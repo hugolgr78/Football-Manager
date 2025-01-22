@@ -1,0 +1,142 @@
+[
+    {
+        "name": "Blazing Falcons",
+        "level": 170,
+        "image_path": "Images/Teams\\Blazing falcons.png",
+        "year_created": 1906,
+        "stadium": "The Forge"
+    },
+    {
+        "name": "Crimson Strikers",
+        "level": 164,
+        "image_path": "Images/Teams\\Crimson Strikers.png",
+        "year_created": 1940,
+        "stadium": "Striker's Arena"
+    },
+    {
+        "name": "Dusk Pioneers",
+        "level": 184,
+        "image_path": "Images/Teams\\Dusk Pioneers.png",
+        "year_created": 1913,
+        "stadium": "Horizon Park"
+    },
+    {
+        "name": "Emerald Stingers",
+        "level": 200,
+        "image_path": "Images/Teams\\Emerald Stingers.png",
+        "year_created": 1932,
+        "stadium": "The Hive"
+    },
+    {
+        "name": "Frost Guardians",
+        "level": 176,
+        "image_path": "Images/Teams\\Frost Guardians.png",
+        "year_created": 1925,
+        "stadium": "Frostguard Citadel"
+    },
+    {
+        "name": "Golden Titans",
+        "level": 182,
+        "image_path": "Images/Teams\\Golden Titans.png",
+        "year_created": 1907,
+        "stadium": "Coliseum"
+    },
+    {
+        "name": "Iron Wolves",
+        "level": 180,
+        "image_path": "Images/Teams\\Iron Wolves.png",
+        "year_created": 1918,
+        "stadium": "The Den Stadium"
+    },
+    {
+        "name": "Oceanic Raiders",
+        "level": 166,
+        "image_path": "Images/Teams\\Oceanic Raiders.png",
+        "year_created": 1932,
+        "stadium": "Bay Arena"
+    },
+    {
+        "name": "Onyx Dragons",
+        "level": 162,
+        "image_path": "Images/Teams\\Onyx Dragons.png",
+        "year_created": 1941,
+        "stadium": "Dragon's Lair"
+    },
+    {
+        "name": "Phoenix Blades",
+        "level": 168,
+        "image_path": "Images/Teams\\Phoenix Blades.png",
+        "year_created": 1928,
+        "stadium": "Bladefire Stadium"
+    },
+    {
+        "name": "Riverstone Bears",
+        "level": 192,
+        "image_path": "Images/Teams\\Riverstone Bears.png",
+        "year_created": 1902,
+        "stadium": "Bearclaw Grounds"
+    },
+    {
+        "name": "Scarlet Vortex",
+        "level": 196,
+        "image_path": "Images/Teams\\Scarlet Vortex.png",
+        "year_created": 1943,
+        "stadium": "Vortex Arena"
+    },
+    {
+        "name": "Shadow Lynx",
+        "level": 190,
+        "image_path": "Images/Teams\\Shadow Lynx.png",
+        "year_created": 1902,
+        "stadium": "Shadow Dome"
+    },
+    {
+        "name": "Silver Sabers",
+        "level": 186,
+        "image_path": "Images/Teams\\Silver Sabers.png",
+        "year_created": 1918,
+        "stadium": "Edge Stadium"
+    },
+    {
+        "name": "Skyline Raptors",
+        "level": 174,
+        "image_path": "Images/Teams\\Skyline Raptors.png",
+        "year_created": 1925,
+        "stadium": "The Nest"
+    },
+    {
+        "name": "Solar Knights",
+        "level": 194,
+        "image_path": "Images/Teams\\Solar Knights.png",
+        "year_created": 1943,
+        "stadium": "Solaris Stadium"
+    },
+    {
+        "name": "Steel Mavericks",
+        "level": 178,
+        "image_path": "Images/Teams\\Steel Mavericks.png",
+        "year_created": 1943,
+        "stadium": "Maverick's Forge"
+    },
+    {
+        "name": "Stormbreak Chargers",
+        "level": 198,
+        "image_path": "Images/Teams\\Stormbreak Chargers.png",
+        "year_created": 1937,
+        "stadium": "Stormbreak Field"
+    },
+    {
+        "name": "Thunder Hawks",
+        "level": 188,
+        "image_path": "Images/Teams\\Thunderhawks.png",
+        "year_created": 1926,
+        "stadium": "Thunder Grounds"
+    },
+    {
+        "name": "Velvet Hurricanes",
+        "level": 172,
+        "image_path": "Images/Teams\\Velvet Hurricanes.png",
+        "year_created": 1904,
+        "stadium": "The Eye Arena"
+    }
+]

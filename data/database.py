@@ -622,7 +622,7 @@ class Matches(Base):
 
     @classmethod
     def get_team_first_match(cls, session, team_id):
-        match = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
+        match = session.query(Matches).filter(
             (Matches.home_id == team_id) | (Matches.away_id == team_id),
             Matches.matchday == 1
         ).first()

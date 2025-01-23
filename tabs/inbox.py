@@ -39,8 +39,8 @@ class Inbox(ctk.CTkFrame):
         emails = Emails.get_all_emails(self.session)
 
         if not emails:
-            self.addEmail("welcome")
             self.addEmail("matchday_preview", matchday = 1)
+            self.addEmail("welcome")
 
             return
 

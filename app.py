@@ -10,7 +10,7 @@ class FootballManager(ctk.CTk):
         super().__init__()
 
         # Games database set up
-        DATABASE_URL = "sqlite:///data/games.db"
+        DATABASE_URL = "sqlite:///data/games.db" 
 
         # Create an engine and a session
         engine = create_engine(DATABASE_URL)

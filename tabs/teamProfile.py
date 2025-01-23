@@ -116,12 +116,12 @@ class Profile(ctk.CTkFrame):
         canvas = ctk.CTkCanvas(self, width = 5, height = 300, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = 0.55, rely = 0.2, anchor = "center")
 
-        ctk.CTkLabel(self, text = f"Founded: {self.parent.team.year_created}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.6, rely = 0.1, anchor = "w")
-        ctk.CTkLabel(self, text = f"Stadium: {self.parent.team.stadium}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.6, rely = 0.15, anchor = "w")
-        self.managerLink = ManagerProfileLink(self, self.session, self.parent.manager_id, f"Manager: {self.parent.manager.first_name} {self.parent.manager.last_name}", "white", 0.6, 0.2, "w", TKINTER_BACKGROUND, self.parent.parent)
+        ctk.CTkLabel(self, text = f"Founded: {self.parent.team.year_created}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.1, anchor = "w")
+        ctk.CTkLabel(self, text = f"Stadium: {self.parent.team.stadium}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.15, anchor = "w")
+        self.managerLink = ManagerProfileLink(self, self.session, self.parent.manager_id, f"Manager: {self.parent.manager.first_name} {self.parent.manager.last_name}", "white", 0.6, 0.2, "w", TKINTER_BACKGROUND, self.parent)
 
         self.players = Players.get_all_players_by_team(session, self.parent.team.id)
-        ctk.CTkLabel(self, text = f"Average Age: {self.averageAge(self.players)}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.6, rely = 0.25, anchor = "w")
+        ctk.CTkLabel(self, text = f"Average Age: {self.averageAge(self.players)}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.25, anchor = "w")
 
         self.trophiesFrame = TrophiesFrame(self, self.session, self.parent.team.id, GREY_BACKGROUND, 460, 360, 15, 0.02, 0.4, "nw")
 

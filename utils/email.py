@@ -128,7 +128,8 @@ class Welcome():
         self.emailFrame_7.place(relx = 0.05, rely = 0.74, anchor = "w")
         self.emailFrame_8.place(relx = 0.05, rely = 0.771, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.title_4, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.83, anchor = "w")
-        ctk.CTkLabel(self.frame, text = self.emailText_5, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.88, anchor = "w")
+        self.emailFrame_9.place(relx = 0.05, rely = 0.86, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_5, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.891, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.emailText_6, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.95, anchor = "w")
 
     def setUpEmail(self):
@@ -281,8 +282,21 @@ class Welcome():
         )
 
         self.title_4 = "Let's get to work!"
+
+        self.emailFrame_9 = TeamProfileLabel(
+            self.frame,
+            self.session,
+            self.parent.team.manager_id,
+            self.parent.team.name,
+            f"We’re confident in your abilities to lead ",
+            f" to glory. The fans, the players, and the",
+            600,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
+        )
+        
         self.emailText_5 = (
-            f"We’re confident in your abilities to lead {self.parent.team.name} to glory. The fans, the players, and the\n"
             f"board are all behind you. Let’s make this a season to remember!"
         )
 

@@ -33,7 +33,7 @@ class ManagerProfileLink(ctk.CTkLabel):
             self.profile = ManagerProfile(self.tab, self.session, self.manager_id, self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
 
-            self.tab.parent.overlappingProfiles.append(self.profile)
+            self.tab.parent.parent.overlappingProfiles.append(self.profile)
         else:
             self.tab.parent.changeTab(7)
 

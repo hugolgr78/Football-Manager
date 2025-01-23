@@ -4,6 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 from utils.teamProfileLink import *
 from utils.leagueProfileLink import *
+from utils.playerProfileLink import *
 
 class EmailFrame(ctk.CTkFrame):
     def __init__(self, parent, session, manager_id, email_type, matchday, player_id, emailFrame, parentTab):
@@ -88,7 +89,6 @@ class EmailFrame(ctk.CTkFrame):
             return "th"
         else:
             return {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
-
 class Welcome():
     def __init__(self, parent, session):
 
@@ -116,14 +116,17 @@ class Welcome():
         self.emailFrame_2.place(relx = 0.05, rely = 0.31, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.emailTextBetFrame_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.35, anchor = "w")
         self.emailFrame_3.place(relx = 0.05, rely = 0.39, anchor = "w")
-        ctk.CTkLabel(self.frame, text = self.title_2, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.45, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.title_2, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.445, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.emailText_3, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.48, anchor = "w")
         self.emailFrame_4.place(relx = 0.05, rely = 0.51, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.emailText_3_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.54, anchor = "w")
         self.emailFrame_5.place(relx = 0.05, rely = 0.57, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.emailText_3_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.601, anchor = "w")
-        ctk.CTkLabel(self.frame, text = self.title_3, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.64, anchor = "w")
-        ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.72, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.title_3, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.645, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.68, anchor = "w")
+        self.emailFrame_6.place(relx = 0.05, rely = 0.71, anchor = "w")
+        self.emailFrame_7.place(relx = 0.05, rely = 0.74, anchor = "w")
+        self.emailFrame_8.place(relx = 0.05, rely = 0.771, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.title_4, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.83, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.emailText_5, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.88, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.emailText_6, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.95, anchor = "w")
@@ -231,20 +234,51 @@ class Welcome():
         )
 
         self.stars = Players.get_all_star_players(self.session, self.parent.team.id)
-        self.youngsters = Players.get_all_youngsters(self.session, self.parent.team.id)
 
         self.title_3 = "Key Players"
-        self.emailText_4 = (
-            f"Here are some of the standout players you’ll be working with:\n"
-            f"- {self.stars[0].first_name} {self.stars[0].last_name} ({self.stars[0].position}, star player)\n"
-            f"- {self.stars[1].first_name} {self.stars[1].last_name} ({self.stars[1].position}, star player)\n"
-            f"- {self.stars[2].first_name} {self.stars[2].last_name} ({self.stars[2].position}, star player)\n"
+        self.emailText_4 = "Here are some of the standout players you’ll be working with:"
+
+        player1 = self.stars[0]
+        self.emailFrame_6 = PlayerProfileLabel(
+            self.frame,
+            self.session,
+            player1,
+            f"{player1.first_name} {player1.last_name}",
+            "- ",
+            f" ({player1.position}, star player)",
+            600,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
         )
 
-        if self.youngsters:
-            self.emailText_4 += (
-                f"- {self.youngsters[0].first_name} {self.youngsters[0].last_name} ({self.youngsters[0].position}, hot prospect)"
-            )
+        player2 = self.stars[1]
+        self.emailFrame_7 = PlayerProfileLabel(
+            self.frame,
+            self.session,
+            player2,
+            f"{player2.first_name} {player2.last_name}",
+            "- ",
+            f" ({player2.position}, star player)",
+            600,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
+        )
+
+        player3 = self.stars[2]
+        self.emailFrame_8 = PlayerProfileLabel(
+            self.frame,
+            self.session,
+            player3,
+            f"{player3.first_name} {player3.last_name}",
+            "- ",
+            f" ({player3.position}, star player)",
+            600,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
+        )
 
         self.title_4 = "Let's get to work!"
         self.emailText_5 = (

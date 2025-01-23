@@ -559,9 +559,9 @@ class Match():
         oppositionEvents = self.awayEvents if team == self.homeTeam else self.homeEvents
         oppositionGoals = self.score.getScore()[1] if team == self.homeTeam else self.score.getScore()[0]
         
-        if self.score.getWinner() == team:
+        if self.winner == team:
             ratings = [7.00 for _ in range(len(finalLineup) + len(currentLineup))]
-        elif self.score.getWinner() == None:
+        elif self.winner == None:
             ratings = [6.50 for _ in range(len(finalLineup) + len(currentLineup))]
         else:
             ratings = [6.00 for _ in range(len(finalLineup) + len(currentLineup))]
@@ -629,20 +629,22 @@ class Match():
 
     def saveData(self):
 
+        self.returnWinner()
+
         homeData = {
-            "points": 3 if self.score.getWinner() == self.homeTeam else 1 if self.score.getWinner() is None else 0,
-            "won": 1 if self.score.getWinner() == self.homeTeam else 0,
-            "drawn": 1 if self.score.getWinner() == None else 0,
-            "lost": 1 if self.score.getWinner() == self.awayTeam else 0,
+            "points": 3 if self.winner == self.homeTeam else 1 if self.winner is None else 0,
+            "won": 1 if self.winner == self.homeTeam else 0,
+            "drawn": 1 if self.winner == None else 0,
+            "lost": 1 if self.winner == self.awayTeam else 0,
             "goals_scored": self.score.getScore()[0],
             "goals_conceded": self.score.getScore()[1]
         }
         
         awayData = {
-            "points": 3 if self.score.getWinner() == self.awayTeam else 1 if self.score.getWinner() is None else 0,
-            "won": 1 if self.score.getWinner() == self.awayTeam else 0,
-            "drawn": 1 if self.score.getWinner() == None else 0,
-            "lost": 1 if self.score.getWinner() == self.homeTeam else 0,
+            "points": 3 if self.winner == self.awayTeam else 1 if self.winner is None else 0,
+            "won": 1 if self.winner == self.awayTeam else 0,
+            "drawn": 1 if self.winner == None else 0,
+            "lost": 1 if self.winner == self.homeTeam else 0,
             "goals_scored": self.score.getScore()[1],
             "goals_conceded": self.score.getScore()[0]
         }
@@ -727,6 +729,15 @@ class Match():
 
         for position, players in self.awayCurrentLineup.items():
             TeamLineup.add_lineup_single(self.session, self.match.id, players.id, position, self.awayRatings[players])
+
+    def returnWinner(self):
+        finalScore = self.score.getScore()
+        if finalScore[0] > finalScore[1]:
+            self.winner = self.homeTeam
+        elif finalScore[0] < finalScore[1]:
+            self.winner = self.awayTeam
+        else:
+            self.winner = None
 
     def getEvents(self):
         return self.homeEvents, self.awayEvents

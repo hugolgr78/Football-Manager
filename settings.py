@@ -147,8 +147,7 @@ MIDFIELD_POSITIONS = ["Defensive Midfielder", "Central Midfielder", "Left Midfie
 ATTACKING_POSITIONS = ["Left Winger", "Right Winger", "Attacking Midfielder", "Striker Left", "Striker Right", "Center Forward"]
 
 SCORER_CHANCES = {
-    'goalkeeper': 0.01,
-    'defender': 0.049,
+    'defender': 0.05,
     'midfielder': 0.25,
     'forward': 0.7
 }
@@ -215,3 +214,22 @@ def generate_lower_div_objectives(min_level, max_level):
         (max_level - range_size - 1, max_level - 2 * range_size): "finish in the top half",
         (max_level - 2 * range_size - 1, min_level): "avoid relegation",
     }
+
+GOAL_RATINGS = [1.00, 1.12, 1.05, 1.15, 1.07, 1.01, 1.04, 1.11]
+PENALTY_GOAL_RATINGS = [0.75, 0.78, 0.82, 0.84, 0.90, 0.94, 1.03, 1.08]
+PENALTY_MISS_RATINGS = [0.32, 0.42, 0.47, 0.51, 0.57, 0.63, 0.66, 0.72]
+YELLOW_CARD_RATINGS = [0.21, 0.28, 0.32, 0.37, 0.41, 0.45, 0.49, 0.53]
+RED_CARD_RATINGS = [1.46, 1.49, 1.52, 1.57, 1.60, 1.63, 1.69, 1.78]
+ASSIST_RATINGS = [0.52, 0.58, 0.65, 0.69, 0.73, 0.78, 0.82, 0.86]
+DEFENDER_GOALS_1 = [0.32, 0.42, 0.47, 0.63, 0.69, 0.78, 0.85, 0.98]
+DEFENDER_GOALS_3 = [0.02, 0.08, 0.15, 0.19, 0.24, 0.29, 0.36, 0.45]
+DEFENDER_GOALS_MORE = [0.89, 0.92, 0.97, 1.03, 1.09, 1.15, 1.22, 1.29]
+NON_SCORER_RATINGS = [-0.56, -0.43, -0.32, -0.21, -0.19, 0.05, 0.09, 0.13, 0.17, 0.24, 0.31, 0.46, 0.49, 0.67]
+
+EVENT_RATINGS = {
+    "goal": GOAL_RATINGS,
+    "penalty_goal": PENALTY_GOAL_RATINGS,
+    "penalty_miss": PENALTY_MISS_RATINGS,
+    "yellow_card": YELLOW_CARD_RATINGS,
+    "red_card": RED_CARD_RATINGS
+}

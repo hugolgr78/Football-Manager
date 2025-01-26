@@ -555,16 +555,23 @@ class Match():
                     teamMatch.awayLineupPitch.addPlayer(playerPosition, playerOn.last_name)
 
     def getPlayerRatings(self, team, finalLineup, currentLineup, events):
-        
+
         oppositionEvents = self.awayEvents if team == self.homeTeam else self.homeEvents
         oppositionGoals = self.score.getScore()[1] if team == self.homeTeam else self.score.getScore()[0]
-        
-        if self.score.getWinner() == team:
-            ratings = [7.00 for _ in range(len(finalLineup) + len(currentLineup))]
-        elif self.score.getWinner() == None:
-            ratings = [6.50 for _ in range(len(finalLineup) + len(currentLineup))]
+
+        ratingsDict = {}
+
+        if team == self.homeTeam:
+            venue = "home"
         else:
-            ratings = [6.00 for _ in range(len(finalLineup) + len(currentLineup))]
+            venue = "away"
+        
+        if self.winner == team:
+            rating = 7.00
+        elif self.winner == None:
+            rating = 6.50
+        else:
+            rating = 6.00
 
         if oppositionGoals == 0:
             if team == self.homeTeam:
@@ -573,76 +580,67 @@ class Match():
                 self.awayCleanSheet = True
 
         for i, (position, player) in enumerate(finalLineup.items()):
-            self.getRating(finalLineup, ratings, events, player, position, oppositionEvents, oppositionGoals, i)
+            self.getRating(venue, rating, ratingsDict, events, player, position, oppositionEvents, oppositionGoals, i)
 
         for i, (position, player) in enumerate(currentLineup.items()):
-            self.getRating(currentLineup, ratings, events, player, position, oppositionEvents, oppositionGoals, i + len(finalLineup))
-        
-        ratings = [min(round(rating, 2), 10) for rating in ratings]
-        
+            self.getRating(venue, rating, ratingsDict, events, player, position, oppositionEvents, oppositionGoals, i + len(finalLineup))
+
         if team == self.homeTeam:
-            self.homeRatings = {}
-            for player, rating in zip(finalLineup.values(), ratings):
-                self.homeRatings[player] = round(rating + 0.5, 2) if self.ratingsBoost == "home" else round(rating - 0.5, 2) if self.ratingsDecay == "home" else rating
-
-            for player, rating in zip(currentLineup.values(), ratings):
-                self.homeRatings[player] = round(rating + 0.5, 2) if self.ratingsBoost == "home" else round(rating - 0.5, 2) if self.ratingsDecay == "home" else rating
+            self.homeRatings = ratingsDict
         else:
-            self.awayRatings = {}
-            for player, rating in zip(finalLineup.values(), ratings):
-                self.awayRatings[player] = round(rating + 0.5, 2) if self.ratingsBoost == "away" else round(rating - 0.5, 2) if self.ratingsDecay == "away" else rating
+            self.awayRatings = ratingsDict
 
-            for player, rating in zip(currentLineup.values(), ratings):
-                self.awayRatings[player] = round(rating + 0.5, 2) if self.ratingsBoost == "away" else round(rating - 0.5, 2) if self.ratingsDecay == "away" else rating
-
-    def getRating(self, lineup, ratings, events, player, position, oppositionEvents, oppositionGoals, i):
-        scorerFlag = False
-        for _, event in events.items():
-            if event["player"] == player: 
-                if event["type"] == "goal":
-                    ratings[i] += random.choice([1.00, 1.12, 1.05, 1.15, 1.07, 1.01, 1.04, 1.11])
-                elif event["type"] == ["penalty_goal"]:
-                    ratings[i] += random.choice([0.75, 0.78, 0.82, 0.84, 0.90, 0.94, 1.03, 1.08])
-            
-                scorerFlag = True
-
-            if "assister" in event and event["assister"] == player:
-                ratings[i] += random.choice([0.52, 0.58, 0.65, 0.69, 0.73, 0.78, 0.82, 0.86])
+    def getRating(self, venue, rating, ratingsDict, events, player, position, oppositionEvents, oppositionGoals, i):
 
         defender_positions = ["Right Back", "Left Back", "Center Back", "Center Back Right", "Center Back Left"]
+
+        scorerFlag = False
+        for _, event in events.items():
+            if event["player"] == player:
+                if event["type"] in EVENT_RATINGS:
+                    rating += random.choice(EVENT_RATINGS[event["type"]])
+                    if event["type"] in ["goal", "penalty_goal"]:
+                        scorerFlag = True
+
+            if "assister" in event and event["assister"] == player:
+                rating += random.choice(ASSIST_RATINGS)
 
         if not scorerFlag:
             if position == "Goalkeeper" or position in defender_positions:
                 if oppositionGoals <= 1:
-                    ratings[i] += random.choice([0.32, 0.42, 0.47, 0.63, 0.69, 0.78, 0.85, 0.98])
+                    rating += random.choice(DEFENDER_GOALS_1)
                 elif oppositionGoals <= 3:
-                    ratings[i] += random.choice([0.02, 0.08, 0.15, 0.19, 0.24, 0.29, 0.36, 0.45])
+                    rating += random.choice(DEFENDER_GOALS_3)
                 else:
-                    ratings[i] -= random.choice([0.89, 0.92, 0.97, 1.03, 1.09, 1.15, 1.22, 1.29])
-            
-            else: # mids and fwds that didnt score or get a red
-                ratings[i] += random.choice([-0.56, -0.43, -0.32, -0.21, -0.19, 0.05, 0.09, 0.13, 0.17, 0.24, 0.31, 0.46, 0.49, 0.67])
+                    rating -= random.choice(DEFENDER_GOALS_MORE)
+            else:  # mids and fwds that didn't score
+                rating += random.choice(NON_SCORER_RATINGS)
 
         # for _, event in oppositionEvents.items():
         #     if event["player"] == player: # own goal
         #         ratings[i] -= random.choice([1.46, 1.49, 1.52, 1.57, 1.60, 1.63, 1.69, 1.78])
 
+        finalRating = round(rating + 0.5, 2) if self.ratingsBoost == venue else round(rating - 0.5, 2) if self.ratingsDecay == venue else round(rating, 2)
+        ratingsDict[player] = min(finalRating, 10)
+
     def saveData(self):
 
+        self.returnWinner()
+
         homeData = {
-            "points": 3 if self.score.getWinner() == self.homeTeam else 1 if self.score.getWinner() is None else 0,
-            "won": 1 if self.score.getWinner() == self.homeTeam else 0,
-            "drawn": 1 if self.score.getWinner() == None else 0,
-            "lost": 1 if self.score.getWinner() == self.awayTeam else 0,
+            "points": 3 if self.winner == self.homeTeam else 1 if self.winner is None else 0,
+            "won": 1 if self.winner == self.homeTeam else 0,
+            "drawn": 1 if self.winner == None else 0,
+            "lost": 1 if self.winner == self.awayTeam else 0,
             "goals_scored": self.score.getScore()[0],
             "goals_conceded": self.score.getScore()[1]
         }
         
         awayData = {
-            "points": 3 if self.score.getWinner() == self.awayTeam else 1 if self.score.getWinner() is None else 0,
-            "won": 1 if self.score.getWinner() == self.awayTeam else 0,
-            "drawn": 1 if self.score.getWinner() == None else 0,
-            "lost": 1 if self.score.getWinner() == self.homeTeam else 0,
+            "points": 3 if self.winner == self.awayTeam else 1 if self.winner is None else 0,
+            "won": 1 if self.winner == self.awayTeam else 0,
+            "drawn": 1 if self.winner == None else 0,
+            "lost": 1 if self.winner == self.homeTeam else 0,
             "goals_scored": self.score.getScore()[1],
             "goals_conceded": self.score.getScore()[0]
         }
@@ -716,17 +714,26 @@ class Match():
         Matches.update_score(self.session, self.match.id, self.score.getScore()[0], self.score.getScore()[1])
 
         ## ------------- Lineup changes --------------- ##
-        for position, players in self.homeFinalLineup.items():
-            TeamLineup.add_lineup_single(self.session, self.match.id, players.id, position, self.homeRatings[players])
+        for position, player in self.homeFinalLineup.items():
+            TeamLineup.add_lineup_single(self.session, self.match.id, player.id, position, self.homeRatings[player])
 
-        for position, players in self.homeCurrentLineup.items():
-            TeamLineup.add_lineup_single(self.session, self.match.id, players.id, position, self.homeRatings[players])
+        for position, player in self.homeCurrentLineup.items():
+            TeamLineup.add_lineup_single(self.session, self.match.id, player.id, position, self.homeRatings[player])
         
-        for position, players in self.awayFinalLineup.items():
-            TeamLineup.add_lineup_single(self.session, self.match.id, players.id, position, self.awayRatings[players])
+        for position, player in self.awayFinalLineup.items():
+            TeamLineup.add_lineup_single(self.session, self.match.id, player.id, position, self.awayRatings[player])
 
-        for position, players in self.awayCurrentLineup.items():
-            TeamLineup.add_lineup_single(self.session, self.match.id, players.id, position, self.awayRatings[players])
+        for position, player in self.awayCurrentLineup.items():
+            TeamLineup.add_lineup_single(self.session, self.match.id, player.id, position, self.awayRatings[player])
+
+    def returnWinner(self):
+        finalScore = self.score.getScore()
+        if finalScore[0] > finalScore[1]:
+            self.winner = self.homeTeam
+        elif finalScore[0] < finalScore[1]:
+            self.winner = self.awayTeam
+        else:
+            self.winner = None
 
     def getEvents(self):
         return self.homeEvents, self.awayEvents

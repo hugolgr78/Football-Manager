@@ -304,7 +304,6 @@ class Welcome():
             f"Best regards,\n"
             f"Name, Chairman"
         )
-
 class MatchdayReview():
     def __init__(self, parent, session):
 
@@ -347,7 +346,7 @@ class MatchdayPreview():
         ctk.CTkLabel(self.frame, text = self.title_2, font = (APP_FONT_BOLD, 20), justify = "left").place(relx = 0.05, rely = 0.36, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.emailText_3, font = (APP_FONT, 15), justify = "left").place(relx = 0.05, rely = 0.44, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.title_3, font = (APP_FONT_BOLD, 20), justify = "left").place(relx = 0.05, rely = 0.54, anchor = "w")
-        ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left").place(relx = 0.05, rely = 0.61, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left").place(relx = 0.05, rely = 0.56, anchor = "nw")
         ctk.CTkLabel(self.frame, text = self.title_4, font = (APP_FONT_BOLD, 20), justify = "left").place(relx = 0.05, rely = 0.71, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.emailText_5, font = (APP_FONT, 15), justify = "left").place(relx = 0.05, rely = 0.76, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.title_5, font = (APP_FONT_BOLD, 20), justify = "left").place(relx = 0.05, rely = 0.82, anchor = "w")
@@ -387,12 +386,14 @@ class MatchdayPreview():
             )
             
             self.stars = Players.get_all_star_players(self.session, self.opponent.id)
-            self.emailText_4 = (
-                f"Here are the top 3 players to watch out for in the upcoming match:\n"
-                f"- {self.stars[0].first_name} {self.stars[0].last_name} ({self.stars[0].position}, star player)\n"
-                f"- {self.stars[1].first_name} {self.stars[1].last_name} ({self.stars[1].position}, star player)\n"
-                f"- {self.stars[2].first_name} {self.stars[2].last_name} ({self.stars[2].position}, star player)"
-            )
+            top_players = min(3, len(self.stars))
+            self.emailText_4 = "Here are the top players to watch out for in the upcoming match:\n"
+
+            for i in range(top_players):
+                player = self.stars[i]
+                self.emailText_4 += f"- {player.first_name} {player.last_name} ({player.position}, star player)\n"
+
+            self.emailText_4 = self.emailText_4.strip()  # Remove the trailing newline
 
             self.emailText_6 = (
                 f"No games have been played yet this season so we do not have data on {self.opponent.name}'s\n"

@@ -147,8 +147,7 @@ MIDFIELD_POSITIONS = ["Defensive Midfielder", "Central Midfielder", "Left Midfie
 ATTACKING_POSITIONS = ["Left Winger", "Right Winger", "Attacking Midfielder", "Striker Left", "Striker Right", "Center Forward"]
 
 SCORER_CHANCES = {
-    'goalkeeper': 0.01,
-    'defender': 0.049,
+    'defender': 0.05,
     'midfielder': 0.25,
     'forward': 0.7
 }

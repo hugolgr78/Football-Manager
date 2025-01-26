@@ -41,6 +41,8 @@ class Inbox(ctk.CTkFrame):
         if not emails:
             self.addEmail("matchday_preview", matchday = 1)
             self.addEmail("welcome")
+            self.saveEmail("welcome")
+            self.saveEmail("matchday_preview", matchday = 1)
 
             return
 
@@ -64,4 +66,7 @@ class Inbox(ctk.CTkFrame):
         #         widget.pack(fill = "both", padx = 10, pady = 5)
 
         if not imported:
-            Emails.add_email(self.session, email_type, matchday, player_id)
+            self.saveEmail(email_type, matchday, player_id)
+
+    def saveEmail(self, email_type, matchday = None, player_id = None):
+        Emails.add_email(self.session, email_type, matchday, player_id)

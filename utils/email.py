@@ -304,7 +304,6 @@ class Welcome():
             f"Best regards,\n"
             f"Name, Chairman"
         )
-
 class MatchdayReview():
     def __init__(self, parent, session):
 

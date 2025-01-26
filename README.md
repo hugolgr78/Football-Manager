@@ -1,4 +1,4 @@
-# Football-Manager-Tkinter
+# Football-Manager
 
 🌟 **Started**: December 2024  
 🚀 **Developed**: In development

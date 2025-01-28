@@ -616,9 +616,9 @@ class Match():
             else:  # mids and fwds that didn't score
                 rating += random.choice(NON_SCORER_RATINGS)
 
-        # for _, event in oppositionEvents.items():
-        #     if event["player"] == player: # own goal
-        #         ratings[i] -= random.choice([1.46, 1.49, 1.52, 1.57, 1.60, 1.63, 1.69, 1.78])
+        for _, event in oppositionEvents.items():
+            if event["player"] == player: # own goal
+                rating -= random.choice([1.46, 1.49, 1.52, 1.57, 1.60, 1.63, 1.69, 1.78])
 
         finalRating = round(rating + 0.5, 2) if self.ratingsBoost == venue else round(rating - 0.5, 2) if self.ratingsDecay == venue else round(rating, 2)
         ratingsDict[player] = min(finalRating, 10)

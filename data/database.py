@@ -619,6 +619,19 @@ class Matches(Base):
             return match
         else:
             return None
+        
+    @classmethod
+    def get_team_matchday_match(cls, session, team_id, league_id, matchday):
+        match = session.query(Matches).filter(
+            ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+            Matches.league_id == league_id,
+            Matches.matchday == matchday
+        ).first()
+
+        if match:
+            return match
+        else:
+            return None
 
     @classmethod
     def get_team_first_match(cls, session, team_id):
@@ -762,6 +775,19 @@ class Matches(Base):
         match = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
             ((Matches.home_id == team_1) & (Matches.away_id == team_2)) |
             ((Matches.home_id == team_2) & (Matches.away_id == team_1))
+        ).order_by(Matches.matchday.desc()).first()
+
+        if match:
+            return match
+        else:
+            return None
+        
+    @classmethod
+    def get_last_encounter_from_matchday(cls, session, team_1, team_2, matchday):
+        match = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
+            ((Matches.home_id == team_1) & (Matches.away_id == team_2)) |
+            ((Matches.home_id == team_2) & (Matches.away_id == team_1)),
+            Matches.matchday < matchday
         ).order_by(Matches.matchday.desc()).first()
 
         if match:
@@ -1595,6 +1621,15 @@ class TeamHistory(Base):
 
         if points:
             return points
+        else:
+            return None
+        
+    @classmethod
+    def get_team_data_matchday(cls, session, team_id, matchday):
+        team = session.query(TeamHistory).filter(TeamHistory.team_id == team_id, TeamHistory.matchday == matchday).first()
+
+        if team:
+            return team
         else:
             return None
 

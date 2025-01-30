@@ -604,7 +604,7 @@ class Match():
 
             if "assister" in event and event["assister"] == player:
                 rating += random.choice(ASSIST_RATINGS)
-
+        
         if not scorerFlag:
             if position == "Goalkeeper" or position in defender_positions:
                 if oppositionGoals <= 1:

@@ -330,6 +330,9 @@ class MatchdayReview():
 
         ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.1, anchor = "w")
         self.statsFrame.place(relx = 0.98, rely = 0.12, anchor = "ne")
+        ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.15, anchor = "w")
+        self.emailFrame_1.place(relx = 0.05, rely = 0.179, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_3, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.22, anchor = "w")
 
     def setUpEmail(self):
         self.emailText_1 = "Here is everything you need to know about the matchday that just passed:"
@@ -338,6 +341,47 @@ class MatchdayReview():
         self.statsFrame.pack_propagate(0)
 
         self.matchFrame()
+
+        match_ = Matches.get_team_matchday_match(self.session, self.parent.team.id, self.parent.league.id, self.matchday)
+        homeTeam = Teams.get_team_by_id(self.session, match_.home_id)
+        awayTeam = Teams.get_team_by_id(self.session, match_.away_id)
+
+        opponentTeam = homeTeam if homeTeam.id != self.parent.team.id else awayTeam
+        expectation = get_expectation(self.parent.team.level, opponentTeam.level)
+        home = True if homeTeam.id == self.parent.team.id else False
+
+        goalDifference = match_.score_home - match_.score_away if home else match_.score_away - match_.score_home
+        if goalDifference > 0:
+            result = "win"
+        elif goalDifference < 0:
+            result = "loss"
+        else:
+            result = "draw"
+        result_category = get_result_category(result, goalDifference)
+
+        fan_reaction = get_fan_reaction(result_category, expectation)
+        fan_message = get_fan_message(fan_reaction)
+
+        self.emailText_2 = (
+            f"The game ended in a {result} for us against"
+        )
+        
+        self.emailFrame_1 = TeamProfileLabel(
+            self.frame,
+            self.session,
+            opponentTeam.manager_id,
+            opponentTeam.name,
+            f"",
+            f", with a goal difference of {goalDifference}.",
+            240,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
+        )
+
+        self.emailText_3 = (
+            f"{fan_message}"
+        )
 
     def matchFrame(self):
         matches = Matches.get_matchday_for_league(self.session, self.parent.league.id, self.matchday)

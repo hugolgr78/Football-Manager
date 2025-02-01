@@ -332,7 +332,14 @@ class MatchdayReview():
         self.statsFrame.place(relx = 0.98, rely = 0.12, anchor = "ne")
         ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.15, anchor = "w")
         self.emailFrame_1.place(relx = 0.05, rely = 0.179, anchor = "w")
-        ctk.CTkLabel(self.frame, text = self.emailText_3, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.22, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_3, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.23, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailTitle_1, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.29, anchor = "w")
+        self.emailFrame_2.place(relx = 0.05, rely = 0.33, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.36, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_5, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.41, anchor = "w")
+
+        for i, frame in enumerate(self.emailFrames_3):
+            frame.place(relx = 0.05, rely = 0.44 + i * 0.031, anchor = "w")
 
     def setUpEmail(self):
         self.emailText_1 = "Here is everything you need to know about the matchday that just passed:"
@@ -363,7 +370,7 @@ class MatchdayReview():
         fan_message = get_fan_message(fan_reaction)
 
         self.emailText_2 = (
-            f"The game ended in a {result} for us against"
+            f"The game result was a {result} for our team against"
         )
         
         self.emailFrame_1 = TeamProfileLabel(
@@ -382,6 +389,70 @@ class MatchdayReview():
         self.emailText_3 = (
             f"{fan_message}"
         )
+
+        lineups = TeamLineup.get_lineup_by_match(self.session, match_.id)
+        playerOTM, rating = self.getPlayerOfTheMatch(match_)
+        teamBest3 = self.getBest3Players(lineups)
+
+        self.emailTitle_1 = "Player performances"
+
+        self.emailFrame_2 = PlayerProfileLabel(
+            self.frame,
+            self.session,
+            playerOTM,
+            f"{playerOTM.first_name} {playerOTM.last_name}",
+            "The player of the match was ",
+            f" with a rating",
+            240,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
+        )
+
+        self.emailText_4 = (
+            f"of {rating}."
+        )
+
+        self.emailText_5 = (
+            f"Here are the top 3 players from our team:"
+        )
+
+        self.emailFrames_3 = []
+        for player in teamBest3:
+            playerData = Players.get_player_by_id(self.session, player.player_id)
+
+            frame = PlayerProfileLabel(
+                self.frame,
+                self.session,
+                playerData,
+                f"{playerData.first_name} {playerData.last_name}",
+                f"- ",
+                f" with a rating of {player.rating}",
+                240,
+                30,
+                self.parent.parentTab,
+                fontSize = 15
+            )
+
+            self.emailFrames_3.append(frame)
+
+        
+            ## Next: new league position with poitsn diff to league title or relegation zone
+
+
+    def getBest3Players(self, lineups):
+        bestPlayers = []
+        for lineup in lineups:
+            player = Players.get_player_by_id(self.session, lineup.player_id)
+            
+            if player.team_id != self.parent.team.id:
+                continue
+
+            bestPlayers.append(lineup)
+
+        bestPlayers.sort(key = lambda x: x.rating, reverse = True)
+        
+        return bestPlayers[:3]
 
     def matchFrame(self):
         matches = Matches.get_matchday_for_league(self.session, self.parent.league.id, self.matchday)
@@ -411,7 +482,7 @@ class MatchdayReview():
 
         ctk.CTkLabel(matchFrame, text = f"{bestMatch.score_home} - {bestMatch.score_away}", font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
-        playerOTM = self.getPlayerOfTheMatch(bestMatch)
+        playerOTM, _ = self.getPlayerOfTheMatch(bestMatch)
 
         ctk.CTkLabel(matchFrame, text = f"POTM: ", font = (APP_FONT, 18), fg_color = TKINTER_BACKGROUND).place(relx = 0.05, rely = 0.92, anchor = "w")
         PlayerProfileLink(matchFrame, self.session, playerOTM, f"{playerOTM.first_name} {playerOTM.last_name}", "white", 0.31, 0.92, "w", TKINTER_BACKGROUND, self.parent.parentTab, fontSize = 18)
@@ -520,7 +591,7 @@ class MatchdayReview():
                 playerData = Players.get_player_by_id(self.session, player.player_id)
                 currPlayer = playerData
 
-        return currPlayer
+        return currPlayer, highestRating
 
 class MatchdayPreview():
     def __init__(self, parent, session):

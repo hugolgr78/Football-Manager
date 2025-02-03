@@ -1642,6 +1642,15 @@ class TeamHistory(Base):
         else:
             return None
 
+    @classmethod
+    def get_team_data_position(cls, session, position, matchday):
+        team = session.query(TeamHistory).filter(TeamHistory.position == position, TeamHistory.matchday == matchday).first()
+
+        if team:
+            return team
+        else:
+            return None
+
 class Referees(Base):
     __tablename__ = 'referees'
     

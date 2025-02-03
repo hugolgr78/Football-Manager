@@ -17,3 +17,8 @@ SET score_home = 0,
 DELETE FROM team_history;
 
 DELETE FROM team_lineup;
+
+DELETE FROM emails;
+
+UPDATE leagues
+SET current_matchday = 1;

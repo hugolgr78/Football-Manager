@@ -467,7 +467,7 @@ class MatchdayReview():
         if currPosition == 1:
             secondPlace = TeamHistory.get_team_data_position(self.session, 2, self.matchday)
             pointsDiff = matchdayTable.points - secondPlace.points
-            text = f"We are currently leading second place by {pointsDiff} points,\ngood work!"
+            text = f"We are currently leading second place by\n{pointsDiff} points, good work!"
         elif currPosition > 17:
             _16thPlace = TeamHistory.get_team_data_position(self.session, 16, self.matchday)
             pointsDiff = _16thPlace.points - matchdayTable.points

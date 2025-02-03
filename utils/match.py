@@ -376,9 +376,15 @@ class Match():
             event["player"] = player
 
         elif event["type"] == "own_goal":
-            ownGoalPosition = random.choices(list(OWN_GOAL_CHANCES.keys()), weights = list(OWN_GOAL_CHANCES.values()), k = 1)[0]
+            ownGoalPosition = random.choices(list(OWN_GOAL_CHANCES.keys()), weights=list(OWN_GOAL_CHANCES.values()), k=1)[0]
             oppositionLineup = self.homeCurrentLineup if lineup == self.awayCurrentLineup else self.awayCurrentLineup
-            player = random.choices([player for player in oppositionLineup.values() if player.position == ownGoalPosition], k = 1)[0]
+            players_in_position = [player for player in oppositionLineup.values() if player.position == ownGoalPosition]
+
+            if not players_in_position:
+                player = random.choice(list(oppositionLineup.values()))
+            else:
+                player = random.choice(players_in_position)
+
             event["player"] = player
 
         elif event["type"] == "yellow_card":
@@ -617,8 +623,7 @@ class Match():
                 rating += random.choice(NON_SCORER_RATINGS)
 
         for _, event in oppositionEvents.items():
-            print(event)
-            if event["player"] == player: # own goal
+            if event["type"] == "own_goal" and event["player"] == player: # own goal
                 rating -= random.choice([1.46, 1.49, 1.52, 1.57, 1.60, 1.63, 1.69, 1.78])
 
         finalRating = round(rating + 0.5, 2) if self.ratingsBoost == venue else round(rating - 0.5, 2) if self.ratingsDecay == venue else round(rating, 2)

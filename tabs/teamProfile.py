@@ -102,6 +102,8 @@ class Profile(ctk.CTkFrame):
         self.session = session
         self.manager_id = manager_id
 
+        manager = Managers.get_manager_by_id(self.session, self.manager_id)
+
         self.league = League.get_league_by_id(session, self.parent.leagueData.league_id)
 
         src = Image.open(io.BytesIO(self.parent.team.logo))
@@ -125,7 +127,9 @@ class Profile(ctk.CTkFrame):
 
         self.trophiesFrame = TrophiesFrame(self, self.session, self.parent.team.id, GREY_BACKGROUND, 460, 360, 15, 0.02, 0.4, "nw")
 
-        self.next5 = next5Matches(self, self.session, self.manager_id, GREY_BACKGROUND, 460, 360, 60, 0.51, 0.4, "nw", 0.3, self.parent.parent, corner_radius = 15)
+        parentTab = self.parent if manager.user == 1 else self.parent.parent
+
+        self.next5 = next5Matches(self, self.session, self.manager_id, GREY_BACKGROUND, 460, 360, 60, 0.51, 0.4, "nw", 0.3, parentTab, corner_radius = 15)
         self.next5.showNext5Matches()
 
     def averageAge(self, players):

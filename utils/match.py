@@ -617,6 +617,7 @@ class Match():
                 rating += random.choice(NON_SCORER_RATINGS)
 
         for _, event in oppositionEvents.items():
+            print(event)
             if event["player"] == player: # own goal
                 rating -= random.choice([1.46, 1.49, 1.52, 1.57, 1.60, 1.63, 1.69, 1.78])
 

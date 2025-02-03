@@ -341,6 +341,9 @@ class MatchdayReview():
         for i, frame in enumerate(self.emailFrames_3):
             frame.place(relx = 0.05, rely = 0.44 + i * 0.031, anchor = "w")
 
+        ctk.CTkLabel(self.frame, text = self.emailTitle_2, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.56, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_6, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.625, anchor = "w")
+
     def setUpEmail(self):
         self.emailText_1 = "Here is everything you need to know about the matchday that just passed:"
 
@@ -436,8 +439,72 @@ class MatchdayReview():
 
             self.emailFrames_3.append(frame)
 
-        
-            ## Next: new league position with poitsn diff to league title or relegation zone
+        self.emailTitle_2 = "League Table"
+
+        lastMatchdayTable = TeamHistory.get_team_data_matchday(self.session, self.parent.team.id, self.matchday - 1)
+        matchdayTable = TeamHistory.get_team_data_matchday(self.session, self.parent.team.id, self.matchday)
+
+        currPosition = matchdayTable.position
+
+        suffix = self.parent.getSuffix(currPosition)
+        if not lastMatchdayTable:
+            text = f"As a result of this matchday, we are now in {currPosition}{suffix}\nposition."
+        else:
+            lastPosition = lastMatchdayTable.position
+            if currPosition == 1 and lastPosition != 1:
+                text = f"As a result of this matchday, we have now taken the lead\nof the league!"
+            elif currPosition < 17 and lastPosition > 18:
+                text = f"As a result of this matchday, we have unfortunately moved\ndown into the relegation zone." 
+            elif lastPosition == currPosition:
+                text = f"As a result of this matchday, we have stayed in\n{currPosition}{suffix} position."
+            elif lastPosition > currPosition:
+                text = f"As a result of this matchday, we have moved up into\n{currPosition}{suffix} position."
+            else:
+                text = f"As a result of this matchday, we have moved down into\n{currPosition}{suffix} position."
+
+        self.emailText_6 = (text)
+
+        if currPosition == 1:
+            secondPlace = TeamHistory.get_team_data_position(self.session, 2, self.matchday)
+            pointsDiff = matchdayTable.points - secondPlace.points
+            text = f"We are currently leading second place by {pointsDiff} points,\ngood work!"
+        elif currPosition > 17:
+            _16thPlace = TeamHistory.get_team_data_position(self.session, 16, self.matchday)
+            pointsDiff = _16thPlace.points - matchdayTable.points
+            text = f"We currently need {pointsDiff} points to get out of the\nrelegation zone."
+        elif currPosition <= 10 and currPosition > 5:
+            text = f"We have settled nicely within the top ten of\nthe league, "
+
+            teamObjective = get_objective_for_level(self.parent.team.level)
+
+            if teamObjective == "fight for the title":
+                text += "let's keep pushing."
+            elif teamObjective == "finish in the top half":
+                text += "great work!"
+            else:
+                text += "fantastic work, the fans are delighted!"
+        elif currPosition <= 5:
+            firstPlace = TeamHistory.get_team_data_position(self.session, 1, self.matchday)
+            pointsDiff = firstPlace.points - matchdayTable.points
+            text = f"We are currently {pointsDiff} points behind the\nleader."
+        elif currPosition >= 11 and currPosition < 15:
+            text = f"We are well above relegation,"
+
+            teamObjective = get_objective_for_level(self.parent.team.level)
+
+            if teamObjective == "fight for the title":
+                text += "but the\nfans are dissapointed."
+            elif teamObjective == "finish in the top half":
+                text += "let's keep\npushing."
+            else:
+                text += "great work!"
+        else:
+            _18thPlace = TeamHistory.get_team_data_position(self.session, 18, self.matchday)
+            pointsDiff = matchdayTable.points - _18thPlace.points
+            f"We are currently {pointsDiff} points ahead of the\nrelegation spots."
+
+        self.emailText_6 += " " + text
+
 
 
     def getBest3Players(self, lineups):

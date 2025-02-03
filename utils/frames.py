@@ -916,7 +916,7 @@ class MatchDayMatchFrame(ctk.CTkFrame):
         self.anchor = anchor
         self.packFrame = pack
 
-        self.score = None # Instance of Score class
+        self.score = "0 - 0" # Instance of Score class
 
         self.matchInstance = Match(self.session, self.match)
 
@@ -960,15 +960,32 @@ class MatchDayMatchFrame(ctk.CTkFrame):
         self.scoreLabel = ctk.CTkLabel(self, text = f"0 - 0", font = (APP_FONT_BOLD, scoreSize), fg_color = self.fgColor)
         self.scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
 
-    def updateScoreLabel(self, home = True):
+    def updateScoreLabel(self, home = True, textAdd = None):
         if home:
-            homeGoals = int(self.scoreLabel.cget("text").split(" - ")[0]) + 1
-            awayGoals = int(self.scoreLabel.cget("text").split(" - ")[1])
-        else:
-            awayGoals = int(self.scoreLabel.cget("text").split(" - ")[1]) + 1
-            homeGoals = int(self.scoreLabel.cget("text").split(" - ")[0])
 
-        self.scoreLabel.configure(text = f"{homeGoals} - {awayGoals}")
+            if textAdd:
+                text = textAdd
+            else:
+                homeGoals = int(self.scoreLabel.cget("text").split(" - ")[0]) + 1
+                awayGoals = int(self.scoreLabel.cget("text").split(" - ")[1])
+
+                text = f"{homeGoals} - {awayGoals}"
+                self.score = text
+        else:
+
+            if textAdd:
+                text = textAdd
+            else:
+                awayGoals = int(self.scoreLabel.cget("text").split(" - ")[1]) + 1
+                homeGoals = int(self.scoreLabel.cget("text").split(" - ")[0])
+
+                text = f"{homeGoals} - {awayGoals}"
+                self.score = text
+
+        self.scoreLabel.configure(text = text)
+
+    def getScoreLabel(self):
+        return self.scoreLabel.cget("text")
 
     def getCurrentScore(self):
         return self.scoreLabel.cget("text").split(" - ")

@@ -198,6 +198,14 @@ class Match():
                 self.add_events(self.awayEvents, self.awaySubs, "substitution", self.awayInjury)
 
         if teamMatch:
+
+            # event = {
+            #     "type": "goal",
+            #     "extra": True
+            # }
+
+            # self.homeEvents["48:32"] = event
+
             print("Home Events: ", self.homeEvents)
             print("Away Events: ", self.awayEvents)
 
@@ -276,9 +284,9 @@ class Match():
             minute = str(random.choices(range(1, 91))[0])
 
         extra = False
-        if minute == 45 or minute == 90:
-            additionalTime = str(random.randint(0, 5))
-            minute = minute + additionalTime
+        if int(minute) == 45 or int(minute) == 90:
+            additionalTime = random.randint(0, 5)
+            minute = str(int(minute) + additionalTime)
             extra = True
 
         second = str(random.choices(range(0, 60))[0])
@@ -446,13 +454,18 @@ class Match():
                 minute = time.split(":")[0]
                 seconds = time.split(":")[1]
                 eventTime = str(int(minute) + 1) + ":" + seconds
+
+                extra = False
+                if self.halfTime or self.fullTime:
+                    extra = True
+
                 events[eventTime] = {
                     "type": "substitution",
                     "player": None,
                     "player_off": None,
                     "player_on": None,
                     "injury": False,
-                    "extra": event_data["extra"]
+                    "extra": extra
                 }
 
                 player_off = random.choices(list(lineup.values()), k = 1)[0]

@@ -216,7 +216,7 @@ class MatchDay(ctk.CTkFrame):
 
                 ## extra time
                 self.halfTime = True
-                maxExtraTimeHalf = 0
+                self.maxExtraTimeHalf = 0
                 for frame in self.otherMatchesFrame.winfo_children():
                     eventsExtraTime = 0
                     maxMinute = 0
@@ -238,8 +238,8 @@ class MatchDay(ctk.CTkFrame):
                     else:
                         extraTime = maxMinute - 45
 
-                    if extraTime > maxExtraTimeHalf:
-                        maxExtraTimeHalf = extraTime
+                    if extraTime > self.maxExtraTimeHalf:
+                        self.maxExtraTimeHalf = extraTime
 
                     frame.matchInstance.extraTimeHalf = extraTime
 
@@ -263,14 +263,14 @@ class MatchDay(ctk.CTkFrame):
                 else:
                     extraTime = maxMinute - 45
 
-                if extraTime > maxExtraTimeHalf:
-                    maxExtraTimeHalf = extraTime
+                if extraTime > self.maxExtraTimeHalf:
+                    self.maxExtraTimeHalf = extraTime
 
                 self.matchFrame.matchInstance.extraTimeHalf = extraTime
 
             if self.halfTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
-                if minutes == 45 + maxExtraTimeHalf and seconds == 0:
+                if minutes == 45 + self.maxExtraTimeHalf and seconds == 0:
                     self.timerThread_running = False
                     self.pauseButton.configure(text = "Resume", command = self.resumeMatch)
                     self.halfTime = False

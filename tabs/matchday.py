@@ -187,7 +187,7 @@ class MatchDay(ctk.CTkFrame):
 
     def increaseTimer(self):
         while self.timerThread_running:
-
+            
             currTime = self.timeLabel.cget("text")
 
             if currTime == "HT":
@@ -302,19 +302,33 @@ class MatchDay(ctk.CTkFrame):
                 
                 for event_time, event_details in list(frame.matchInstance.homeEvents.items()):
                     if event_time == str(minutes) + ":" + str(seconds) and event_time not in frame.matchInstance.homeProcessedEvents:
-                        if event_details["type"] == "own_goal" or event_details["type"] == "goal" or event_details["type"] == "penalty_goal":
-                            frame.updateScoreLabel()
-
-                        frame.matchInstance.getEventPlayer(event_details, True, event_time)
-                        frame.matchInstance.homeProcessedEvents[event_time] = event_details
+                        if event_details["extra"]:
+                            if self.halfTime or self.fullTime:
+                                if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
+                                    frame.updateScoreLabel()
+                                frame.matchInstance.getEventPlayer(event_details, True, event_time)
+                                frame.matchInstance.homeProcessedEvents[event_time] = event_details
+                        else:
+                            if not (self.halfTime or self.fullTime):
+                                if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
+                                    frame.updateScoreLabel()
+                                frame.matchInstance.getEventPlayer(event_details, True, event_time)
+                                frame.matchInstance.homeProcessedEvents[event_time] = event_details
                 
                 for event_time, event_details in list(frame.matchInstance.awayEvents.items()):
                     if event_time == str(minutes) + ":" + str(seconds) and event_time not in frame.matchInstance.awayProcessedEvents:
-                        if event_details["type"] == "own_goal" or event_details["type"] == "goal" or event_details["type"] == "penalty_goal":
-                            frame.updateScoreLabel(home = False)
-                    
-                        frame.matchInstance.getEventPlayer(event_details, False, event_time)
-                        frame.matchInstance.homeProcessedEvents[event_time] = event_details
+                        if event_details["extra"]:
+                            if self.halfTime or self.fullTime:
+                                if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
+                                    frame.updateScoreLabel(home = False)
+                                frame.matchInstance.getEventPlayer(event_details, False, event_time)
+                                frame.matchInstance.homeProcessedEvents[event_time] = event_details
+                        else:
+                            if not (self.halfTime or self.fullTime):
+                                if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
+                                    frame.updateScoreLabel(home = False)
+                                frame.matchInstance.getEventPlayer(event_details, False, event_time)
+                                frame.matchInstance.homeProcessedEvents[event_time] = event_details
 
             if minutes == 45 + self.matchFrame.matchInstance.extraTimeHalf and self.halfTime and seconds == 0:
                 self.matchFrame.updateScoreLabel(textAdd = "HT")
@@ -322,33 +336,61 @@ class MatchDay(ctk.CTkFrame):
             ## ----------- managing team match ------------
             for event_time, event_details in list(self.matchFrame.matchInstance.homeEvents.items()):
                 if event_time == str(minutes) + ":" + str(seconds) and event_time not in self.matchFrame.matchInstance.homeProcessedEvents:
-                    if event_details["type"] == "own_goal" or event_details["type"] == "goal" or event_details["type"] == "penalty_goal":
-                        self.matchFrame.updateScoreLabel()
-                    
-                    newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, True, event_time, teamMatch = self, managing_team = True if self.home else False)
-                    self.matchFrame.matchInstance.homeProcessedEvents[event_time] = event_details
+                    if event_details["extra"]:
+                        if self.halfTime or self.fullTime:
+                            if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
+                                self.matchFrame.updateScoreLabel()
+                            newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, True, event_time, teamMatch=self, managing_team=True if self.home else False)
+                            self.matchFrame.matchInstance.homeProcessedEvents[event_time] = event_details
 
-                    if self.home and event_details["type"] == "injury":
-                        self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
-                    if self.home and event_details["type"] == "red_card":
-                        self.substitution(redCardPlayer = newEvent["player"])
+                            if self.home and event_details["type"] == "injury":
+                                self.substitution(forceSub=True, injuredPlayer=newEvent["player"])
+                            if self.home and event_details["type"] == "red_card":
+                                self.substitution(redCardPlayer=newEvent["player"])
 
-                    self.after(0, self.updateMatchDataFrame, newEvent, event_time, True)
-            
+                            self.after(0, self.updateMatchDataFrame, newEvent, event_time, True)
+                    else:
+                        if not (self.halfTime or self.fullTime):
+                            if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
+                                self.matchFrame.updateScoreLabel()
+                            newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, True, event_time, teamMatch=self, managing_team=True if self.home else False)
+                            self.matchFrame.matchInstance.homeProcessedEvents[event_time] = event_details
+
+                            if self.home and event_details["type"] == "injury":
+                                self.substitution(forceSub=True, injuredPlayer=newEvent["player"])
+                            if self.home and event_details["type"] == "red_card":
+                                self.substitution(redCardPlayer=newEvent["player"])
+
+                            self.after(0, self.updateMatchDataFrame, newEvent, event_time, True)
+
             for event_time, event_details in list(self.matchFrame.matchInstance.awayEvents.items()):
                 if event_time == str(minutes) + ":" + str(seconds) and event_time not in self.matchFrame.matchInstance.awayProcessedEvents:
-                    if event_details["type"] == "own_goal" or event_details["type"] == "goal" or event_details["type"] == "penalty_goal":
-                        self.matchFrame.updateScoreLabel(home = False)
+                    if event_details["extra"]:
+                        if self.halfTime or self.fullTime:
+                            if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
+                                self.matchFrame.updateScoreLabel(home=False)
+                            newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, False, event_time, teamMatch=self, managing_team=True if not self.home else False)
+                            self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
 
-                    newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, False, event_time, teamMatch = self, managing_team = True if not self.home else False)
-                    self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
+                            if not self.home and event_details["type"] == "injury":
+                                self.substitution(forceSub=True, injuredPlayer=newEvent["player"])
+                            if not self.home and event_details["type"] == "red_card":
+                                self.substitution(redCardPlayer=newEvent["player"])
 
-                    if not self.home and event_details["type"] == "injury":
-                        self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
-                    if not self.home and event_details["type"] == "red_card":
-                        self.substitution(redCardPlayer = newEvent["player"])
+                            self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
+                    else:
+                        if not (self.halfTime or self.fullTime):
+                            if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
+                                self.matchFrame.updateScoreLabel(home=False)
+                            newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, False, event_time, teamMatch=self, managing_team=True if not self.home else False)
+                            self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
 
-                    self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
+                            if not self.home and event_details["type"] == "injury":
+                                self.substitution(forceSub=True, injuredPlayer=newEvent["player"])
+                            if not self.home and event_details["type"] == "red_card":
+                                self.substitution(redCardPlayer=newEvent["player"])
+
+                            self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
 
             if self.halfTimeEnded:
                 self.timeLabel.configure(text = "HT")
@@ -739,6 +781,14 @@ class MatchDay(ctk.CTkFrame):
         frame.pack(expand = True, fill = "both")
 
         minute = int(time.split(":")[0]) + 1
+
+        if event["extra"]:
+            extraTime = minute - 45
+            minuteText = f"45 + {extraTime}'"
+            minuteFont = 13
+        else:
+            minuteText = str(minute) + "'"
+            minuteFont = 15
         
         if event["type"] != "substitution":
             player = event["player"]
@@ -778,12 +828,12 @@ class MatchDay(ctk.CTkFrame):
         image = ctk.CTkImage(src, None, (src.width, src.height))
         
         if home:
-            ctk.CTkLabel(frame, text = str(minute) + "'", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+            ctk.CTkLabel(frame, text = minuteText, font = (APP_FONT, minuteFont), fg_color = TKINTER_BACKGROUND).place(relx = 0.07, rely = 0.5, anchor = "center")
             ctk.CTkLabel(frame, text = "", image = image, fg_color = TKINTER_BACKGROUND).place(relx = 0.15, rely = 0.5, anchor = "w")
             ctk.CTkLabel(frame, text = text, font = (APP_FONT_BOLD, 18), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.3, anchor = "w")
             ctk.CTkLabel(frame, text = subText, font = (APP_FONT, 12), fg_color = TKINTER_BACKGROUND, height = 10).place(relx = 0.3, rely = 0.7, anchor = "w")
         else:
-            ctk.CTkLabel(frame, text = str(minute) + "'", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.95, rely = 0.5, anchor = "e")
+            ctk.CTkLabel(frame, text = minuteText, font = (APP_FONT, minuteFont), fg_color = TKINTER_BACKGROUND).place(relx = 0.93, rely = 0.5, anchor = "center")
             ctk.CTkLabel(frame, text = "", image = image, fg_color = TKINTER_BACKGROUND).place(relx = 0.85, rely = 0.5, anchor = "e")
             ctk.CTkLabel(frame, text = text, font = (APP_FONT_BOLD, 18), fg_color = TKINTER_BACKGROUND).place(relx = 0.7, rely = 0.3, anchor = "e")
             ctk.CTkLabel(frame, text = subText, font = (APP_FONT, 12), fg_color = TKINTER_BACKGROUND, height = 10).place(relx = 0.7, rely = 0.7, anchor = "e")

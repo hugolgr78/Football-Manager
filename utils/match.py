@@ -200,20 +200,6 @@ class Match():
                 self.add_events(self.awayEvents, self.awaySubs, "substitution", self.awayInjury)
 
         if teamMatch:
-
-            event = {
-                "type": "goal",
-                "extra": True
-            }
-
-            event2 = {
-                "type": "goal",
-                "extra": False
-            }
-
-            self.homeEvents["48:32"] = event
-            self.homeEvents["47:32"] = event2
-
             print("Home Events: ", self.homeEvents)
             print("Away Events: ", self.awayEvents)
 
@@ -705,6 +691,13 @@ class Match():
         ## ------------- Match Events changes --------------- ##
         for time, event in self.homeProcessedEvents.items():
             minute = int(time.split(":")[0]) + 1
+
+            if event["extra"]:
+                extraTime = minute - 45
+                minute = f"45 + {extraTime}'"
+            else:
+                minute = str(minute)
+
             if event["type"] == "goal":
                 MatchEvents.add_event(self.session, self.match.id, "goal", minute, event["player"].id)
                 MatchEvents.add_event(self.session, self.match.id, "assist", minute, event["assister"].id)
@@ -719,6 +712,13 @@ class Match():
 
         for time, event in self.awayProcessedEvents.items():
             minute = int(time.split(":")[0]) + 1
+
+            if event["extra"]:
+                extraTime = minute - 45
+                minute = f"45 + {extraTime}'"
+            else:
+                minute = str(minute)
+
             if event["type"] == "goal":
                 MatchEvents.add_event(self.session, self.match.id, "goal", minute, event["player"].id)
                 MatchEvents.add_event(self.session, self.match.id, "assist", minute, event["assister"].id)

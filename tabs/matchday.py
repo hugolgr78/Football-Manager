@@ -122,6 +122,8 @@ class MatchDay(ctk.CTkFrame):
         self.timeLabel = ctk.CTkLabel(self.timeFrame, text = "00:00", font = (APP_FONT_BOLD, 50), fg_color = TKINTER_BACKGROUND)
         self.timeLabel.place(relx = 0.5, rely = 0.4, anchor = "center")
 
+        self.extraTimeLabel = ctk.CTkLabel(self.timeFrame, text = "ET", font = (APP_FONT, 18), fg_color = TKINTER_BACKGROUND)
+
         self.pauseButton = ctk.CTkButton(self.timeFrame, text = "Simulate", font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, command = self.simulateMatch)
         self.pauseButton.place(relx = 0.5, rely = 0.8, anchor = "center")
 
@@ -267,6 +269,7 @@ class MatchDay(ctk.CTkFrame):
                 self.matchFrame.matchInstance.extraTimeHalf = extraTime
 
             if self.halfTime:
+                self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
                 if minutes == 45 + maxExtraTimeHalf and seconds == 0:
                     self.timerThread_running = False
                     self.pauseButton.configure(text = "Resume", command = self.resumeMatch)
@@ -276,6 +279,8 @@ class MatchDay(ctk.CTkFrame):
                     for frame in self.otherMatchesFrame.winfo_children():
                         if frame.getScoreLabel() != "HT":
                             frame.updateScoreLabel(textAdd = "HT")
+
+                    self.extraTimeLabel.place_forget()
 
             if minutes == 90 and seconds == 0:
                 ## Full time

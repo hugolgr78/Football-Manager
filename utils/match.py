@@ -206,7 +206,13 @@ class Match():
                 "extra": True
             }
 
+            event2 = {
+                "type": "goal",
+                "extra": False
+            }
+
             self.homeEvents["48:32"] = event
+            self.homeEvents["47:32"] = event2
 
             print("Home Events: ", self.homeEvents)
             print("Away Events: ", self.awayEvents)

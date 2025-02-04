@@ -962,7 +962,6 @@ class MatchDayMatchFrame(ctk.CTkFrame):
 
     def updateScoreLabel(self, home = True, textAdd = None):
         if home:
-
             if textAdd:
                 text = textAdd
             else:
@@ -972,7 +971,6 @@ class MatchDayMatchFrame(ctk.CTkFrame):
                 text = f"{homeGoals} - {awayGoals}"
                 self.score = text
         else:
-
             if textAdd:
                 text = textAdd
             else:

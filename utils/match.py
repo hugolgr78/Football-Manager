@@ -46,6 +46,8 @@ class Match():
 
         self.extraTimeHalf = 0
         self.extraTimeFull = 0
+        self.halfTime = False
+        self.fullTime = False
 
     def createTeamLineup(self, teamID, home):
 
@@ -199,12 +201,12 @@ class Match():
 
         if teamMatch:
 
-            # event = {
-            #     "type": "goal",
-            #     "extra": True
-            # }
+            event = {
+                "type": "goal",
+                "extra": True
+            }
 
-            # self.homeEvents["48:32"] = event
+            self.homeEvents["48:32"] = event
 
             print("Home Events: ", self.homeEvents)
             print("Away Events: ", self.awayEvents)

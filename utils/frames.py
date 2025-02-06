@@ -46,18 +46,22 @@ class MatchFrame(ctk.CTkFrame):
         self.oponent = ctk.CTkLabel(self, text = self.awayTeam.name if self.home else self.homeTeam.name, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
         self.oponent.place(relx = 0.1, rely = 0.5, anchor = "w")
         self.oponent.bind("<Enter>", lambda event: self.onFrameHover()) 
+        self.oponent.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
         self.leagueName = ctk.CTkLabel(self, text = self.parent.league.name, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
         self.leagueName.place(relx = 0.45, rely = 0.5, anchor = "center")
         self.leagueName.bind("<Enter>", lambda event: self.onFrameHover())
+        self.leagueName.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
         self.time = ctk.CTkLabel(self, text = self.match.time, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
         self.time.place(relx = 0.9, rely = 0.5, anchor = "e")
         self.time.bind("<Enter>", lambda event: self.onFrameHover())
+        self.time.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
         self.location = ctk.CTkLabel(self, text = "H" if self.home else "A", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
         self.location.place(relx = 0.95, rely = 0.5, anchor = "e")
         self.location.bind("<Enter>", lambda event: self.onFrameHover())
+        self.location.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
         if self.parent.league.current_matchday > self.match.matchday:
             self.played = True
@@ -66,6 +70,7 @@ class MatchFrame(ctk.CTkFrame):
             self.score = ctk.CTkLabel(self, text = text, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
             self.score.place(relx = 0.73, rely = 0.5, anchor = "center")
             self.score.bind("<Enter>", lambda event: self.onFrameHover())
+            self.score.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
             if self.home:
                 self.result = "W" if self.match.score_home > self.match.score_away else "D" if self.match.score_home == self.match.score_away else "L"
@@ -84,6 +89,7 @@ class MatchFrame(ctk.CTkFrame):
             self.resultLabel = ctk.CTkLabel(self, image = ctk_image, text = "", fg_color = TKINTER_BACKGROUND)
             self.resultLabel.place(relx = 0.66, rely = 0.5, anchor = "center")
             self.resultLabel.bind("<Enter>", lambda event: self.onFrameHover())
+            self.resultLabel.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
     def onFrameHover(self):
         self.configure(fg_color = DARK_GREY)
@@ -202,12 +208,17 @@ class MatchFrame(ctk.CTkFrame):
     def addEvent(self, event, home, i):
         player = Players.get_player_by_id(self.session, event.player_id)
 
-        if home:
-            ctk.CTkLabel(self.matchEventsFrame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 0, sticky = "e")
-            ctk.CTkLabel(self.matchEventsFrame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 1, sticky = "e", padx = (0, 10))
+        if "+" in event.time:
+            font = 9
         else:
-            ctk.CTkLabel(self.matchEventsFrame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 4, sticky = "w", padx = (10, 0))
-            ctk.CTkLabel(self.matchEventsFrame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 5, sticky = "w")
+            font = 10
+
+        if home:
+            ctk.CTkLabel(self.matchEventsFrame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, font)).grid(row = i, column = 0, sticky = "w", padx = 5)
+            ctk.CTkLabel(self.matchEventsFrame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 1, sticky = "w")
+        else:
+            ctk.CTkLabel(self.matchEventsFrame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 4, sticky = "e")
+            ctk.CTkLabel(self.matchEventsFrame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, font)).grid(row = i, column = 5, sticky = "e", padx = 5)
 
         if event.event_type == "goal":
             src = Image.open("Images/goal.png")
@@ -916,7 +927,7 @@ class MatchDayMatchFrame(ctk.CTkFrame):
         self.anchor = anchor
         self.packFrame = pack
 
-        self.score = None # Instance of Score class
+        self.score = "0 - 0" # Instance of Score class
 
         self.matchInstance = Match(self.session, self.match)
 
@@ -960,15 +971,30 @@ class MatchDayMatchFrame(ctk.CTkFrame):
         self.scoreLabel = ctk.CTkLabel(self, text = f"0 - 0", font = (APP_FONT_BOLD, scoreSize), fg_color = self.fgColor)
         self.scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
 
-    def updateScoreLabel(self, home = True):
+    def updateScoreLabel(self, home = True, textAdd = None):
         if home:
-            homeGoals = int(self.scoreLabel.cget("text").split(" - ")[0]) + 1
-            awayGoals = int(self.scoreLabel.cget("text").split(" - ")[1])
-        else:
-            awayGoals = int(self.scoreLabel.cget("text").split(" - ")[1]) + 1
-            homeGoals = int(self.scoreLabel.cget("text").split(" - ")[0])
+            if textAdd:
+                text = textAdd
+            else:
+                homeGoals = int(self.scoreLabel.cget("text").split(" - ")[0]) + 1
+                awayGoals = int(self.scoreLabel.cget("text").split(" - ")[1])
 
-        self.scoreLabel.configure(text = f"{homeGoals} - {awayGoals}")
+                text = f"{homeGoals} - {awayGoals}"
+                self.score = text
+        else:
+            if textAdd:
+                text = textAdd
+            else:
+                awayGoals = int(self.scoreLabel.cget("text").split(" - ")[1]) + 1
+                homeGoals = int(self.scoreLabel.cget("text").split(" - ")[0])
+
+                text = f"{homeGoals} - {awayGoals}"
+                self.score = text
+
+        self.scoreLabel.configure(text = text)
+
+    def getScoreLabel(self):
+        return self.scoreLabel.cget("text")
 
     def getCurrentScore(self):
         return self.scoreLabel.cget("text").split(" - ")

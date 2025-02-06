@@ -24,6 +24,8 @@ class MatchDay(ctk.CTkFrame):
         self.halfTime = False
         self.halfTimeEnded = False
         self.fullTime = False
+        self.maxExtraTimeHalf = 0
+        self.maxExtraTimeFull = 100
 
         self.speed = 1 / 120
 
@@ -214,6 +216,7 @@ class MatchDay(ctk.CTkFrame):
             else:
                 seconds += 1
 
+            ## ----------- half time ------------
             if minutes == 45 and seconds == 0: ## half time
 
                 ## extra time
@@ -234,7 +237,7 @@ class MatchDay(ctk.CTkFrame):
                             if minute + 1 > maxMinute:
                                 maxMinute = minute + 1
 
-                        elif minute < 45:
+                        elif minute < 45 and event_details["type"] != "susbtitution":
                             firstHalfEvents += 1
 
                     if maxMinute - 45 < firstHalfEvents:
@@ -259,7 +262,7 @@ class MatchDay(ctk.CTkFrame):
                         if minute + 1 > maxMinute:
                             maxMinute = minute + 1
 
-                    elif minute < 45:
+                    elif minute < 45 and event_details["type"] != "susbtitution":
                         firstHalfEvents += 1
 
                 if maxMinute - 45 < firstHalfEvents:
@@ -277,21 +280,96 @@ class MatchDay(ctk.CTkFrame):
                 if minutes == 45 + self.maxExtraTimeHalf and seconds == 0:
                     self.timerThread_running = False
                     self.pauseButton.configure(text = "Resume", command = self.resumeMatch)
-                    self.halfTime = False
-                    self.halfTimeEnded = True
 
                     for frame in self.otherMatchesFrame.winfo_children():
                         if frame.getScoreLabel() != "HT":
                             frame.updateScoreLabel(textAdd = "HT")
 
+                    if self.matchFrame.getScoreLabel() != "HT":
+                        self.matchFrame.updateScoreLabel(textAdd = "HT")    
+
                     self.extraTimeLabel.place_forget()
 
-            if minutes == 90 and seconds == 0:
-                ## Full time
-                self.timerThread_running = False
-                self.pauseButton.configure(text = "Save", command = self.endSimulation)
+                    self.halfTime = False
+                    self.halfTimeEnded = True
 
-            if minutes == 89 and seconds == 0:
+            ## ----------- full time ------------
+            if minutes == 90 and seconds == 0:
+               
+                self.fullTime = True
+                self.matchFrame.matchInstance.fullTime = True
+                self.maxExtraTimeFull = 0
+
+                for frame in self.otherMatchesFrame.winfo_children():
+                    frame.matchInstance.fullTime = True
+                    eventsExtraTime = 0
+                    maxMinute = 0
+                    secondHalfEvents = 0
+                    combined_events = {**frame.matchInstance.homeEvents, **frame.matchInstance.awayEvents}
+                    for event_time, event_details in list(combined_events.items()):
+                        minute = int(event_time.split(":")[0])
+                        if event_details["extra"] and minute > 90: # second half extra time events
+                            eventsExtraTime += 1
+                            
+                            if minute + 1 > maxMinute:
+                                maxMinute = minute + 1
+
+                        elif minute > 45 and not event_details["extra"] and event_details["type"] != "substitution":
+                            secondHalfEvents += 1
+
+                    if maxMinute - 90 < secondHalfEvents:
+                        extraTime = min(secondHalfEvents, 5)
+                    else:
+                        extraTime = maxMinute - 90
+
+                    if extraTime > self.maxExtraTimeFull:
+                        self.maxExtraTimeFull = extraTime
+
+                    frame.matchInstance.extraTimeFull = extraTime
+
+                eventsExtraTime = 0
+                maxMinute = 0
+                secondHalfEvents = 0
+                combined_events = {**self.matchFrame.matchInstance.homeEvents, **self.matchFrame.matchInstance.awayEvents}
+                for event_time, event_details in list(combined_events.items()):
+                    minute = int(event_time.split(":")[0])
+                    if event_details["extra"] and minute > 90: # first hald extra time events
+                        eventsExtraTime += 1
+                        
+                        if minute + 1 > maxMinute:
+                            maxMinute = minute + 1
+
+                    elif minute > 45 and not event_details["extra"] and event_details["type"] != "susbtitution":
+                        secondHalfEvents += 1
+
+                if maxMinute - 90 < secondHalfEvents:
+                    extraTime = min(secondHalfEvents, 5)
+                else:
+                    extraTime = maxMinute - 90
+
+                if extraTime > self.maxExtraTimeFull:
+                    self.maxExtraTimeFull = extraTime
+
+                self.matchFrame.matchInstance.extraTimeFull = extraTime
+
+            if self.fullTime:
+                self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
+                if minutes == 90 + self.maxExtraTimeFull and seconds == 0:
+                    self.timerThread_running = False
+                    self.pauseButton.configure(text = "Save", command = self.endSimulation)
+                    self.fullTime = False
+
+                    for frame in self.otherMatchesFrame.winfo_children():
+                        if frame.getScoreLabel() != "FT":
+                            frame.updateScoreLabel(textAdd = "FT")
+
+                    if self.matchFrame.getScoreLabel() != "FT":
+                        self.matchFrame.updateScoreLabel(textAdd = "FT")
+                    
+                    self.extraTimeLabel.place_forget()
+
+            ## ----------- substitution end ------------
+            if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
                 self.substitutionButton.configure(state = "disabled")
 
             ## ----------- other matches ------------ 
@@ -299,6 +377,9 @@ class MatchDay(ctk.CTkFrame):
 
                 if minutes == 45 + frame.matchInstance.extraTimeHalf and self.halfTime and seconds == 0:
                     frame.updateScoreLabel(textAdd = "HT")
+
+                if minutes == 90 + frame.matchInstance.extraTimeFull and self.fullTime and seconds == 0:
+                    frame.updateScoreLabel(textAdd = "FT")
                 
                 for event_time, event_details in list(frame.matchInstance.homeEvents.items()):
                     if event_time == str(minutes) + ":" + str(seconds) and event_time not in frame.matchInstance.homeProcessedEvents:
@@ -327,11 +408,15 @@ class MatchDay(ctk.CTkFrame):
                             if not (self.halfTime or self.fullTime):
                                 if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                     frame.updateScoreLabel(home = False)
+
                                 frame.matchInstance.getEventPlayer(event_details, False, event_time)
                                 frame.matchInstance.homeProcessedEvents[event_time] = event_details
 
             if minutes == 45 + self.matchFrame.matchInstance.extraTimeHalf and self.halfTime and seconds == 0:
                 self.matchFrame.updateScoreLabel(textAdd = "HT")
+            
+            if minutes == 90 + self.matchFrame.matchInstance.extraTimeFull and self.fullTime and seconds == 0:
+                self.matchFrame.updateScoreLabel(textAdd = "FT")
 
             ## ----------- managing team match ------------
             for event_time, event_details in list(self.matchFrame.matchInstance.homeEvents.items()):
@@ -783,8 +868,12 @@ class MatchDay(ctk.CTkFrame):
         minute = int(time.split(":")[0]) + 1
 
         if event["extra"]:
-            extraTime = minute - 45
-            minuteText = f"45 + {extraTime}'"
+            if minute < 50:
+                extraTime = minute - 45
+                minuteText = f"45 + {extraTime}'"
+            else:
+                extraTime = minute - 90
+                minuteText = f"90 + {extraTime}'"
             minuteFont = 13
         else:
             minuteText = str(minute) + "'"

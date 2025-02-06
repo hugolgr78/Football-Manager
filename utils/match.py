@@ -44,6 +44,11 @@ class Match():
 
         self.score = None
 
+        self.extraTimeHalf = 0
+        self.extraTimeFull = 0
+        self.halfTime = False
+        self.fullTime = False
+
     def createTeamLineup(self, teamID, home):
 
         lineup = {}
@@ -139,10 +144,7 @@ class Match():
 
         for _ in range (scoreHome):
             type_ = random.choices(list(GOAL_TYPE_CHANCES.keys()), weights = [GOAL_TYPE_CHANCES[goalType] for goalType in GOAL_TYPE_CHANCES])[0]
-            minute = str(random.choices(range(1, 91))[0])
-            second = str(random.choices(range(0, 60))[0])
-            time = minute + ":" + second
-
+            time, extra = self.generateTime()
             self.checkTime(time, self.homeEvents)
 
             if type_ == "penalty":
@@ -152,23 +154,14 @@ class Match():
                     type_ = "penalty_miss"
                     self.score.appendScore(-1, True)
 
-            # if time == 45 or time == 90:
-            #     additionalTime = str(random.randint(0, 5))
-            #     if additionalTime != 0:
-            #         time = time + " + " + additionalTime
-            # else:
-            #     time = time
-
             self.homeEvents[time] = {
                 "type": type_,
+                "extra": extra
             }
 
         for _ in range (scoreAway):
             type_ = random.choices(list(GOAL_TYPE_CHANCES.keys()), weights = [GOAL_TYPE_CHANCES[goalType] for goalType in GOAL_TYPE_CHANCES])[0]
-            minute = str(random.choices(range(1, 91))[0])
-            second = str(random.choices(range(0, 60))[0])
-            time = minute + ":" + second
-
+            time, extra = self.generateTime()
             self.checkTime(time, self.awayEvents)
 
             if type_ == "penalty":
@@ -178,15 +171,9 @@ class Match():
                     type_ = "penalty_miss"
                     self.score.appendScore(-1, False)
 
-            # if time == 45 or time == 90:
-            #     additionalTime = str(random.randint(0, 5))
-            #     if additionalTime != 0:
-            #         time = time + " + " + additionalTime
-            # else:
-            #     time = time
-
             self.awayEvents[time] = {
                 "type": type_,
+                "extra": extra
             }
 
         self.add_events(self.homeEvents, self.numHomeYellows, "yellow_card")
@@ -285,17 +272,31 @@ class Match():
                 self.awaySubs = random.choices(range(0, MAX_SUBS + 1), weights = weights, k = 1)[0]
                 self.homeSubs = None
 
+    def generateTime(self, minute = None):
+
+        if not minute:
+            minute = str(random.choices(range(1, 91))[0])
+
+        extra = False
+        if int(minute) == 45 or int(minute) == 90:
+            additionalTime = random.randint(0, 5)
+            minute = str(int(minute) + additionalTime)
+            extra = True
+
+        second = str(random.choices(range(0, 60))[0])
+        time = minute + ":" + second
+
+        return time, extra
+
     def add_events(self, events_dict, num_events, event_type, injury = None, managing_team = False):
         new_events = []
         injurySub = False
         for _ in range(num_events):
             if event_type != "substitution":
-                minute = str(random.choices(range(1, 91))[0])
-                second = str(random.choices(range(0, 60))[0])
-                time = minute + ":" + second
+                time, extra = self.generateTime()
                 time = self.checkTime(time, events_dict)
 
-                new_events.append((time, {"type": event_type}))
+                new_events.append((time, {"type": event_type, "extra": extra}))
             else:
                 if injury and not managing_team and not injurySub:
                     for event_time, event in list(events_dict.items()):
@@ -303,17 +304,16 @@ class Match():
                             minute = event_time.split(":")[0]
                             sub_time = str(int(minute) + 1) + ":30" 
 
-                            new_events.append((sub_time, {"type": "substitution", "player": None, "player_off": None, "player_on": None, "injury": True}))
+                            new_events.append((sub_time, {"type": "substitution", "player": None, "player_off": None, "player_on": None, "injury": True, "extra": event["extra"]}))
                             self.checkSubsitutionTime(sub_time, events_dict)
                             injurySub = True
                 else:
                     minute_ranges = list(range(46, 91))
                     weights = [2] * 19 + [3] * 11 + [1] * 15  # Weights for 46-65, 65-75, 75-90
                     minute = str(random.choices(minute_ranges, weights = weights, k = 1)[0])
-                    seconds = str(random.choices(range(0, 60))[0])
-                    time = minute + ":" + seconds
+                    time, extra = self.generateTime(minute = minute)
                     time = self.checkTime(time, events_dict)
-                    new_events.append((time, {"type": "substitution", "player": None, "player_off": None, "player_on": None, "injury": False}))
+                    new_events.append((time, {"type": "substitution", "player": None, "player_off": None, "player_on": None, "injury": False, "extra": extra}))
 
         for time, event in new_events:
             events_dict[time] = event
@@ -376,9 +376,15 @@ class Match():
             event["player"] = player
 
         elif event["type"] == "own_goal":
-            ownGoalPosition = random.choices(list(OWN_GOAL_CHANCES.keys()), weights = list(OWN_GOAL_CHANCES.values()), k = 1)[0]
+            ownGoalPosition = random.choices(list(OWN_GOAL_CHANCES.keys()), weights=list(OWN_GOAL_CHANCES.values()), k=1)[0]
             oppositionLineup = self.homeCurrentLineup if lineup == self.awayCurrentLineup else self.awayCurrentLineup
-            player = random.choices([player for player in oppositionLineup.values() if player.position == ownGoalPosition], k = 1)[0]
+            players_in_position = [player for player in oppositionLineup.values() if player.position == ownGoalPosition]
+
+            if not players_in_position:
+                player = random.choice(list(oppositionLineup.values()))
+            else:
+                player = random.choice(players_in_position)
+
             event["player"] = player
 
         elif event["type"] == "yellow_card":
@@ -442,12 +448,18 @@ class Match():
                 minute = time.split(":")[0]
                 seconds = time.split(":")[1]
                 eventTime = str(int(minute) + 1) + ":" + seconds
+
+                extra = False
+                if self.halfTime or self.fullTime:
+                    extra = True
+
                 events[eventTime] = {
                     "type": "substitution",
                     "player": None,
                     "player_off": None,
                     "player_on": None,
-                    "injury": False
+                    "injury": False,
+                    "extra": extra
                 }
 
                 player_off = random.choices(list(lineup.values()), k = 1)[0]
@@ -604,7 +616,7 @@ class Match():
 
             if "assister" in event and event["assister"] == player:
                 rating += random.choice(ASSIST_RATINGS)
-
+        
         if not scorerFlag:
             if position == "Goalkeeper" or position in defender_positions:
                 if oppositionGoals <= 1:
@@ -617,7 +629,7 @@ class Match():
                 rating += random.choice(NON_SCORER_RATINGS)
 
         for _, event in oppositionEvents.items():
-            if event["player"] == player: # own goal
+            if event["type"] == "own_goal" and event["player"] == player: # own goal
                 rating -= random.choice([1.46, 1.49, 1.52, 1.57, 1.60, 1.63, 1.69, 1.78])
 
         finalRating = round(rating + 0.5, 2) if self.ratingsBoost == venue else round(rating - 0.5, 2) if self.ratingsDecay == venue else round(rating, 2)
@@ -679,6 +691,17 @@ class Match():
         ## ------------- Match Events changes --------------- ##
         for time, event in self.homeProcessedEvents.items():
             minute = int(time.split(":")[0]) + 1
+
+            if event["extra"]:
+                if minute < 50:
+                    extraTime = minute - 45
+                    minute = f"45 + {extraTime}'"
+                else:
+                    extraTime = minute - 90
+                    minute = f"90 + {extraTime}'"
+            else:
+                minute = str(minute)
+
             if event["type"] == "goal":
                 MatchEvents.add_event(self.session, self.match.id, "goal", minute, event["player"].id)
                 MatchEvents.add_event(self.session, self.match.id, "assist", minute, event["assister"].id)
@@ -693,6 +716,17 @@ class Match():
 
         for time, event in self.awayProcessedEvents.items():
             minute = int(time.split(":")[0]) + 1
+
+            if event["extra"]:
+                if minute < 50:
+                    extraTime = minute - 45
+                    minute = f"45 + {extraTime}'"
+                else:
+                    extraTime = minute - 90
+                    minute = f"90 + {extraTime}'"
+            else:
+                minute = str(minute)
+
             if event["type"] == "goal":
                 MatchEvents.add_event(self.session, self.match.id, "goal", minute, event["player"].id)
                 MatchEvents.add_event(self.session, self.match.id, "assist", minute, event["assister"].id)

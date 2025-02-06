@@ -1025,6 +1025,15 @@ class MatchEvents(Base):
             return 0
         
     @classmethod
+    def get_events_by_match_and_player(cls, session, match_id, player_id):
+        events = session.query(MatchEvents).filter(MatchEvents.match_id == match_id, MatchEvents.player_id == player_id).all()
+
+        if events:
+            return events
+        else:
+            return None
+        
+    @classmethod
     def get_all_goals(cls, session, league_id):
         PlayerAlias = aliased(Players)
         MatchAlias = aliased(Matches)
@@ -1627,6 +1636,15 @@ class TeamHistory(Base):
     @classmethod
     def get_team_data_matchday(cls, session, team_id, matchday):
         team = session.query(TeamHistory).filter(TeamHistory.team_id == team_id, TeamHistory.matchday == matchday).first()
+
+        if team:
+            return team
+        else:
+            return None
+
+    @classmethod
+    def get_team_data_position(cls, session, position, matchday):
+        team = session.query(TeamHistory).filter(TeamHistory.position == position, TeamHistory.matchday == matchday).first()
 
         if team:
             return team

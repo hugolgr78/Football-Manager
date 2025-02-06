@@ -217,9 +217,9 @@ def generate_lower_div_objectives(min_level, max_level):
 
 GOAL_RATINGS = [1.00, 1.12, 1.05, 1.15, 1.07, 1.01, 1.04, 1.11]
 PENALTY_GOAL_RATINGS = [0.75, 0.78, 0.82, 0.84, 0.90, 0.94, 1.03, 1.08]
-PENALTY_MISS_RATINGS = [0.32, 0.42, 0.47, 0.51, 0.57, 0.63, 0.66, 0.72]
-YELLOW_CARD_RATINGS = [0.21, 0.28, 0.32, 0.37, 0.41, 0.45, 0.49, 0.53]
-RED_CARD_RATINGS = [1.46, 1.49, 1.52, 1.57, 1.60, 1.63, 1.69, 1.78]
+PENALTY_MISS_RATINGS = [-0.32, -0.42, -0.47, -0.51, -0.57, -0.63, -0.66, -0.72]
+YELLOW_CARD_RATINGS = [-0.21, -0.28, -0.32, -0.37, -0.41, -0.45, -0.49, -0.53]
+RED_CARD_RATINGS = [-1.46, -1.49, -1.52, -1.57, -1.60, -1.63, -1.69, -1.78]
 ASSIST_RATINGS = [0.52, 0.58, 0.65, 0.69, 0.73, 0.78, 0.82, 0.86]
 DEFENDER_GOALS_1 = [0.32, 0.42, 0.47, 0.63, 0.69, 0.78, 0.85, 0.98]
 DEFENDER_GOALS_3 = [0.02, 0.08, 0.15, 0.19, 0.24, 0.29, 0.36, 0.45]
@@ -233,3 +233,77 @@ EVENT_RATINGS = {
     "yellow_card": YELLOW_CARD_RATINGS,
     "red_card": RED_CARD_RATINGS
 }
+
+FAN_REACTIONS = {
+    "big_win":     ["Ecstatic", "Very Happy", "Happy", "Very Happy", "Ecstatic"],
+    "win":         ["Neutral", "Happy", "Happy", "Very Happy", "Ecstatic"],
+    "draw":        ["Angry", "Neutral", "Neutral", "Happy", "Very Happy"],
+    "loss":        ["Furious", "Angry", "Neutral", "Neutral", "Neutral"],
+    "big_loss":    ["Furious_2", "Furious", "Angry", "Angry", "Neutral"],
+    "emb_loss":    ["Riot Mode", "Furious_2", "Furious", "Furious", "Angry"]
+}
+
+EXPECTATION_LEVELS = ["Clear Favorite", "Slight Favorite", "Even Match", "Slight Underdog", "Clear Underdog"]
+
+TEAM_EXPECTATIONS = {
+    range(9, 100): "Clear Favorite",   # Team is much stronger
+    range(5, 9): "Slight Favorite",    # Team is slightly stronger
+    range(-4, 5): "Even Match",        # Teams are evenly matched
+    range(-8, -4): "Slight Underdog",  # Team is slightly weaker
+    range(-100, -8): "Clear Underdog"  # Team is much weaker
+}
+
+RESULT_CATEGORIES = {
+    "win": {
+        range(4, 100): "big_win",     # Won by 4+ goals
+        range(1, 4): "win",           # Won by 1-3 goals
+    },
+    "draw": {
+        range(0, 1): "draw"           # A draw always has GD = 0
+    },
+    "loss": {
+        range(-3, 0): "loss",         # Lost by 1-3 goals
+        range(-6, -3): "big_loss",    # Lost by 4-6 goals
+        range(-10, -6): "emb_loss",   # Lost by 7-9 goals
+        range(-100, -10): "riot_loss" # Lost by 10+ goals (fans furious)
+    }
+}
+
+FAN_MESSAGES = {
+    "Ecstatic": "It was an unforgettable performance, and the fans are \nabsolutely ecstatic with the result!",
+    "Very Happy": "The team delivered a great result, and the fans are \nthrilled with the performance.",
+    "Happy": "This was a solid result, and the fans are pleased with \nthe team's efforts.",
+    "Neutral": "It was a decent performance, but nothing too special. \nThe fans are neither excited nor disappointed.",
+    "Angry": "It was a frustrating result, and the fans expected much \nbetter from the team.",
+    "Furious": "The performance was unacceptable, and the fans are \nabsolutely furious about the outcome.",
+    "Furious_2": "The fans are outraged by the team's display and are \ndemanding serious improvements.",
+    "Riot Mode": "Chaos has erupted among the supporters! The fans have \ncompletely lost it, and protests are breaking out."
+}
+
+def get_fan_reaction(result, expectation):
+    """ Get the fan reaction based on match result and expectation level. """
+
+    index = EXPECTATION_LEVELS.index(expectation)
+    return FAN_REACTIONS.get(result, ["Unknown"] * 5)[index]
+
+def get_expectation(team_level, opponent_level):
+    """Determine expectation level based on team level difference."""
+    level_diff = team_level - opponent_level
+    for diff_range, expectation in TEAM_EXPECTATIONS.items():
+        if level_diff in diff_range:
+            return expectation
+    return "Even Match"
+
+def get_result_category(game_result, goal_difference):
+    """Determine result category based on game result and goal difference."""
+
+    for gd_range, category in RESULT_CATEGORIES[game_result].items():
+        if goal_difference in gd_range:
+            return category
+
+    return "unknown"  # Default case (should never happen)
+
+def get_fan_message(fan_reaction: str) -> str:
+    """Return a fan reaction message based on the given fan reaction."""
+    return FAN_MESSAGES.get(fan_reaction, "The fans aren't sure how to react.")
+

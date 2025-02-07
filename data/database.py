@@ -77,7 +77,7 @@ class Managers(Base):
             updateProgress(2)
             Referees().add_referees(session)
             updateProgress(3)
-            League.add_league(session, LEAGUE_NAME, FIRST_YEAR)
+            League.add_league(session, LEAGUE_NAME, FIRST_YEAR, 0, 3)
             
             updateProgress(None)
 
@@ -1367,9 +1367,11 @@ class League(Base):
     year = Column(Integer, nullable = False)
     logo = Column(BLOB)
     current_matchday = Column(Integer, nullable = False, default = 1) # the matchday stored has not yet been simualted (once one is, this value is incremented)
+    promotion = Column(Integer, nullable = False)
+    relegation = Column(Integer, nullable = False)
 
     @classmethod
-    def add_league(cls, session, name, year):
+    def add_league(cls, session, name, year, promotion, relagation):
 
         with open(f"Images/{name}.png", 'rb') as file:
             logo = file.read()
@@ -1378,7 +1380,9 @@ class League(Base):
             id = str(uuid.uuid4()),
             name = name,
             year = year,
-            logo = logo
+            logo = logo,
+            promotion = promotion,
+            relegation = relagation
         )
 
         session.add(new_league)

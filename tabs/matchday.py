@@ -264,7 +264,7 @@ class MatchDay(ctk.CTkFrame):
 
                     elif minute < 45 and event_details["type"] != "susbtitution":
                         firstHalfEvents += 1
-
+                
                 if maxMinute - 45 < firstHalfEvents:
                     extraTime = min(firstHalfEvents, 5)
                 else:

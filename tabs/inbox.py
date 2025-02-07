@@ -49,32 +49,25 @@ class Inbox(ctk.CTkFrame):
         email_operations = [
             {"type": "matchday_preview", "matchday": self.league.current_matchday, "condition": self.league.current_matchday <= 38},
             {"type": "matchday_review", "matchday": self.league.current_matchday - 1, "condition": self.league.current_matchday > 1},
-            # Add more email operations here as needed
         ]
 
         # Add emails
         for email in email_operations:
-            if not Emails.get_email_by_matchday_and_type(self.session, email["matchday"], email["type"]) and email["condition"]:
+            if not Emails.get_email_by_matchday_and_type(self.session, email["matchday"], email["type"]):
+                print("Adding email")
                 self.addEmail(email["type"], matchday = email["matchday"])
 
         # Save emails in reverse order
         for email in reversed(email_operations):
-            if not Emails.get_email_by_matchday_and_type(self.session, email["matchday"], email["type"]) and email["condition"]:
+            if not Emails.get_email_by_matchday_and_type(self.session, email["matchday"], email["type"]):
+                print("Saving email")
                 self.saveEmail(email["type"], matchday = email["matchday"])
 
         for email in reversed(emails):
             self.addEmail(email.email_type, email.matchday, email.player_id)
 
     def addEmail(self, email_type, matchday = None, player_id = None, imported = False):
-        # existing_widgets = self.emailsFrame.winfo_children()
-        # for widget in existing_widgets:
-        #     widget.pack_forget()
-
-        new_email = EmailFrame(self.emailsFrame, self.session, self.manager_id, email_type, matchday, player_id, self.emailDataFrame, self)
-
-        # for widget in existing_widgets:
-        #     if widget != new_email:
-        #         widget.pack(fill = "both", padx = 10, pady = 5)
+        EmailFrame(self.emailsFrame, self.session, self.manager_id, email_type, matchday, player_id, self.emailDataFrame, self)
 
     def saveEmail(self, email_type, matchday = None, player_id = None):
         Emails.add_email(self.session, email_type, matchday, player_id)

@@ -279,7 +279,7 @@ class Match():
 
         extra = False
         if int(minute) == 45 or int(minute) == 90:
-            additionalTime = random.randint(0, 5)
+            additionalTime = random.randint(0, 4)
             minute = str(int(minute) + additionalTime)
             extra = True
 

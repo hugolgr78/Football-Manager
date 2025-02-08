@@ -639,6 +639,9 @@ class Match():
 
         self.returnWinner()
 
+        Players.decrease_all_banned_players(self.session, self.homeTeam.id)
+        Players.decrease_all_banned_players(self.session, self.awayTeam.id)
+
         homeData = {
             "points": 3 if self.winner == self.homeTeam else 1 if self.winner is None else 0,
             "won": 1 if self.winner == self.homeTeam else 0,
@@ -711,6 +714,10 @@ class Match():
             elif event["type"] == "substitution":
                 MatchEvents.add_event(self.session, self.match.id, "sub_off", minute, event["player_off"].id) 
                 MatchEvents.add_event(self.session, self.match.id, "sub_on", minute, event["player_on"].id)
+            elif event["type"] == "injury" or event["type"] == "red_card":
+                MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
+                ban = get_player_ban(event["type"])
+                Players.add_player_ban(self.session, event["player"].id, ban, event["type"])
             else:
                 MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
 

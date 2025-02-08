@@ -265,6 +265,7 @@ class Players(Base):
     morale = Column(Integer, nullable = False, default = 50)
     player_role = Column(Enum("Star player", "Youngster", "Backup", "Rotation", "First Team"))
     player_ban = Column(Integer, nullable = False, default = 0)
+    player_ban_type = Column(String(128), default = None)
 
     @classmethod
     def add_players(cls, session, team_id):
@@ -573,11 +574,12 @@ class Players(Base):
             return None
         
     @classmethod
-    def add_player_ban(cls, session, player_id, ban):
+    def add_player_ban(cls, session, player_id, ban, ban_type):
         player = session.query(Players).filter(Players.id == player_id).first()
 
         if player:
             player.player_ban = ban
+            player.player_ban_type = ban_type
             session.commit()
         else:
             return None

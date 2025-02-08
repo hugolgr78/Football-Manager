@@ -92,6 +92,7 @@ class EmailFrame(ctk.CTkFrame):
             return "th"
         else:
             return {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
+
 class Welcome():
     def __init__(self, parent, session):
 
@@ -307,6 +308,7 @@ class Welcome():
             f"Best regards,\n"
             f"Name, Chairman"
         )
+
 class MatchdayReview():
     def __init__(self, parent, session):
 
@@ -443,6 +445,7 @@ class MatchdayReview():
 
         lastMatchdayTable = TeamHistory.get_team_data_matchday(self.session, self.parent.team.id, self.matchday - 1)
         matchdayTable = TeamHistory.get_team_data_matchday(self.session, self.parent.team.id, self.matchday)
+        league = self.parent.league
 
         currPosition = matchdayTable.position
 
@@ -453,8 +456,15 @@ class MatchdayReview():
             lastPosition = lastMatchdayTable.position
             if currPosition == 1 and lastPosition != 1:
                 text = f"As a result of this matchday, we have now taken the lead\nof the league!"
-            elif currPosition < 17 and lastPosition > 18:
+            elif currPosition < 20 - league.relegation and lastPosition > 21 - league.relegation:
                 text = f"As a result of this matchday, we have unfortunately moved\ndown into the relegation zone." 
+            elif league.promotion != 0:
+                if currPosition <= league.promotion and lastPosition > league.promotion:
+                    text = f"As a result of this matchday, we have moved up into the\npromotion spots"
+                elif currPosition > league.promotion and lastPosition <= league.promotion:
+                    text = f"As a result of this matchday, we have moved down from the\npromotion spots."
+                else:
+                    text = f"As a result of this matchday, we have stayed in\nthe promotion spots."
             elif lastPosition == currPosition:
                 text = f"As a result of this matchday, we have stayed in\n{currPosition}{suffix} position."
             elif lastPosition > currPosition:
@@ -469,8 +479,8 @@ class MatchdayReview():
             pointsDiff = matchdayTable.points - secondPlace.points
             text = f"We are currently leading second place by\n{pointsDiff} points, good work!"
         elif currPosition > 17:
-            _16thPlace = TeamHistory.get_team_data_position(self.session, 16, self.matchday)
-            pointsDiff = _16thPlace.points - matchdayTable.points
+            aboveRel = TeamHistory.get_team_data_position(self.session, 20 - league.relegation, self.matchday)
+            pointsDiff = aboveRel.points - matchdayTable.points
             text = f"We currently need {pointsDiff} points to get out of the\nrelegation zone."
         elif currPosition <= 10 and currPosition > 5:
             text = f"We have settled nicely within the top ten of\nthe league, "
@@ -487,7 +497,7 @@ class MatchdayReview():
             firstPlace = TeamHistory.get_team_data_position(self.session, 1, self.matchday)
             pointsDiff = firstPlace.points - matchdayTable.points
             text = f"We are currently {pointsDiff} points behind the\nleader."
-        elif currPosition >= 11 and currPosition < 15:
+        elif currPosition >= 11 and currPosition < 18 - league.relegation:
             text = f"We are well above relegation,"
 
             teamObjective = get_objective_for_level(self.parent.team.level)
@@ -499,8 +509,8 @@ class MatchdayReview():
             else:
                 text += "great work!"
         else:
-            _18thPlace = TeamHistory.get_team_data_position(self.session, 18, self.matchday)
-            pointsDiff = matchdayTable.points - _18thPlace.points
+            firstRelegated = TeamHistory.get_team_data_position(self.session, 21 - league.relegation, self.matchday)
+            pointsDiff = matchdayTable.points - firstRelegated.points
             f"We are currently {pointsDiff} points ahead of the\nrelegation spots."
 
         self.emailText_6 += " " + text

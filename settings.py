@@ -1,3 +1,5 @@
+import random
+
 APP_SIZE = (1200, 700)
 DARK_GREY = "#3b3b3b"
 TKINTER_BACKGROUND = "#2b2b2b"
@@ -303,7 +305,14 @@ def get_result_category(game_result, goal_difference):
 
     return "unknown"  # Default case (should never happen)
 
-def get_fan_message(fan_reaction: str) -> str:
+def get_fan_message(fan_reaction):
     """Return a fan reaction message based on the given fan reaction."""
     return FAN_MESSAGES.get(fan_reaction, "The fans aren't sure how to react.")
 
+def get_player_ban(ban_type):
+    if ban_type == "injury":
+        ban = random.randint(1, 15)
+    else: # red card
+        ban = random.randint(1,3)
+
+    return ban

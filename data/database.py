@@ -264,6 +264,7 @@ class Players(Base):
     flag = Column(BLOB)
     morale = Column(Integer, nullable = False, default = 50)
     player_role = Column(Enum("Star player", "Youngster", "Backup", "Rotation", "First Team"))
+    player_ban = Column(Integer, nullable = False, default = 0)
 
     @classmethod
     def add_players(cls, session, team_id):
@@ -553,6 +554,33 @@ class Players(Base):
         else:
             return None
 
+    @classmethod
+    def decrease_all_banned_players(cls, session, team_id):
+        players = session.query(Players).filter(Players.team_id == team_id).all()
+
+        for player in players:
+            player.player_ban = max(0, player.player_ban - 1)
+
+        session.commit()
+    
+    @classmethod
+    def get_all_non_banned_players(cls, session, team_id):
+        players = session.query(Players).filter(Players.team_id == team_id, Players.player_ban == 0).all()
+
+        if players:
+            return players
+        else:
+            return None
+        
+    @classmethod
+    def add_player_ban(cls, session, player_id, ban):
+        player = session.query(Players).filter(Players.id == player_id).first()
+
+        if player:
+            player.player_ban = ban
+            session.commit()
+        else:
+            return None
 class Matches(Base):
 
     __tablename__ = 'matches'

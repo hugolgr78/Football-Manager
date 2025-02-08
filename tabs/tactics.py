@@ -59,48 +59,6 @@ class Tactics(ctk.CTkFrame):
         self.playerDropDown.place(relx = 0.05, rely = 0.5, anchor = "w")
         self.playerDropDown.set("Choose Player")
 
-    ## TESTING FUNCTION ONLY 
-    def autoLineup(self):
-        chosenPositions = ["Goalkeeper", "Left Back", "Right Back", "Center Back Right", "Center Back", "Center Back Left", "Central Midfielder Right", "Central Midfielder Left", "Left Winger", "Right Winger", "Center Forward"]
-        chosenPlayers = ["Wayne Ross", "Melvin Lawrence", "Jim Sampson", "Jared Jones", "Raymond Kelly", "William Jefferson", "Justin Moore", "Henry Ayers", "Jeffery Parker", "Steven Krause", "Ray Lamb"]
-        
-        self.selectedLineup["Goalkeeper"] = Players.get_player_by_name(self.session, "Wayne", "Ross")
-        self.selectedLineup["Left Back"] = Players.get_player_by_name(self.session, "Melvin", "Lawrence")
-        self.selectedLineup["Right Back"] = Players.get_player_by_name(self.session, "Jim", "Sampson")
-        self.selectedLineup["Center Back Right"] = Players.get_player_by_name(self.session, "Jared", "Jones")
-        self.selectedLineup["Center Back"] = Players.get_player_by_name(self.session, "Raymond", "Kelly")
-        self.selectedLineup["Center Back Left"] = Players.get_player_by_name(self.session, "William", "Jefferson")
-        self.selectedLineup["Central Midfielder Right"] = Players.get_player_by_name(self.session, "Justin", "Moore")
-        self.selectedLineup["Central Midfielder Left"] = Players.get_player_by_name(self.session, "Henry", "Ayers")
-        self.selectedLineup["Left Winger"] = Players.get_player_by_name(self.session, "Jeffery", "Parker")
-        self.selectedLineup["Right Winger"] = Players.get_player_by_name(self.session, "Steven", "Krause")
-        self.selectedLineup["Center Forward"] = Players.get_player_by_name(self.session, "Ray", "Lamb")
-
-        for position, name in zip(chosenPositions, chosenPlayers):
-            LineupPlayerFrame(self.lineupPitch, 
-                            POSITIONS_PITCH_POSITIONS[position][0], 
-                            POSITIONS_PITCH_POSITIONS[position][1], 
-                            "center", 
-                            GREY_BACKGROUND,
-                            65, 
-                            65, 
-                            name,
-                            POSITION_CODES[position],
-                            position,
-                            self.removePlayer
-                        )
-            
-            for frame in self.substituteFrame.winfo_children():
-                if frame.winfo_children()[1].cget("text") == name:
-                    frame.destroy()
-
-        self.dropDown.configure(state = "disabled")
-        self.lineupPitch.set_counter(11)
-
-        for frame in self.substituteFrame.winfo_children():
-            if isinstance(frame, SubstitutePlayer):
-                frame.showCheckBox()
-
     def importLineup(self):
         self.leagueTeams = LeagueTeams.get_league_by_team(self.session, self.team.id)
         self.league = League.get_league_by_id(self.session, self.leagueTeams.league_id)
@@ -253,6 +211,7 @@ class Tactics(ctk.CTkFrame):
         SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute)
 
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
+        self.substitutePlayers = []
 
         self.subCounter = 0
 

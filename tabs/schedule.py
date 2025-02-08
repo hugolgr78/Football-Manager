@@ -12,6 +12,8 @@ class Schedule(ctk.CTkFrame):
         self.manager_id = manager_id
         self.parent = parent
 
+        self.frames = []
+
         self.team = Teams.get_teams_by_manager(session, manager_id)[0]
         self.matches = Matches.get_all_matches_by_team(session, self.team.id)
         self.league = League.get_league_by_id(session, self.matches[0].league_id)
@@ -39,4 +41,5 @@ class Schedule(ctk.CTkFrame):
                 widget.destroy()
 
         for match in self.matches:
-            MatchFrame(self, self.session, self.manager_id, match, self.scheduleFrame, self.matchInfoFrame, self)
+            frame = MatchFrame(self, self.session, self.manager_id, match, self.scheduleFrame, self.matchInfoFrame, self)
+            self.frames.append(frame)

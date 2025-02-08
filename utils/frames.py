@@ -925,6 +925,7 @@ class SubstitutePlayer(ctk.CTkFrame):
 
     def showCheckBox(self):
         self.checkBox.place(relx = 1, rely = 0.5, anchor = "e")
+        self.checkBox.configure(state = "normal")
 
     def hideCheckBox(self):
         self.checkBox.place_forget()

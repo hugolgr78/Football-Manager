@@ -26,6 +26,8 @@ class MatchFrame(ctk.CTkFrame):
         self.match = match
         self.matchInfoFrame = matchInfoFrame
         self.parentTab = parentTab
+
+        self.open = False
         
         self.played = False
 
@@ -116,6 +118,16 @@ class MatchFrame(ctk.CTkFrame):
             self.resultLabel.configure(fg_color = TKINTER_BACKGROUND)
 
     def displayMatchInfo(self):
+
+        if self.open:
+            return
+
+        self.open = True
+
+        for otherMatchFrame in self.parentTab.frames:
+            if otherMatchFrame != self:
+                otherMatchFrame.open = False
+
         self.scoreFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 100, corner_radius = 10)
         self.scoreFrame.place(relx = 0.5, rely = 0.02, anchor = "n")
 

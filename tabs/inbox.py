@@ -46,22 +46,27 @@ class Inbox(ctk.CTkFrame):
 
             return
 
-        email_operations = [
-            {"type": "matchday_preview", "matchday": self.league.current_matchday, "condition": self.league.current_matchday <= 38},
-            {"type": "matchday_review", "matchday": self.league.current_matchday - 1, "condition": self.league.current_matchday > 1},
-        ]
+        # email_operations = [
+        #     {"type": "matchday_preview", "matchday": self.league.current_matchday, "condition": self.league.current_matchday <= 38},
+        #     {"type": "matchday_review", "matchday": self.league.current_matchday - 1, "condition": self.league.current_matchday > 1},
+        # ]
+
+        current_matchday = self.league.current_matchday
+        addedEmails = []
 
         # Add emails
-        for email in email_operations:
-            if not Emails.get_email_by_matchday_and_type(self.session, email["matchday"], email["type"]):
-                print("Adding email")
-                self.addEmail(email["type"], matchday = email["matchday"])
+        for matchday in range(current_matchday, 0, -1):
+            if matchday <= 38:
+                if not Emails.get_email_by_matchday_and_type(self.session, matchday, "matchday_preview"):
+                    self.addEmail("matchday_preview", matchday = matchday)
+                    addedEmails.append(["matchday_preview", matchday])
+            if matchday > 1:
+                if not Emails.get_email_by_matchday_and_type(self.session, matchday - 1, "matchday_review"):
+                    self.addEmail("matchday_review", matchday = matchday - 1)
+                    addedEmails.append(["matchday_review", matchday - 1])
 
-        # Save emails in reverse order
-        for email in reversed(email_operations):
-            if not Emails.get_email_by_matchday_and_type(self.session, email["matchday"], email["type"]):
-                print("Saving email")
-                self.saveEmail(email["type"], matchday = email["matchday"])
+        for email in reversed(addedEmails):
+            self.saveEmail(email[0], matchday = email[1])
 
         for email in reversed(emails):
             self.addEmail(email.email_type, email.matchday, email.player_id)

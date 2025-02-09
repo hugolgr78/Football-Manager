@@ -562,6 +562,9 @@ class Players(Base):
         for player in players:
             player.player_ban = max(0, player.player_ban - 1)
 
+            if player.player_ban == 0:
+                player.player_ban_type = None
+
         session.commit()
     
     @classmethod

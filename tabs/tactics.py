@@ -74,6 +74,7 @@ class Tactics(ctk.CTkFrame):
 
         for match in self.matchdayMatches:
             if match.home_id == self.team.id or match.away_id == self.team.id:
+                self.lastTeamMatch = match
                 self.lineup = TeamLineup.get_lineup_by_match_and_team(self.session, match.id, self.team.id)
 
         self.dropDown.configure(state = "disabled")
@@ -83,6 +84,14 @@ class Tactics(ctk.CTkFrame):
             position = playerData.position
             positionCode = POSITION_CODES[position]
             player = Players.get_player_by_id(self.session, playerData.player_id)
+
+            events = MatchEvents.get_events_by_match_and_player(self.session, self.lastTeamMatch.id, player.id)
+            
+            if events:
+                subOnEvents = [event for event in events if event.event_type == "sub_on" and event.player_id == player.id]
+
+                if subOnEvents:
+                    continue
 
             name = player.first_name + " " + player.last_name
             self.selectedLineup[position] = player

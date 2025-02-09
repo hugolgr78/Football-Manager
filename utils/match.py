@@ -59,13 +59,19 @@ class Match():
         oppFormation = random.choices(formations, weights = weights, k = 1)[0]
         defNums, midNums, attNums = map(int, oppFormation.split("-"))
 
+        players = Players.get_all_non_banned_players(self.session, teamID)
+        goalkeepers = [player for player in players if player.position == "goalkeeper"]
+        defenders = [player for player in players if player.position == "defender"]
+        midfielders = [player for player in players if player.position == "midfielder"]
+        attackers = [player for player in players if player.position == "forward"]
+
         # goalkeeper
-        goalkeepers = Players.get_all_goalkeepers(self.session, teamID)
+        # goalkeepers = Players.get_all_goalkeepers(self.session, teamID)
         lineup["Goalkeeper"] = goalkeepers[0]
 
         # defenders
         positions = FORMATIONS_POSITIONS[oppFormation][1:defNums + 1]
-        defenders = Players.get_all_defenders(self.session, teamID) 
+        # defenders = Players.get_all_defenders(self.session, teamID) 
 
         for position in positions:
             code = POSITION_CODES[position]
@@ -77,7 +83,7 @@ class Match():
 
         # midfielders
         positions = FORMATIONS_POSITIONS[oppFormation][defNums + 1:defNums + midNums + 1]
-        midfielders = Players.get_all_midfielders(self.session, teamID)
+        # midfielders = Players.get_all_midfielders(self.session, teamID)
 
         for position in positions:
             code = POSITION_CODES[position]
@@ -89,7 +95,7 @@ class Match():
 
         # attackers
         positions = FORMATIONS_POSITIONS[oppFormation][defNums + midNums + 1:]
-        attackers = Players.get_all_forwards(self.session, teamID)
+        # attackers = Players.get_all_forwards(self.session, teamID)
 
         for position in positions:
             code = POSITION_CODES[position]

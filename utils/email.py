@@ -458,7 +458,7 @@ class MatchdayReview():
                 text = f"As a result of this matchday, we have now taken the lead\nof the league!"
             elif currPosition < 20 - league.relegation and lastPosition > 21 - league.relegation:
                 text = f"As a result of this matchday, we have unfortunately moved\ndown into the relegation zone." 
-            elif league.promotion != 0:
+            elif league.promotion != 0 and currPosition <= league.promotion:
                 if currPosition <= league.promotion and lastPosition > league.promotion:
                     text = f"As a result of this matchday, we have moved up into the\npromotion spots"
                 elif currPosition > league.promotion and lastPosition <= league.promotion:
@@ -511,11 +511,9 @@ class MatchdayReview():
         else:
             firstRelegated = TeamHistory.get_team_data_position(self.session, 21 - league.relegation, self.matchday)
             pointsDiff = matchdayTable.points - firstRelegated.points
-            f"We are currently {pointsDiff} points ahead of the\nrelegation spots."
+            text = f"We are currently {pointsDiff} points ahead of the\nrelegation spots."
 
         self.emailText_6 += " " + text
-
-
 
     def getBest3Players(self, lineups):
         bestPlayers = []

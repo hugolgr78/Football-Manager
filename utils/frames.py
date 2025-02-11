@@ -928,16 +928,17 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.removeButton.place(relx = 0.95, rely = 0.05, anchor = "ne")
 
 class SubstitutePlayer(ctk.CTkFrame):
-    def __init__(self, parent, fgColor, height, width, player, checkBoxFunction, session, parentTab):
+    def __init__(self, parent, fgColor, height, width, player, checkBoxFunction, session, parentTab, comp_id):
         super().__init__(parent, fg_color = fgColor, width = width, height = height)
         self.pack(pady = 5)
 
         self.player = player
+        self.playerBanned = PlayerBans.check_bans_for_player(session, self.player.id, comp_id)
 
-        if self.player.player_ban != 0:
-            textColor = GREY
-        else:
+        if not self.playerBanned:
             textColor = "white"
+        else:
+            textColor = GREY
 
         ctk.CTkLabel(self, text = "SUB", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
         
@@ -950,7 +951,7 @@ class SubstitutePlayer(ctk.CTkFrame):
 
     def showCheckBox(self):
 
-        if self.player.player_ban != 0:
+        if self.playerBanned:
             return
 
         self.checkBox.place(relx = 0.95, rely = 0.5, anchor = "e")

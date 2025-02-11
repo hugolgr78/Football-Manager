@@ -59,7 +59,7 @@ class Match():
         oppFormation = random.choices(formations, weights = weights, k = 1)[0]
         defNums, midNums, attNums = map(int, oppFormation.split("-"))
 
-        players = Players.get_all_non_banned_players(self.session, teamID)
+        players = PlayerBans.get_all_non_banned_players_for_comp(self.session, teamID, self.match.league_id)
         goalkeepers = [player for player in players if player.position == "goalkeeper"]
         defenders = [player for player in players if player.position == "defender"]
         midfielders = [player for player in players if player.position == "midfielder"]
@@ -645,8 +645,8 @@ class Match():
 
         self.returnWinner()
 
-        Players.decrease_all_banned_players(self.session, self.homeTeam.id)
-        Players.decrease_all_banned_players(self.session, self.awayTeam.id)
+        PlayerBans.reduce_all_player_bans_for_team(self.session, self.homeTeam.id, self.match.league_id)
+        PlayerBans.reduce_all_player_bans_for_team(self.session, self.awayTeam.id, self.match.league_id)
 
         homeData = {
             "points": 3 if self.winner == self.homeTeam else 1 if self.winner is None else 0,
@@ -723,7 +723,7 @@ class Match():
             elif event["type"] == "injury" or event["type"] == "red_card":
                 MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
                 ban = get_player_ban(event["type"])
-                Players.add_player_ban(self.session, event["player"].id, ban, event["type"])
+                PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id if event["type"] == "red_card" else "any", ban, event["type"])
             else:
                 MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
 
@@ -749,6 +749,10 @@ class Match():
             elif event["type"] == "substitution":
                 MatchEvents.add_event(self.session, self.match.id, "sub_off", minute, event["player_off"].id) 
                 MatchEvents.add_event(self.session, self.match.id, "sub_on", minute, event["player_on"].id)
+            elif event["type"] == "injury" or event["type"] == "red_card":
+                MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
+                ban = get_player_ban(event["type"])
+                PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id if event["type"] == "red_card" else "any", ban, event["type"])
             else:
                 MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
 

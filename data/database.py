@@ -1842,13 +1842,15 @@ class PlayerBans(Base):
         return bans
 
     @classmethod
-    def get_bans_for_player(cls, session, player_id):
-        bans = session.query(PlayerBans).filter(player_id = player_id).all()
+    def check_bans_for_player(cls, session, player_id, competition_id):
+        bans = session.query(PlayerBans).join(Players).filter(Players.id == player_id).all()
+        is_banned = False
 
-        if bans:
-            return bans
-        else:
-            return None
+        for ban in bans:
+            if ban.ban_type == "injury" or ban.competition_id == competition_id:
+                is_banned = True
+        
+        return is_banned
 
     @classmethod
     def get_all_non_banned_players_for_comp(cls, session, team_id, competition_id):
@@ -1856,13 +1858,7 @@ class PlayerBans(Base):
         non_banned_players = []
 
         for player in all_players:
-            player_bans = PlayerBans.get_bans_for_player(session, player.id)
-            is_banned = False
-
-            for ban in player_bans:
-                if ban.ban_type == "injury" or ban.competition_id == competition_id:
-                    is_banned = True
-                    break
+            is_banned = PlayerBans.check_bans_for_player(session, player.id, competition_id)
 
             if not is_banned:
                 non_banned_players.append(player)

@@ -91,7 +91,7 @@ class Tactics(ctk.CTkFrame):
                 if subOnEvents:
                     continue
             
-            if player.player_ban != 0:
+            if PlayerBans.check_bans_for_player(self.session, player.id, self.league.id):
                 continue
 
             playersCount += 1
@@ -121,7 +121,7 @@ class Tactics(ctk.CTkFrame):
         for player in self.players:
             name = player.first_name + " " + player.last_name
             if player not in self.selectedLineup.values():
-                frame = SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self.session, self) 
+                frame = SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self.session, self, self.league.id) 
 
                 if playersCount == 11:
                     frame.showCheckBox()
@@ -129,12 +129,14 @@ class Tactics(ctk.CTkFrame):
         for position in POSITION_CODES.keys():
             if position in self.selectedLineup:
                 del self.positionsCopy[position]
+            
+        self.dropDown.configure(values = self.positionsCopy)
 
     def addSubstitutePlayers(self):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).pack(pady = 5)
         
         for player in self.players:
-            SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self.session, self)
+            SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self.session, self, self.league.id)
 
     def choosePlayer(self, selected_position):
         self.selected_position = selected_position
@@ -146,7 +148,7 @@ class Tactics(ctk.CTkFrame):
         values = []
         for player in self.players:
             playerName = player.first_name + " " + player.last_name
-            if POSITION_CODES[selected_position] in player.specific_positions.split(",") and player not in self.selectedLineup.values() and player.player_ban == 0:
+            if POSITION_CODES[selected_position] in player.specific_positions.split(",") and player not in self.selectedLineup.values() and not PlayerBans.check_bans_for_player(self.session, player.id, self.league.id):
                 values.append(playerName)
         
         if len(values) == 0:
@@ -226,7 +228,7 @@ class Tactics(ctk.CTkFrame):
                 break
 
         player = Players.get_player_by_name(self.session, playerName.split(" ")[0], playerName.split(" ")[1])
-        SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self.session, self)
+        SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self.session, self, self.league.id)
 
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
         self.substitutePlayers = []

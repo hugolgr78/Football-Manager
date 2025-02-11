@@ -503,11 +503,11 @@ class MatchdayReview():
             teamObjective = get_objective_for_level(self.parent.team.level)
 
             if teamObjective == "fight for the title":
-                text += "but the\nfans are dissapointed."
+                text += " but the\nfans are dissapointed."
             elif teamObjective == "finish in the top half":
-                text += "let's keep\npushing."
+                text += " let's keep\npushing."
             else:
-                text += "great work!"
+                text += " great work!"
         else:
             firstRelegated = TeamHistory.get_team_data_position(self.session, 21 - league.relegation, self.matchday)
             pointsDiff = matchdayTable.points - firstRelegated.points

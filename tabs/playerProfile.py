@@ -100,7 +100,13 @@ class Profile(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = f"{self.player.age} years old / {self.player.date_of_birth}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.27, anchor = "w")
 
-        ctk.CTkLabel(self, text = self.player.player_role, font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.33, anchor = "w")
+        if self.player.player_ban == 0:
+            ctk.CTkLabel(self, text = self.player.player_role, font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.33, anchor = "w")
+        else:
+            if self.player.player_ban_type == "injury":
+                ctk.CTkLabel(self, text = f"Injured. Expected return in {self.player.player_ban} matchdays", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.33, anchor = "w")
+            else:
+                ctk.CTkLabel(self, text = f"Suspended. Returns in {self.player.player_ban} matchdays", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.33, anchor = "w")
 
         teamLogo = Image.open(io.BytesIO(self.parent.team.logo))
         teamLogo.thumbnail((200, 200))

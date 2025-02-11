@@ -264,8 +264,6 @@ class Players(Base):
     flag = Column(BLOB)
     morale = Column(Integer, nullable = False, default = 50)
     player_role = Column(Enum("Star player", "Youngster", "Backup", "Rotation", "First Team"))
-    player_ban = Column(Integer, nullable = False, default = 0)
-    player_ban_type = Column(String(128), default = None)
 
     @classmethod
     def add_players(cls, session, team_id):
@@ -552,38 +550,6 @@ class Players(Base):
 
         if goalkeepers:
             return goalkeepers
-        else:
-            return None
-
-    @classmethod
-    def decrease_all_banned_players(cls, session, team_id):
-        players = session.query(Players).filter(Players.team_id == team_id).all()
-
-        for player in players:
-            player.player_ban = max(0, player.player_ban - 1)
-
-            if player.player_ban == 0:
-                player.player_ban_type = None
-
-        session.commit()
-    
-    @classmethod
-    def get_all_non_banned_players(cls, session, team_id):
-        players = session.query(Players).filter(Players.team_id == team_id, Players.player_ban == 0).all()
-
-        if players:
-            return players
-        else:
-            return None
-        
-    @classmethod
-    def add_player_ban(cls, session, player_id, ban, ban_type):
-        player = session.query(Players).filter(Players.id == player_id).first()
-
-        if player:
-            player.player_ban = ban
-            player.player_ban_type = ban_type
-            session.commit()
         else:
             return None
 class Matches(Base):
@@ -1834,6 +1800,74 @@ class Emails(Base):
             return emails
         else:
             return None
+        
+class PlayerBans(Base):
+    __tablename__ = 'player_bans'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    player_id = Column(String(128), ForeignKey('players.id'))
+    competition_id = Column(String(128))
+    ban_length = Column(Integer, nullable = False)
+    ban_type = Column(Enum("red_card", "injury"), nullable = False)
+
+    @classmethod
+    def add_player_ban(cls, session, player_id, competition_id, ban_length, ban_type):
+        new_ban = PlayerBans(
+            player_id = player_id,
+            competition_id = competition_id,
+            ban_length = ban_length,
+            ban_type = ban_type
+        )
+
+        session.add(new_ban)
+        session.commit()
+
+        return new_ban
+
+    @classmethod
+    def reduce_all_player_bans_for_team(cls, session, team_id, competition_id):
+        bans = session.query(PlayerBans).join(Players).filter(Players.team_id == team_id).all()
+
+        for ban in bans:
+            if ban.ban_type == "injury":
+                ban.ban_length -= 1
+            elif ban.competition_id == competition_id:
+                ban.ban_length -= 1
+
+            if ban.ban_length == 0:
+                session.delete(ban)
+
+        session.commit()
+
+        return bans
+
+    @classmethod
+    def get_bans_for_player(cls, session, player_id):
+        bans = session.query(PlayerBans).filter(player_id = player_id).all()
+
+        if bans:
+            return bans
+        else:
+            return None
+
+    @classmethod
+    def get_all_non_banned_players_for_comp(cls, session, team_id, competition_id):
+        all_players = Players.get_all_players_by_team(session, team_id)
+        non_banned_players = []
+
+        for player in all_players:
+            player_bans = PlayerBans.get_bans_for_player(session, player.id)
+            is_banned = False
+
+            for ban in player_bans:
+                if ban.ban_type == "injury" or ban.competition_id == competition_id:
+                    is_banned = True
+                    break
+
+            if not is_banned:
+                non_banned_players.append(player)
+
+        return non_banned_players
 
 def create_tables(database_name):
     DATABASE_URL = f"sqlite:///data/{database_name}.db"

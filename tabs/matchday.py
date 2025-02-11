@@ -24,6 +24,7 @@ class MatchDay(ctk.CTkFrame):
         self.halfTime = False
         self.halfTimeEnded = False
         self.fullTime = False
+        self.fullTimeEnded = False
         self.maxExtraTimeHalf = 0
         self.maxExtraTimeFull = 100
 
@@ -358,6 +359,7 @@ class MatchDay(ctk.CTkFrame):
                     self.timerThread_running = False
                     self.pauseButton.configure(text = "Save", command = self.endSimulation)
                     self.fullTime = False
+                    self.fullTimeEnded = True
 
                     for frame in self.otherMatchesFrame.winfo_children():
                         if frame.getScoreLabel() != "FT":
@@ -480,6 +482,8 @@ class MatchDay(ctk.CTkFrame):
             if self.halfTimeEnded:
                 self.timeLabel.configure(text = "HT")
                 self.halfTimeEnded = False
+            elif self.fullTimeEnded:
+                self.timeLabel.configure(text = "FT")
             else:
                 self.after(0, self.updateTimeLabel, minutes, seconds)
 

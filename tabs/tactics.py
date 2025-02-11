@@ -77,9 +77,7 @@ class Tactics(ctk.CTkFrame):
                 self.lastTeamMatch = match
                 self.lineup = TeamLineup.get_lineup_by_match_and_team(self.session, match.id, self.team.id)
 
-        self.dropDown.configure(state = "disabled")
-        self.lineupPitch.set_counter(11)
-
+        playersCount = 0
         for playerData in self.lineup:
             position = playerData.position
             positionCode = POSITION_CODES[position]
@@ -92,6 +90,11 @@ class Tactics(ctk.CTkFrame):
 
                 if subOnEvents:
                     continue
+            
+            if player.player_ban != 0:
+                continue
+
+            playersCount += 1
 
             name = player.first_name + " " + player.last_name
             self.selectedLineup[position] = player
@@ -108,14 +111,20 @@ class Tactics(ctk.CTkFrame):
                             position,
                             self.removePlayer
                         )
+            
+        self.lineupPitch.set_counter(playersCount)
+
+        if playersCount == 11:
+            self.dropDown.configure(state = "disabled")
 
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).pack(pady = 5)
-
         for player in self.players:
             name = player.first_name + " " + player.last_name
             if player not in self.selectedLineup.values():
-                frame = SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute) 
-                frame.showCheckBox()
+                frame = SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self.session, self) 
+
+                if playersCount == 11:
+                    frame.showCheckBox()
 
         for position in POSITION_CODES.keys():
             if position in self.selectedLineup:
@@ -125,7 +134,7 @@ class Tactics(ctk.CTkFrame):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).pack(pady = 5)
         
         for player in self.players:
-            SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute)
+            SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self.session, self)
 
     def choosePlayer(self, selected_position):
         self.selected_position = selected_position
@@ -137,7 +146,7 @@ class Tactics(ctk.CTkFrame):
         values = []
         for player in self.players:
             playerName = player.first_name + " " + player.last_name
-            if POSITION_CODES[selected_position] in player.specific_positions.split(",") and player not in self.selectedLineup.values():
+            if POSITION_CODES[selected_position] in player.specific_positions.split(",") and player not in self.selectedLineup.values() and player.player_ban == 0:
                 values.append(playerName)
         
         if len(values) == 0:
@@ -217,7 +226,7 @@ class Tactics(ctk.CTkFrame):
                 break
 
         player = Players.get_player_by_name(self.session, playerName.split(" ")[0], playerName.split(" ")[1])
-        SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute)
+        SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self.session, self)
 
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
         self.substitutePlayers = []

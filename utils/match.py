@@ -752,7 +752,7 @@ class Match():
             elif event["type"] == "injury" or event["type"] == "red_card":
                 MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
                 ban = get_player_ban(event["type"])
-                PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id if event["type"] == "red_card" else "any", ban, event["type"])
+                PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id, ban, event["type"])
             else:
                 MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
 

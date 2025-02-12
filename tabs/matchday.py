@@ -872,7 +872,7 @@ class MatchDay(ctk.CTkFrame):
         minute = int(time.split(":")[0]) + 1
 
         if event["extra"]:
-            if minute < 50:
+            if minute <= 50:
                 extraTime = minute - 45
                 minuteText = f"45 + {extraTime}'"
             else:

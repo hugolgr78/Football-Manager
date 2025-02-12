@@ -1109,7 +1109,28 @@ class MatchEvents(Base):
             return yellow_cards
         else:
             return 0
-        
+
+    @classmethod
+    def check_yellow_card_ban(cls, session, player_id, comp_id, ban_threshold):
+        yellow_cards = session.query(MatchEvents).join(Matches).filter(
+            MatchEvents.player_id == player_id,
+            MatchEvents.event_type == "yellow_card",
+            Matches.league_id == comp_id
+        ).count()
+
+        if yellow_cards and yellow_cards % ban_threshold == 0:
+            red_card_ban = session.query(PlayerBans).filter(
+                PlayerBans.player_id == player_id,
+                PlayerBans.ban_type == "red_card",
+                PlayerBans.ban_length > 0
+            ).first()
+
+            if red_card_ban:
+                red_card_ban.ban_length += 1
+                session.commit()
+            else:
+                PlayerBans.add_player_ban(session, player_id, comp_id, ban_length = 1, ban_type = "yellow_cards")
+
     @classmethod
     def get_all_yellow_cards(cls, session, league_id):
         PlayerAlias = aliased(Players)
@@ -1808,7 +1829,7 @@ class PlayerBans(Base):
     player_id = Column(String(128), ForeignKey('players.id'))
     competition_id = Column(String(128))
     ban_length = Column(Integer, nullable = False)
-    ban_type = Column(Enum("red_card", "injury"), nullable = False)
+    ban_type = Column(Enum("red_card", "injury", "yellow_cards"), nullable = False)
 
     @classmethod
     def add_player_ban(cls, session, player_id, competition_id, ban_length, ban_type):
@@ -1851,6 +1872,12 @@ class PlayerBans(Base):
                 is_banned = True
         
         return is_banned
+    
+    @classmethod
+    def get_bans_for_player(cls, session, player_id):
+        bans = session.query(PlayerBans).join(Players).filter(Players.id == player_id).all()
+
+        return bans if bans else []
 
     @classmethod
     def get_all_non_banned_players_for_comp(cls, session, team_id, competition_id):

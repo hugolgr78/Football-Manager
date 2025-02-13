@@ -1130,6 +1130,7 @@ class MatchEvents(Base):
                 session.commit()
             else:
                 PlayerBans.add_player_ban(session, player_id, comp_id, ban_length = 1, ban_type = "yellow_cards")
+                Emails.add_email(session, "player_ban", None, player_id, 1, comp_id)
 
     @classmethod
     def get_all_yellow_cards(cls, session, league_id):
@@ -1763,13 +1764,17 @@ class Emails(Base):
     email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban"), nullable = False)
     matchday = Column(Integer)
     player_id = Column(String(128), ForeignKey('players.id'))
+    ban_length = Column(Integer)
+    comp_id = Column(String(128))
 
     @classmethod
-    def add_email(cls, session, email_type, matchday, player_id):
+    def add_email(cls, session, email_type, matchday, player_id, ban_length, comp_id):
         new_email = Emails(
             email_type = email_type,
             matchday = matchday,
-            player_id = player_id
+            player_id = player_id,
+            ban_length = ban_length,
+            comp_id = comp_id
         )
 
         session.add(new_email)

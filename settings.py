@@ -316,3 +316,19 @@ def get_player_ban(ban_type):
         ban = random.randint(1,3)
 
     return ban
+
+# Normal scenario
+LOW_YELLOW_CARD = [0.7, 0.2, 0.1]
+LOW_RED_CARD = [0.95, 0.05]
+
+MEDIUM_YELLOW_CARD = [0.6, 0.2, 0.1, 0.1]
+MEDIUM_RED_CARD = [0.88, 0.08, 0.03]
+
+HIGH_YELLOW_CARD = [0.5, 0.3, 0.1, 0.05, 0.05]
+HIGH_RED_CARD = [0.84, 0.1, 0.05, 0.01]
+
+# Extra yellows scenario
+YELLOWS_EXTRA = [0.1] * 10
+
+# 100% red card scenario
+RED_100 = [1.0]

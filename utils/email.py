@@ -10,7 +10,7 @@ from PIL import Image
 import io
 
 class EmailFrame(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id, email_type, matchday, player_id, emailFrame, parentTab):
+    def __init__(self, parent, session, manager_id, email_type, matchday, player_id, ban_length, comp_id, emailFrame, parentTab):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 260, height = 50)
         self.pack(fill = "both", padx = 10, pady = 5)
 
@@ -20,6 +20,8 @@ class EmailFrame(ctk.CTkFrame):
         self.email_type = email_type
         self.matchday = matchday
         self.player_id = player_id
+        self.ban_length = ban_length
+        self.comp_id = comp_id
         self.emailFrame = emailFrame
         self.parentTab = parentTab
 
@@ -1073,6 +1075,16 @@ class PlayerInjury():
         for widget in self.frame.winfo_children():
             widget.place_forget()
 
+        self.setUpEmail()
+
+        self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
+        self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.1, anchor = "w")
+
+    def setUpEmail(self):
+        self.emailText_1 = f"I regret to inform you that {self.parent.player.first_name} {self.parent.player.last_name} has suffered an injury."
+
 class PlayerBan():
     def __init__(self, parent, session):
 
@@ -1087,6 +1099,23 @@ class PlayerBan():
     def openEmail(self):
         for widget in self.frame.winfo_children():
             widget.place_forget()
+
+        self.setUpEmail()
+
+        self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
+        self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.12, anchor = "w")
+
+    def setUpEmail(self):
+
+        competition = League.get_league_by_id(self.session, self.parent.comp_id)
+
+        self.emailText_1 = (
+            f"I regret to inform you that {self.parent.player.first_name} {self.parent.player.last_name} has been suspended for {self.parent.ban_length} match(es)\n"
+            f"in the {competition.name}."
+        )
+
 
 EMAIL_CLASSES = {
     "welcome": Welcome,

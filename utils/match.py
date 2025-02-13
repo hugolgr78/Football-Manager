@@ -206,6 +206,14 @@ class Match():
                 self.add_events(self.awayEvents, self.awaySubs, "substitution", self.awayInjury)
 
         if teamMatch:
+
+            event = {
+                "type": "red_card",
+                "extra": False
+            }
+
+            self.awayEvents["12:50"] = event
+
             print("Home Events: ", self.homeEvents)
             print("Away Events: ", self.awayEvents)
 
@@ -236,37 +244,23 @@ class Match():
         self.referee = Referees.get_referee_by_id(self.session, self.match.referee_id)
         severity = self.referee.severity
 
-        if severity == "low":
-            self.numHomeYellows = random.choices(range(0, 3), weights = [0.7, 0.2, 0.1], k = 1)[0]
-            self.numAwayYellows = random.choices(range(0, 3), weights = [0.7, 0.2, 0.1], k = 1)[0]
-            self.numHomeReds = random.choices(range(0, 2), weights = [0.95, 0.05], k = 1)[0]
-            self.numAwayReds = random.choices(range(0, 2), weights = [0.95, 0.05], k = 1)[0]
-        elif severity == "medium":
-            self.numHomeYellows = random.choices(range(0, 4), weights = [0.6, 0.2, 0.1, 0.1], k = 1)[0]
-            self.numAwayYellows = random.choices(range(0, 4), weights = [0.6, 0.2, 0.1, 0.1], k = 1)[0]
-            self.numHomeReds = random.choices(range(0, 3), weights = [0.88, 0.08, 0.03], k = 1)[0]
-            self.numAwayReds = random.choices(range(0, 3), weights = [0.88, 0.08, 0.03], k = 1)[0]
-        else:
-            self.numHomeYellows = random.choices(range(0, 5), weights = [0.5, 0.3, 0.1, 0.05, 0.05], k = 1)[0]
-            self.numAwayYellows = random.choices(range(0, 5), weights = [0.5, 0.3, 0.1, 0.05, 0.05], k = 1)[0]
-            self.numHomeReds = random.choices(range(0, 4), weights = [0.84, 0.1, 0.05, 0.01], k = 1)[0]
-            self.numAwayReds = random.choices(range(0, 4), weights = [0.84, 0.1, 0.05, 0.01], k = 1)[0]
+        choices = len(LOW_YELLOW_CARD)
 
-        # if severity == "low":
-        #     self.numHomeYellows = random.choices(range(0, 10), weights=[0.1] * 10, k=1)[0]
-        #     self.numAwayYellows = random.choices(range(0, 10), weights=[0.1] * 10, k=1)[0]
-        #     self.numHomeReds = random.choices(range(0, 2), weights=[0.95, 0.05], k=1)[0]
-        #     self.numAwayReds = random.choices(range(0, 2), weights=[0.95, 0.05], k=1)[0]
-        # elif severity == "medium":
-        #     self.numHomeYellows = random.choices(range(0, 10), weights=[0.1] * 10, k=1)[0]
-        #     self.numAwayYellows = random.choices(range(0, 10), weights=[0.1] * 10, k=1)[0]
-        #     self.numHomeReds = random.choices(range(0, 3), weights=[0.88, 0.08, 0.03], k=1)[0]
-        #     self.numAwayReds = random.choices(range(0, 3), weights=[0.88, 0.08, 0.03], k=1)[0]
-        # else:
-        #     self.numHomeYellows = random.choices(range(0, 10), weights=[0.1] * 10, k=1)[0]
-        #     self.numAwayYellows = random.choices(range(0, 10), weights=[0.1] * 10, k=1)[0]
-        #     self.numHomeReds = random.choices(range(0, 4), weights=[0.84, 0.1, 0.05, 0.01], k=1)[0]
-        #     self.numAwayReds = random.choices(range(0, 4), weights=[0.84, 0.1, 0.05, 0.01], k=1)[0]
+        if severity == "low":
+            self.numHomeYellows = random.choices(range(0, choices), weights = LOW_YELLOW_CARD)[0]
+            self.numAwayYellows = random.choices(range(0, choices), weights = LOW_YELLOW_CARD)[0]
+            self.numHomeReds = random.choices(range(0, choices - 1), weights = LOW_RED_CARD)[0]
+            self.numAwayReds = random.choices(range(0, choices - 1), weights = LOW_RED_CARD)[0]
+        elif severity == "medium":
+            self.numHomeYellows = random.choices(range(0, choices + 1), weights = MEDIUM_YELLOW_CARD)[0]
+            self.numAwayYellows = random.choices(range(0, choices + 1), weights = MEDIUM_YELLOW_CARD)[0]
+            self.numHomeReds = random.choices(range(0, choices), weights = MEDIUM_RED_CARD)[0]
+            self.numAwayReds = random.choices(range(0, choices), weights = MEDIUM_RED_CARD)[0]
+        else:
+            self.numHomeYellows = random.choices(range(0, choices + 2), weights = HIGH_YELLOW_CARD)[0]
+            self.numAwayYellows = random.choices(range(0, choices + 2), weights = HIGH_YELLOW_CARD)[0]
+            self.numHomeReds = random.choices(range(0, choices + 1), weights = HIGH_RED_CARD)[0]
+            self.numAwayReds = random.choices(range(0, choices + 1), weights = HIGH_RED_CARD)[0]
 
     def getInjuries(self):
         self.homeInjury = False
@@ -657,7 +651,7 @@ class Match():
         finalRating = round(rating + 0.5, 2) if self.ratingsBoost == venue else round(rating - 0.5, 2) if self.ratingsDecay == venue else round(rating, 2)
         ratingsDict[player] = min(finalRating, 10)
 
-    def saveData(self):
+    def saveData(self, managing_team = None):
 
         self.returnWinner()
 
@@ -740,6 +734,12 @@ class Match():
                 MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
                 ban = get_player_ban(event["type"])
                 PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id if event["type"] == "red_card" else "any", ban, event["type"])
+
+                if managing_team == "home" and event["type"] == "injury":
+                    Emails.add_email(self.session, "player_injury", None, event["player"].id, None, self.match.league_id)
+                elif managing_team == "home" and event["type"] == "red_card":
+                    Emails.add_email(self.session, "player_ban", None, event["player"].id, ban, self.match.league_id)
+
             elif event["type"] == "yellow_card":
                 MatchEvents.add_event(self.session, self.match.id, "yellow_card", minute, event["player"].id)
                 MatchEvents.check_yellow_card_ban(self.session, event["player"].id, self.match.league_id, 5)
@@ -772,6 +772,12 @@ class Match():
                 MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
                 ban = get_player_ban(event["type"])
                 PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id, ban, event["type"])
+
+                if managing_team == "away" and event["type"] == "injury":
+                    Emails.add_email(self.session, "player_injury", None, event["player"].id, None, self.match.league_id)
+                elif managing_team == "away" and event["type"] == "red_card":
+                    Emails.add_email(self.session, "player_ban", None, event["player"].id, ban, self.match.league_id)
+
             elif event["type"] == "yellow_card":
                 MatchEvents.add_event(self.session, self.match.id, "yellow_card", minute, event["player"].id)
                 MatchEvents.check_yellow_card_ban(self.session, event["player"].id, self.match.league_id, 5)

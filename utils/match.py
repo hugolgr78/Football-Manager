@@ -206,14 +206,6 @@ class Match():
                 self.add_events(self.awayEvents, self.awaySubs, "substitution", self.awayInjury)
 
         if teamMatch:
-
-            event = {
-                "type": "red_card",
-                "extra": False
-            }
-
-            self.awayEvents["12:50"] = event
-
             print("Home Events: ", self.homeEvents)
             print("Away Events: ", self.awayEvents)
 
@@ -736,7 +728,7 @@ class Match():
                 PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id if event["type"] == "red_card" else "any", ban, event["type"])
 
                 if managing_team == "home" and event["type"] == "injury":
-                    Emails.add_email(self.session, "player_injury", None, event["player"].id, None, self.match.league_id)
+                    Emails.add_email(self.session, "player_injury", None, event["player"].id, ban, self.match.league_id)
                 elif managing_team == "home" and event["type"] == "red_card":
                     Emails.add_email(self.session, "player_ban", None, event["player"].id, ban, self.match.league_id)
 
@@ -774,7 +766,7 @@ class Match():
                 PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id, ban, event["type"])
 
                 if managing_team == "away" and event["type"] == "injury":
-                    Emails.add_email(self.session, "player_injury", None, event["player"].id, None, self.match.league_id)
+                    Emails.add_email(self.session, "player_injury", None, event["player"].id, ban, self.match.league_id)
                 elif managing_team == "away" and event["type"] == "red_card":
                     Emails.add_email(self.session, "player_ban", None, event["player"].id, ban, self.match.league_id)
 

@@ -1080,10 +1080,29 @@ class PlayerInjury():
         self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
         self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
 
-        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.1, anchor = "w")
+        self.emailFrame_1.place(relx = 0.05, rely = 0.1, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.131, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.18, anchor = "w")
 
     def setUpEmail(self):
-        self.emailText_1 = f"I regret to inform you that {self.parent.player.first_name} {self.parent.player.last_name} has suffered an injury."
+
+        self.emailFrame_1 = PlayerProfileLabel(
+            self.frame,
+            self.session,
+            self.parent.player,
+            f"{self.parent.player.first_name} {self.parent.player.last_name}",
+            "I regret to inform you that ",
+            " has suffered an injury.",
+            240,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
+        )
+
+        self.emailText_1 = f"We expect him to be out for at least {self.parent.ban_length} match(es)."
+
+        self.emailText_2 = "Name, Assistant Manager"
 
 class PlayerBan():
     def __init__(self, parent, session):
@@ -1105,17 +1124,42 @@ class PlayerBan():
         self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
         self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
 
-        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.12, anchor = "w")
+        self.emailFrame_1.place(relx = 0.05, rely = 0.12, anchor = "w")
+        self.emailFrame_2.place(relx = 0.05, rely = 0.151, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.2, anchor = "w")
 
     def setUpEmail(self):
 
         competition = League.get_league_by_id(self.session, self.parent.comp_id)
 
-        self.emailText_1 = (
-            f"I regret to inform you that {self.parent.player.first_name} {self.parent.player.last_name} has been suspended for {self.parent.ban_length} match(es)\n"
-            f"in the {competition.name}."
+        self.emailFrame_1 = PlayerProfileLabel(
+            self.frame,
+            self.session,
+            self.parent.player,
+            f"{self.parent.player.first_name} {self.parent.player.last_name}",
+            "I regret to inform you that ",
+            " has picked up a suspension.",
+            240,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
         )
 
+        self.emailFrame_2 = LeagueProfileLabel(
+            self.frame,
+            self.session,
+            self.parent.manager_id,
+            f"{competition.name}",
+            f"He will miss {self.parent.ban_length} match(es) in the ",
+            ".",
+            240,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
+        )
+
+        self.emailText_1 = "Name, Assistant Manager"
 
 EMAIL_CLASSES = {
     "welcome": Welcome,

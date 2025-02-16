@@ -3,6 +3,7 @@ from settings import *
 from data.database import *
 from data.gamesDatabase import *
 from utils.score import Score
+from collections import defaultdict
 
 class Match():
     def __init__(self, session, match):
@@ -57,7 +58,7 @@ class Match():
         formations = list(FORMATIONS_CHANCES.keys())
         weights = list(FORMATIONS_CHANCES.values())
         oppFormation = random.choices(formations, weights = weights, k = 1)[0]
-        defNums, midNums, attNums = map(int, oppFormation.split("-"))
+        defNums, midNums, _ = map(int, oppFormation.split("-"))
 
         players = PlayerBans.get_all_non_banned_players_for_comp(self.session, teamID, self.match.league_id)
         goalkeepers = [player for player in players if player.position == "goalkeeper"]
@@ -66,43 +67,17 @@ class Match():
         attackers = [player for player in players if player.position == "forward"]
 
         # goalkeeper
-        # goalkeepers = Players.get_all_goalkeepers(self.session, teamID)
         lineup["Goalkeeper"] = goalkeepers[0]
 
         # defenders
-        positions = FORMATIONS_POSITIONS[oppFormation][1:defNums + 1]
-        # defenders = Players.get_all_defenders(self.session, teamID) 
-
-        for position in positions:
-            code = POSITION_CODES[position]
-
-            for defender in defenders:
-                if code in defender.specific_positions and defender not in lineup.values():
-                    lineup[position] = defender
-                    break
+        self.choosePlayers(FORMATIONS_POSITIONS[oppFormation][1:defNums + 1], defenders, lineup)
 
         # midfielders
-        positions = FORMATIONS_POSITIONS[oppFormation][defNums + 1:defNums + midNums + 1]
-        # midfielders = Players.get_all_midfielders(self.session, teamID)
-
-        for position in positions:
-            code = POSITION_CODES[position]
-
-            for midfielder in midfielders:
-                if code in midfielder.specific_positions and midfielder not in lineup.values():
-                    lineup[position] = midfielder
-                    break
+        self.choosePlayers(FORMATIONS_POSITIONS[oppFormation][defNums + 1:defNums + midNums + 1], midfielders, lineup)
 
         # attackers
-        positions = FORMATIONS_POSITIONS[oppFormation][defNums + midNums + 1:]
-        # attackers = Players.get_all_forwards(self.session, teamID)
+        self.choosePlayers(FORMATIONS_POSITIONS[oppFormation][defNums + midNums + 1:], attackers, lineup)
 
-        for position in positions:
-            code = POSITION_CODES[position]
-
-            for attacker in attackers:
-                if code in attacker.specific_positions and attacker not in lineup.values():
-                    lineup[position] = attacker
         # substitutes
         if len(goalkeepers) > 1:
             substitutes.append(goalkeepers[1])
@@ -134,6 +109,49 @@ class Match():
         else:
             self.awayCurrentLineup = lineup
             self.awayCurrentSubs = substitutes
+
+    def choosePlayers(self, position_names, players, lineup):
+
+        position_options = defaultdict(list)
+
+        for position in position_names:
+            for player in players:
+                if POSITION_CODES[position] in player.specific_positions:
+                    position_options[position].append(player)
+
+        assigned_players = set()
+
+        while position_options != {}:
+            # Step 2: Sort full position names by scarcity (fewest available players first)
+            sorted_positions = sorted(position_options.keys(), key = lambda pos: len(position_options[pos]))
+
+            # Pick the position with the least available players
+            position = sorted_positions[0]
+            available_players = [p for p in position_options[position] if p not in assigned_players]
+
+            if not available_players: # get a youth team player from db or create a new one
+                del position_options[position]
+                continue
+
+            # Step 3: Prioritize by role (star > first_team > rotation)
+            best_fit = next((p for p in available_players if p.player_role == "Star player"), None) or \
+                    next((p for p in available_players if p.player_role == "First Team"), None) or \
+                    next((p for p in available_players if p.player_role == "Rotation"), None)
+
+            if not best_fit:
+                best_fit = available_players[0]
+
+            lineup[position] = best_fit
+            assigned_players.add(best_fit)
+
+            # Remove the assigned player from all position options
+            for pos_list in position_options.values():
+                if best_fit in pos_list:
+                    pos_list.remove(best_fit)
+
+            # Remove empty position entries
+            # position_options = {pos: players for pos, players in position_options.items() if players}
+            del position_options[position]
 
     def generateScore(self, teamMatch = False, home = False):
         self.score = Score(self.homeTeam, self.awayTeam, self.homeCurrentLineup, self.awayCurrentLineup)

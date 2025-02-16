@@ -1892,7 +1892,7 @@ class PlayerBans(Base):
         for player in all_players:
             is_banned = PlayerBans.check_bans_for_player(session, player.id, competition_id)
 
-            if not is_banned:
+            if not is_banned and player.player_role != "Youth":
                 non_banned_players.append(player)
 
         return non_banned_players

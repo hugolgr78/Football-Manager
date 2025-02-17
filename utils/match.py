@@ -4,6 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 from utils.score import Score
 from collections import defaultdict
+import itertools
 
 class Match():
     def __init__(self, session, match):
@@ -67,7 +68,10 @@ class Match():
         attackers = [player for player in players if player.position == "forward"]
 
         # goalkeeper
-        lineup["Goalkeeper"] = goalkeepers[0]
+        if len(goalkeepers) == 0:
+            self.getYouthPlayer(teamID, "Goalkeeper", lineup)
+        else:
+            lineup["Goalkeeper"] = goalkeepers[0]
 
         # defenders
         self.choosePlayers(FORMATIONS_POSITIONS[oppFormation][1:defNums + 1], defenders, lineup)
@@ -150,8 +154,29 @@ class Match():
                     pos_list.remove(best_fit)
 
             # Remove empty position entries
-            # position_options = {pos: players for pos, players in position_options.items() if players}
             del position_options[position]
+
+    def getYouthPlayer(self, teamID, position, lineup):
+        youthPlayers = PlayerBans.get_all_non_banned_youth_players_for_comp(self.session, teamID, self.match.league_id)
+
+        if youthPlayers:
+            for player in youthPlayers:
+                if POSITION_CODES[position] in player.specific_positions:
+                    lineup[position] = player
+                    return
+                
+        if position in DEFENSIVE_POSITIONS:
+            overallPosition = "defender"
+        elif position in MIDFIELD_POSITIONS:
+            overallPosition = "midfielder"
+        elif position in ATTACKING_POSITIONS:
+            overallPosition = "forward"
+        else:
+            overallPosition = "goalkeeper"
+                
+        # list empty or no player found with the specific position
+        newYouth = Players.add_player(self.session, teamID, overallPosition, position, "Youth Team")
+        lineup[position] = newYouth
 
     def generateScore(self, teamMatch = False, home = False):
         self.score = Score(self.homeTeam, self.awayTeam, self.homeCurrentLineup, self.awayCurrentLineup)
@@ -665,6 +690,13 @@ class Match():
 
         self.returnWinner()
 
+        for player in itertools.chain(self.homeCurrentLineup.values(), self.awayCurrentLineup.values(), self.homeFinalLineup.values(), self.awayFinalLineup.values()):
+            if player.age < 18:
+                data = Players.get_player_by_id(self.session, player.id)
+
+                if not data:
+                    Players.add_player_entry(self.session, player)
+
         PlayerBans.reduce_all_player_bans_for_team(self.session, self.homeTeam.id, self.match.league_id)
         PlayerBans.reduce_all_player_bans_for_team(self.session, self.awayTeam.id, self.match.league_id)
 
@@ -743,7 +775,7 @@ class Match():
             elif event["type"] == "injury" or event["type"] == "red_card":
                 MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
                 ban = get_player_ban(event["type"])
-                PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id if event["type"] == "red_card" else "any", ban, event["type"])
+                PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
                 if managing_team == "home" and event["type"] == "injury":
                     Emails.add_email(self.session, "player_injury", None, event["player"].id, ban, self.match.league_id)
@@ -781,7 +813,7 @@ class Match():
             elif event["type"] == "injury" or event["type"] == "red_card":
                 MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
                 ban = get_player_ban(event["type"])
-                PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id, ban, event["type"])
+                PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
                 if managing_team == "away" and event["type"] == "injury":
                     Emails.add_email(self.session, "player_injury", None, event["player"].id, ban, self.match.league_id)

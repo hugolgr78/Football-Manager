@@ -271,7 +271,7 @@ class Players(Base):
         session.commit()
 
     @classmethod
-    def add_player(cls, session, team_id, position, required_position, role):
+    def add_player(cls, session, team_id, position, required_position, role, commit = False):
         
         selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
         _, countryWeights = COUNTRIES[selectedContinent]
@@ -321,9 +321,10 @@ class Players(Base):
 
         new_player.specific_positions = ','.join(player_positions)
 
-        # session.add(new_player)
-        # session.commit()
-
+        if commit:
+            session.add(new_player)
+            session.commit()
+            
         return new_player
 
     @classmethod

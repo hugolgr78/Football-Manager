@@ -171,7 +171,8 @@ class Squad(ctk.CTkFrame):
         self.playersFrame.pack()
 
         for player in self.players:
-            PlayerFrame(self.parent, self.session, self.manager_id, player, self.playersFrame, teamSquad = False)
+            if player.player_role != "Youth Team":
+                PlayerFrame(self.parent, self.session, self.manager_id, player, self.playersFrame, teamSquad = False)
 
 class Schedule(ctk.CTkFrame):
     def __init__(self, parent, session, manager_id):

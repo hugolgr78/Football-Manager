@@ -48,4 +48,5 @@ class Squad(ctk.CTkFrame):
                 widget.destroy()
 
         for player in self.players:
-            frame = PlayerFrame(self, self.session, self.manager_id, player, self.playersFrame)
+            if player.player_role != "Youth Team":
+                PlayerFrame(self, self.session, self.manager_id, player, self.playersFrame)

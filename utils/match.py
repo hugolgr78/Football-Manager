@@ -135,10 +135,11 @@ class Match():
 
         position_options = defaultdict(list)
 
-        for position in position_names:
-            lineup[position] = None
+        # for position in position_names:
+        #     lineup[position] = None
 
         for position in position_names:
+            position_options[position] = []
             for player in players:
                 if POSITION_CODES[position] in player.specific_positions:
                     position_options[position].append(player)
@@ -169,11 +170,6 @@ class Match():
             lineup[position] = best_fit
             assigned_players.add(best_fit)
 
-            # Remove the assigned player from all position options
-            for pos_list in position_options.values():
-                if best_fit in pos_list:
-                    pos_list.remove(best_fit)
-
             # Remove empty position entries
             del position_options[position]
 
@@ -200,7 +196,7 @@ class Match():
                 
         # list empty or no player found with the specific position
         newYouth = Players.add_player(self.session, teamID, overallPosition, position, "Youth Team")
-        if lineup is not None:
+        if lineup is not None: # if lineup is passed as None, then add to subs
             lineup[position] = newYouth
         else:
             substitutes.append(newYouth)

@@ -303,8 +303,8 @@ class Players(Base):
         specific_positions = {
             "goalkeeper": ["GK"],
             "defender": ["RB", "CB", "LB"],
-            "midfielder": ["DM", "CM", "RM", "LM", "AM"],
-            "forward": ["LW", "CF", "RW"]
+            "midfielder": ["DM", "CM", "RM", "LM"],
+            "forward": ["LW", "CF", "RW", "AM"]
         }
 
         # Ensure the player has the required position
@@ -516,7 +516,7 @@ class Players(Base):
             return None
 
     @classmethod
-    def get_all_players_by_team(cls, session, team_id):
+    def get_all_players_by_team(cls, session, team_id, youths = True):
         position_order = case(
             [
                 (Players.position == 'goalkeeper', 1),
@@ -524,16 +524,21 @@ class Players(Base):
                 (Players.position == 'midfielder', 3),
                 (Players.position == 'forward', 4)
             ],
-            else_ = 5
+            else_=5
         )
 
-        players = session.query(Players).filter(Players.team_id == team_id).order_by(position_order).all()
+        query = session.query(Players).filter(Players.team_id == team_id)
+
+        if not youths:
+            query = query.filter(Players.player_role != 'Youth Team')
+
+        players = query.order_by(position_order).all()
 
         if players:
             return players
         else:
             return None
-
+        
     @classmethod
     def get_all_star_players(cls, session, team_id):
         players = session.query(Players).filter(Players.team_id == team_id, Players.player_role == 'Star player').all()

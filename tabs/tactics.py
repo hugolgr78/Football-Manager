@@ -62,7 +62,9 @@ class Tactics(ctk.CTkFrame):
     def importLineup(self):
         self.leagueTeams = LeagueTeams.get_league_by_team(self.session, self.team.id)
         self.league = League.get_league_by_id(self.session, self.leagueTeams.league_id)
-        self.players = Players.get_all_players_by_team(self.session, self.team.id)
+        self.players = Players.get_all_players_by_team(self.session, self.team.id, youths = False)
+
+        self.checkPositionsForYouth()
 
         lastMatchday = self.league.current_matchday - 1
 
@@ -131,6 +133,46 @@ class Tactics(ctk.CTkFrame):
                 del self.positionsCopy[position]
             
         self.dropDown.configure(values = self.positionsCopy)
+
+    def checkPositionsForYouth(self):
+        nonBannedPlayers = PlayerBans.get_all_non_banned_players_for_comp(self.session, self.team.id, self.league.id)
+
+        for position in POSITION_CODES.keys():
+
+            playersForPosition = [player for player in nonBannedPlayers if POSITION_CODES[position] in player.specific_positions.split(",")]
+
+            if position in DEFENSIVE_POSITIONS:
+                overallPosition = "defender"
+            elif position in MIDFIELD_POSITIONS:
+                overallPosition = "midfielder"
+            elif position in ATTACKING_POSITIONS:
+                overallPosition = "forward"
+            else:
+                overallPosition = "goalkeeper"
+
+            if len(playersForPosition) == 0:
+                youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.session, self.team.id, self.league.id)
+                youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth not in self.players]
+
+                if len(youthForPosition) > 0:
+                    self.players.append(youthForPosition[0])
+                else:
+                    newYouth = Players.add_player(self.session, self.team.id, overallPosition, position, "Youth Team")
+                    self.players.append(newYouth)
+
+                if position == "Goalkeeper":
+                    newYouth = Players.add_player(self.session, self.team.id, overallPosition, position, "Youth Team")
+                    self.players.append(newYouth)
+
+            elif position == "Goalkeeper" and len(playersForPosition) == 1:
+                youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.session, self.team.id, self.league.id)
+                youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth not in self.players]
+
+                if len(youthForPosition) > 0:
+                    self.players.append(youthForPosition[0])
+                else:
+                    newYouth = Players.add_player(self.session, self.team.id, overallPosition, position, "Youth Team")
+                    self.players.append(newYouth)
 
     def addSubstitutePlayers(self):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).pack(pady = 5)

@@ -24,10 +24,3 @@ UPDATE leagues
 SET current_matchday = 1;
 
 DELETE FROM player_bans;
-
-INSERT INTO match_events (id, match_id, event_type, time, player_id)
-VALUES
-    ('7284ca0f-2098-4a75-9788-2b5b8160d2c1', 'efdd683d-0dce-4f1b-b6b1-669a7e379595', 'yellow_card', '1', 'efccaf89-6dc1-47f8-ae22-2bde6bc86357'),
-    ('7284ca0f-2098-4a75-9788-2b5b8160d2c2', 'efdd683d-0dce-4f1b-b6b1-669a7e379595', 'yellow_card', '2', 'efccaf89-6dc1-47f8-ae22-2bde6bc86357'),
-    ('7284ca0f-2098-4a75-9788-2b5b8160d2c3', 'efdd683d-0dce-4f1b-b6b1-669a7e379595', 'yellow_card', '3', 'efccaf89-6dc1-47f8-ae22-2bde6bc86357');
-    -- ('7284ca0f-2098-4a75-9788-2b5b8160d2c4', '<match_id>', 'yellow_card', '4', 'b80ffa42-a8d1-4c44-973f-ec37113b0086');

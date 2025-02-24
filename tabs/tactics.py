@@ -85,14 +85,20 @@ class Tactics(ctk.CTkFrame):
             positionCode = POSITION_CODES[position]
             player = Players.get_player_by_id(self.session, playerData.player_id)
 
+            # Remove any youths that arent in the players list as the position is now free
+            if player.player_role == "Youth Team" and player not in self.players:
+                continue
+
             events = MatchEvents.get_events_by_match_and_player(self.session, self.lastTeamMatch.id, player.id)
             
+            # Remove any players that were subbed on
             if events:
                 subOnEvents = [event for event in events if event.event_type == "sub_on" and event.player_id == player.id]
 
                 if subOnEvents:
                     continue
             
+            # Remove any players that are banned
             if PlayerBans.check_bans_for_player(self.session, player.id, self.league.id):
                 continue
 

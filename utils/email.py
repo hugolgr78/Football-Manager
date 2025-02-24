@@ -10,7 +10,7 @@ from PIL import Image
 import io
 
 class EmailFrame(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id, email_type, matchday, player_id, emailFrame, parentTab):
+    def __init__(self, parent, session, manager_id, email_type, matchday, player_id, ban_length, comp_id, emailFrame, parentTab):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 260, height = 50)
         self.pack(fill = "both", padx = 10, pady = 5)
 
@@ -20,6 +20,8 @@ class EmailFrame(ctk.CTkFrame):
         self.email_type = email_type
         self.matchday = matchday
         self.player_id = player_id
+        self.ban_length = ban_length
+        self.comp_id = comp_id
         self.emailFrame = emailFrame
         self.parentTab = parentTab
 
@@ -458,7 +460,7 @@ class MatchdayReview():
                 text = f"As a result of this matchday, we have now taken the lead\nof the league!"
             elif currPosition < 20 - league.relegation and lastPosition > 21 - league.relegation:
                 text = f"As a result of this matchday, we have unfortunately moved\ndown into the relegation zone." 
-            elif league.promotion != 0:
+            elif league.promotion != 0 and currPosition <= league.promotion:
                 if currPosition <= league.promotion and lastPosition > league.promotion:
                     text = f"As a result of this matchday, we have moved up into the\npromotion spots"
                 elif currPosition > league.promotion and lastPosition <= league.promotion:
@@ -503,19 +505,17 @@ class MatchdayReview():
             teamObjective = get_objective_for_level(self.parent.team.level)
 
             if teamObjective == "fight for the title":
-                text += "but the\nfans are dissapointed."
+                text += " but the\nfans are dissapointed."
             elif teamObjective == "finish in the top half":
-                text += "let's keep\npushing."
+                text += " let's keep\npushing."
             else:
-                text += "great work!"
+                text += " great work!"
         else:
             firstRelegated = TeamHistory.get_team_data_position(self.session, 21 - league.relegation, self.matchday)
             pointsDiff = matchdayTable.points - firstRelegated.points
-            f"We are currently {pointsDiff} points ahead of the\nrelegation spots."
+            text = f"We are currently {pointsDiff} points ahead of the\nrelegation spots."
 
         self.emailText_6 += " " + text
-
-
 
     def getBest3Players(self, lineups):
         bestPlayers = []
@@ -1075,6 +1075,35 @@ class PlayerInjury():
         for widget in self.frame.winfo_children():
             widget.place_forget()
 
+        self.setUpEmail()
+
+        self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
+        self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        self.emailFrame_1.place(relx = 0.05, rely = 0.1, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.131, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.18, anchor = "w")
+
+    def setUpEmail(self):
+
+        self.emailFrame_1 = PlayerProfileLabel(
+            self.frame,
+            self.session,
+            self.parent.player,
+            f"{self.parent.player.first_name} {self.parent.player.last_name}",
+            "I regret to inform you that ",
+            " has suffered an injury.",
+            240,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
+        )
+
+        self.emailText_1 = f"We expect him to be out for at least {self.parent.ban_length} match(es)."
+
+        self.emailText_2 = "Name, Assistant Manager"
+
 class PlayerBan():
     def __init__(self, parent, session):
 
@@ -1089,6 +1118,48 @@ class PlayerBan():
     def openEmail(self):
         for widget in self.frame.winfo_children():
             widget.place_forget()
+
+        self.setUpEmail()
+
+        self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
+        self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        self.emailFrame_1.place(relx = 0.05, rely = 0.12, anchor = "w")
+        self.emailFrame_2.place(relx = 0.05, rely = 0.151, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.2, anchor = "w")
+
+    def setUpEmail(self):
+
+        competition = League.get_league_by_id(self.session, self.parent.comp_id)
+
+        self.emailFrame_1 = PlayerProfileLabel(
+            self.frame,
+            self.session,
+            self.parent.player,
+            f"{self.parent.player.first_name} {self.parent.player.last_name}",
+            "I regret to inform you that ",
+            " has picked up a suspension.",
+            240,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
+        )
+
+        self.emailFrame_2 = LeagueProfileLabel(
+            self.frame,
+            self.session,
+            self.parent.manager_id,
+            f"{competition.name}",
+            f"He will miss {self.parent.ban_length} match(es) in the ",
+            ".",
+            240,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
+        )
+
+        self.emailText_1 = "Name, Assistant Manager"
 
 EMAIL_CLASSES = {
     "welcome": Welcome,

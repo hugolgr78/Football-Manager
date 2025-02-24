@@ -24,6 +24,7 @@ class MatchDay(ctk.CTkFrame):
         self.halfTime = False
         self.halfTimeEnded = False
         self.fullTime = False
+        self.fullTimeEnded = False
         self.maxExtraTimeHalf = 0
         self.maxExtraTimeFull = 100
 
@@ -358,6 +359,7 @@ class MatchDay(ctk.CTkFrame):
                     self.timerThread_running = False
                     self.pauseButton.configure(text = "Save", command = self.endSimulation)
                     self.fullTime = False
+                    self.fullTimeEnded = True
 
                     for frame in self.otherMatchesFrame.winfo_children():
                         if frame.getScoreLabel() != "FT":
@@ -425,7 +427,7 @@ class MatchDay(ctk.CTkFrame):
                         if self.halfTime or self.fullTime:
                             if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                 self.matchFrame.updateScoreLabel()
-                            newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, True, event_time, teamMatch=self, managing_team=True if self.home else False)
+                            newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, True, event_time, teamMatch = self, managing_team = True if self.home else False)
                             self.matchFrame.matchInstance.homeProcessedEvents[event_time] = event_details
 
                             if self.home and event_details["type"] == "injury":
@@ -438,7 +440,7 @@ class MatchDay(ctk.CTkFrame):
                         if not (self.halfTime or self.fullTime):
                             if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                 self.matchFrame.updateScoreLabel()
-                            newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, True, event_time, teamMatch=self, managing_team=True if self.home else False)
+                            newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, True, event_time, teamMatch = self, managing_team = True if self.home else False)
                             self.matchFrame.matchInstance.homeProcessedEvents[event_time] = event_details
 
                             if self.home and event_details["type"] == "injury":
@@ -454,7 +456,7 @@ class MatchDay(ctk.CTkFrame):
                         if self.halfTime or self.fullTime:
                             if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                 self.matchFrame.updateScoreLabel(home=False)
-                            newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, False, event_time, teamMatch=self, managing_team=True if not self.home else False)
+                            newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, False, event_time, teamMatch = self, managing_team = True if not self.home else False)
                             self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
 
                             if not self.home and event_details["type"] == "injury":
@@ -467,7 +469,7 @@ class MatchDay(ctk.CTkFrame):
                         if not (self.halfTime or self.fullTime):
                             if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                 self.matchFrame.updateScoreLabel(home=False)
-                            newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, False, event_time, teamMatch=self, managing_team=True if not self.home else False)
+                            newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, False, event_time, teamMatch = self, managing_team = True if not self.home else False)
                             self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
 
                             if not self.home and event_details["type"] == "injury":
@@ -480,6 +482,8 @@ class MatchDay(ctk.CTkFrame):
             if self.halfTimeEnded:
                 self.timeLabel.configure(text = "HT")
                 self.halfTimeEnded = False
+            elif self.fullTimeEnded:
+                self.timeLabel.configure(text = "FT")
             else:
                 self.after(0, self.updateTimeLabel, minutes, seconds)
 
@@ -868,7 +872,7 @@ class MatchDay(ctk.CTkFrame):
         minute = int(time.split(":")[0]) + 1
 
         if event["extra"]:
-            if minute < 50:
+            if minute <= 50:
                 extraTime = minute - 45
                 minuteText = f"45 + {extraTime}'"
             else:
@@ -935,7 +939,7 @@ class MatchDay(ctk.CTkFrame):
         for frame in self.otherMatchesFrame.winfo_children():
             frame.matchInstance.saveData()
 
-        self.matchFrame.matchInstance.saveData()
+        self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away")
 
         LeagueTeams.update_team_positions(self.session, self.league.id)
 

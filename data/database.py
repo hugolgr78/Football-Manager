@@ -263,7 +263,69 @@ class Players(Base):
     nationality = Column(String(128), nullable = False)
     flag = Column(BLOB)
     morale = Column(Integer, nullable = False, default = 50)
-    player_role = Column(Enum("Star player", "Youngster", "Backup", "Rotation", "First Team"))
+    player_role = Column(Enum("Star player", "Youngster", "Backup", "Rotation", "First Team", "Youth Team"), nullable = False)
+
+    @classmethod
+    def add_player_entry(cls, session, data):
+        session.add(data)
+        session.commit()
+
+    @classmethod
+    def add_player(cls, session, team_id, position, required_position, role, commit = False):
+        
+        selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
+        _, countryWeights = COUNTRIES[selectedContinent]
+        country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
+
+        with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
+            flag = file.read()
+        
+        faker = Faker()
+        date_of_birth = faker.date_of_birth(minimum_age = 15, maximum_age = 17)
+        new_player = Players(
+            team_id = team_id,
+            first_name = faker.first_name_male(),
+            last_name = faker.last_name(),
+            number = random.randint(1, 99),
+            position = position,
+            date_of_birth = str(date_of_birth),
+            age = 2024 - date_of_birth.year,
+            nationality = country,
+            flag = flag,
+            player_role = role,
+        )
+
+        existing_numbers = {player.number for player in Players.get_all_players_by_team(session, team_id)}
+        while new_player.number in existing_numbers:
+            new_player.number = random.randint(1, 99)
+
+        # Define specific positions based on the main position
+        specific_positions = {
+            "goalkeeper": ["GK"],
+            "defender": ["RB", "CB", "LB"],
+            "midfielder": ["DM", "CM", "RM", "LM"],
+            "forward": ["LW", "CF", "RW", "AM"]
+        }
+
+        # Ensure the player has the required position
+        required_code = POSITION_CODES[required_position]
+        player_positions = [required_code]
+
+        # Add a random number of other positions based on the main position
+        if position in specific_positions:
+            other_positions = specific_positions[position]
+            other_positions.remove(required_code)
+            if len(other_positions) > 0:    
+                num_other_positions = random.randint(1, len(other_positions))
+                player_positions.extend(random.sample(other_positions, num_other_positions))
+
+        new_player.specific_positions = ','.join(player_positions)
+
+        if commit:
+            session.add(new_player)
+            session.commit()
+            
+        return new_player
 
     @classmethod
     def add_players(cls, session, team_id):
@@ -299,7 +361,7 @@ class Players(Base):
         for overall_position, specific_pos_list in specific_positions.items():
             for specific_pos in specific_pos_list:
                 selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
-                continent, countryWeights = COUNTRIES[selectedContinent]
+                _, countryWeights = COUNTRIES[selectedContinent]
                 country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
 
                 with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
@@ -312,7 +374,7 @@ class Players(Base):
                     last_name = faker.last_name(),
                     number = random.randint(1, 99),
                     position = overall_position,
-                    date_of_birth = date_of_birth,
+                    date_of_birth = str(date_of_birth),
                     age = 2024 - date_of_birth.year,
                     nationality = country,
                     flag = flag
@@ -330,7 +392,7 @@ class Players(Base):
 
                 numbers.append(new_player.number)
 
-                if new_player.age < 21:
+                if new_player.age <= 21:
                     new_player.player_role = "Youngster"
                 elif overall_position == "goalkeeper":
                     if not gk_assigned:
@@ -365,7 +427,7 @@ class Players(Base):
                     last_name = faker.last_name(),
                     number = random.randint(1, 99),
                     position = overall_position,
-                    date_of_birth = date_of_birth,
+                    date_of_birth = str(date_of_birth),
                     age = 2024 - date_of_birth.year,
                     nationality = country,
                     flag = flag 
@@ -381,7 +443,7 @@ class Players(Base):
 
                 numbers.append(new_player.number)
 
-                if new_player.age < 21:
+                if new_player.age <= 21:
                     new_player.player_role = "Youngster"
                 elif overall_position == "goalkeeper":
                     if not gk_assigned:
@@ -454,7 +516,7 @@ class Players(Base):
             return None
 
     @classmethod
-    def get_all_players_by_team(cls, session, team_id):
+    def get_all_players_by_team(cls, session, team_id, youths = True):
         position_order = case(
             [
                 (Players.position == 'goalkeeper', 1),
@@ -462,16 +524,21 @@ class Players(Base):
                 (Players.position == 'midfielder', 3),
                 (Players.position == 'forward', 4)
             ],
-            else_ = 5
+            else_=5
         )
 
-        players = session.query(Players).filter(Players.team_id == team_id).order_by(position_order).all()
+        query = session.query(Players).filter(Players.team_id == team_id)
+
+        if not youths:
+            query = query.filter(Players.player_role != 'Youth Team')
+
+        players = query.order_by(position_order).all()
 
         if players:
             return players
         else:
             return None
-
+        
     @classmethod
     def get_all_star_players(cls, session, team_id):
         players = session.query(Players).filter(Players.team_id == team_id, Players.player_role == 'Star player').all()
@@ -552,7 +619,6 @@ class Players(Base):
             return goalkeepers
         else:
             return None
-
 class Matches(Base):
 
     __tablename__ = 'matches'
@@ -1110,7 +1176,29 @@ class MatchEvents(Base):
             return yellow_cards
         else:
             return 0
-        
+
+    @classmethod
+    def check_yellow_card_ban(cls, session, player_id, comp_id, ban_threshold):
+        yellow_cards = session.query(MatchEvents).join(Matches).filter(
+            MatchEvents.player_id == player_id,
+            MatchEvents.event_type == "yellow_card",
+            Matches.league_id == comp_id
+        ).count()
+
+        if yellow_cards and yellow_cards % ban_threshold == 0:
+            red_card_ban = session.query(PlayerBans).filter(
+                PlayerBans.player_id == player_id,
+                PlayerBans.ban_type == "red_card",
+                PlayerBans.ban_length > 0
+            ).first()
+
+            if red_card_ban:
+                red_card_ban.ban_length += 1
+                session.commit()
+            else:
+                PlayerBans.add_player_ban(session, player_id, comp_id, ban_length = 1, ban_type = "yellow_cards")
+                Emails.add_email(session, "player_ban", None, player_id, 1, comp_id)
+
     @classmethod
     def get_all_yellow_cards(cls, session, league_id):
         PlayerAlias = aliased(Players)
@@ -1743,13 +1831,17 @@ class Emails(Base):
     email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban"), nullable = False)
     matchday = Column(Integer)
     player_id = Column(String(128), ForeignKey('players.id'))
+    ban_length = Column(Integer)
+    comp_id = Column(String(128))
 
     @classmethod
-    def add_email(cls, session, email_type, matchday, player_id):
+    def add_email(cls, session, email_type, matchday, player_id, ban_length, comp_id):
         new_email = Emails(
             email_type = email_type,
             matchday = matchday,
-            player_id = player_id
+            player_id = player_id,
+            ban_length = ban_length,
+            comp_id = comp_id
         )
 
         session.add(new_email)
@@ -1801,6 +1893,89 @@ class Emails(Base):
             return emails
         else:
             return None
+        
+class PlayerBans(Base):
+    __tablename__ = 'player_bans'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    player_id = Column(String(128), ForeignKey('players.id'))
+    competition_id = Column(String(128))
+    ban_length = Column(Integer, nullable = False)
+    ban_type = Column(Enum("red_card", "injury", "yellow_cards"), nullable = False)
+
+    @classmethod
+    def add_player_ban(cls, session, player_id, competition_id, ban_length, ban_type):
+        new_ban = PlayerBans(
+            player_id = player_id,
+            competition_id = competition_id,
+            ban_length = ban_length,
+            ban_type = ban_type
+        )
+
+        session.add(new_ban)
+        session.commit()
+
+        return new_ban
+
+    @classmethod
+    def reduce_all_player_bans_for_team(cls, session, team_id, competition_id):
+        bans = session.query(PlayerBans).join(Players).filter(Players.team_id == team_id).all()
+
+        for ban in bans:
+            if ban.ban_type == "injury":
+                ban.ban_length -= 1
+            elif ban.competition_id == competition_id:
+                ban.ban_length -= 1
+
+            if ban.ban_length == 0:
+                session.delete(ban)
+
+        session.commit()
+
+        return bans
+
+    @classmethod
+    def check_bans_for_player(cls, session, player_id, competition_id):
+        bans = session.query(PlayerBans).join(Players).filter(Players.id == player_id).all()
+        is_banned = False
+
+        for ban in bans:
+            if ban.ban_type == "injury" or ban.competition_id == competition_id:
+                is_banned = True
+        
+        return is_banned
+    
+    @classmethod
+    def get_bans_for_player(cls, session, player_id):
+        bans = session.query(PlayerBans).join(Players).filter(Players.id == player_id).all()
+
+        return bans if bans else []
+
+    @classmethod
+    def get_all_non_banned_players_for_comp(cls, session, team_id, competition_id):
+        all_players = Players.get_all_players_by_team(session, team_id)
+        non_banned_players = []
+
+        for player in all_players:
+            is_banned = PlayerBans.check_bans_for_player(session, player.id, competition_id)
+
+            if not is_banned and player.player_role != "Youth Team":
+                non_banned_players.append(player)
+
+        return non_banned_players
+    
+    @classmethod 
+    def get_all_non_banned_youth_players_for_comp(cls, session, team_id, competition_id):
+        all_players = Players.get_all_players_by_team(session, team_id)
+        non_banned_players = []
+
+        for player in all_players:
+            is_banned = PlayerBans.check_bans_for_player(session, player.id, competition_id)
+
+            if not is_banned and player.player_role == "Youth Team":
+                non_banned_players.append(player)
+
+        return non_banned_players
 
 def create_tables(database_name):
     DATABASE_URL = f"sqlite:///data/{database_name}.db"
@@ -1809,7 +1984,7 @@ def create_tables(database_name):
     SessionLocal = sessionmaker(autocommit = False, autoflush = False, bind = engine)
     Base.metadata.create_all(bind = engine)
 
-    return SessionLocal()
+    return SessionLocal
 
 def updateProgress(textIndex):
     global progressBar, progressLabel, progressFrame, percentageLabel, PROGRESS

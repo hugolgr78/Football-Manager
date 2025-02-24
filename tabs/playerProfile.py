@@ -85,6 +85,10 @@ class Profile(ctk.CTkFrame):
         self.session = session
         self.player = player
 
+        self.suspended = False
+        self.susBan = None
+        self.injured = False
+
         src = Image.open("Images/default_user.png")
         src.thumbnail((200, 200))
         self.photo = ctk.CTkImage(src, None, (src.width, src.height))
@@ -100,7 +104,18 @@ class Profile(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = f"{self.player.age} years old / {self.player.date_of_birth}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.27, anchor = "w")
 
-        ctk.CTkLabel(self, text = self.player.player_role, font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.33, anchor = "w")
+        playerBans = PlayerBans.get_bans_for_player(self.session, self.player.id)
+
+        for ban in playerBans:
+            if ban.ban_type == "injury":
+                ctk.CTkLabel(self, text = f"Injured. Expected return in {ban.ban_length} matchday(s)", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.33, anchor = "w")
+                self.injured = True
+            else:
+                self.suspended = True
+                self.susBan = ban
+
+        if not self.injured:
+            ctk.CTkLabel(self, text = self.player.player_role, font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.33, anchor = "w")
 
         teamLogo = Image.open(io.BytesIO(self.parent.team.logo))
         teamLogo.thumbnail((200, 200))
@@ -125,7 +140,11 @@ class Profile(ctk.CTkFrame):
         self.addStats()
 
     def addStats(self):
-        ctk.CTkLabel(self.statsFrame, text = "Eclipse League stats: ", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.03, rely = 0.5, anchor = "w")
+
+        if not self.suspended:
+            ctk.CTkLabel(self.statsFrame, text = "Eclipse League stats: ", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.03, rely = 0.5, anchor = "w")
+        else:
+            ctk.CTkLabel(self.statsFrame, text = f"Eclipse League stats: (# for {self.susBan.ban_length} match(es))", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.03, rely = 0.5, anchor = "w")
 
         played = TeamLineup.get_number_matches_by_player(self.session, self.player.id, self.parent.league.league_id)
         yellowCards = MatchEvents.get_yellow_cards_by_player(self.session, self.player.id)

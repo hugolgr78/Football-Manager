@@ -3,6 +3,8 @@ from settings import *
 from data.database import *
 from data.gamesDatabase import *
 from utils.score import Score
+from collections import defaultdict
+import itertools
 
 class Match():
     def __init__(self, session, match):
@@ -57,49 +59,34 @@ class Match():
         formations = list(FORMATIONS_CHANCES.keys())
         weights = list(FORMATIONS_CHANCES.values())
         oppFormation = random.choices(formations, weights = weights, k = 1)[0]
-        defNums, midNums, attNums = map(int, oppFormation.split("-"))
+        defNums, midNums, _ = map(int, oppFormation.split("-"))
+
+        players = PlayerBans.get_all_non_banned_players_for_comp(self.session, teamID, self.match.league_id)
+        goalkeepers = [player for player in players if player.position == "goalkeeper"]
+        defenders = [player for player in players if player.position == "defender"]
+        midfielders = [player for player in players if player.position == "midfielder"]
+        attackers = [player for player in players if player.position == "forward"]
 
         # goalkeeper
-        goalkeepers = Players.get_all_goalkeepers(self.session, teamID)
-        lineup["Goalkeeper"] = goalkeepers[0]
+        if len(goalkeepers) == 0:
+            self.getYouthPlayer(teamID, "Goalkeeper", lineup = lineup)
+        else:
+            lineup["Goalkeeper"] = goalkeepers[0]
 
         # defenders
-        positions = FORMATIONS_POSITIONS[oppFormation][1:defNums + 1]
-        defenders = Players.get_all_defenders(self.session, teamID) 
-
-        for position in positions:
-            code = POSITION_CODES[position]
-
-            for defender in defenders:
-                if code in defender.specific_positions and defender not in lineup.values():
-                    lineup[position] = defender
-                    break
+        self.choosePlayers(FORMATIONS_POSITIONS[oppFormation][1:defNums + 1], defenders, lineup, teamID)
 
         # midfielders
-        positions = FORMATIONS_POSITIONS[oppFormation][defNums + 1:defNums + midNums + 1]
-        midfielders = Players.get_all_midfielders(self.session, teamID)
-
-        for position in positions:
-            code = POSITION_CODES[position]
-
-            for midfielder in midfielders:
-                if code in midfielder.specific_positions and midfielder not in lineup.values():
-                    lineup[position] = midfielder
-                    break
+        self.choosePlayers(FORMATIONS_POSITIONS[oppFormation][defNums + 1:defNums + midNums + 1], midfielders, lineup, teamID)
 
         # attackers
-        positions = FORMATIONS_POSITIONS[oppFormation][defNums + midNums + 1:]
-        attackers = Players.get_all_forwards(self.session, teamID)
+        self.choosePlayers(FORMATIONS_POSITIONS[oppFormation][defNums + midNums + 1:], attackers, lineup, teamID)
 
-        for position in positions:
-            code = POSITION_CODES[position]
-
-            for attacker in attackers:
-                if code in attacker.specific_positions and attacker not in lineup.values():
-                    lineup[position] = attacker
         # substitutes
         if len(goalkeepers) > 1:
             substitutes.append(goalkeepers[1])
+        else:
+            self.getYouthPlayer(teamID, "Goalkeeper", substitutes = substitutes)
 
         # Add 2 defenders to substitutes
         defender_count = 0
@@ -108,12 +95,22 @@ class Match():
                 substitutes.append(defender)
                 defender_count += 1
 
+        if defender_count != 2:
+            for _ in range(2 - defender_count):
+                specific_position = random.choice(DEFENSIVE_POSITIONS)
+                self.getYouthPlayer(teamID, specific_position, substitutes = substitutes)
+
         # Add 2 midfielders to substitutes
         midfielder_count = 0
         for midfielder in midfielders:
             if midfielder not in lineup.values() and midfielder_count < 2:
                 substitutes.append(midfielder)
                 midfielder_count += 1
+
+        if midfielder_count != 2:
+            for _ in range(2 - midfielder_count):
+                specific_position = random.choice(MIDFIELD_POSITIONS)
+                self.getYouthPlayer(teamID, specific_position, substitutes = substitutes)
 
         # Add 2 attackers to substitutes
         attacker_count = 0
@@ -122,12 +119,87 @@ class Match():
                 substitutes.append(attacker)
                 attacker_count += 1
 
+        if attacker_count != 2:
+            for _ in range(2 - attacker_count):
+                specific_position = random.choice(ATTACKING_POSITIONS)
+                self.getYouthPlayer(teamID, specific_position, substitutes = substitutes)
+
         if home:
             self.homeCurrentLineup = lineup
             self.homeCurrentSubs = substitutes
         else:
             self.awayCurrentLineup = lineup
             self.awayCurrentSubs = substitutes
+
+    def choosePlayers(self, position_names, players, lineup, teamID):
+
+        position_options = defaultdict(list)
+
+        # for position in position_names:
+        #     lineup[position] = None
+
+        for position in position_names:
+            position_options[position] = []
+            for player in players:
+                if POSITION_CODES[position] in player.specific_positions:
+                    position_options[position].append(player)
+
+        assigned_players = set()
+
+        while position_options != {}:
+            # Step 2: Sort full position names by scarcity (fewest available players first)
+            sorted_positions = sorted(position_options.keys(), key = lambda pos: len(position_options[pos]))
+
+            # Pick the position with the least available players
+            position = sorted_positions[0]
+            available_players = [p for p in position_options[position] if p not in assigned_players]
+
+            if not available_players: # get a youth team player from db or create a new one
+                self.getYouthPlayer(teamID, position, lineup = lineup)
+                del position_options[position]
+                continue
+
+            # Step 3: Prioritize by role (star > first_team > rotation)
+            best_fit = next((p for p in available_players if p.player_role == "Star player"), None) or \
+                    next((p for p in available_players if p.player_role == "First Team"), None) or \
+                    next((p for p in available_players if p.player_role == "Rotation"), None)
+
+            if not best_fit:
+                best_fit = available_players[0]
+
+            lineup[position] = best_fit
+            assigned_players.add(best_fit)
+
+            # Remove empty position entries
+            del position_options[position]
+
+    def getYouthPlayer(self, teamID, position, lineup = None, substitutes = None):
+        youthPlayers = PlayerBans.get_all_non_banned_youth_players_for_comp(self.session, teamID, self.match.league_id)
+
+        if youthPlayers:
+            for player in youthPlayers:
+                if POSITION_CODES[position] in player.specific_positions and player not in lineup.values():
+                    if lineup is not None:
+                        lineup[position] = player
+                    else:
+                        substitutes.append(player)
+                    return
+                
+        if position in DEFENSIVE_POSITIONS:
+            overallPosition = "defender"
+        elif position in MIDFIELD_POSITIONS:
+            overallPosition = "midfielder"
+        elif position in ATTACKING_POSITIONS:
+            overallPosition = "forward"
+        else:
+            overallPosition = "goalkeeper"
+                
+        # list empty or no player found with the specific position
+        newYouth = Players.add_player(self.session, teamID, overallPosition, position, "Youth Team")
+        if lineup is not None: # if lineup is passed as None, then add to subs
+            lineup[position] = newYouth
+        else:
+            substitutes.append(newYouth)
 
     def generateScore(self, teamMatch = False, home = False):
         self.score = Score(self.homeTeam, self.awayTeam, self.homeCurrentLineup, self.awayCurrentLineup)
@@ -230,21 +302,23 @@ class Match():
         self.referee = Referees.get_referee_by_id(self.session, self.match.referee_id)
         severity = self.referee.severity
 
+        choices = len(LOW_YELLOW_CARD)
+
         if severity == "low":
-            self.numHomeYellows = random.choices(range(0, 3), weights = [0.7, 0.2, 0.1], k = 1)[0]
-            self.numAwayYellows = random.choices(range(0, 3), weights = [0.7, 0.2, 0.1], k = 1)[0]
-            self.numHomeReds = random.choices(range(0, 2), weights = [0.95, 0.05], k = 1)[0]
-            self.numAwayReds = random.choices(range(0, 2), weights = [0.95, 0.05], k = 1)[0]
+            self.numHomeYellows = random.choices(range(0, choices), weights = LOW_YELLOW_CARD)[0]
+            self.numAwayYellows = random.choices(range(0, choices), weights = LOW_YELLOW_CARD)[0]
+            self.numHomeReds = random.choices(range(0, choices - 1), weights = LOW_RED_CARD)[0]
+            self.numAwayReds = random.choices(range(0, choices - 1), weights = LOW_RED_CARD)[0]
         elif severity == "medium":
-            self.numHomeYellows = random.choices(range(0, 4), weights = [0.6, 0.2, 0.1, 0.1], k = 1)[0]
-            self.numAwayYellows = random.choices(range(0, 4), weights = [0.6, 0.2, 0.1, 0.1], k = 1)[0]
-            self.numHomeReds = random.choices(range(0, 3), weights = [0.88, 0.08, 0.03], k = 1)[0]
-            self.numAwayReds = random.choices(range(0, 3), weights = [0.88, 0.08, 0.03], k = 1)[0]
+            self.numHomeYellows = random.choices(range(0, choices + 1), weights = MEDIUM_YELLOW_CARD)[0]
+            self.numAwayYellows = random.choices(range(0, choices + 1), weights = MEDIUM_YELLOW_CARD)[0]
+            self.numHomeReds = random.choices(range(0, choices), weights = MEDIUM_RED_CARD)[0]
+            self.numAwayReds = random.choices(range(0, choices), weights = MEDIUM_RED_CARD)[0]
         else:
-            self.numHomeYellows = random.choices(range(0, 5), weights = [0.5, 0.3, 0.1, 0.05, 0.05], k = 1)[0]
-            self.numAwayYellows = random.choices(range(0, 5), weights = [0.5, 0.3, 0.1, 0.05, 0.05], k = 1)[0]
-            self.numHomeReds = random.choices(range(0, 4), weights = [0.84, 0.1, 0.05, 0.01], k = 1)[0]
-            self.numAwayReds = random.choices(range(0, 4), weights = [0.84, 0.1, 0.05, 0.01], k = 1)[0]
+            self.numHomeYellows = random.choices(range(0, choices + 2), weights = HIGH_YELLOW_CARD)[0]
+            self.numAwayYellows = random.choices(range(0, choices + 2), weights = HIGH_YELLOW_CARD)[0]
+            self.numHomeReds = random.choices(range(0, choices + 1), weights = HIGH_RED_CARD)[0]
+            self.numAwayReds = random.choices(range(0, choices + 1), weights = HIGH_RED_CARD)[0]
 
     def getInjuries(self):
         self.homeInjury = False
@@ -635,9 +709,19 @@ class Match():
         finalRating = round(rating + 0.5, 2) if self.ratingsBoost == venue else round(rating - 0.5, 2) if self.ratingsDecay == venue else round(rating, 2)
         ratingsDict[player] = min(finalRating, 10)
 
-    def saveData(self):
+    def saveData(self, managing_team = None):
 
         self.returnWinner()
+
+        for player in itertools.chain(self.homeCurrentLineup.values(), self.awayCurrentLineup.values(), self.homeFinalLineup.values(), self.awayFinalLineup.values(), self.homeCurrentSubs, self.awayCurrentSubs):
+            if player.age < 18:
+                data = Players.get_player_by_id(self.session, player.id)
+
+                if not data:
+                    Players.add_player_entry(self.session, player)
+
+        PlayerBans.reduce_all_player_bans_for_team(self.session, self.homeTeam.id, self.match.league_id)
+        PlayerBans.reduce_all_player_bans_for_team(self.session, self.awayTeam.id, self.match.league_id)
 
         homeData = {
             "points": 3 if self.winner == self.homeTeam else 1 if self.winner is None else 0,
@@ -711,6 +795,19 @@ class Match():
             elif event["type"] == "substitution":
                 MatchEvents.add_event(self.session, self.match.id, "sub_off", minute, event["player_off"].id) 
                 MatchEvents.add_event(self.session, self.match.id, "sub_on", minute, event["player_on"].id)
+            elif event["type"] == "injury" or event["type"] == "red_card":
+                MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
+                ban = get_player_ban(event["type"])
+                PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
+
+                if managing_team == "home" and event["type"] == "injury":
+                    Emails.add_email(self.session, "player_injury", None, event["player"].id, ban, self.match.league_id)
+                elif managing_team == "home" and event["type"] == "red_card":
+                    Emails.add_email(self.session, "player_ban", None, event["player"].id, ban, self.match.league_id)
+
+            elif event["type"] == "yellow_card":
+                MatchEvents.add_event(self.session, self.match.id, "yellow_card", minute, event["player"].id)
+                MatchEvents.check_yellow_card_ban(self.session, event["player"].id, self.match.league_id, 5)
             else:
                 MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
 
@@ -718,7 +815,7 @@ class Match():
             minute = int(time.split(":")[0]) + 1
 
             if event["extra"]:
-                if minute < 50:
+                if minute <= 50:
                     extraTime = minute - 45
                     minute = f"45 + {extraTime}'"
                 else:
@@ -736,6 +833,19 @@ class Match():
             elif event["type"] == "substitution":
                 MatchEvents.add_event(self.session, self.match.id, "sub_off", minute, event["player_off"].id) 
                 MatchEvents.add_event(self.session, self.match.id, "sub_on", minute, event["player_on"].id)
+            elif event["type"] == "injury" or event["type"] == "red_card":
+                MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
+                ban = get_player_ban(event["type"])
+                PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
+
+                if managing_team == "away" and event["type"] == "injury":
+                    Emails.add_email(self.session, "player_injury", None, event["player"].id, ban, self.match.league_id)
+                elif managing_team == "away" and event["type"] == "red_card":
+                    Emails.add_email(self.session, "player_ban", None, event["player"].id, ban, self.match.league_id)
+
+            elif event["type"] == "yellow_card":
+                MatchEvents.add_event(self.session, self.match.id, "yellow_card", minute, event["player"].id)
+                MatchEvents.check_yellow_card_ban(self.session, event["player"].id, self.match.league_id, 5)
             else:
                 MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
 

@@ -860,18 +860,28 @@ class Match():
         ## ------------- Lineup changes --------------- ##
         for position, player in self.homeFinalLineup.items():
             TeamLineup.add_lineup_single(self.session, self.match.id, player.id, position, self.homeRatings[player])
+            moraleChange = get_morale_change("win" if self.winner == self.homeTeam else "draw" if self.winner == None else "loss", self.homeRatings[player], self.goalDiffHome)
+            Players.update_morale(self.session, player.id, moraleChange)
 
         for position, player in self.homeCurrentLineup.items():
             TeamLineup.add_lineup_single(self.session, self.match.id, player.id, position, self.homeRatings[player])
+            moraleChange = get_morale_change("win" if self.winner == self.homeTeam else "draw" if self.winner == None else "loss", self.homeRatings[player], self.goalDiffHome)
+            Players.update_morale(self.session, player.id, moraleChange)
         
         for position, player in self.awayFinalLineup.items():
             TeamLineup.add_lineup_single(self.session, self.match.id, player.id, position, self.awayRatings[player])
-
+            moraleChange = get_morale_change("win" if self.winner == self.awayTeam else "draw" if self.winner == None else "loss", self.awayRatings[player], self.goalDiffAway)
+            Players.update_morale(self.session, player.id, moraleChange)
+            
         for position, player in self.awayCurrentLineup.items():
             TeamLineup.add_lineup_single(self.session, self.match.id, player.id, position, self.awayRatings[player])
+            moraleChange = get_morale_change("win" if self.winner == self.awayTeam else "draw" if self.winner == None else "loss", self.awayRatings[player], self.goalDiffAway)
+            Players.update_morale(self.session, player.id, moraleChange)
 
     def returnWinner(self):
         finalScore = self.score.getScore()
+        self.goalDiffHome = finalScore[0] - finalScore[1]
+        self.goalDiffAway = finalScore[1] - finalScore[0]
         if finalScore[0] > finalScore[1]:
             self.winner = self.homeTeam
         elif finalScore[0] < finalScore[1]:

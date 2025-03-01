@@ -851,7 +851,8 @@ class Match():
 
         if self.homeCleanSheet:
             MatchEvents.add_event(self.session, self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"].id)
-        elif self.awayCleanSheet:
+        
+        if self.awayCleanSheet:
             MatchEvents.add_event(self.session, self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"].id)
 
         ## ------------- Matches changes --------------- ##

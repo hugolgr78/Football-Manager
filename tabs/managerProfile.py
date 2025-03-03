@@ -8,18 +8,17 @@ from utils.teamLogo import TeamLogo
 from utils.frames import WinRatePieChart, TrophiesFrame
 
 class ManagerProfile(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id, changeBackFunction = None):
+    def __init__(self, parent, manager_id, changeBackFunction = None):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id
         self.changeBackFunction = changeBackFunction
 
-        self.manager = Managers.get_manager_by_id(self.session, self.manager_id)
-        self.team = Teams.get_teams_by_manager(self.session, self.manager_id)[0]
+        self.manager = Managers.get_manager_by_id(self.manager_id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
 
-        self.profile = Profile(self, self.session, self.manager_id)
+        self.profile = Profile(self, self.manager_id)
         self.history = None
         self.titles = ["Profile", "History"]
         self.tabs = [self.profile, self.history]
@@ -72,16 +71,15 @@ class ManagerProfile(ctk.CTkFrame):
         self.buttons[self.activeButton].configure(state = "disabled")
 
         if not self.tabs[self.activeButton]:
-            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.session, self.manager_id)
+            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.manager_id)
 
         self.tabs[self.activeButton].pack()
 
 class Profile(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id):
+    def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id
 
         src = Image.open("Images/default_user.png")
@@ -101,7 +99,7 @@ class Profile(ctk.CTkFrame):
 
         teamLogo = Image.open(io.BytesIO(self.parent.team.logo))
         teamLogo.thumbnail((200, 200))
-        self.teamLogo = TeamLogo(self, self.session, teamLogo, self.parent.team, TKINTER_BACKGROUND, 0.83, 0.22, "center", self.parent)
+        self.teamLogo = TeamLogo(self, teamLogo, self.parent.team, TKINTER_BACKGROUND, 0.83, 0.22, "center", self.parent)
 
         canvas = ctk.CTkCanvas(self, width = 1000, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = 0.5, rely = 0.4, anchor = "center")
@@ -116,12 +114,11 @@ class Profile(ctk.CTkFrame):
                     f"Drawn: {self.parent.manager.games_played - self.parent.manager.games_won - self.parent.manager.games_lost}", 
                     font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.87, anchor = "center")
         
-        self.trophiesFrame = TrophiesFrame(self, self.session, self.manager_id, GREY_BACKGROUND, 550, 300, 15, 0.67, 0.7, "center", team = False)
+        self.trophiesFrame = TrophiesFrame(self, self.manager_id, GREY_BACKGROUND, 550, 300, 15, 0.67, 0.7, "center", team = False)
 
 class History(ctk.CTkScrollableFrame):
-    def __init__(self, parent, session, manager_id):
+    def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 965, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id

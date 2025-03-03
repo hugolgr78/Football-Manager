@@ -8,12 +8,11 @@ import threading, time
 from PIL import Image
 
 class MatchDay(ctk.CTkFrame):
-    def __init__(self, parent, session, teamLineup, teamSubstitutes, team, players):
+    def __init__(self, parent, teamLineup, teamSubstitutes, team, players):
         super().__init__(parent, width = APP_SIZE[0], height = APP_SIZE[1], fg_color = TKINTER_BACKGROUND)
         self.pack(fill = "both", expand = True)
 
         self.parent = parent
-        self.session = session
         self.teamLineup = teamLineup
         self.teamSubstitutes = teamSubstitutes
         self.team = team
@@ -34,10 +33,10 @@ class MatchDay(ctk.CTkFrame):
 
         self.lastShout = 0
 
-        self.leagueTeams = LeagueTeams.get_league_by_team(self.session, self.team.id)
-        self.league = League.get_league_by_id(self.session, self.leagueTeams.league_id)
+        self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
+        self.league = League.get_league_by_id(self.leagueTeams.league_id)
         self.currentMatchDay = self.league.current_matchday
-        self.matchDay = Matches.get_matchday_for_league(self.session, self.league.id, self.currentMatchDay)
+        self.matchDay = Matches.get_matchday_for_league(self.league.id, self.currentMatchDay)
 
         self.teamMatchFrame = ctk.CTkFrame(self, width = APP_SIZE[0] - 300, height = APP_SIZE[1], fg_color = TKINTER_BACKGROUND)
         self.teamMatchFrame.place(relx = 0, rely = 0.5, anchor = "w")
@@ -101,7 +100,7 @@ class MatchDay(ctk.CTkFrame):
         for match in self.matchDay:
             if match.home_id == self.team.id or match.away_id == self.team.id:
                 self.teamMatch = match
-                self.matchFrame = MatchDayMatchFrame(self.teamMatchFrame, self.session, match, TKINTER_BACKGROUND, 150, 400, imageSize = 70, relx =  0.5, rely =  0.03, anchor = "n", border_width = 3, border_color = GREY_BACKGROUND, pack = False)
+                self.matchFrame = MatchDayMatchFrame(self.teamMatchFrame, match, TKINTER_BACKGROUND, 150, 400, imageSize = 70, relx =  0.5, rely =  0.03, anchor = "n", border_width = 3, border_color = GREY_BACKGROUND, pack = False)
                 
                 self.matchDataFrame = ctk.CTkScrollableFrame(self.teamMatchFrame, width = 370, height = 300, fg_color = TKINTER_BACKGROUND, border_width = 3, border_color = GREY_BACKGROUND)
                 self.matchDataFrame.place(relx = 0.5, rely = 0.27, anchor = "n")
@@ -116,7 +115,7 @@ class MatchDay(ctk.CTkFrame):
                     self.matchFrame.matchInstance.homeCurrentSubs = self.teamSubstitutes
 
             else:
-                frame = MatchDayMatchFrame(self.otherMatchesFrame, self.session, match, TKINTER_BACKGROUND, 60, 300)
+                frame = MatchDayMatchFrame(self.otherMatchesFrame, match, TKINTER_BACKGROUND, 60, 300)
                 frame.matchInstance.createTeamLineup(match.home_id, True)
                 frame.matchInstance.createTeamLineup(match.away_id, False)
                 frame.matchInstance.generateScore()
@@ -666,7 +665,7 @@ class MatchDay(ctk.CTkFrame):
         self.dropDown.configure(state = "readonly")
         self.dropDown.configure(values = self.values)
 
-        playerData = Players.get_player_by_name(self.session, playerName.split(" ")[0], playerName.split(" ")[1])
+        playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1])
         if playerData in self.startTeamLineup.values():
             self.playersOff[playerPosition] = playerData
             self.currentSubs += 1
@@ -698,7 +697,7 @@ class MatchDay(ctk.CTkFrame):
                     positions = labels[0].cget("text")
                     unavailable = frame.unavailable
 
-                    player = Players.get_player_by_name(self.session, playerName.split(" ")[0], playerName.split(" ")[1])
+                    player = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1])
                     if self.currentSubs > MAX_SUBS - self.completedSubs:
                         if POSITION_CODES[selected_position] in positions.split(",") and player in self.startTeamLineup.values() and player not in self.teamLineup.values() and not unavailable:
                             values.append(playerName)
@@ -734,7 +733,7 @@ class MatchDay(ctk.CTkFrame):
 
         self.dropDown.configure(values = self.values)
 
-        playerData = Players.get_player_by_name(self.session, selected_player.split(" ")[0], selected_player.split(" ")[1])
+        playerData = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1])
         if playerData in self.startTeamLineup.values():
             for position, player in list(self.playersOff.items()):
                 if player == playerData:
@@ -941,12 +940,12 @@ class MatchDay(ctk.CTkFrame):
 
         self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away")
 
-        LeagueTeams.update_team_positions(self.session, self.league.id)
+        LeagueTeams.update_team_positions(self.league.id)
 
-        for team in LeagueTeams.get_teams_by_league(self.session, self.league.id):
-            TeamHistory.add_team(self.session, self.currentMatchDay, team.team_id, team.position, team.points)
+        for team in LeagueTeams.get_teams_by_league(self.league.id):
+            TeamHistory.add_team(self.currentMatchDay, team.team_id, team.position, team.points)
 
-        League.update_current_matchday(self.session, self.league.id)
+        League.update_current_matchday(self.league.id)
 
         self.pack_forget()
         self.parent.resetMenu()

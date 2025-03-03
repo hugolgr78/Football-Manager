@@ -6,16 +6,15 @@ from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFram
 from tabs.matchday import MatchDay
 
 class Tactics(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id):
+    def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
-        self.session = session
         self.manager_id = manager_id
         self.parent = parent
         self.selected_position = None
 
-        self.team = Teams.get_teams_by_manager(self.session, self.manager_id)[0]
-        self.players = Players.get_all_players_by_team(self.session, self.team.id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.players = Players.get_all_players_by_team(self.team.id)
 
         self.selectedLineup = {}
         self.substitutePlayers = []
@@ -60,9 +59,9 @@ class Tactics(ctk.CTkFrame):
         self.playerDropDown.set("Choose Player")
 
     def importLineup(self):
-        self.leagueTeams = LeagueTeams.get_league_by_team(self.session, self.team.id)
-        self.league = League.get_league_by_id(self.session, self.leagueTeams.league_id)
-        self.players = Players.get_all_players_by_team(self.session, self.team.id, youths = False)
+        self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
+        self.league = League.get_league_by_id(self.leagueTeams.league_id)
+        self.players = Players.get_all_players_by_team(self.team.id, youths = False)
 
         self.checkPositionsForYouth()
 
@@ -72,24 +71,24 @@ class Tactics(ctk.CTkFrame):
             self.addSubstitutePlayers()
             return
         
-        self.matchdayMatches = Matches.get_matchday_for_league(self.session, self.league.id, lastMatchday)
+        self.matchdayMatches = Matches.get_matchday_for_league(self.league.id, lastMatchday)
 
         for match in self.matchdayMatches:
             if match.home_id == self.team.id or match.away_id == self.team.id:
                 self.lastTeamMatch = match
-                self.lineup = TeamLineup.get_lineup_by_match_and_team(self.session, match.id, self.team.id)
+                self.lineup = TeamLineup.get_lineup_by_match_and_team(match.id, self.team.id)
 
         playersCount = 0
         for playerData in self.lineup:
             position = playerData.position
             positionCode = POSITION_CODES[position]
-            player = Players.get_player_by_id(self.session, playerData.player_id)
+            player = Players.get_player_by_id(playerData.player_id)
 
             # Remove any youths that arent in the players list as the position is now free
             if player.player_role == "Youth Team" and player not in self.players:
                 continue
 
-            events = MatchEvents.get_events_by_match_and_player(self.session, self.lastTeamMatch.id, player.id)
+            events = MatchEvents.get_events_by_match_and_player(self.lastTeamMatch.id, player.id)
             
             # Remove any players that were subbed on
             if events:
@@ -99,7 +98,7 @@ class Tactics(ctk.CTkFrame):
                     continue
             
             # Remove any players that are banned
-            if PlayerBans.check_bans_for_player(self.session, player.id, self.league.id):
+            if PlayerBans.check_bans_for_player(player.id, self.league.id):
                 continue
 
             playersCount += 1
@@ -129,7 +128,7 @@ class Tactics(ctk.CTkFrame):
         for player in self.players:
             name = player.first_name + " " + player.last_name
             if player not in self.selectedLineup.values():
-                frame = SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self.session, self, self.league.id) 
+                frame = SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self, self.league.id) 
 
                 if playersCount == 11:
                     frame.showCheckBox()
@@ -141,7 +140,7 @@ class Tactics(ctk.CTkFrame):
         self.dropDown.configure(values = self.positionsCopy)
 
     def checkPositionsForYouth(self):
-        nonBannedPlayers = PlayerBans.get_all_non_banned_players_for_comp(self.session, self.team.id, self.league.id)
+        nonBannedPlayers = PlayerBans.get_all_non_banned_players_for_comp(self.team.id, self.league.id)
 
         for position in POSITION_CODES.keys():
 
@@ -157,34 +156,34 @@ class Tactics(ctk.CTkFrame):
                 overallPosition = "goalkeeper"
 
             if len(playersForPosition) == 0:
-                youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.session, self.team.id, self.league.id)
+                youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
                 youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth not in self.players]
 
                 if len(youthForPosition) > 0:
                     self.players.append(youthForPosition[0])
                 else:
-                    newYouth = Players.add_player(self.session, self.team.id, overallPosition, position, "Youth Team")
+                    newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
                     self.players.append(newYouth)
 
                 if position == "Goalkeeper":
-                    newYouth = Players.add_player(self.session, self.team.id, overallPosition, position, "Youth Team")
+                    newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
                     self.players.append(newYouth)
 
             elif position == "Goalkeeper" and len(playersForPosition) == 1:
-                youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.session, self.team.id, self.league.id)
+                youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
                 youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth not in self.players]
 
                 if len(youthForPosition) > 0:
                     self.players.append(youthForPosition[0])
                 else:
-                    newYouth = Players.add_player(self.session, self.team.id, overallPosition, position, "Youth Team")
+                    newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
                     self.players.append(newYouth)
 
     def addSubstitutePlayers(self):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).pack(pady = 5)
         
         for player in self.players:
-            SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self.session, self, self.league.id)
+            SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self, self.league.id)
 
     def choosePlayer(self, selected_position):
         self.selected_position = selected_position
@@ -196,7 +195,7 @@ class Tactics(ctk.CTkFrame):
         values = []
         for player in self.players:
             playerName = player.first_name + " " + player.last_name
-            if POSITION_CODES[selected_position] in player.specific_positions.split(",") and player not in self.selectedLineup.values() and not PlayerBans.check_bans_for_player(self.session, player.id, self.league.id):
+            if POSITION_CODES[selected_position] in player.specific_positions.split(",") and player not in self.selectedLineup.values() and not PlayerBans.check_bans_for_player(player.id, self.league.id):
                 values.append(playerName)
         
         if len(values) == 0:
@@ -229,7 +228,7 @@ class Tactics(ctk.CTkFrame):
 
         self.lineupPitch.increment_counter()
 
-        player = Players.get_player_by_name(self.session, selected_player.split(" ")[0], selected_player.split(" ")[1])
+        player = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1])
         self.selectedLineup[self.selected_position] = player
 
         LineupPlayerFrame(self.lineupPitch, 
@@ -275,8 +274,8 @@ class Tactics(ctk.CTkFrame):
 
                 break
 
-        player = Players.get_player_by_name(self.session, playerName.split(" ")[0], playerName.split(" ")[1])
-        SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self.session, self, self.league.id)
+        player = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1])
+        SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self, self.league.id)
 
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
         self.substitutePlayers = []
@@ -336,4 +335,4 @@ class Tactics(ctk.CTkFrame):
                             frame.disableCheckBox()
 
     def finishLineup(self):
-        MatchDay(self.parent, self.session, self.selectedLineup, self.substitutePlayers, self.team, self.players)
+        MatchDay(self.parent, self.selectedLineup, self.substitutePlayers, self.team, self.players)

@@ -353,3 +353,15 @@ def get_morale_change(match_result, player_rating, goal_difference):
     final_morale_change = max(-10, min(10, final_morale_change))
     
     return final_morale_change
+
+def get_morale_decrease_role(player):
+    role = player.player_role
+
+    if role == "Star player":
+        return -5
+    elif role == "First Team":
+        return -3
+    elif role == "Rotation":
+        return -1
+    
+    return 0 # Backup keepers and youth players

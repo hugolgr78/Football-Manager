@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine, func, case
+from sqlalchemy import create_engine, func, case, or_
 from sqlalchemy.orm import sessionmaker, aliased
 from sqlalchemy.types import Enum
 import uuid, json, random
@@ -496,7 +496,7 @@ class Players(Base):
         return manager
         
     @classmethod
-    def update_age(session, id, age):
+    def update_age(cls, session, id, age):
         player = session.query(Players).filter(Players.id == id).first()
 
         if player:
@@ -506,11 +506,11 @@ class Players(Base):
             return None
 
     @classmethod
-    def update_morale(session, id, morale):
+    def update_morale(cls, session, id, morale):
         player = session.query(Players).filter(Players.id == id).first()
 
         if player:
-            player.morale = morale
+            player.morale += morale
             session.commit()
         else:
             return None
@@ -1089,6 +1089,18 @@ class MatchEvents(Base):
             return goals
         else:
             return 0
+
+    @classmethod
+    def get_goals_and_pens_by_player(cls, session, player_id):
+        goals = session.query(MatchEvents).filter(
+            MatchEvents.player_id == player_id,
+            or_(MatchEvents.event_type == "goal", MatchEvents.event_type == "penalty_goal")
+        ).count()
+
+        if goals:
+            return goals
+        else:
+            return 0
         
     @classmethod
     def get_events_by_match_and_player(cls, session, match_id, player_id):
@@ -1114,7 +1126,7 @@ class MatchEvents(Base):
         ).join(
             MatchAlias, MatchEvents.match_id == MatchAlias.id
         ).filter(
-            MatchEvents.event_type == "goal",
+            or_(MatchEvents.event_type == "goal", MatchEvents.event_type == "penalty_goal"),
             MatchAlias.league_id == league_id
         ).group_by(
             MatchEvents.player_id,

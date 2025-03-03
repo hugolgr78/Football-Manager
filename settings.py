@@ -332,3 +332,36 @@ YELLOWS_EXTRA = [0.1] * 10
 
 # 100% red card scenario
 RED_100 = [1.0]
+
+def get_morale_change(match_result, player_rating, goal_difference):
+    # Base morale change based on match result
+    if match_result == "win":
+        base_morale = 5
+    elif match_result == "draw":
+        base_morale = 0
+    else:  # loss
+        base_morale = -5
+    
+    # Adjust based on player rating (ratings above 7 improve morale, below 7 decrease it)
+    rating_factor = (player_rating - 7) * 0.5
+    
+    # Adjust based on goal difference (larger goal difference in favor of the team increases morale)
+    goal_diff_factor = goal_difference * 0.5
+    
+    # Calculate final morale change and limit it between -10 and 10
+    final_morale_change = round(base_morale + rating_factor + goal_diff_factor)
+    final_morale_change = max(-10, min(10, final_morale_change))
+    
+    return final_morale_change
+
+def get_morale_decrease_role(player):
+    role = player.player_role
+
+    if role == "Star player":
+        return -5
+    elif role == "First Team":
+        return -3
+    elif role == "Rotation":
+        return -1
+    
+    return 0 # Backup keepers and youth players

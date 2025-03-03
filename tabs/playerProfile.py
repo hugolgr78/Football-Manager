@@ -152,7 +152,7 @@ class Profile(ctk.CTkFrame):
         averageRating = TeamLineup.get_player_average_rating(self.session, self.player.id, self.parent.league.league_id)
 
         if self.player.position != "goalkeeper":
-            goals = MatchEvents.get_goals_by_player(self.session, self.player.id)
+            goals = MatchEvents.get_goals_and_pens_by_player(self.session, self.player.id)
             assists = MatchEvents.get_assists_by_player(self.session, self.player.id)
             stats = [averageRating, redCards, yellowCards, assists, goals, played]
             statsNames = ["averageRating", "redCard", "yellowCard", "assist", "goal", "played"]

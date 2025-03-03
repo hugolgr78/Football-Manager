@@ -24,3 +24,6 @@ UPDATE leagues
 SET current_matchday = 1;
 
 DELETE FROM player_bans;
+
+UPDATE players
+SET morale = 50;

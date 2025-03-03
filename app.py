@@ -4,6 +4,17 @@ from settings import *
 from startMenu import StartMenu
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+import shutil
+import os
+
+def backup_database(db_path, backup_dir):
+    if not os.path.exists(backup_dir):
+        os.makedirs(backup_dir)
+    
+    backup_path = os.path.join(backup_dir, f"JohnLocke.db")
+    
+    shutil.copy2(db_path, backup_path)
+    print(f"Database backed up to {backup_path}")
 
 class FootballManager(ctk.CTk):
     def __init__(self):
@@ -11,6 +22,10 @@ class FootballManager(ctk.CTk):
 
         # Games database set up
         DATABASE_URL = "sqlite:///data/games.db" 
+        
+        db_path = "data/JohnLocke.db"
+        backup_dir = "data/backups"
+        backup_database(db_path, backup_dir)
 
         # Create an engine and a session
         engine = create_engine(DATABASE_URL)

@@ -9,11 +9,10 @@ from utils.frames import MatchFrame, PlayerFrame, next5Matches, TrophiesFrame
 from utils.managerProfileLink import ManagerProfileLink
 
 class TeamProfile(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id, parentTab = None, changeBackFunction = None):
+    def __init__(self, parent, manager_id, parentTab = None, changeBackFunction = None):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id
         self.changeBackFunction = changeBackFunction
 
@@ -22,11 +21,11 @@ class TeamProfile(ctk.CTkFrame):
         else:
             self.parentTab = parentTab
 
-        self.manager = Managers.get_manager_by_id(session, manager_id)
-        self.team = Teams.get_teams_by_manager(session, manager_id)[0]
-        self.leagueData = LeagueTeams.get_league_by_team(session, self.team.id)
+        self.manager = Managers.get_manager_by_id(manager_id)
+        self.team = Teams.get_teams_by_manager(manager_id)[0]
+        self.leagueData = LeagueTeams.get_league_by_team(self.team.id)
 
-        self.profile = Profile(self, self.session, self.manager_id)
+        self.profile = Profile(self, self.manager_id)
 
         self.history = None
         if self.manager.user == 1:
@@ -43,8 +42,8 @@ class TeamProfile(ctk.CTkFrame):
         self.activeButton = 0
         self.buttons = []
 
-        self.team = Teams.get_teams_by_manager(self.session, self.manager_id)[0]
-        self.league = LeagueTeams.get_league_by_team(session, self.team.id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.league = LeagueTeams.get_league_by_team(self.team.id)
 
         self.tabsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 50, corner_radius = 0)
         self.tabsFrame.pack(expand = True, fill = "both", padx = 10, pady = 10)
@@ -90,21 +89,20 @@ class TeamProfile(ctk.CTkFrame):
         self.buttons[self.activeButton].configure(state = "disabled")
 
         if not self.tabs[self.activeButton]:
-            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.session, self.manager_id)
+            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.manager_id)
 
         self.tabs[self.activeButton].pack()
 
 class Profile(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id):
+    def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id
 
-        manager = Managers.get_manager_by_id(self.session, self.manager_id)
+        manager = Managers.get_manager_by_id(self.manager_id)
 
-        self.league = League.get_league_by_id(session, self.parent.leagueData.league_id)
+        self.league = League.get_league_by_id(self.parent.leagueData.league_id)
 
         src = Image.open(io.BytesIO(self.parent.team.logo))
         src.thumbnail((200, 200))
@@ -120,16 +118,16 @@ class Profile(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = f"Founded: {self.parent.team.year_created}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.1, anchor = "w")
         ctk.CTkLabel(self, text = f"Stadium: {self.parent.team.stadium}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.15, anchor = "w")
-        self.managerLink = ManagerProfileLink(self, self.session, self.parent.manager_id, f"Manager: {self.parent.manager.first_name} {self.parent.manager.last_name}", "white", 0.6, 0.2, "w", TKINTER_BACKGROUND, self.parent)
+        self.managerLink = ManagerProfileLink(self, self.parent.manager_id, f"Manager: {self.parent.manager.first_name} {self.parent.manager.last_name}", "white", 0.6, 0.2, "w", TKINTER_BACKGROUND, self.parent)
 
-        self.players = Players.get_all_players_by_team(session, self.parent.team.id)
+        self.players = Players.get_all_players_by_team(self.parent.team.id)
         ctk.CTkLabel(self, text = f"Average Age: {self.averageAge(self.players)}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.25, anchor = "w")
 
-        self.trophiesFrame = TrophiesFrame(self, self.session, self.parent.team.id, GREY_BACKGROUND, 460, 360, 15, 0.02, 0.4, "nw")
+        self.trophiesFrame = TrophiesFrame(self, self.parent.team.id, GREY_BACKGROUND, 460, 360, 15, 0.02, 0.4, "nw")
 
         parentTab = self.parent if manager.user == 1 else self.parent.parent
 
-        self.next5 = next5Matches(self, self.session, self.manager_id, GREY_BACKGROUND, 460, 360, 60, 0.51, 0.4, "nw", 0.3, parentTab, corner_radius = 15)
+        self.next5 = next5Matches(self, self.manager_id, GREY_BACKGROUND, 460, 360, 60, 0.51, 0.4, "nw", 0.3, parentTab, corner_radius = 15)
         self.next5.showNext5Matches()
 
     def averageAge(self, players):
@@ -147,14 +145,13 @@ class Profile(ctk.CTkFrame):
             return {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
 
 class Squad(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id):
+    def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id
 
-        self.players = Players.get_all_players_by_team(session, self.parent.team.id)
+        self.players = Players.get_all_players_by_team(self.parent.team.id)
 
         self.infoFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 40, corner_radius = 0)
         self.infoFrame.pack()
@@ -172,19 +169,18 @@ class Squad(ctk.CTkFrame):
 
         for player in self.players:
             if player.player_role != "Youth Team":
-                PlayerFrame(self.parent, self.session, self.manager_id, player, self.playersFrame, teamSquad = False)
+                PlayerFrame(self.parent, self.manager_id, player, self.playersFrame, teamSquad = False)
 
 class Schedule(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id):
+    def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id
         self.team = self.parent.team
 
-        self.matches = Matches.get_all_matches_by_team(session, self.parent.team.id)
-        self.league = League.get_league_by_id(session, self.matches[0].league_id)
+        self.matches = Matches.get_all_matches_by_team(self.parent.team.id)
+        self.league = League.get_league_by_id(self.matches[0].league_id)
 
         self.matchesFrame = ctk.CTkScrollableFrame(self, fg_color = TKINTER_BACKGROUND, width = 650, height = 590, corner_radius = 0)
         self.matchesFrame.place(relx = 0.02, rely = 0.05, anchor = "nw")
@@ -195,13 +191,12 @@ class Schedule(ctk.CTkFrame):
         self.frames = []
 
         for match in self.matches:
-            frame = MatchFrame(self, self.session, self.manager_id, match, self.matchesFrame, self.matchInfoFrame, self.parent.parentTab)
+            frame = MatchFrame(self, self.manager_id, match, self.matchesFrame, self.matchInfoFrame, self.parent.parentTab)
             self.frames.append(frame)
 
 class History(ctk.CTkScrollableFrame):
-    def __init__(self, parent, session, manager_id):
+    def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 965, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id

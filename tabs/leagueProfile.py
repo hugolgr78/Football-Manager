@@ -8,19 +8,18 @@ from utils.frames import LeagueTable, MatchdayFrame
 from utils.playerProfileLink import PlayerProfileLink
 
 class LeagueProfile(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id, changeBackFunction = None):
+    def __init__(self, parent, manager_id, changeBackFunction = None):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id
         self.changeBackFunction = changeBackFunction
 
-        self.team = Teams.get_teams_by_manager(self.session, self.manager_id)[0]
-        self.leagueTeams = LeagueTeams.get_league_by_team(self.session, self.team.id)
-        self.league = League.get_league_by_id(self.session, self.leagueTeams.league_id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
+        self.league = League.get_league_by_id(self.leagueTeams.league_id)
 
-        self.profile = Profile(self, self.session, self.league)
+        self.profile = Profile(self, self.league)
         self.matchdays = None
         self.graphs = None
         self.history = None
@@ -75,16 +74,15 @@ class LeagueProfile(ctk.CTkFrame):
         self.buttons[self.activeButton].configure(state = "disabled")
 
         if not self.tabs[self.activeButton]:
-            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.session, self.league)
+            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.league)
 
         self.tabs[self.activeButton].pack()
 
 class Profile(ctk.CTkFrame):
-    def __init__(self, parent, session, league):
+    def __init__(self, parent, league):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.league = league
 
         src = Image.open(io.BytesIO(self.league.logo))
@@ -95,7 +93,7 @@ class Profile(ctk.CTkFrame):
         ctk.CTkLabel(self, text = f"{self.league.name} - {self.league.year}", font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.15, rely = 0.1, anchor = "w")
 
         self.tableFrame = LeagueTable(self, 480, 600, 0.03, 0.2, GREY_BACKGROUND, "nw", corner_radius = 15, highlightManaged = True)
-        self.tableFrame.defineManager(self.session, self.parent.manager_id)
+        self.tableFrame.defineManager(self.parent.manager_id)
         self.tableFrame.addLeagueTable()
 
         self.statsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 310, height = 480, corner_radius = 15)
@@ -107,11 +105,11 @@ class Profile(ctk.CTkFrame):
     def addStats(self):
         ctk.CTkLabel(self.statsFrame, text = "Stats", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).pack(pady = 10)
 
-        self.topScorers = MatchEvents.get_all_goals(self.session, self.league.id)
-        self.topAssisters = MatchEvents.get_all_assists(self.session, self.league.id)
-        self.topCleanSheets = MatchEvents.get_all_clean_sheets(self.session, self.league.id)
-        self.mostYellowCards = MatchEvents.get_all_yellow_cards(self.session, self.league.id)
-        self.bestAverageRatings = TeamLineup.get_all_average_ratings(self.session, self.league.id)
+        self.topScorers = MatchEvents.get_all_goals(self.league.id)
+        self.topAssisters = MatchEvents.get_all_assists(self.league.id)
+        self.topCleanSheets = MatchEvents.get_all_clean_sheets(self.league.id)
+        self.mostYellowCards = MatchEvents.get_all_yellow_cards(self.league.id)
+        self.bestAverageRatings = TeamLineup.get_all_average_ratings(self.league.id)
 
         self.stats = [self.topScorers, self.topAssisters, self.topCleanSheets, self.mostYellowCards, self.bestAverageRatings]
         self.statNames = ["Top Scorer", "Top Assister", "Most Clean Sheets", "Most Yellow Cards", "Best Average Rating"]
@@ -140,9 +138,8 @@ class Profile(ctk.CTkFrame):
             if stat[0][0] == 0:
                 ctk.CTkLabel(frame, text = "N/A", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.7, anchor = "w")
             else:
-                # ctk.CTkLabel(frame, text = str(stat[0][1] + " " + stat[0][2]), font = (APP_FONT, 15) if len(str(stat[0][1] + " " + stat[0][2])) > 15 else (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.7, anchor = "w")
-                player = Players.get_player_by_name(self.session, str(stat[0][1]), str(stat[0][2]))
-                PlayerProfileLink(frame, self.session, player, str(stat[0][1] + " " + stat[0][2]), "white", 0.05, 0.7, "w", GREY_BACKGROUND, self.parent)
+                player = Players.get_player_by_name(str(stat[0][1]), str(stat[0][2]))
+                PlayerProfileLink(frame, player, str(stat[0][1] + " " + stat[0][2]), "white", 0.05, 0.7, "w", GREY_BACKGROUND, self.parent)
 
             ctk.CTkLabel(frame, text = round(stat[0][3], 2), font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.75, rely = 0.7, anchor = "center")
 
@@ -150,18 +147,17 @@ class Profile(ctk.CTkFrame):
         pass
 
 class Matchdays(ctk.CTkFrame):
-    def __init__(self, parent, session, league):
+    def __init__(self, parent, league):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.league = league
         self.currentMatchday = self.league.current_matchday
 
         self.frames = []
         self.activeFrame = self.currentMatchday - 1
 
-        self.numTeams = self.parent.leagueTeams.get_teams_by_league(self.session, self.league.id)
+        self.numTeams = self.parent.leagueTeams.get_teams_by_league(self.league.id)
         self.numMacthdays = len(self.numTeams) * 2 - 2
 
         self.buttonsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 980, height = 60, corner_radius = 15)
@@ -173,8 +169,8 @@ class Matchdays(ctk.CTkFrame):
     def createFrames(self):
         for i in range(self.numMacthdays):
             if i == self.currentMatchday - 1:
-                matchday = Matches.get_matchday_for_league(self.session, self.league.id, self.currentMatchday)
-                frame = MatchdayFrame(self, self.session, matchday, self.currentMatchday, self.currentMatchday, self, self.parent, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
+                matchday = Matches.get_matchday_for_league( self.league.id, self.currentMatchday)
+                frame = MatchdayFrame(self, matchday, self.currentMatchday, self.currentMatchday, self, self.parent, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
             else:
                 frame = None
             
@@ -214,8 +210,8 @@ class Matchdays(ctk.CTkFrame):
         if self.frames[self.activeFrame]:
             self.frames[self.activeFrame].placeFrame()
         else:
-            matchday = Matches.get_matchday_for_league(self.session, self.league.id, self.activeFrame + 1)
-            self.frames[self.activeFrame] = MatchdayFrame(self, self.session, matchday, self.activeFrame + 1, self.currentMatchday, self, self.parent, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
+            matchday = Matches.get_matchday_for_league(self.league.id, self.activeFrame + 1)
+            self.frames[self.activeFrame] = MatchdayFrame(self, matchday, self.activeFrame + 1, self.currentMatchday, self, self.parent, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
 
     def go_currentMatchday(self):
         self.frames[self.activeFrame].place_forget()
@@ -226,13 +222,12 @@ class Matchdays(ctk.CTkFrame):
         self.currentMatchdayButton.configure(state = "disabled")
 
 class Graphs(ctk.CTkFrame):
-    def __init__(self, parent, session, league):
+    def __init__(self, parent, league):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.league = league
-        self.leagueTeams = LeagueTeams.get_teams_by_position(self.session, self.league.id)
+        self.leagueTeams = LeagueTeams.get_teams_by_position(self.league.id)
         self.numTeams = len(self.leagueTeams)
 
         self.columns = (self.numTeams * 2) - 3
@@ -264,14 +259,14 @@ class Graphs(ctk.CTkFrame):
         self.drawGrid(self.pointsCanvas, max(15, self.leagueTeams[0].points), "points")  
 
         for i, team in enumerate(self.leagueTeams):
-            team = Teams.get_team_by_id(self.session, team.team_id)
+            team = Teams.get_team_by_id(team.team_id)
 
-            positions_result = TeamHistory.get_positions_by_team(self.session, team.id)
+            positions_result = TeamHistory.get_positions_by_team(team.id)
             if positions_result:
                 positions = [pos[0] for pos in positions_result]  # Convert tuple to list
                 self.createGraphs(positions, i, self.numTeams - 1, "positions", self.positionsCanvas)
 
-            points_result = TeamHistory.get_points_by_team(self.session, team.id)
+            points_result = TeamHistory.get_points_by_team(team.id)
             if points_result:
                 points = [poi[0] for poi in points_result]  # Convert tuple to list
                 self.createGraphs(points, i, max(15, self.leagueTeams[0].points), "points", self.pointsCanvas)
@@ -279,7 +274,7 @@ class Graphs(ctk.CTkFrame):
     def addTeams(self):
 
         for i, team in enumerate(self.leagueTeams):
-            teamData = Teams.get_team_by_id(self.session, team.team_id)
+            teamData = Teams.get_team_by_id(team.team_id)
 
             frame = ctk.CTkFrame(self.tableFrame, fg_color = TKINTER_BACKGROUND, width = 200, height = 21)
             frame.pack(fill = "both", pady = 5, padx = 5)
@@ -436,9 +431,9 @@ class Graphs(ctk.CTkFrame):
             self.drawGrid(self.positionsCanvas, self.numTeams - 1, "positions")
 
             for i, team in enumerate(self.leagueTeams):
-                team = Teams.get_team_by_id(self.session, team.team_id)
+                team = Teams.get_team_by_id(team.team_id)
 
-                positions_result = TeamHistory.get_positions_by_team(self.session, team.id)
+                positions_result = TeamHistory.get_positions_by_team(team.id)
                 if positions_result:
                     positions = [pos[0] for pos in positions_result]  # Convert tuple to list
                     self.createGraphs(positions, i, self.numTeams - 1, "positions", self.positionsCanvas)
@@ -449,9 +444,9 @@ class Graphs(ctk.CTkFrame):
             self.drawGrid(self.pointsCanvas, max(15, self.leagueTeams[0].points), "points")
 
             for i, team in enumerate(self.leagueTeams):
-                team = Teams.get_team_by_id(self.session, team.team_id)
+                team = Teams.get_team_by_id(team.team_id)
 
-                points_result = TeamHistory.get_points_by_team(self.session, team.id)
+                points_result = TeamHistory.get_points_by_team(team.id)
                 if points_result:
                     points = [poi[0] for poi in points_result]  # Convert tuple to list
                     self.createGraphs(points, i, max(15, self.leagueTeams[0].points), "points", self.pointsCanvas)
@@ -462,7 +457,7 @@ class Graphs(ctk.CTkFrame):
             img = widget.winfo_children()[0]
             name = widget.winfo_children()[1]
 
-            team = Teams.get_team_by_name(self.session, name.cget("text"))
+            team = Teams.get_team_by_name(name.cget("text"))
 
             widget.unbind("<Button-1>")
             img.unbind("<Button-1>")
@@ -474,12 +469,12 @@ class Graphs(ctk.CTkFrame):
 
     def selectTeam(self, team_id, index, frame, img, name):
         if self.graph == "positions":
-            positions_result = TeamHistory.get_positions_by_team(self.session, team_id)
+            positions_result = TeamHistory.get_positions_by_team(team_id)
             if positions_result:
                 positions = [pos[0] for pos in positions_result]
                 self.createGraphs(positions, index, self.numTeams - 1, "positions", self.positionsCanvas, False, True)
         else:
-            points_result = TeamHistory.get_points_by_team(self.session, team_id)
+            points_result = TeamHistory.get_points_by_team(team_id)
             if points_result:
                 points = [poi[0] for poi in points_result]
                 self.createGraphs(points, index, max(15, self.leagueTeams[0].points), "points", self.pointsCanvas, False, True)
@@ -495,12 +490,12 @@ class Graphs(ctk.CTkFrame):
 
     def deselectTeam(self, team_id, index, frame, img, name):
         if self.graph == "positions":
-            positions_result = TeamHistory.get_positions_by_team(self.session, team_id)
+            positions_result = TeamHistory.get_positions_by_team(team_id)
             if positions_result:
                 positions = [pos[0] for pos in positions_result]
                 self.createGraphs(positions, index, self.numTeams - 1, "positions", self.positionsCanvas, False, False)
         else:
-            points_result = TeamHistory.get_points_by_team(self.session, team_id)
+            points_result = TeamHistory.get_points_by_team(team_id)
             if points_result:
                 points = [poi[0] for poi in points_result]
                 self.createGraphs(points, index, max(15, self.leagueTeams[0].points), "points", self.pointsCanvas, False, False)
@@ -515,9 +510,8 @@ class Graphs(ctk.CTkFrame):
         name.bind("<Button-1>", lambda event, team_id = team_id, i = index, f = frame, im = img, n = name: self.selectTeam(team_id, i, f, im, n))
 
 class History(ctk.CTkScrollableFrame):
-    def __init__(self, parent, session, league):
+    def __init__(self, parent, league):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 965, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.league = league

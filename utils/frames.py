@@ -547,19 +547,18 @@ class LeagueTable(ctk.CTkFrame):
 
         self.grid_propagate(False)
 
-    def defineManager(self, session, manager_id):
-        self.session = session
+    def defineManager(self, manager_id):
         self.manager_id = manager_id
-        self.team = Teams.get_teams_by_manager(self.session, self.manager_id)[0]
-        self.league = LeagueTeams.get_league_by_team(self.session, self.team.id)
-        self.leagueData = League.get_league_by_id(self.session, self.league.league_id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.league = LeagueTeams.get_league_by_team(self.team.id)
+        self.leagueData = League.get_league_by_id(self.league.league_id)
 
     def addLeagueTable(self):
 
-        teamsData = LeagueTeams.get_teams_by_position(self.session, self.league.league_id)
+        teamsData = LeagueTeams.get_teams_by_position(self.league.league_id)
 
         for i, team in enumerate(teamsData):
-            teamName = Teams.get_team_by_id(self.session, team.team_id)
+            teamName = Teams.get_team_by_id(team.team_id)
             team_logo_blob = teamName.logo
             team_image = Image.open(io.BytesIO(team_logo_blob))
             team_image.thumbnail((20, 20))

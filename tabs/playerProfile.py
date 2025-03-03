@@ -8,18 +8,17 @@ from utils.teamLogo import TeamLogo
 from utils.frames import FootballPitchPlayerPos
 
 class PlayerProfile(ctk.CTkFrame):
-    def __init__(self, parent, session, player, changeBackFunction = None):
+    def __init__(self, parent, player, changeBackFunction = None):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.session = session
         self.player = player
         self.changeBackFunction = changeBackFunction
 
-        self.team = Teams.get_team_by_id(self.session, self.player.team_id)
-        self.league = LeagueTeams.get_league_by_team(self.session, self.team.id)
+        self.team = Teams.get_team_by_id(self.player.team_id)
+        self.league = LeagueTeams.get_league_by_team(self.team.id)
 
-        self.profile = Profile(self, self.session, self.player)
+        self.profile = Profile(self, self.player)
         self.attributes = None
         self.contract = None
         self.history = None
@@ -73,16 +72,15 @@ class PlayerProfile(ctk.CTkFrame):
         self.buttons[self.activeButton].configure(state = "disabled")
 
         if not self.tabs[self.activeButton]:
-            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.session, self.player)
+            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.player)
 
         self.tabs[self.activeButton].pack()
 
 class Profile(ctk.CTkFrame):
-    def __init__(self, parent, session, player):
+    def __init__(self, parent, player):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.player = player
 
         self.suspended = False
@@ -104,7 +102,7 @@ class Profile(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = f"{self.player.age} years old / {self.player.date_of_birth}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.27, anchor = "w")
 
-        playerBans = PlayerBans.get_bans_for_player(self.session, self.player.id)
+        playerBans = PlayerBans.get_bans_for_player(self.player.id)
 
         for ban in playerBans:
             if ban.ban_type == "injury":
@@ -119,7 +117,7 @@ class Profile(ctk.CTkFrame):
 
         teamLogo = Image.open(io.BytesIO(self.parent.team.logo))
         teamLogo.thumbnail((200, 200))
-        self.teamLogo = TeamLogo(self, self.session, teamLogo, self.parent.team, TKINTER_BACKGROUND, 0.83, 0.22, "center", self.parent.parent)
+        self.teamLogo = TeamLogo(self, teamLogo, self.parent.team, TKINTER_BACKGROUND, 0.83, 0.22, "center", self.parent.parent)
 
         canvas = ctk.CTkCanvas(self, width = 1000, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = 0.5, rely = 0.4, anchor = "center")
@@ -146,19 +144,19 @@ class Profile(ctk.CTkFrame):
         else:
             ctk.CTkLabel(self.statsFrame, text = f"Eclipse League stats: (# for {self.susBan.ban_length} match(es))", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.03, rely = 0.5, anchor = "w")
 
-        played = TeamLineup.get_number_matches_by_player(self.session, self.player.id, self.parent.league.league_id)
-        yellowCards = MatchEvents.get_yellow_cards_by_player(self.session, self.player.id)
-        redCards = MatchEvents.get_red_cards_by_player(self.session, self.player.id)
-        averageRating = TeamLineup.get_player_average_rating(self.session, self.player.id, self.parent.league.league_id)
+        played = TeamLineup.get_number_matches_by_player(self.player.id, self.parent.league.league_id)
+        yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id)
+        redCards = MatchEvents.get_red_cards_by_player(self.player.id)
+        averageRating = TeamLineup.get_player_average_rating(self.player.id, self.parent.league.league_id)
 
         if self.player.position != "goalkeeper":
-            goals = MatchEvents.get_goals_and_pens_by_player(self.session, self.player.id)
-            assists = MatchEvents.get_assists_by_player(self.session, self.player.id)
+            goals = MatchEvents.get_goals_and_pens_by_player(self.player.id)
+            assists = MatchEvents.get_assists_by_player(self.player.id)
             stats = [averageRating, redCards, yellowCards, assists, goals, played]
             statsNames = ["averageRating", "redCard", "yellowCard", "assist", "goal", "played"]
         else:
-            cleanSheets = MatchEvents.get_clean_sheets_by_player(self.session, self.player.id)
-            savedPens = MatchEvents.get_penalty_saves_by_player(self.session, self.player.id)
+            cleanSheets = MatchEvents.get_clean_sheets_by_player(self.player.id)
+            savedPens = MatchEvents.get_penalty_saves_by_player(self.player.id)
             stats = [averageRating, cleanSheets, savedPens, redCards, yellowCards, played]
             statsNames = ["averageRating", "cleanSheet", "savedPen", "redCard", "yellowCard", "played"]
 
@@ -178,25 +176,22 @@ class Profile(ctk.CTkFrame):
             ctk.CTkLabel(self.statsFrame, text = stat, font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = relx_position, rely = 0.7, anchor = "center")
 
 class Attributes(ctk.CTkFrame):
-    def __init__(self, parent, session, player):
+    def __init__(self, parent, player):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.player = player
 
 class Contract(ctk.CTkFrame):
-    def __init__(self, parent, session, player):
+    def __init__(self, parent, player):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.player = player
 
 class History(ctk.CTkScrollableFrame):
-    def __init__(self, parent, session, player):
+    def __init__(self, parent, player):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 965, height = 630, corner_radius = 0) 
 
         self.parent = parent
-        self.session = session
         self.player = player

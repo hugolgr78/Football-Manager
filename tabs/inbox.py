@@ -5,16 +5,15 @@ from data.gamesDatabase import *
 from utils.email import *
 
 class Inbox(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id):
+    def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id
 
-        self.team = Teams.get_teams_by_manager(self.session, self.manager_id)[0]
-        self.leagueTeams = LeagueTeams.get_league_by_team(self.session, self.team.id)
-        self.league = League.get_league_by_id(self.session, self.leagueTeams.league_id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
+        self.league = League.get_league_by_id(self.leagueTeams.league_id)
 
         self.emailsFrame = ctk.CTkScrollableFrame(self, width = 280, height = 645, fg_color = TKINTER_BACKGROUND, corner_radius = 0)
         self.emailsFrame.place(x = 0, y = 55, anchor = "nw")
@@ -36,7 +35,7 @@ class Inbox(ctk.CTkFrame):
         self.importEmails()
 
     def importEmails(self):
-        emails = Emails.get_all_emails(self.session)
+        emails = Emails.get_all_emails()
 
         if not emails:
             self.addEmail("matchday_preview", matchday = 1)
@@ -52,11 +51,11 @@ class Inbox(ctk.CTkFrame):
         # Add emails
         for matchday in range(current_matchday, 0, -1):
             if matchday <= 38:
-                if not Emails.get_email_by_matchday_and_type(self.session, matchday, "matchday_preview"):
+                if not Emails.get_email_by_matchday_and_type(matchday, "matchday_preview"):
                     self.addEmail("matchday_preview", matchday = matchday)
                     addedEmails.append(["matchday_preview", matchday])
             if matchday > 1:
-                if not Emails.get_email_by_matchday_and_type(self.session, matchday - 1, "matchday_review"):
+                if not Emails.get_email_by_matchday_and_type(matchday - 1, "matchday_review"):
                     self.addEmail("matchday_review", matchday = matchday - 1)
                     addedEmails.append(["matchday_review", matchday - 1])
 
@@ -67,7 +66,7 @@ class Inbox(ctk.CTkFrame):
             self.addEmail(email.email_type, email.matchday, email.player_id, email.ban_length, email.comp_id)
 
     def addEmail(self, email_type, matchday = None, player_id = None, ban_length = None, comp_id = None):
-        EmailFrame(self.emailsFrame, self.session, self.manager_id, email_type, matchday, player_id, ban_length, comp_id, self.emailDataFrame, self)
+        EmailFrame(self.emailsFrame, self.manager_id, email_type, matchday, player_id, ban_length, comp_id, self.emailDataFrame, self)
 
     def saveEmail(self, email_type, matchday = None, player_id = None, ban_length = None, comp_id = None):
-        Emails.add_email(self.session, email_type, matchday, player_id, ban_length, comp_id)
+        Emails.add_email(email_type, matchday, player_id, ban_length, comp_id)

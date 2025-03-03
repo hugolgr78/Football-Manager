@@ -36,14 +36,13 @@ class DatabaseManager:
         """Set the database name and initialize the session factory.
            Runs create_tables() only if explicitly requested.
         """
-        if self.database_name is None:  # Only allow setting once
-            self.database_name = database_name
-            DATABASE_URL = f"sqlite:///data/{database_name}.db"
-            engine = create_engine(DATABASE_URL, connect_args = {"check_same_thread": False})
-            self.session_factory = sessionmaker(autocommit = False, autoflush = False, bind = engine)
+        self.database_name = database_name
+        DATABASE_URL = f"sqlite:///data/{database_name}.db"
+        engine = create_engine(DATABASE_URL, connect_args = {"check_same_thread": False})
+        self.session_factory = sessionmaker(autocommit = False, autoflush = False, bind = engine)
 
-            if create_tables:
-                self.create_tables(engine)  # Run only if requested
+        if create_tables:
+            self.create_tables(engine)  # Run only if requested
 
     def create_tables(self, engine):
         """Create tables in the database if they do not exist."""
@@ -2180,15 +2179,6 @@ class PlayerBans(Base):
             return non_banned_players
         finally:
             session.close()
-
-def create_tables(database_name):
-    DATABASE_URL = f"sqlite:///data/{database_name}.db"
-
-    engine = create_engine(DATABASE_URL)
-    SessionLocal = sessionmaker(autocommit = False, autoflush = False, bind = engine)
-    Base.metadata.create_all(bind = engine)
-
-    return SessionLocal
 
 def updateProgress(textIndex):
     global progressBar, progressLabel, progressFrame, percentageLabel, PROGRESS

@@ -13,12 +13,11 @@ from tabs.leagueProfile import LeagueProfile
 from tabs.managerProfile import ManagerProfile
 
 class MainMenu(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id):
+    def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND)
         self.pack(fill = "both", expand = True)
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id
 
         self.initUI()
@@ -27,7 +26,7 @@ class MainMenu(ctk.CTkFrame):
 
         self.overlappingProfiles = []
 
-        self.hub = Hub(self, self.session, self.manager_id)
+        self.hub = Hub(self, self.manager_id)
         self.hub.place(x = 200, y = 0, anchor = "nw")
         
         self.inbox = None
@@ -95,7 +94,7 @@ class MainMenu(ctk.CTkFrame):
         self.buttons[self.activeButton].configure(state = "disabled")
 
         if not self.tabs[self.activeButton]:
-            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.session, self.manager_id)
+            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.manager_id)
 
         self.tabs[self.activeButton].place(x = 200, y = 0, anchor = "nw")
 

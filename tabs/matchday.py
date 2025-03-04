@@ -666,7 +666,8 @@ class MatchDay(ctk.CTkFrame):
         self.dropDown.configure(values = self.values)
 
         playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1])
-        if playerData in self.startTeamLineup.values():
+        lineupIDs = [player.id for player in self.startTeamLineup.values()]
+        if playerData.id in lineupIDs:
             self.playersOff[playerPosition] = playerData
             self.currentSubs += 1
         else:
@@ -734,9 +735,10 @@ class MatchDay(ctk.CTkFrame):
         self.dropDown.configure(values = self.values)
 
         playerData = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1])
-        if playerData in self.startTeamLineup.values():
+        lineupIDs = [player.id for player in self.startTeamLineup.values()]
+        if playerData.id in lineupIDs:
             for position, player in list(self.playersOff.items()):
-                if player == playerData:
+                if player.id == playerData.id:
                     del self.playersOff[position]
                     break
 
@@ -745,7 +747,10 @@ class MatchDay(ctk.CTkFrame):
             self.playersOn[self.selected_position] = playerData
 
         self.teamLineup[self.selected_position] = playerData
-        self.teamSubstitutes.remove(playerData)
+
+        for player in self.teamSubstitutes:
+            if player.id == playerData.id:
+                self.teamSubstitutes.remove(player)
 
         color = GREY_BACKGROUND
         if self.injuredPlayer:

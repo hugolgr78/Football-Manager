@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, case, or_
-from sqlalchemy.orm import sessionmaker, aliased
+from sqlalchemy.orm import sessionmaker, aliased, scoped_session
 from sqlalchemy.types import Enum
 import uuid, json, random
 from faker import Faker
@@ -28,25 +28,25 @@ class DatabaseManager:
         if cls._instance is None:
             cls._instance = super(DatabaseManager, cls).__new__(cls)
             cls._instance.database_name = None
-            cls._instance.session_factory = None
+            cls._instance.scoped_session = None
         return cls._instance
 
     def set_database(self, database_name, create_tables = False):
+
         self.database_name = database_name
         DATABASE_URL = f"sqlite:///data/{database_name}.db"
-        engine = create_engine(DATABASE_URL)
-        self.session_factory = sessionmaker(autocommit = False, autoflush = False, bind = engine)
+        engine = create_engine(DATABASE_URL, connect_args = {"check_same_thread": False})
+        session_factory = sessionmaker(autocommit = False, autoflush = False, bind = engine)
+        self.scoped_session = scoped_session(session_factory)  # One session per thread
 
         if create_tables:
-            self.create_tables(engine)
-
-    def create_tables(self, engine):
-        Base.metadata.create_all(bind = engine)
+            Base.metadata.create_all(bind = engine)
 
     def get_session(self):
-        if not self.session_factory:
+        """Return the shared session per thread."""
+        if not self.scoped_session:
             raise ValueError("Database has not been set. Call set_database() first.")
-        return self.session_factory()
+        return self.scoped_session()
 
 
 class Managers(Base):
@@ -1305,8 +1305,8 @@ class MatchEvents(Base):
                     red_card_ban.ban_length += 1
                     session.commit()
                 else:
-                    PlayerBans.add_player_ban(session, player_id, comp_id, ban_length = 1, ban_type = "yellow_cards")
-                    Emails.add_email(session, "player_ban", None, player_id, 1, comp_id)
+                    PlayerBans.add_player_ban(player_id, comp_id, ban_length = 1, ban_type = "yellow_cards")
+                    Emails.add_email("player_ban", None, player_id, 1, comp_id)
         finally:
             session.close()
 
@@ -2144,7 +2144,7 @@ class PlayerBans(Base):
     def get_all_non_banned_players_for_comp(cls, team_id, competition_id):
         session = DatabaseManager().get_session()
         try:
-            all_players = Players.get_all_players_by_team(session, team_id)
+            all_players = Players.get_all_players_by_team(team_id)
             non_banned_players = []
 
             for player in all_players:
@@ -2161,7 +2161,7 @@ class PlayerBans(Base):
     def get_all_non_banned_youth_players_for_comp(cls, team_id, competition_id):
         session = DatabaseManager().get_session()
         try:
-            all_players = Players.get_all_players_by_team(session, team_id)
+            all_players = Players.get_all_players_by_team(team_id)
             non_banned_players = []
 
             for player in all_players:

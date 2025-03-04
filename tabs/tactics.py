@@ -120,6 +120,7 @@ class Tactics(ctk.CTkFrame):
                         )
             
         self.lineupPitch.set_counter(playersCount)
+        lineupIDs = [player.id for player in self.selectedLineup.values()]
 
         if playersCount == 11:
             self.dropDown.configure(state = "disabled")
@@ -127,7 +128,7 @@ class Tactics(ctk.CTkFrame):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).pack(pady = 5)
         for player in self.players:
             name = player.first_name + " " + player.last_name
-            if player not in self.selectedLineup.values():
+            if player.id not in lineupIDs:
                 frame = SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self, self.league.id) 
 
                 if playersCount == 11:

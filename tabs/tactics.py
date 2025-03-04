@@ -158,7 +158,8 @@ class Tactics(ctk.CTkFrame):
 
             if len(playersForPosition) == 0:
                 youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
-                youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth not in self.players]
+                playerIDs = [player.id for player in self.players]
+                youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth.id not in playerIDs]
 
                 if len(youthForPosition) > 0:
                     self.players.append(youthForPosition[0])
@@ -172,7 +173,8 @@ class Tactics(ctk.CTkFrame):
 
             elif position == "Goalkeeper" and len(playersForPosition) == 1:
                 youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
-                youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth not in self.players]
+                playerIDs = [player.id for player in self.players]
+                youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth.id not in playerIDs]
 
                 if len(youthForPosition) > 0:
                     self.players.append(youthForPosition[0])
@@ -194,9 +196,10 @@ class Tactics(ctk.CTkFrame):
         self.choosePlayerFrame.place(relx = 0.225, rely = 0.5, anchor = "center")
 
         values = []
+        lineupIDs = [player.id for player in self.selectedLineup.values()]
         for player in self.players:
             playerName = player.first_name + " " + player.last_name
-            if POSITION_CODES[selected_position] in player.specific_positions.split(",") and player not in self.selectedLineup.values() and not PlayerBans.check_bans_for_player(player.id, self.league.id):
+            if POSITION_CODES[selected_position] in player.specific_positions.split(",") and player.id not in lineupIDs and not PlayerBans.check_bans_for_player(player.id, self.league.id):
                 values.append(playerName)
         
         if len(values) == 0:

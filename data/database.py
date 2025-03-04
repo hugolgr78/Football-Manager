@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, case, or_
 from sqlalchemy.orm import sessionmaker, aliased, scoped_session
@@ -589,6 +589,21 @@ class Players(Base):
             session.close()
 
     @classmethod
+    def batch_update_morales(cls, morales):
+        session = DatabaseManager().get_session()
+        try:
+            for morale in morales:
+                player = session.query(Players).filter(Players.id == morale[0]).first()
+                if player:
+                    player.morale += morale[1]
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def get_all_players_by_team(cls, team_id, youths = True):
         session = DatabaseManager().get_session()
         try:
@@ -971,6 +986,31 @@ class TeamLineup(Base):
             raise e
         finally:
             session.close()
+
+    @classmethod
+    def batch_add_lineups(cls, lineups):
+        session = DatabaseManager().get_session()
+        try:
+            # Create a list of dictionaries representing each lineup
+            lineup_dicts = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "match_id": lineup[0],
+                    "player_id": lineup[1],
+                    "position": lineup[2],
+                    "rating": lineup[3]
+                }
+                for lineup in lineups
+            ]
+
+            # Use the list of dictionaries to add the lineups
+            session.bulk_insert_mappings(TeamLineup, lineup_dicts)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
     
     @classmethod
     def add_lineup_single(cls, match_id, player_id, position, rating):
@@ -1118,6 +1158,31 @@ class MatchEvents(Base):
             session.add(new_event)
             session.commit()
             return new_event
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_add_events(cls, events):
+        session = DatabaseManager().get_session()
+        try:
+            # Create a list of dictionaries representing each event
+            event_dicts = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "match_id": event[0],
+                    "event_type": event[1],
+                    "time": event[2],
+                    "player_id": event[3]
+                }
+                for event in events
+            ]
+
+            # Use session.execute with an insert statement
+            session.execute(insert(MatchEvents), event_dicts)
+            session.commit()
         except Exception as e:
             session.rollback()
             raise e
@@ -2016,6 +2081,32 @@ class Emails(Base):
             raise e
         finally:
             session.close()
+
+    @classmethod
+    def batch_add_emails(cls, emails):
+        session = DatabaseManager().get_session()
+        try:
+            # Create a list of dictionaries representing each email
+            email_dicts = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "email_type": email[0],
+                    "matchday": email[1],
+                    "player_id": email[2],
+                    "ban_length": email[3],
+                    "comp_id": email[4]
+                }
+                for email in emails
+            ]
+
+            # Use session.execute with an insert statement
+            session.execute(insert(Emails), email_dicts)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
     
     @classmethod
     def get_email_by_id(cls, id):
@@ -2086,6 +2177,31 @@ class PlayerBans(Base):
             session.commit()
 
             return new_ban
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_add_bans(cls, bans):
+        session = DatabaseManager().get_session()
+        try:
+            # Create a list of dictionaries representing each ban
+            ban_dicts = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "player_id": ban[0],
+                    "competition_id": ban[1],
+                    "ban_length": ban[2],
+                    "ban_type": ban[3]
+                }
+                for ban in bans
+            ]
+
+            # Use session.execute with an insert statement
+            session.execute(insert(PlayerBans), ban_dicts)
+            session.commit()
         except Exception as e:
             session.rollback()
             raise e

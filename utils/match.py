@@ -7,15 +7,14 @@ from collections import defaultdict
 import itertools, threading
 
 class Match():
-    def __init__(self, session, match):
+    def __init__(self, match):
 
-        self.session = session
         self.match = match
 
-        self.homeTeam = Teams.get_team_by_id(self.session, self.match.home_id)
-        self.awayTeam = Teams.get_team_by_id(self.session, self.match.away_id)
+        self.homeTeam = Teams.get_team_by_id(self.match.home_id)
+        self.awayTeam = Teams.get_team_by_id(self.match.away_id)
 
-        self.manager = Managers.get_all_user_managers(self.session)[0]
+        self.manager = Managers.get_all_user_managers()[0]
         self.managerName = f"{self.manager.first_name}{self.manager.last_name}"
 
         # As soon as a player is subbed in, the player is added to the current lineup and the subbed off player is removed
@@ -64,7 +63,7 @@ class Match():
         oppFormation = random.choices(formations, weights = weights, k = 1)[0]
         defNums, midNums, _ = map(int, oppFormation.split("-"))
 
-        players = PlayerBans.get_all_non_banned_players_for_comp(self.session, teamID, self.match.league_id)
+        players = PlayerBans.get_all_non_banned_players_for_comp(teamID, self.match.league_id)
         goalkeepers = [player for player in players if player.position == "goalkeeper"]
         defenders = [player for player in players if player.position == "defender"]
         midfielders = [player for player in players if player.position == "midfielder"]
@@ -138,9 +137,6 @@ class Match():
 
         position_options = defaultdict(list)
 
-        # for position in position_names:
-        #     lineup[position] = None
-
         for position in position_names:
             position_options[position] = []
             for player in players:
@@ -150,14 +146,12 @@ class Match():
         assigned_players = set()
 
         while position_options != {}:
-            # Step 2: Sort full position names by scarcity (fewest available players first)
             sorted_positions = sorted(position_options.keys(), key = lambda pos: len(position_options[pos]))
 
-            # Pick the position with the least available players
             position = sorted_positions[0]
             available_players = [p for p in position_options[position] if p not in assigned_players]
 
-            if not available_players: # get a youth team player from db or create a new one
+            if not available_players:
                 self.getYouthPlayer(teamID, position, lineup = lineup)
                 del position_options[position]
                 continue
@@ -177,7 +171,7 @@ class Match():
             del position_options[position]
 
     def getYouthPlayer(self, teamID, position, lineup = None, substitutes = None):
-        youthPlayers = PlayerBans.get_all_non_banned_youth_players_for_comp(self.session, teamID, self.match.league_id)
+        youthPlayers = PlayerBans.get_all_non_banned_youth_players_for_comp(teamID, self.match.league_id)
 
         if youthPlayers:
             for player in youthPlayers:
@@ -198,7 +192,7 @@ class Match():
             overallPosition = "goalkeeper"
                 
         # list empty or no player found with the specific position
-        newYouth = Players.add_player(self.session, teamID, overallPosition, position, "Youth Team")
+        newYouth = Players.add_player(teamID, overallPosition, position, "Youth Team")
         if lineup is not None: # if lineup is passed as None, then add to subs
             lineup[position] = newYouth
         else:
@@ -254,7 +248,6 @@ class Match():
         self.add_events(self.homeEvents, self.numHomeYellows, "yellow_card")
         self.add_events(self.awayEvents, self.numAwayYellows, "yellow_card")
 
-        # Add red card events
         self.add_events(self.homeEvents, self.numHomeReds, "red_card")
         self.add_events(self.awayEvents, self.numAwayReds, "red_card")
 
@@ -302,7 +295,7 @@ class Match():
         return time
 
     def getYellowsAndReds(self):
-        self.referee = Referees.get_referee_by_id(self.session, self.match.referee_id)
+        self.referee = Referees.get_referee_by_id(self.match.referee_id)
         severity = self.referee.severity
 
         choices = len(LOW_YELLOW_CARD)
@@ -718,13 +711,13 @@ class Match():
 
         for player in itertools.chain(self.homeCurrentLineup.values(), self.awayCurrentLineup.values(), self.homeFinalLineup.values(), self.awayFinalLineup.values(), self.homeCurrentSubs, self.awayCurrentSubs):
             if player.age < 18:
-                data = Players.get_player_by_id(self.session, player.id)
+                data = Players.get_player_by_id(player.id)
 
                 if not data:
-                    Players.add_player_entry(self.session, player)
+                    Players.add_player_entry(player)
 
-        PlayerBans.reduce_all_player_bans_for_team(self.session, self.homeTeam.id, self.match.league_id)
-        PlayerBans.reduce_all_player_bans_for_team(self.session, self.awayTeam.id, self.match.league_id)
+        PlayerBans.reduce_all_player_bans_for_team(self.homeTeam.id, self.match.league_id)
+        PlayerBans.reduce_all_player_bans_for_team(self.awayTeam.id, self.match.league_id)
 
         homeData = {
             "points": 3 if self.winner == self.homeTeam else 1 if self.winner is None else 0,
@@ -748,8 +741,7 @@ class Match():
         self.getPlayerRatings(self.awayTeam, self.awayFinalLineup, self.awayCurrentLineup, self.awayProcessedEvents)
 
         ## ------------- League Teams changes --------------- ##
-        LeagueTeams.update_team(self.session, 
-                                self.homeTeam.id, 
+        LeagueTeams.update_team(self.homeTeam.id, 
                                 homeData["points"],
                                 homeData["won"],
                                 homeData["drawn"],
@@ -758,8 +750,7 @@ class Match():
                                 homeData["goals_conceded"]
                             )
         
-        LeagueTeams.update_team(self.session,
-                                self.awayTeam.id, 
+        LeagueTeams.update_team(self.awayTeam.id, 
                                 awayData["points"],
                                 awayData["won"],
                                 awayData["drawn"],
@@ -768,11 +759,11 @@ class Match():
                                 awayData["goals_conceded"]
                                 )
         ## ------------- Managers changes --------------- ##
-        homeManager = Managers.get_manager_by_id(self.session, self.homeTeam.manager_id)
-        awayManager = Managers.get_manager_by_id(self.session, self.awayTeam.manager_id)
+        homeManager = Managers.get_manager_by_id(self.homeTeam.manager_id)
+        awayManager = Managers.get_manager_by_id(self.awayTeam.manager_id)
 
-        Managers.update_games(self.session, homeManager.id, homeData["won"], homeData["lost"])
-        Managers.update_games(self.session, awayManager.id, awayData["won"], awayData["lost"])
+        Managers.update_games(homeManager.id, homeData["won"], homeData["lost"])
+        Managers.update_games(awayManager.id, awayData["won"], awayData["lost"])
 
         ## ------------- Match Events changes --------------- ##
         for time, event in self.homeProcessedEvents.items():
@@ -789,29 +780,29 @@ class Match():
                 minute = str(minute)
 
             if event["type"] == "goal":
-                MatchEvents.add_event(self.session, self.match.id, "goal", minute, event["player"].id)
-                MatchEvents.add_event(self.session, self.match.id, "assist", minute, event["assister"].id)
+                MatchEvents.add_event(self.match.id, "goal", minute, event["player"].id)
+                MatchEvents.add_event(self.match.id, "assist", minute, event["assister"].id)
             elif event["type"] == "penalty_miss":
-                MatchEvents.add_event(self.session, self.match.id, "penalty_miss", minute, event["player"].id)
-                MatchEvents.add_event(self.session, self.match.id, "penalty_saved", minute, self.awayCurrentLineup["Goalkeeper"].id)
+                MatchEvents.add_event(self.match.id, "penalty_miss", minute, event["player"].id)
+                MatchEvents.add_event(self.match.id, "penalty_saved", minute, self.awayCurrentLineup["Goalkeeper"].id)
             elif event["type"] == "substitution":
-                MatchEvents.add_event(self.session, self.match.id, "sub_off", minute, event["player_off"].id) 
-                MatchEvents.add_event(self.session, self.match.id, "sub_on", minute, event["player_on"].id)
+                MatchEvents.add_event(self.match.id, "sub_off", minute, event["player_off"].id) 
+                MatchEvents.add_event(self.match.id, "sub_on", minute, event["player_on"].id)
             elif event["type"] == "injury" or event["type"] == "red_card":
-                MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
+                MatchEvents.add_event(self.match.id, event["type"], minute, event["player"].id)
                 ban = get_player_ban(event["type"])
-                PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
+                PlayerBans.add_player_ban(event["player"].id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
                 if managing_team == "home" and event["type"] == "injury":
-                    Emails.add_email(self.session, "player_injury", None, event["player"].id, ban, self.match.league_id)
+                    Emails.add_email("player_injury", None, event["player"].id, ban, self.match.league_id)
                 elif managing_team == "home" and event["type"] == "red_card":
-                    Emails.add_email(self.session, "player_ban", None, event["player"].id, ban, self.match.league_id)
+                    Emails.add_email("player_ban", None, event["player"].id, ban, self.match.league_id)
 
             elif event["type"] == "yellow_card":
-                MatchEvents.add_event(self.session, self.match.id, "yellow_card", minute, event["player"].id)
-                MatchEvents.check_yellow_card_ban(self.session, event["player"].id, self.match.league_id, 5)
+                MatchEvents.add_event(self.match.id, "yellow_card", minute, event["player"].id)
+                MatchEvents.check_yellow_card_ban(event["player"].id, self.match.league_id, 5)
             else:
-                MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
+                MatchEvents.add_event(self.match.id, event["type"], minute, event["player"].id)
 
         for time, event in self.awayProcessedEvents.items():
             minute = int(time.split(":")[0]) + 1
@@ -827,42 +818,42 @@ class Match():
                 minute = str(minute)
 
             if event["type"] == "goal":
-                MatchEvents.add_event(self.session, self.match.id, "goal", minute, event["player"].id)
-                MatchEvents.add_event(self.session, self.match.id, "assist", minute, event["assister"].id)
+                MatchEvents.add_event(self.match.id, "goal", minute, event["player"].id)
+                MatchEvents.add_event(self.match.id, "assist", minute, event["assister"].id)
             elif event["type"] == "penalty_miss":
-                MatchEvents.add_event(self.session, self.match.id, "penalty_miss", minute, event["player"].id)
-                MatchEvents.add_event(self.session, self.match.id, "penalty_saved", minute, self.homeCurrentLineup["Goalkeeper"].id)
+                MatchEvents.add_event(self.match.id, "penalty_miss", minute, event["player"].id)
+                MatchEvents.add_event(self.match.id, "penalty_saved", minute, self.homeCurrentLineup["Goalkeeper"].id)
             elif event["type"] == "substitution":
-                MatchEvents.add_event(self.session, self.match.id, "sub_off", minute, event["player_off"].id) 
-                MatchEvents.add_event(self.session, self.match.id, "sub_on", minute, event["player_on"].id)
+                MatchEvents.add_event(self.match.id, "sub_off", minute, event["player_off"].id) 
+                MatchEvents.add_event(self.match.id, "sub_on", minute, event["player_on"].id)
             elif event["type"] == "injury" or event["type"] == "red_card":
-                MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
+                MatchEvents.add_event(self.match.id, event["type"], minute, event["player"].id)
                 ban = get_player_ban(event["type"])
-                PlayerBans.add_player_ban(self.session, event["player"].id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
+                PlayerBans.add_player_ban(event["player"].id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
                 if managing_team == "away" and event["type"] == "injury":
-                    Emails.add_email(self.session, "player_injury", None, event["player"].id, ban, self.match.league_id)
+                    Emails.add_email("player_injury", None, event["player"].id, ban, self.match.league_id)
                 elif managing_team == "away" and event["type"] == "red_card":
-                    Emails.add_email(self.session, "player_ban", None, event["player"].id, ban, self.match.league_id)
+                    Emails.add_email("player_ban", None, event["player"].id, ban, self.match.league_id)
 
             elif event["type"] == "yellow_card":
-                MatchEvents.add_event(self.session, self.match.id, "yellow_card", minute, event["player"].id)
-                MatchEvents.check_yellow_card_ban(self.session, event["player"].id, self.match.league_id, 5)
+                MatchEvents.add_event(self.match.id, "yellow_card", minute, event["player"].id)
+                MatchEvents.check_yellow_card_ban(event["player"].id, self.match.league_id, 5)
             else:
-                MatchEvents.add_event(self.session, self.match.id, event["type"], minute, event["player"].id)
+                MatchEvents.add_event(self.match.id, event["type"], minute, event["player"].id)
 
         if self.homeCleanSheet:
-            MatchEvents.add_event(self.session, self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"].id)
+            MatchEvents.add_event(self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"].id)
         
         if self.awayCleanSheet:
-            MatchEvents.add_event(self.session, self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"].id)
+            MatchEvents.add_event(self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"].id)
 
         ## ------------- Matches changes --------------- ##
-        Matches.update_score(self.session, self.match.id, self.score.getScore()[0], self.score.getScore()[1])
+        Matches.update_score(self.match.id, self.score.getScore()[0], self.score.getScore()[1])
 
         ## ------------- Lineup changes --------------- ##
         for position, player in self.homeFinalLineup.items():
-            TeamLineup.add_lineup_single(self.session, self.match.id, player.id, position, self.homeRatings[player])
+            TeamLineup.add_lineup_single(self.match.id, player.id, position, self.homeRatings[player])
             
             if not self.getGameTime(player, self.homeProcessedEvents):
                 # Player hasnt played more than 20 mins or at all -> decrease morale based on player role
@@ -871,48 +862,48 @@ class Match():
                 # Change morale based on game outcome
                 moraleChange = get_morale_change("win" if self.winner == self.homeTeam else "draw" if self.winner == None else "loss", self.homeRatings[player], self.goalDiffHome)
             
-            Players.update_morale(self.session, player.id, moraleChange)
+            Players.update_morale(player.id, moraleChange)
 
         for position, player in self.homeCurrentLineup.items():
-            TeamLineup.add_lineup_single(self.session, self.match.id, player.id, position, self.homeRatings[player])
+            TeamLineup.add_lineup_single(self.match.id, player.id, position, self.homeRatings[player])
             
             if not self.getGameTime(player, self.homeProcessedEvents):
                 moraleChange = get_morale_decrease_role(player)
             else:
                 moraleChange = get_morale_change("win" if self.winner == self.homeTeam else "draw" if self.winner == None else "loss", self.homeRatings[player], self.goalDiffHome)
 
-            Players.update_morale(self.session, player.id, moraleChange)
+            Players.update_morale(player.id, moraleChange)
         
         for position, player in self.awayFinalLineup.items():
-            TeamLineup.add_lineup_single(self.session, self.match.id, player.id, position, self.awayRatings[player])
+            TeamLineup.add_lineup_single(self.match.id, player.id, position, self.awayRatings[player])
             
             if not self.getGameTime(player, self.awayProcessedEvents):
                 moraleChange = get_morale_decrease_role(player)
             else:
                 moraleChange = get_morale_change("win" if self.winner == self.awayTeam else "draw" if self.winner == None else "loss", self.awayRatings[player], self.goalDiffAway)
 
-            Players.update_morale(self.session, player.id, moraleChange)
+            Players.update_morale(player.id, moraleChange)
             
         for position, player in self.awayCurrentLineup.items():
-            TeamLineup.add_lineup_single(self.session, self.match.id, player.id, position, self.awayRatings[player])
+            TeamLineup.add_lineup_single(self.match.id, player.id, position, self.awayRatings[player])
             
             if not self.getGameTime(player, self.awayProcessedEvents):
                 moraleChange = get_morale_decrease_role(player)
             else:
                 moraleChange = get_morale_change("win" if self.winner == self.awayTeam else "draw" if self.winner == None else "loss", self.awayRatings[player], self.goalDiffAway)
 
-            Players.update_morale(self.session, player.id, moraleChange)
+            Players.update_morale(player.id, moraleChange)
 
-        homePlayers = Players.get_all_players_by_team(self.session, self.homeTeam.id, youths = False)
-        awayPlayers = Players.get_all_players_by_team(self.session, self.awayTeam.id, youths = False)
+        homePlayers = Players.get_all_players_by_team(self.homeTeam.id, youths = False)
+        awayPlayers = Players.get_all_players_by_team(self.awayTeam.id, youths = False)
 
         for player in homePlayers:
             if player not in self.homeCurrentLineup and player not in self.homeFinalLineup:
-                Players.update_morale(self.session, player.id, get_morale_decrease_role(player))
+                Players.update_morale(player.id, get_morale_decrease_role(player))
 
         for player in awayPlayers:
             if player not in self.awayCurrentLineup and player not in self.awayFinalLineup:
-                    Players.update_morale(self.session, player.id, get_morale_decrease_role(player))
+                Players.update_morale(player.id, get_morale_decrease_role(player))
 
     def getGameTime(self, player, events):
         sub_off_time = None

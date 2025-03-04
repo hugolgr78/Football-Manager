@@ -4,7 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 
 class TeamProfileLabel(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id, team_name, prefix_text, suffix_text, width, height, tab, textColor = "white", fg_color = TKINTER_BACKGROUND, fontSize = 20):
+    def __init__(self, parent, manager_id, team_name, prefix_text, suffix_text, width, height, tab, textColor = "white", fg_color = TKINTER_BACKGROUND, fontSize = 20):
         super().__init__(parent, fg_color = fg_color, width = width, height = height, corner_radius = 0)
         
         # Static part of the text
@@ -18,7 +18,7 @@ class TeamProfileLabel(ctk.CTkFrame):
         
         # Clickable link part
         self.link = TeamProfileLink(
-            self, session, manager_id, 
+            self, manager_id, 
             text = team_name, 
             textColor = textColor, 
             relx = 0, rely = 0, anchor = "w", 
@@ -38,11 +38,10 @@ class TeamProfileLabel(ctk.CTkFrame):
         self.suffix_label.pack(side = "left")
 
 class TeamProfileLink(ctk.CTkLabel):
-    def __init__(self, parent, session, manager_id, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20):
+    def __init__(self, parent, manager_id, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20):
         super().__init__(parent, text = text, font = (APP_FONT, fontSize), fg_color = fg_color, text_color = textColor)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
-        self.session = session
         self.manager_id = manager_id
         self.textColor = textColor
         self.tab = tab
@@ -62,10 +61,10 @@ class TeamProfileLink(ctk.CTkLabel):
     def openClubProfile(self, event):
         from tabs.teamProfile import TeamProfile
 
-        manager = Managers.get_manager_by_id(self.session, self.manager_id)
+        manager = Managers.get_manager_by_id(self.manager_id)
 
         if manager.user != 1:
-            self.profile = TeamProfile(self.tab, self.session, self.manager_id, parentTab = self.tab, changeBackFunction = self.changeBack)
+            self.profile = TeamProfile(self.tab, self.manager_id, parentTab = self.tab, changeBackFunction = self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
 
             self.tab.parent.overlappingProfiles.append(self.profile)

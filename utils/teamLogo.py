@@ -5,13 +5,12 @@ from data.gamesDatabase import *
 from PIL import Image
 
 class TeamLogo(ctk.CTkImage):
-    def __init__(self, parent, session, image, team, fg_color, relx, rely, anchor, tab):
+    def __init__(self, parent, image, team, fg_color, relx, rely, anchor, tab):
         super().__init__(image, None, (image.width, image.height))
         
         self.parent = parent
         self.fg_color = fg_color
         self.team = team
-        self.session = session
         self.tab = tab
         
         self.imageLabel = ctk.CTkLabel(self.parent, image = self, text = "", fg_color = self.fg_color)
@@ -22,10 +21,10 @@ class TeamLogo(ctk.CTkImage):
     def openClubProfile(self):
         from tabs.teamProfile import TeamProfile
 
-        manager = Managers.get_manager_by_id(self.session, self.team.manager_id)
+        manager = Managers.get_manager_by_id(self.team.manager_id)
 
         if manager.user != 1:
-            self.profile = TeamProfile(self.tab, self.session, self.team.manager_id, parentTab = self.tab, changeBackFunction = self.changeBack)
+            self.profile = TeamProfile(self.tab, self.team.manager_id, parentTab = self.tab, changeBackFunction = self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
 
             self.tab.parent.overlappingProfiles.append(self.profile)

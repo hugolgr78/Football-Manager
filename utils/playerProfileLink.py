@@ -4,7 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 
 class PlayerProfileLabel(ctk.CTkFrame):
-    def __init__(self, parent, session, player, player_name, prefix_text, suffix_text, width, height, tab, textColor = "white", fg_color = TKINTER_BACKGROUND, fontSize = 20):
+    def __init__(self, parent, player, player_name, prefix_text, suffix_text, width, height, tab, textColor = "white", fg_color = TKINTER_BACKGROUND, fontSize = 20):
         super().__init__(parent, fg_color = fg_color, width = width, height = height, corner_radius = 0)
         
         # Static part of the text
@@ -18,7 +18,7 @@ class PlayerProfileLabel(ctk.CTkFrame):
         
         # Clickable link part
         self.link = PlayerProfileLink(
-            self, session, player, 
+            self, player, 
             text = player_name, 
             textColor = textColor, 
             relx = 0, rely = 0, anchor = "w", 
@@ -38,11 +38,10 @@ class PlayerProfileLabel(ctk.CTkFrame):
         self.suffix_label.pack(side = "left")
 
 class PlayerProfileLink(ctk.CTkLabel):
-    def __init__(self, parent, session, player, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20):
+    def __init__(self, parent, player, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20):
         super().__init__(parent, text = text, font = (APP_FONT, fontSize), fg_color = fg_color, text_color = textColor)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
-        self.session = session
         self.player = player
         self.textColor = textColor
         self.tab = tab
@@ -62,7 +61,7 @@ class PlayerProfileLink(ctk.CTkLabel):
     def openPlayerProfile(self, event):
         from tabs.playerProfile import PlayerProfile
 
-        self.profile = PlayerProfile(self.tab, self.session, self.player, self.changeBack)
+        self.profile = PlayerProfile(self.tab, self.player, self.changeBack)
         self.profile.place(x = 0, y = 0, anchor = "nw")
 
         self.tab.parent.overlappingProfiles.append(self.profile)

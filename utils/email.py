@@ -10,12 +10,11 @@ from PIL import Image
 import io
 
 class EmailFrame(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id, email_type, matchday, player_id, ban_length, comp_id, emailFrame, parentTab):
+    def __init__(self, parent, manager_id, email_type, matchday, player_id, ban_length, comp_id, emailFrame, parentTab):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 260, height = 50)
         self.pack(fill = "both", padx = 10, pady = 5)
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id
         self.email_type = email_type
         self.matchday = matchday
@@ -27,13 +26,13 @@ class EmailFrame(ctk.CTkFrame):
 
         self.emailOpen = False
 
-        self.manager = Managers.get_manager_by_id(self.session, self.manager_id)
-        self.team = Teams.get_teams_by_manager(self.session, self.manager_id)[0]
-        self.leagueData = LeagueTeams.get_league_by_team(self.session, self.team.id)
-        self.league = League.get_league_by_id(self.session, self.leagueData.league_id)
-        self.player = Players.get_player_by_id(self.session, self.player_id) if self.player_id else None
+        self.manager = Managers.get_manager_by_id(self.manager_id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.leagueData = LeagueTeams.get_league_by_team(self.team.id)
+        self.league = League.get_league_by_id(self.leagueData.league_id)
+        self.player = Players.get_player_by_id(self.player_id) if self.player_id else None
 
-        self.email = EMAIL_CLASSES[self.email_type](self, self.session)
+        self.email = EMAIL_CLASSES[self.email_type](self)
 
         self.bind("<Enter>", lambda e: self.onFrameHover())
         self.bind("<Leave>", lambda e: self.onFrameLeave())
@@ -96,10 +95,9 @@ class EmailFrame(ctk.CTkFrame):
             return {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
 
 class Welcome():
-    def __init__(self, parent, session):
+    def __init__(self, parent):
 
         self.parent = parent
-        self.session = session
         self.frame = self.parent.emailFrame
 
         self.subject = f"Welcome to the {self.parent.team.name}!"
@@ -145,7 +143,6 @@ class Welcome():
 
         self.emailFrame_1 = TeamProfileLabel(
             self.frame,
-            self.session,
             self.parent.manager.id,
             self.parent.team.name,
             f"Welcome to ",
@@ -164,7 +161,6 @@ class Welcome():
         self.title_1 = "About the Club"
         self.emailFrame_2 = TeamProfileLabel(
             self.frame,
-            self.session,
             self.parent.manager.id,
             self.parent.team.name,
             f"Founded in {self.parent.team.year_created}, ",
@@ -182,7 +178,6 @@ class Welcome():
 
         self.emailFrame_3 = LeagueProfileLabel(
             self.frame,
-            self.session,
             self.parent.manager.id,
             self.parent.league.name,
             f"Our team competes in the ",
@@ -195,9 +190,9 @@ class Welcome():
 
         expected_finish = (200 - self.parent.team.level) // 2 + 1
         suffix = self.parent.getSuffix(expected_finish)
-        self.firstMatch = Matches.get_team_first_match(self.session, self.parent.team.id)
-        homeTeam = Teams.get_team_by_id(self.session, self.firstMatch.home_id)
-        awayTeam = Teams.get_team_by_id(self.session, self.firstMatch.away_id)
+        self.firstMatch = Matches.get_team_first_match(self.parent.team.id)
+        homeTeam = Teams.get_team_by_id(self.firstMatch.home_id)
+        awayTeam = Teams.get_team_by_id(self.firstMatch.away_id)
         self.opponent = homeTeam if homeTeam.id != self.parent.team.id else awayTeam
         self.venue = "a home" if homeTeam.id == self.parent.team.id else "an away"
 
@@ -208,7 +203,6 @@ class Welcome():
 
         self.emailFrame_4 = LeagueProfileLabel(
             self.frame,
-            self.session,
             self.parent.manager.id,
             self.parent.league.name,
             f"- League Finish: {expected_finish}{suffix} place in the ",
@@ -225,7 +219,6 @@ class Welcome():
 
         self.emailFrame_5 = TeamProfileLabel(
             self.frame,
-            self.session,
             self.opponent.manager_id,
             self.opponent.name,
             f"Our journey starts with our first match against ",
@@ -240,7 +233,7 @@ class Welcome():
            f"counting on you to set the tone for the season with a strong performance." 
         )
 
-        self.stars = Players.get_all_star_players(self.session, self.parent.team.id)
+        self.stars = Players.get_all_star_players(self.parent.team.id)
 
         self.title_3 = "Key Players"
         self.emailText_4 = "Here are some of the standout players you’ll be working with:"
@@ -248,7 +241,6 @@ class Welcome():
         player1 = self.stars[0]
         self.emailFrame_6 = PlayerProfileLabel(
             self.frame,
-            self.session,
             player1,
             f"{player1.first_name} {player1.last_name}",
             "- ",
@@ -262,7 +254,6 @@ class Welcome():
         player2 = self.stars[1]
         self.emailFrame_7 = PlayerProfileLabel(
             self.frame,
-            self.session,
             player2,
             f"{player2.first_name} {player2.last_name}",
             "- ",
@@ -276,7 +267,6 @@ class Welcome():
         player3 = self.stars[2]
         self.emailFrame_8 = PlayerProfileLabel(
             self.frame,
-            self.session,
             player3,
             f"{player3.first_name} {player3.last_name}",
             "- ",
@@ -291,7 +281,6 @@ class Welcome():
 
         self.emailFrame_9 = TeamProfileLabel(
             self.frame,
-            self.session,
             self.parent.team.manager_id,
             self.parent.team.name,
             f"We’re confident in your abilities to lead ",
@@ -312,10 +301,9 @@ class Welcome():
         )
 
 class MatchdayReview():
-    def __init__(self, parent, session):
+    def __init__(self, parent):
 
         self.parent = parent
-        self.session = session
         self.matchday = self.parent.matchday
         self.frame = self.parent.emailFrame
 
@@ -356,9 +344,9 @@ class MatchdayReview():
 
         self.matchFrame()
 
-        match_ = Matches.get_team_matchday_match(self.session, self.parent.team.id, self.parent.league.id, self.matchday)
-        homeTeam = Teams.get_team_by_id(self.session, match_.home_id)
-        awayTeam = Teams.get_team_by_id(self.session, match_.away_id)
+        match_ = Matches.get_team_matchday_match(self.parent.team.id, self.parent.league.id, self.matchday)
+        homeTeam = Teams.get_team_by_id(match_.home_id)
+        awayTeam = Teams.get_team_by_id(match_.away_id)
 
         opponentTeam = homeTeam if homeTeam.id != self.parent.team.id else awayTeam
         expectation = get_expectation(self.parent.team.level, opponentTeam.level)
@@ -382,7 +370,6 @@ class MatchdayReview():
         
         self.emailFrame_1 = TeamProfileLabel(
             self.frame,
-            self.session,
             opponentTeam.manager_id,
             opponentTeam.name,
             f"",
@@ -397,7 +384,7 @@ class MatchdayReview():
             f"{fan_message}"
         )
 
-        lineups = TeamLineup.get_lineup_by_match(self.session, match_.id)
+        lineups = TeamLineup.get_lineup_by_match(match_.id)
         playerOTM, rating = self.getPlayerOfTheMatch(match_)
         teamBest3 = self.getBest3Players(lineups)
 
@@ -405,7 +392,6 @@ class MatchdayReview():
 
         self.emailFrame_2 = PlayerProfileLabel(
             self.frame,
-            self.session,
             playerOTM,
             f"{playerOTM.first_name} {playerOTM.last_name}",
             "The player of the match was ",
@@ -426,11 +412,10 @@ class MatchdayReview():
 
         self.emailFrames_3 = []
         for player in teamBest3:
-            playerData = Players.get_player_by_id(self.session, player.player_id)
+            playerData = Players.get_player_by_id(player.player_id)
 
             frame = PlayerProfileLabel(
                 self.frame,
-                self.session,
                 playerData,
                 f"{playerData.first_name} {playerData.last_name}",
                 f"- ",
@@ -445,8 +430,8 @@ class MatchdayReview():
 
         self.emailTitle_2 = "League Table"
 
-        lastMatchdayTable = TeamHistory.get_team_data_matchday(self.session, self.parent.team.id, self.matchday - 1)
-        matchdayTable = TeamHistory.get_team_data_matchday(self.session, self.parent.team.id, self.matchday)
+        lastMatchdayTable = TeamHistory.get_team_data_matchday(self.parent.team.id, self.matchday - 1)
+        matchdayTable = TeamHistory.get_team_data_matchday(self.parent.team.id, self.matchday)
         league = self.parent.league
 
         currPosition = matchdayTable.position
@@ -477,11 +462,11 @@ class MatchdayReview():
         self.emailText_6 = (text)
 
         if currPosition == 1:
-            secondPlace = TeamHistory.get_team_data_position(self.session, 2, self.matchday)
+            secondPlace = TeamHistory.get_team_data_position(2, self.matchday)
             pointsDiff = matchdayTable.points - secondPlace.points
             text = f"We are currently leading second place by\n{pointsDiff} points, good work!"
         elif currPosition > 17:
-            aboveRel = TeamHistory.get_team_data_position(self.session, 20 - league.relegation, self.matchday)
+            aboveRel = TeamHistory.get_team_data_position(20 - league.relegation, self.matchday)
             pointsDiff = aboveRel.points - matchdayTable.points
             text = f"We currently need {pointsDiff} points to get out of the\nrelegation zone."
         elif currPosition <= 10 and currPosition > 5:
@@ -496,7 +481,7 @@ class MatchdayReview():
             else:
                 text += "fantastic work, the fans are delighted!"
         elif currPosition <= 5:
-            firstPlace = TeamHistory.get_team_data_position(self.session, 1, self.matchday)
+            firstPlace = TeamHistory.get_team_data_position(1, self.matchday)
             pointsDiff = firstPlace.points - matchdayTable.points
             text = f"We are currently {pointsDiff} points behind the\nleader."
         elif currPosition >= 11 and currPosition < 18 - league.relegation:
@@ -511,7 +496,7 @@ class MatchdayReview():
             else:
                 text += " great work!"
         else:
-            firstRelegated = TeamHistory.get_team_data_position(self.session, 21 - league.relegation, self.matchday)
+            firstRelegated = TeamHistory.get_team_data_position(21 - league.relegation, self.matchday)
             pointsDiff = matchdayTable.points - firstRelegated.points
             text = f"We are currently {pointsDiff} points ahead of the\nrelegation spots."
 
@@ -520,7 +505,7 @@ class MatchdayReview():
     def getBest3Players(self, lineups):
         bestPlayers = []
         for lineup in lineups:
-            player = Players.get_player_by_id(self.session, lineup.player_id)
+            player = Players.get_player_by_id(lineup.player_id)
             
             if player.team_id != self.parent.team.id:
                 continue
@@ -532,7 +517,7 @@ class MatchdayReview():
         return bestPlayers[:3]
 
     def matchFrame(self):
-        matches = Matches.get_matchday_for_league(self.session, self.parent.league.id, self.matchday)
+        matches = Matches.get_matchday_for_league(self.parent.league.id, self.matchday)
         bestMatch = self.findBestMatch(matches)
         bestPlayer, events, rating = self.findBestPlayer(matches)
 
@@ -541,18 +526,18 @@ class MatchdayReview():
 
         ctk.CTkLabel(matchFrame, text = "Best showing:", font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.15, anchor = "center")
 
-        homeTeam = Teams.get_team_by_id(self.session, bestMatch.home_id)
+        homeTeam = Teams.get_team_by_id(bestMatch.home_id)
         homeImage = Image.open(io.BytesIO(homeTeam.logo))
         homeImage.thumbnail((75,  75))
-        TeamLogo(matchFrame, self.session, homeImage, homeTeam, TKINTER_BACKGROUND, 0.2, 0.45, "center", self.parent.parentTab)
+        TeamLogo(matchFrame, homeImage, homeTeam, TKINTER_BACKGROUND, 0.2, 0.45, "center", self.parent.parentTab)
 
         ctk.CTkLabel(matchFrame, text = homeTeam.name.split()[0], font = (APP_FONT, 13), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.65, anchor = "center")
         ctk.CTkLabel(matchFrame, text = homeTeam.name.split()[1], font = (APP_FONT_BOLD, 18), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.75, anchor = "center")
 
-        awayTeam = Teams.get_team_by_id(self.session, bestMatch.away_id)
+        awayTeam = Teams.get_team_by_id(bestMatch.away_id)
         awayImage = Image.open(io.BytesIO(awayTeam.logo))
         awayImage.thumbnail((75,  75))
-        TeamLogo(matchFrame, self.session, awayImage, awayTeam, TKINTER_BACKGROUND, 0.8, 0.45, "center", self.parent.parentTab)
+        TeamLogo(matchFrame, awayImage, awayTeam, TKINTER_BACKGROUND, 0.8, 0.45, "center", self.parent.parentTab)
 
         ctk.CTkLabel(matchFrame, text = awayTeam.name.split()[0], font = (APP_FONT, 13), fg_color = TKINTER_BACKGROUND).place(relx = 0.8, rely = 0.65, anchor = "center")
         ctk.CTkLabel(matchFrame, text = awayTeam.name.split()[1], font = (APP_FONT_BOLD, 18), fg_color = TKINTER_BACKGROUND).place(relx = 0.8, rely = 0.75, anchor = "center")
@@ -562,7 +547,7 @@ class MatchdayReview():
         playerOTM, _ = self.getPlayerOfTheMatch(bestMatch)
 
         ctk.CTkLabel(matchFrame, text = f"POTM: ", font = (APP_FONT, 18), fg_color = TKINTER_BACKGROUND).place(relx = 0.05, rely = 0.92, anchor = "w")
-        PlayerProfileLink(matchFrame, self.session, playerOTM, f"{playerOTM.first_name} {playerOTM.last_name}", "white", 0.31, 0.92, "w", TKINTER_BACKGROUND, self.parent.parentTab, fontSize = 18)
+        PlayerProfileLink(matchFrame, playerOTM, f"{playerOTM.first_name} {playerOTM.last_name}", "white", 0.31, 0.92, "w", TKINTER_BACKGROUND, self.parent.parentTab, fontSize = 18)
 
         canvas = ctk.CTkCanvas(self.statsFrame, width = 10, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.pack(fill = "both", padx = 5, pady = 5)  
@@ -577,9 +562,9 @@ class MatchdayReview():
         playerImage = ctk.CTkImage(src, None, (src.width, src.height))
         ctk.CTkLabel(playerFrame, image = playerImage, text = "", fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.4, anchor = "center")
 
-        PlayerProfileLink(playerFrame, self.session, bestPlayer, f"{bestPlayer.first_name} {bestPlayer.last_name}", "white", 0.45, 0.35, "w", TKINTER_BACKGROUND, self.parent.parentTab, fontSize = 15)
-        playerTeam = Teams.get_team_by_id(self.session, bestPlayer.team_id)
-        TeamProfileLink(playerFrame, self.session, playerTeam.manager_id, playerTeam.name, "white", 0.45, 0.45, "w", TKINTER_BACKGROUND, self.parent.parentTab, fontSize = 12)
+        PlayerProfileLink(playerFrame, bestPlayer, f"{bestPlayer.first_name} {bestPlayer.last_name}", "white", 0.45, 0.35, "w", TKINTER_BACKGROUND, self.parent.parentTab, fontSize = 15)
+        playerTeam = Teams.get_team_by_id(bestPlayer.team_id)
+        TeamProfileLink(playerFrame, playerTeam.manager_id, playerTeam.name, "white", 0.45, 0.45, "w", TKINTER_BACKGROUND, self.parent.parentTab, fontSize = 12)
 
         src = Image.open("Images/averageRating.png")
         src.thumbnail((25,  25))
@@ -630,22 +615,22 @@ class MatchdayReview():
         playerEvents = []
 
         for match in matches:
-            lineupHome = TeamLineup.get_lineup_by_match_and_team(self.session, match.id, match.home_id)
-            lineupAway = TeamLineup.get_lineup_by_match_and_team(self.session, match.id, match.away_id)
+            lineupHome = TeamLineup.get_lineup_by_match_and_team(match.id, match.home_id)
+            lineupAway = TeamLineup.get_lineup_by_match_and_team(match.id, match.away_id)
 
             for player in lineupHome:
                 if player.rating > highestRating:
                     highestRating = player.rating
-                    playerData = Players.get_player_by_id(self.session, player.player_id)
+                    playerData = Players.get_player_by_id(player.player_id)
                     currPlayer = playerData
-                    playerEvents = MatchEvents.get_events_by_match_and_player(self.session, match.id, player.player_id)
+                    playerEvents = MatchEvents.get_events_by_match_and_player(match.id, player.player_id)
 
             for player in lineupAway:
                 if player.rating > highestRating:
                     highestRating = player.rating
-                    playerData = Players.get_player_by_id(self.session, player.player_id)
+                    playerData = Players.get_player_by_id(player.player_id)
                     currPlayer = playerData
-                    playerEvents = MatchEvents.get_events_by_match_and_player(self.session, match.id, player.player_id)
+                    playerEvents = MatchEvents.get_events_by_match_and_player(match.id, player.player_id)
         
         return currPlayer, playerEvents, highestRating
     
@@ -653,28 +638,27 @@ class MatchdayReview():
         highestRating = 0
         currPlayer = None
 
-        lineupHome = TeamLineup.get_lineup_by_match_and_team(self.session, match.id, match.home_id)
-        lineupAway = TeamLineup.get_lineup_by_match_and_team(self.session, match.id, match.away_id)
+        lineupHome = TeamLineup.get_lineup_by_match_and_team(match.id, match.home_id)
+        lineupAway = TeamLineup.get_lineup_by_match_and_team(match.id, match.away_id)
 
         for player in lineupHome:
             if player.rating > highestRating:
                 highestRating = player.rating
-                playerData = Players.get_player_by_id(self.session, player.player_id)
+                playerData = Players.get_player_by_id(player.player_id)
                 currPlayer = playerData
 
         for player in lineupAway:
             if player.rating > highestRating:
                 highestRating = player.rating
-                playerData = Players.get_player_by_id(self.session, player.player_id)
+                playerData = Players.get_player_by_id(player.player_id)
                 currPlayer = playerData
 
         return currPlayer, highestRating
 
 class MatchdayPreview():
-    def __init__(self, parent, session):
+    def __init__(self, parent):
 
         self.parent = parent
-        self.session = session
         self.frame = self.parent.emailFrame
         self.matchday = self.parent.matchday
 
@@ -712,15 +696,14 @@ class MatchdayPreview():
 
     def setUpEmail(self):
 
-        self.nextMatch = Matches.get_team_matchday_match(self.session, self.parent.team.id, self.parent.league.id, self.matchday)
-        homeTeam = Teams.get_team_by_id(self.session, self.nextMatch.home_id)
-        awayTeam = Teams.get_team_by_id(self.session, self.nextMatch.away_id)
+        self.nextMatch = Matches.get_team_matchday_match(self.parent.team.id, self.parent.league.id, self.matchday)
+        homeTeam = Teams.get_team_by_id(self.nextMatch.home_id)
+        awayTeam = Teams.get_team_by_id(self.nextMatch.away_id)
         self.opponent = homeTeam if homeTeam.id != self.parent.team.id else awayTeam
-        self.opponentData = TeamHistory.get_team_data_matchday(self.session, self.opponent.id, self.matchday - 1)
+        self.opponentData = TeamHistory.get_team_data_matchday(self.opponent.id, self.matchday - 1)
 
         self.emailFrame_1 = TeamProfileLabel(
             self.frame,
-            self.session,
             self.opponent.manager_id,
             self.opponent.name,
             f"Here is everything you need to know about our upcoming match against ",
@@ -739,7 +722,6 @@ class MatchdayPreview():
 
         self.emailFrame_2 = TeamProfileLabel(
             self.frame,
-            self.session,
             homeTeam.manager_id,
             homeTeam.name,
             f"- Fixture: ",
@@ -752,7 +734,6 @@ class MatchdayPreview():
 
         self.emailFrame_3 = TeamProfileLabel(
             self.frame,
-            self.session,
             awayTeam.manager_id,
             awayTeam.name,
             f"",
@@ -779,7 +760,6 @@ class MatchdayPreview():
 
             self.emailFrame_4 = TeamProfileLabel(
                 self.frame,
-                self.session,
                 self.opponent.manager_id,
                 self.opponent.name,
                 f"As it is the start of the season, we currently do not have data available on ",
@@ -796,7 +776,7 @@ class MatchdayPreview():
                 f"Stay prepared and let's aim for a strong start to the season!"
             )
             
-            self.stars = Players.get_all_star_players(self.session, self.opponent.id)
+            self.stars = Players.get_all_star_players(self.opponent.id)
             top_players = min(3, len(self.stars))
             self.emailText_4 = "Here are the top players to watch out for in the upcoming match:\n"
 
@@ -806,7 +786,6 @@ class MatchdayPreview():
                 player = self.stars[i]
                 frame = PlayerProfileLabel(
                     self.frame,
-                    self.session,
                     player,
                     f"{player.first_name} {player.last_name}",
                     f"- ",
@@ -827,7 +806,7 @@ class MatchdayPreview():
             )
 
         else:
-            last5 = Matches.get_team_last_5_matches_from_matchday(self.session, self.opponent.id, self.matchday)
+            last5 = Matches.get_team_last_5_matches_from_matchday(self.opponent.id, self.matchday)
             opponentPosition = self.opponentData.position
             suffix = self.parent.getSuffix(opponentPosition)
 
@@ -856,7 +835,6 @@ class MatchdayPreview():
 
             self.emailFrame_4 = LeagueProfileLabel(
                 self.frame,
-                self.session,
                 self.parent.manager.id,
                 self.parent.league.name,
                 f"They are currently {opponentPosition}{suffix} in the ",
@@ -873,7 +851,7 @@ class MatchdayPreview():
                 f"Throughout the season, they have kept N clean sheets and have failed to score in N matches."
             )
         
-            last5lineups = [TeamLineup.get_lineup_by_match_and_team(self.session, match.id, self.opponent.id) for match in last5]
+            last5lineups = [TeamLineup.get_lineup_by_match_and_team(match.id, self.opponent.id) for match in last5]
             best3Players = self.getBest3Players(last5lineups)
             self.emailText_4 = (
                 f"Here are the top 3 players to watch out for in the upcoming match:"
@@ -885,7 +863,6 @@ class MatchdayPreview():
                 player = best3Players[i]['player']
                 frame = PlayerProfileLabel(
                     self.frame,
-                    self.session,
                     player,
                     f"{player.first_name} {player.last_name}",
                     f"- ",
@@ -897,11 +874,11 @@ class MatchdayPreview():
                 )
                 self.emailFrames_5.append(frame)
 
-            lastMatch = Matches.get_team_last_match_from_matchday(self.session, self.opponent.id, self.matchday)
+            lastMatch = Matches.get_team_last_match_from_matchday(self.opponent.id, self.matchday)
 
-            lastLineup = TeamLineup.get_lineup_by_match_and_team(self.session, lastMatch.id, self.opponent.id)
+            lastLineup = TeamLineup.get_lineup_by_match_and_team(lastMatch.id, self.opponent.id)
             defs, mids, fwds = self.countFormation(lastLineup, lastMatch)
-            goalkeeper = Players.get_player_by_id(self.session, lastLineup[0].player_id)
+            goalkeeper = Players.get_player_by_id(lastLineup[0].player_id)
 
             self.emailText_6 = (
                 f"In their last match, {self.opponent.name} lined up in a {defs}-{mids}-{fwds} formation. Here is their starting XI:\n"
@@ -910,7 +887,7 @@ class MatchdayPreview():
 
             text1 = "- Defenders: "
             for i in range(1, defs + 1):
-                player = Players.get_player_by_id(self.session, lastLineup[i].player_id)
+                player = Players.get_player_by_id(lastLineup[i].player_id)
                 if i != defs:
                     text1 += f"{player.first_name} {player.last_name}, "
                 else:
@@ -921,7 +898,7 @@ class MatchdayPreview():
             # Midfielders
             text2 = "- Midfielders: "
             for i in range(defs + 1, defs + mids + 1):
-                player = Players.get_player_by_id(self.session, lastLineup[i].player_id)
+                player = Players.get_player_by_id(lastLineup[i].player_id)
                 if i != defs + mids:
                     text2 += f"{player.first_name} {player.last_name}, "
                 else:
@@ -932,7 +909,7 @@ class MatchdayPreview():
             # Forwards
             text3 = "- Forwards: "
             for i in range(defs + mids + 1, defs + mids + fwds + 1):
-                player = Players.get_player_by_id(self.session, lastLineup[i].player_id)
+                player = Players.get_player_by_id(lastLineup[i].player_id)
                 if i != defs + mids + fwds:
                     text3 += f"{player.first_name} {player.last_name}, "
                 else:
@@ -940,13 +917,12 @@ class MatchdayPreview():
 
             self.emailText_6 += text3
 
-        lastEncounter = Matches.get_last_encounter_from_matchday(self.session, self.parent.team.id, self.opponent.id, self.matchday)
+        lastEncounter = Matches.get_last_encounter_from_matchday(self.parent.team.id, self.opponent.id, self.matchday)
 
         if lastEncounter:
 
             self.emailFrame_6 = TeamProfileLabel(
                 self.frame,
-                self.session,
                 self.opponent.manager_id,
                 self.opponent.name,
                 f"Our last encounter against ",
@@ -960,7 +936,6 @@ class MatchdayPreview():
 
             self.emailFrame_6 = TeamProfileLabel(
                 self.frame,
-                self.session,
                 self.opponent.manager_id,
                 self.opponent.name,
                 f"We have never faced ",
@@ -979,7 +954,7 @@ class MatchdayPreview():
         players = {}
         for lineup in lineups:
             for player in lineup:
-                playerData = Players.get_player_by_id(self.session, player.player_id)
+                playerData = Players.get_player_by_id(player.player_id)
                 key = f"{playerData.first_name} {playerData.last_name}"
                 if key in players:
                     players[key]['total_rating'] += player.rating
@@ -996,7 +971,7 @@ class MatchdayPreview():
 
     def countFormation(self, lineup, match):
         position_counts = {"defenders": 0, "midfielders": 0, "attackers": 0}
-        events = MatchEvents.get_events_by_match(self.session, match.id)
+        events = MatchEvents.get_events_by_match(match.id)
 
         for player in lineup:
             
@@ -1016,10 +991,9 @@ class MatchdayPreview():
         return position_counts['defenders'], position_counts['midfielders'], position_counts['attackers']
 
 class PlayerGamesIssue():
-    def __init__(self, parent, session):
+    def __init__(self, parent):
 
         self.parent = parent
-        self.session = session
         self.frame = self.parent.emailFrame
 
         self.subject = f"{self.parent.player.last_name} issue"
@@ -1031,10 +1005,9 @@ class PlayerGamesIssue():
             widget.place_forget()
 
 class SeasonReview():
-    def __init__(self, parent, session):
+    def __init__(self, parent):
 
         self.parent = parent
-        self.session = session
         self.frame = self.parent.emailFrame
 
         self.subject = f"{self.parent.league.year} season review"
@@ -1046,10 +1019,9 @@ class SeasonReview():
             widget.place_forget()
 
 class SeasonPreview():
-    def __init__(self, parent, session):
+    def __init__(self, parent):
 
         self.parent = parent
-        self.session = session
         self.frame = self.parent.emailFrame
 
         self.subject = f"{self.parent.league.year} season preview"
@@ -1061,10 +1033,9 @@ class SeasonPreview():
             widget.place_forget()
 
 class PlayerInjury():
-    def __init__(self, parent, session):
+    def __init__(self, parent):
 
         self.parent = parent
-        self.session = session
         self.frame = self.parent.emailFrame
 
         self.subject = f"{self.parent.player.last_name} injury"
@@ -1089,7 +1060,6 @@ class PlayerInjury():
 
         self.emailFrame_1 = PlayerProfileLabel(
             self.frame,
-            self.session,
             self.parent.player,
             f"{self.parent.player.first_name} {self.parent.player.last_name}",
             "I regret to inform you that ",
@@ -1105,10 +1075,9 @@ class PlayerInjury():
         self.emailText_2 = "Name, Assistant Manager"
 
 class PlayerBan():
-    def __init__(self, parent, session):
+    def __init__(self, parent):
 
         self.parent = parent
-        self.session = session
         self.frame = self.parent.emailFrame
 
         self.subject = f"{self.parent.player.last_name} suspension"
@@ -1131,11 +1100,10 @@ class PlayerBan():
 
     def setUpEmail(self):
 
-        competition = League.get_league_by_id(self.session, self.parent.comp_id)
+        competition = League.get_league_by_id(self.parent.comp_id)
 
         self.emailFrame_1 = PlayerProfileLabel(
             self.frame,
-            self.session,
             self.parent.player,
             f"{self.parent.player.first_name} {self.parent.player.last_name}",
             "I regret to inform you that ",
@@ -1148,7 +1116,6 @@ class PlayerBan():
 
         self.emailFrame_2 = LeagueProfileLabel(
             self.frame,
-            self.session,
             self.parent.manager_id,
             f"{competition.name}",
             f"He will miss {self.parent.ban_length} match(es) in the ",

@@ -13,7 +13,6 @@ LEAGUE_NAME = "Eclipse League"
 FIRST_YEAR = 2024
 NUM_TEAMS = 20
 
-## Testing ##
 TOTAL_STEPS = 1003
 PROGRESS = 0
 
@@ -33,23 +32,18 @@ class DatabaseManager:
         return cls._instance
 
     def set_database(self, database_name, create_tables = False):
-        """Set the database name and initialize the session factory.
-           Runs create_tables() only if explicitly requested.
-        """
         self.database_name = database_name
         DATABASE_URL = f"sqlite:///data/{database_name}.db"
-        engine = create_engine(DATABASE_URL, connect_args = {"check_same_thread": False})
+        engine = create_engine(DATABASE_URL)
         self.session_factory = sessionmaker(autocommit = False, autoflush = False, bind = engine)
 
         if create_tables:
-            self.create_tables(engine)  # Run only if requested
+            self.create_tables(engine)
 
     def create_tables(self, engine):
-        """Create tables in the database if they do not exist."""
         Base.metadata.create_all(bind = engine)
 
     def get_session(self):
-        """Return a new session instance."""
         if not self.session_factory:
             raise ValueError("Database has not been set. Call set_database() first.")
         return self.session_factory()

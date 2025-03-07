@@ -40,7 +40,14 @@ class ShoutFrame(ctk.CTkFrame):
 
             minute = self.currMinute + random.randint(1, 10)
             second = random.randint(0, 59)
-            events[str(minute) + ":" + str(second)] = {"type": type_}
+
+            extra = False
+            if minute >= 90:
+                extra = True
+            elif 45 <= minute < 50:
+                extra = True
+
+            events[str(minute) + ":" + str(second)] = {"type": type_, "extra": extra}
             self.match.score.appendScore(1, home)
 
     def removeGoal(self, home):

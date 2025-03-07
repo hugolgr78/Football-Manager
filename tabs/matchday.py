@@ -204,6 +204,9 @@ class MatchDay(ctk.CTkFrame):
                 self.matchFrame.updateScoreLabel(textAdd = self.matchFrame.score)
                 self.matchFrame.matchInstance.halfTime = False
 
+                self.shoutsButton.configure(state = "normal")
+                self.substitutionButton.configure(state = "normal")
+
             else:
                 currTime = currTime.split(":")
                 minutes = int(currTime[0])
@@ -414,6 +417,8 @@ class MatchDay(ctk.CTkFrame):
                                 frame.matchInstance.homeProcessedEvents[event_time] = event_details
 
             if minutes == 45 + self.matchFrame.matchInstance.extraTimeHalf and self.halfTime and seconds == 0:
+                self.shoutsButton.configure(state = "disabled")
+                self.substitutionButton.configure(state = "disabled")
                 self.matchFrame.updateScoreLabel(textAdd = "HT")
             
             if minutes == 90 + self.matchFrame.matchInstance.extraTimeFull and self.fullTime and seconds == 0:
@@ -699,11 +704,13 @@ class MatchDay(ctk.CTkFrame):
                     unavailable = frame.unavailable
 
                     player = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1])
+                    startIDs = [player.id for player in self.startTeamLineup.values()]
+                    lineupIDs = [player.id for player in self.teamLineup.values()]
                     if self.currentSubs > MAX_SUBS - self.completedSubs:
-                        if POSITION_CODES[selected_position] in positions.split(",") and player in self.startTeamLineup.values() and player not in self.teamLineup.values() and not unavailable:
+                        if POSITION_CODES[selected_position] in positions.split(",") and player.id in startIDs and player.id not in lineupIDs and not unavailable:
                             values.append(playerName)
                     else:
-                        if POSITION_CODES[selected_position] in positions.split(",") and player not in self.teamLineup.values() and not unavailable:
+                        if POSITION_CODES[selected_position] in positions.split(",") and player.id not in lineupIDs and not unavailable:
                             values.append(playerName)
         
         if len(values) == 0:
@@ -819,7 +826,7 @@ class MatchDay(ctk.CTkFrame):
             ## Adding / removing players from the lineup and lineup pitch (checking differences between startTeamLineup and teamLineup)
             pitch = self.homeLineupPitch if self.home else self.awayLineupPitch
             for position, player in self.startTeamLineup.items(): # changing a player's position 
-                if position in self.teamLineup and player != self.teamLineup[position]:
+                if position in self.teamLineup and player.id != self.teamLineup[position].id:
                     pitch.removePlayer(position)
                     pitch.addPlayer(position, self.teamLineup[position].last_name)
 

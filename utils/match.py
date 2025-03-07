@@ -625,7 +625,12 @@ class Match():
     def addPlayerToLineup(self, event, playerOn, playerOff, playerPosition, subs, lineup, teamMatch, home, managing_team = False):
         event["player_off"] = playerOff
         event["player_on"] = playerOn
-        subs.remove(playerOn) # remove the player on from the subs list
+
+        # remove the player from the subs list
+        for player in subs:
+            if player.id == playerOn.id:
+                subs.remove(player)
+                break
 
         if not managing_team:
             lineup[playerPosition] = playerOn # add the player on to the lineup

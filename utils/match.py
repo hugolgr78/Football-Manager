@@ -4,6 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 from utils.score import Score
 from collections import defaultdict
+from sqlalchemy.orm import Session
 import itertools, threading, concurrent.futures
 
 class Match():
@@ -73,7 +74,7 @@ class Match():
         if len(goalkeepers) == 0:
             self.getYouthPlayer(teamID, "Goalkeeper", lineup = lineup)
         else:
-            lineup["Goalkeeper"] = goalkeepers[0]
+            lineup["Goalkeeper"] = goalkeepers[0].id
 
         # defenders
         self.choosePlayers(FORMATIONS_POSITIONS[oppFormation][1:defNums + 1], defenders, lineup, teamID)
@@ -86,15 +87,15 @@ class Match():
 
         # substitutes
         if len(goalkeepers) > 1:
-            substitutes.append(goalkeepers[1])
+            substitutes.append(goalkeepers[1].id)
         else:
             self.getYouthPlayer(teamID, "Goalkeeper", substitutes = substitutes)
 
         # Add 2 defenders to substitutes
         defender_count = 0
         for defender in defenders:
-            if defender not in lineup.values() and defender_count < 2:
-                substitutes.append(defender)
+            if defender.id not in lineup.values() and defender_count < 2:
+                substitutes.append(defender.id)
                 defender_count += 1
 
         if defender_count != 2:
@@ -105,8 +106,8 @@ class Match():
         # Add 2 midfielders to substitutes
         midfielder_count = 0
         for midfielder in midfielders:
-            if midfielder not in lineup.values() and midfielder_count < 2:
-                substitutes.append(midfielder)
+            if midfielder.id not in lineup.values() and midfielder_count < 2:
+                substitutes.append(midfielder.id)
                 midfielder_count += 1
 
         if midfielder_count != 2:
@@ -117,8 +118,8 @@ class Match():
         # Add 2 attackers to substitutes
         attacker_count = 0
         for attacker in attackers:
-            if attacker not in lineup.values() and attacker_count < 2:
-                substitutes.append(attacker)
+            if attacker.id not in lineup.values() and attacker_count < 2:
+                substitutes.append(attacker.id)
                 attacker_count += 1
 
         if attacker_count != 2:
@@ -164,7 +165,7 @@ class Match():
             if not best_fit:
                 best_fit = available_players[0]
 
-            lineup[position] = best_fit
+            lineup[position] = best_fit.id
             assigned_players.add(best_fit)
 
             # Remove empty position entries
@@ -177,11 +178,11 @@ class Match():
             for player in youthPlayers:
                 if lineup:
                     if POSITION_CODES[position] in player.specific_positions and player not in lineup.values():
-                        lineup[position] = player
+                        lineup[position] = player.id
                         return
                 else:
                     if POSITION_CODES[position] in player.specific_positions and player not in substitutes:
-                        substitutes.append(player)
+                        substitutes.append(player.id)
                         return
                 
         if position in DEFENSIVE_POSITIONS:
@@ -407,68 +408,79 @@ class Match():
             processedEvents = self.awayProcessedEvents
             subsCount = self.awaySubs
 
+        # Fetch all players in the lineup with a single query
+        player_ids = list(lineup.values())
+        players = Players.get_players_by_ids(player_ids)
+        players_dict = {player.id: player for player in players}
+
         if event["type"] == "goal":
+            ## scorer
             scorerPosition = random.choices(list(SCORER_CHANCES.keys()), weights = list(SCORER_CHANCES.values()), k = 1)[0]
-            players = [player for player in lineup.values() if player.position == scorerPosition]
+            players = [Players.get_player_by_id(player_id).id for player_id in lineup.values() if Players.get_player_by_id(player_id).position == scorerPosition]
+            players = [player.id for player in players_dict.values() if player.position == scorerPosition]
 
             while len(players) == 0:
                 scorerPosition = random.choices(list(SCORER_CHANCES.keys()), weights = list(SCORER_CHANCES.values()), k = 1)[0]
-                players = [player for player in lineup.values() if player.position == scorerPosition]
+                players = [player.id for player in players_dict.values() if player.position == scorerPosition]
 
-            player = random.choices(players, k = 1)[0]
-            event["player"] = player
+            playerID = random.choices(players, k = 1)[0]
+            event["player"] = playerID
 
+            ## assister
             assisterPosition = random.choices(list(ASSISTER_CHANCES.keys()), weights = list(ASSISTER_CHANCES.values()), k = 1)[0]
-            players = [player for player in lineup.values() if player.position == assisterPosition]
+            players = [player.id for player in players_dict.values() if player.position == assisterPosition]
 
             while len(players) == 0:
                 assisterPosition = random.choices(list(ASSISTER_CHANCES.keys()), weights = list(ASSISTER_CHANCES.values()), k = 1)[0]
-                players = [player for player in lineup.values() if player.position == assisterPosition]
+                players = [player.id for player in players_dict.values() if player.position == assisterPosition]
+            
+            playerID = random.choices(players, k = 1)[0]
 
-            player = random.choices(players, k = 1)[0]
-
-            if assisterPosition == scorerPosition and len([player for player in lineup.values() if player.position == assisterPosition]) == 1:
+            if assisterPosition == scorerPosition and len(players) == 1: # makes sure player doesnt assist themselves
                 available_positions = [pos for pos in ASSISTER_CHANCES.keys() if pos != assisterPosition]
                 assisterPosition = random.choices(available_positions, weights = [ASSISTER_CHANCES[pos] for pos in available_positions], k = 1)[0]
 
-            while player == event["player"]:
-                player = random.choices([player for player in lineup.values() if player.position == assisterPosition], k = 1)[0]
+            while playerID == event["player"]:
+                playerID = random.choices([player.id for player in players_dict.values() if player.position == assisterPosition], k = 1)[0]
 
-            event["assister"] = player
+            event["assister"] = playerID
 
         elif event["type"] == "penalty_goal" or event["type"] == "penalty_miss":
             penaltyPosition = random.choices(list(PENALTY_TAKER_CHANCES.keys()), weights = list(PENALTY_TAKER_CHANCES.values()), k = 1)[0]
-            players = [player for player in lineup.values() if player.position == penaltyPosition]
+            players = [player.id for player in players_dict.values() if player.position == penaltyPosition]
 
             while len(players) == 0:
                 penaltyPosition = random.choices(list(PENALTY_TAKER_CHANCES.keys()), weights = list(PENALTY_TAKER_CHANCES.values()), k = 1)[0]
-                players = [player for player in lineup.values() if player.position == penaltyPosition]
+                players = [player.id for player in players_dict.values() if player.position == penaltyPosition]
 
-            player = random.choices(players, k = 1)[0]
-            event["player"] = player
+            playerID = random.choices(players, k = 1)[0]
+            event["player"] = playerID
 
         elif event["type"] == "own_goal":
-            ownGoalPosition = random.choices(list(OWN_GOAL_CHANCES.keys()), weights=list(OWN_GOAL_CHANCES.values()), k=1)[0]
+            ownGoalPosition = random.choices(list(OWN_GOAL_CHANCES.keys()), weights = list(OWN_GOAL_CHANCES.values()), k = 1)[0]
             oppositionLineup = self.homeCurrentLineup if lineup == self.awayCurrentLineup else self.awayCurrentLineup
-            players_in_position = [player for player in oppositionLineup.values() if player.position == ownGoalPosition]
+            
+            players = Players.get_players_by_ids(list(oppositionLineup.values()))
+            players_dict = {player.id: player for player in players}
+            
+            players_in_position = [player.id for player in players_dict.values() if player.position == ownGoalPosition]
 
             if not players_in_position:
-                player = random.choice(list(oppositionLineup.values()))
+                playerID = random.choice(list(oppositionLineup.values()))
             else:
-                player = random.choice(players_in_position)
+                playerID = random.choice(players_in_position)
 
-            event["player"] = player
-
+            event["player"] = playerID
         elif event["type"] == "yellow_card":
-            player = random.choices(list(lineup.values()), k = 1)[0]
-            event["player"] = player
+            playerID = random.choices(list(lineup.values()), k = 1)[0]
+            event["player"] = playerID
 
             for _, processedEvent in processedEvents.items():
-                if processedEvent["type"] == "yellow_card" and processedEvent["player"] == player:
+                if processedEvent["type"] == "yellow_card" and processedEvent["player"] == playerID:
                     event["type"] = "red_card"
-                    playerPosition = list(lineup.keys())[list(lineup.values()).index(player)]
+                    playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
                     lineup.pop(playerPosition)
-                    finalLineup[playerPosition] = player
+                    finalLineup[playerPosition] = playerID
 
                     if teamMatch:
                         if home:
@@ -478,18 +490,18 @@ class Match():
 
         elif event["type"] == "red_card":
             redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
-            players = [player for player in lineup.values() if player.position == redCardPosition]
+            players = [player.id for player in players_dict.values() if player.position == redCardPosition]
 
             while len(players) == 0:
                 redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
-                players = [player for player in lineup.values() if player.position == redCardPosition]
+                players = [player.id for player in players_dict.values() if player.position == redCardPosition]
             
-            player = random.choices(players, k = 1)[0]
-            event["player"] = player
+            playerID = random.choices(players, k = 1)[0]
+            event["player"] = playerID
 
-            playerPosition = list(lineup.keys())[list(lineup.values()).index(player)]
+            playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
             lineup.pop(playerPosition)
-            finalLineup[playerPosition] = player
+            finalLineup[playerPosition] = playerID
 
             if teamMatch:
                 if home:
@@ -534,23 +546,23 @@ class Match():
                     "extra": extra
                 }
 
-                player_off = random.choices(list(lineup.values()), k = 1)[0]
-                player_off = self.checkPlayerOff(player_off, processedEvents, time, lineup)
+                playerOffID = random.choices(list(lineup.values()), k = 1)[0]
+                playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
 
-                playerPositionOff = list(lineup.keys())[list(lineup.values()).index(player_off)]
+                playerPositionOff = list(lineup.keys())[list(lineup.values()).index(playerOffID)]
                 lineup.pop(playerPositionOff)
-                finalLineup[playerPositionOff] = player_off
+                finalLineup[playerPositionOff] = playerOffID
 
-                self.findSubstitute(events[eventTime], player_off, playerPosition, lineup, subs, home, teamMatch = teamMatch)
+                self.findSubstitute(events[eventTime], playerOffID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
 
         elif event["type"] == "injury":
-            injuredPlayer = random.choices(list(lineup.values()), k = 1)[0]
-            event["player"] = injuredPlayer
+            injuredPlayerID = random.choices(list(lineup.values()), k = 1)[0]
+            event["player"] = injuredPlayerID
 
-            playerPosition = list(lineup.keys())[list(lineup.values()).index(injuredPlayer)]
+            playerPosition = list(lineup.keys())[list(lineup.values()).index(injuredPlayerID)]
             if not managing_team:
                 lineup.pop(playerPosition)
-                finalLineup[playerPosition] = injuredPlayer
+                finalLineup[playerPosition] = injuredPlayerID
 
             if teamMatch:
                 if home:
@@ -564,16 +576,16 @@ class Match():
                 sub_time = str(currMinute + 1) + ":30"
                 for event_time, event_data in events.items():
                     if event_data["type"] == "substitution" and event_time == sub_time:
-                        self.findSubstitute(event_data, injuredPlayer, playerPosition, lineup, subs, home, teamMatch = teamMatch)
+                        self.findSubstitute(event_data, injuredPlayerID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
 
         elif event["type"] == "substitution" and not event["injury"] and not managing_team:
-            players = [player for player in lineup.values() if player.position != "goalkeeper"]
-            player_off = random.choices(list(players), k = 1)[0]
+            players = [player.id for player in players_dict.values() if player.position != "goalkeeper"]
+            playerOffID = random.choices(list(players), k = 1)[0]
 
-            player_off = self.checkPlayerOff(player_off, processedEvents, time, lineup)
-            playerPosition = list(lineup.keys())[list(lineup.values()).index(player_off)]
+            playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
+            playerPosition = list(lineup.keys())[list(lineup.values()).index(playerOffID)]
             lineup.pop(playerPosition)
-            finalLineup[playerPosition] = player_off
+            finalLineup[playerPosition] = playerOffID
 
             if teamMatch:
                 if home:
@@ -581,63 +593,72 @@ class Match():
                 else:
                     teamMatch.awayLineupPitch.removePlayer(playerPosition)
 
-            self.findSubstitute(event, player_off, playerPosition, lineup, subs, home, teamMatch = teamMatch)
+            self.findSubstitute(event, playerOffID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
         
         if teamMatch:
             return event
 
-    def checkPlayerOff(self, player, processEvents, time, lineup, checked_players = None):
+    def checkPlayerOff(self, playerID, processEvents, time, lineup, checked_players = None):
         if checked_players is None:
             checked_players = set()
 
         for event_time, event_data in processEvents.items():
-            if event_data["type"] == "substitution" and event_data["player_on"] == player:
+            if event_data["type"] == "substitution" and event_data["player_on"] == playerID:
                 eventMinute = int(event_time.split(":")[0])
                 currMinute = int(time.split(":")[0])
                 if eventMinute < currMinute - 30:
-                    return player  # Found a valid player
+                    return playerID  # Found a valid player
                 else:
-                    checked_players.add(player)
-                    available_players = [p for p in lineup.values() if p.position != "goalkeeper" and p not in checked_players]
+                    checked_players.add(playerID)
+
+                    players = Players.get_players_by_ids(list(lineup.values()))
+                    players_dict = {player.id: player for player in players}
+
+                    available_players = [player.id for player in players_dict.values() if player.position != "goalkeeper" and player.id not in checked_players]
                     if not available_players:
                         return None  # No more players to check
+                    
                     new_player = random.choices(available_players, k = 1)[0]
                     return self.checkPlayerOff(new_player, processEvents, time, lineup, checked_players)
 
-        return player  # No substitution event found for the player
+        return playerID  # No substitution event found for the player
 
-    def findSubstitute(self, event, player_off, playerPosition, lineup, subs, home, teamMatch = None):
-        for player in subs:
+    def findSubstitute(self, event, playerOffID, playerPosition, lineup, subs, home, teamMatch = None):
+        for playerID in subs:
+            player = Players.get_player_by_id(playerID)
             if POSITION_CODES[playerPosition] in player.specific_positions.split(","):
-                self.addPlayerToLineup(event, player, player_off, playerPosition, subs, lineup, teamMatch, home)
+                self.addPlayerToLineup(event, playerID, playerOffID, playerPosition, subs, lineup, teamMatch, home)
                 return
 
         ## if no player was found to have a good position, add a player with the same overall position (defender, midfielder, forward)
-        for player in subs:
-            if player.position == player_off.position:
-                self.addPlayerToLineup(event, player, player_off, playerPosition, subs, lineup, teamMatch, home)
+        for playerID in subs:
+            playerOff = Players.get_player_by_id(playerOffID)
+            player = Players.get_player_by_id(playerID)
+            if player.position == playerOff.position:
+                self.addPlayerToLineup(event, playerID, playerOffID, playerPosition, subs, lineup, teamMatch, home)
                 return
             
         ## if no player was found to have the same overall position, add a random player
-        player = random.choices(subs, k = 1)[0]
-        self.addPlayerToLineup(event, player, player_off, playerPosition, subs, lineup, teamMatch, home)
+        playerID = random.choices(subs, k = 1)[0]
+        self.addPlayerToLineup(event, playerID, playerOffID, playerPosition, subs, lineup, teamMatch, home)
 
-    def addPlayerToLineup(self, event, playerOn, playerOff, playerPosition, subs, lineup, teamMatch, home, managing_team = False):
-        event["player_off"] = playerOff
-        event["player_on"] = playerOn
+    def addPlayerToLineup(self, event, playerOnID, playerOffID, playerPosition, subs, lineup, teamMatch, home, managing_team = False):
+        event["player_off"] = playerOffID
+        event["player_on"] = playerOnID
 
         # remove the player from the subs list
-        for player in subs:
-            if player.id == playerOn.id:
-                subs.remove(player)
+        for playerID in subs:
+            if playerID == playerOnID:
+                subs.remove(playerID)
                 break
 
         if not managing_team:
-            lineup[playerPosition] = playerOn # add the player on to the lineup
+            lineup[playerPosition] = playerOnID # add the player on to the lineup
 
         if teamMatch:
-            teamMatch.updateSubFrame(home, playerOn, playerOff)
+            teamMatch.updateSubFrame(home, playerOnID, playerOffID)
             if not managing_team:
+                playerOn = Players.get_player_by_id(playerOnID)
                 if home:
                     teamMatch.homeLineupPitch.addPlayer(playerPosition, playerOn.last_name)
                 else:
@@ -668,30 +689,30 @@ class Match():
             else:
                 self.awayCleanSheet = True
 
-        for i, (position, player) in enumerate(finalLineup.items()):
-            self.getRating(venue, rating, ratingsDict, events, player, position, oppositionEvents, oppositionGoals, i)
+        for i, (position, playerID) in enumerate(finalLineup.items()):
+            self.getRating(venue, rating, ratingsDict, events, playerID, position, oppositionEvents, oppositionGoals, i)
 
-        for i, (position, player) in enumerate(currentLineup.items()):
-            self.getRating(venue, rating, ratingsDict, events, player, position, oppositionEvents, oppositionGoals, i + len(finalLineup))
+        for i, (position, playerID) in enumerate(currentLineup.items()):
+            self.getRating(venue, rating, ratingsDict, events, playerID, position, oppositionEvents, oppositionGoals, i + len(finalLineup))
 
         if team == self.homeTeam:
             self.homeRatings = ratingsDict
         else:
             self.awayRatings = ratingsDict
 
-    def getRating(self, venue, rating, ratingsDict, events, player, position, oppositionEvents, oppositionGoals, i):
+    def getRating(self, venue, rating, ratingsDict, events, playerID, position, oppositionEvents, oppositionGoals, i):
 
         defender_positions = ["Right Back", "Left Back", "Center Back", "Center Back Right", "Center Back Left"]
 
         scorerFlag = False
         for _, event in events.items():
-            if event["player"] == player:
+            if event["player"] == playerID:
                 if event["type"] in EVENT_RATINGS:
                     rating += random.choice(EVENT_RATINGS[event["type"]])
                     if event["type"] in ["goal", "penalty_goal"]:
                         scorerFlag = True
 
-            if "assister" in event and event["assister"] == player:
+            if "assister" in event and event["assister"] == playerID:
                 rating += random.choice(ASSIST_RATINGS)
         
         if not scorerFlag:
@@ -706,22 +727,22 @@ class Match():
                 rating += random.choice(NON_SCORER_RATINGS)
 
         for _, event in oppositionEvents.items():
-            if event["type"] == "own_goal" and event["player"] == player: # own goal
+            if event["type"] == "own_goal" and event["player"] == playerID: # own goal
                 rating -= random.choice([1.46, 1.49, 1.52, 1.57, 1.60, 1.63, 1.69, 1.78])
 
         finalRating = round(rating + 0.5, 2) if self.ratingsBoost == venue else round(rating - 0.5, 2) if self.ratingsDecay == venue else round(rating, 2)
-        ratingsDict[player] = min(finalRating, 10)
+        ratingsDict[playerID] = min(finalRating, 10)
 
     def saveData(self, managing_team = None):
 
         self.returnWinner()
 
-        for player in itertools.chain(self.homeCurrentLineup.values(), self.awayCurrentLineup.values(), self.homeFinalLineup.values(), self.awayFinalLineup.values(), self.homeCurrentSubs, self.awayCurrentSubs):
-            if player.age < 18:
-                data = Players.get_player_by_id(player.id)
+        # for player in itertools.chain(self.homeCurrentLineup.values(), self.awayCurrentLineup.values(), self.homeFinalLineup.values(), self.awayFinalLineup.values(), self.homeCurrentSubs, self.awayCurrentSubs):
+        #     if player.age < 18:
+        #         data = Players.get_player_by_id(player.id)
 
-                if not data:
-                    Players.add_player_entry(player)
+        #         if not data:
+        #             Players.add_player_entry(player)
 
         PlayerBans.reduce_all_player_bans_for_team(self.homeTeam.id, self.match.league_id)
         PlayerBans.reduce_all_player_bans_for_team(self.awayTeam.id, self.match.league_id)
@@ -766,10 +787,11 @@ class Match():
             bans_to_add = []
             emails_to_add = []
             for time, event in self.homeProcessedEvents.items():
-                player_id = event["player"].id if "player" in event and event["player"] else None
-                assister_id = event["assister"].id if "assister" in event and event["assister"] else None
-                player_off_id = event["player_off"].id if "player_off" in event and event["player_off"] else None
-                player_on_id = event["player_on"].id if "player_on" in event and event["player_on"] else None
+
+                player_id = event["player"] if "player" in event and event["player"] else None
+                assister_id = event["assister"] if "assister" in event and event["assister"] else None
+                player_off_id = event["player_off"] if "player_off" in event and event["player_off"] else None
+                player_on_id = event["player_on"] if "player_on" in event and event["player_on"] else None
                 minute = int(time.split(":")[0]) + 1
 
                 if event["extra"]:
@@ -786,7 +808,7 @@ class Match():
                     events_to_add.append((self.match.id, "goal", minute, player_id))
                     events_to_add.append((self.match.id, "assist", minute, assister_id))
                 elif event["type"] == "penalty_miss":
-                    goalkeeper_id = self.awayCurrentLineup["Goalkeeper"].id
+                    goalkeeper_id = self.awayCurrentLineup["Goalkeeper"]
                     events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
                     events_to_add.append((self.match.id, "penalty_saved", minute, goalkeeper_id))
                 elif event["type"] == "substitution":
@@ -809,10 +831,11 @@ class Match():
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
 
             for time, event in self.awayProcessedEvents.items():
-                player_id = event["player"].id if "player" in event and event["player"] else None
-                assister_id = event["assister"].id if "assister" in event and event["assister"] else None
-                player_off_id = event["player_off"].id if "player_off" in event and event["player_off"] else None
-                player_on_id = event["player_on"].id if "player_on" in event and event["player_on"] else None
+                
+                player_id = event["player"] if "player" in event and event["player"] else None
+                assister_id = event["assister"] if "assister" in event and event["assister"] else None
+                player_off_id = event["player_off"] if "player_off" in event and event["player_off"] else None
+                player_on_id = event["player_on"] if "player_on" in event and event["player_on"] else None
                 minute = int(time.split(":")[0]) + 1
 
                 if event["extra"]:
@@ -829,7 +852,7 @@ class Match():
                     events_to_add.append((self.match.id, "goal", minute, player_id))
                     events_to_add.append((self.match.id, "assist", minute, assister_id))
                 elif event["type"] == "penalty_miss":
-                    goalkeeper_id = self.homeCurrentLineup["Goalkeeper"].id
+                    goalkeeper_id = self.homeCurrentLineup["Goalkeeper"]
                     events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
                     events_to_add.append((self.match.id, "penalty_saved", minute, goalkeeper_id))
                 elif event["type"] == "substitution":
@@ -852,10 +875,10 @@ class Match():
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
 
             if self.homeCleanSheet:
-                events_to_add.append((self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"].id))
+                events_to_add.append((self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"]))
             
             if self.awayCleanSheet:
-                events_to_add.append((self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"].id))
+                events_to_add.append((self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"]))
 
             futures.append(executor.submit(MatchEvents.batch_add_events, events_to_add))
             futures.append(executor.submit(PlayerBans.batch_add_bans, bans_to_add))
@@ -868,47 +891,51 @@ class Match():
             lineups_to_add = []
             morales_to_update = []
 
-            for position, player in self.homeFinalLineup.items():
-                lineups_to_add.append((self.match.id, player.id, position, self.homeRatings[player]))
+            for position, playerID in self.homeFinalLineup.items():
+                lineups_to_add.append((self.match.id, playerID, position, self.homeRatings[playerID]))
                 
-                if not self.getGameTime(player, self.homeProcessedEvents):
+                if not self.getGameTime(playerID, self.homeProcessedEvents):
                     # Player hasnt played more than 20 mins or at all -> decrease morale based on player role
+                    player = Players.get_player_by_id(playerID)
                     moraleChange = get_morale_decrease_role(player)
                 else:
                     # Change morale based on game outcome
-                    moraleChange = get_morale_change("win" if self.winner == self.homeTeam else "draw" if self.winner == None else "loss", self.homeRatings[player], self.goalDiffHome)
+                    moraleChange = get_morale_change("win" if self.winner == self.homeTeam else "draw" if self.winner == None else "loss", self.homeRatings[playerID], self.goalDiffHome)
                 
-                morales_to_update.append((player.id, moraleChange))
+                morales_to_update.append((playerID, moraleChange))
 
-            for position, player in self.homeCurrentLineup.items():
-                lineups_to_add.append((self.match.id, player.id, position, self.homeRatings[player]))
+            for position, playerID in self.homeCurrentLineup.items():
+                lineups_to_add.append((self.match.id, playerID, position, self.homeRatings[playerID]))
                 
-                if not self.getGameTime(player, self.homeProcessedEvents):
+                if not self.getGameTime(playerID, self.homeProcessedEvents):
+                    player = Players.get_player_by_id(playerID)
                     moraleChange = get_morale_decrease_role(player)
                 else:
-                    moraleChange = get_morale_change("win" if self.winner == self.homeTeam else "draw" if self.winner == None else "loss", self.homeRatings[player], self.goalDiffHome)
+                    moraleChange = get_morale_change("win" if self.winner == self.homeTeam else "draw" if self.winner == None else "loss", self.homeRatings[playerID], self.goalDiffHome)
 
-                morales_to_update.append((player.id, moraleChange))
+                morales_to_update.append((playerID, moraleChange))
             
-            for position, player in self.awayFinalLineup.items():
-                lineups_to_add.append((self.match.id, player.id, position, self.awayRatings[player]))
+            for position, playerID in self.awayFinalLineup.items():
+                lineups_to_add.append((self.match.id, playerID, position, self.awayRatings[playerID]))
                 
-                if not self.getGameTime(player, self.awayProcessedEvents):
+                if not self.getGameTime(playerID, self.awayProcessedEvents):
+                    player = Players.get_player_by_id(playerID)
                     moraleChange = get_morale_decrease_role(player)
                 else:
-                    moraleChange = get_morale_change("win" if self.winner == self.awayTeam else "draw" if self.winner == None else "loss", self.awayRatings[player], self.goalDiffAway)
+                    moraleChange = get_morale_change("win" if self.winner == self.awayTeam else "draw" if self.winner == None else "loss", self.awayRatings[playerID], self.goalDiffAway)
 
-                morales_to_update.append((player.id, moraleChange))
+                morales_to_update.append((playerID, moraleChange))
 
-            for position, player in self.awayCurrentLineup.items():
-                lineups_to_add.append((self.match.id, player.id, position, self.awayRatings[player]))
+            for position, playerID in self.awayCurrentLineup.items():
+                lineups_to_add.append((self.match.id, playerID, position, self.awayRatings[playerID]))
                 
-                if not self.getGameTime(player, self.awayProcessedEvents):
+                if not self.getGameTime(playerID, self.awayProcessedEvents):
+                    player = Players.get_player_by_id(playerID)
                     moraleChange = get_morale_decrease_role(player)
                 else:
-                    moraleChange = get_morale_change("win" if self.winner == self.awayTeam else "draw" if self.winner == None else "loss", self.awayRatings[player], self.goalDiffAway)
+                    moraleChange = get_morale_change("win" if self.winner == self.awayTeam else "draw" if self.winner == None else "loss", self.awayRatings[playerID], self.goalDiffAway)
 
-                morales_to_update.append((player.id, moraleChange))
+                morales_to_update.append((playerID, moraleChange))
 
             futures.append(executor.submit(TeamLineup.batch_add_lineups, lineups_to_add))
 
@@ -916,30 +943,26 @@ class Match():
             awayPlayers = Players.get_all_players_by_team(self.awayTeam.id, youths = False)
 
             for player in homePlayers:
-                currentIDs = [player.id for player in self.homeCurrentLineup.values()]
-                finalIDs = [player.id for player in self.homeFinalLineup.values()]
-                if player.id not in currentIDs and player not in finalIDs:
+                if player.id not in self.homeCurrentLineup.values() and player not in self.homeFinalLineup.values():
                     morales_to_update.append((player.id, get_morale_decrease_role(player)))
 
             for player in awayPlayers:
-                currentIDs = [player.id for player in self.awayCurrentLineup.values()]
-                finalIDs = [player.id for player in self.awayFinalLineup.values()]
-                if player.id not in currentIDs and player not in finalIDs:
+                if player.id not in self.awayCurrentLineup.values() and player not in self.awayFinalLineup.values():
                     morales_to_update.append((player.id, get_morale_decrease_role(player)))
 
             futures.append(executor.submit(Players.batch_update_morales, morales_to_update))
 
             concurrent.futures.wait(futures)
 
-    def getGameTime(self, player, events):
+    def getGameTime(self, playerID, events):
         sub_off_time = None
         sub_on_time = None
 
         for time, event in events.items():
-            if event["type"] == "sub_on" and event["player"] == player:
+            if event["type"] == "sub_on" and event["player"] == playerID:
                 sub_on_time = time
 
-            if event["type"] == "sub_off" and event["player"] == player:
+            if event["type"] == "sub_off" and event["player"] == playerID:
                 sub_off_time = time
 
         if sub_on_time and sub_off_time:

@@ -104,7 +104,7 @@ class Tactics(ctk.CTkFrame):
             playersCount += 1
 
             name = player.first_name + " " + player.last_name
-            self.selectedLineup[position] = player
+            self.selectedLineup[position] = player.id
 
             LineupPlayerFrame(self.lineupPitch, 
                             POSITIONS_PITCH_POSITIONS[position][0], 
@@ -120,7 +120,6 @@ class Tactics(ctk.CTkFrame):
                         )
             
         self.lineupPitch.set_counter(playersCount)
-        lineupIDs = [player.id for player in self.selectedLineup.values()]
 
         if playersCount == 11:
             self.dropDown.configure(state = "disabled")
@@ -128,7 +127,7 @@ class Tactics(ctk.CTkFrame):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).pack(pady = 5)
         for player in self.players:
             name = player.first_name + " " + player.last_name
-            if player.id not in lineupIDs:
+            if player.id not in self.selectedLineup.values():
                 frame = SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self, self.league.id) 
 
                 if playersCount == 11:
@@ -196,10 +195,9 @@ class Tactics(ctk.CTkFrame):
         self.choosePlayerFrame.place(relx = 0.225, rely = 0.5, anchor = "center")
 
         values = []
-        lineupIDs = [player.id for player in self.selectedLineup.values()]
         for player in self.players:
             playerName = player.first_name + " " + player.last_name
-            if POSITION_CODES[selected_position] in player.specific_positions.split(",") and player.id not in lineupIDs and not PlayerBans.check_bans_for_player(player.id, self.league.id):
+            if POSITION_CODES[selected_position] in player.specific_positions.split(",") and player.id not in self.selectedLineup.values() and not PlayerBans.check_bans_for_player(player.id, self.league.id):
                 values.append(playerName)
         
         if len(values) == 0:
@@ -233,7 +231,7 @@ class Tactics(ctk.CTkFrame):
         self.lineupPitch.increment_counter()
 
         player = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1])
-        self.selectedLineup[self.selected_position] = player
+        self.selectedLineup[self.selected_position] = player.id
 
         LineupPlayerFrame(self.lineupPitch, 
                             POSITIONS_PITCH_POSITIONS[self.selected_position][0], 
@@ -260,8 +258,9 @@ class Tactics(ctk.CTkFrame):
                     frame.showCheckBox()
 
     def removePlayer(self, frame, playerName, playerPosition):
-        for position, selected_player in self.selectedLineup.items():
-            if selected_player.first_name + " " + selected_player.last_name == playerName:
+        playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1])
+        for position, playerID in self.selectedLineup.items():
+            if playerID == playerData.id:
                 del self.selectedLineup[position]
                 break
 
@@ -278,8 +277,7 @@ class Tactics(ctk.CTkFrame):
 
                 break
 
-        player = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1])
-        SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self, self.league.id)
+        SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, playerData, self.checkSubstitute, self, self.league.id)
 
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
         self.substitutePlayers = []
@@ -317,7 +315,7 @@ class Tactics(ctk.CTkFrame):
 
     def checkSubstitute(self, checkBox, player):
         if checkBox.get() == 0:
-            del self.substitutePlayers[self.substitutePlayers.index(player)]
+            del self.substitutePlayers[self.substitutePlayers.index(player.id)]
             self.subCounter -= 1
 
             if self.subCounter < MATCHDAY_SUBS:
@@ -327,7 +325,7 @@ class Tactics(ctk.CTkFrame):
                     if isinstance(frame, SubstitutePlayer):
                         frame.enableCheckBox()
         else:
-            self.substitutePlayers.append(player)
+            self.substitutePlayers.append(player.id)
             self.subCounter += 1
 
             if self.subCounter == MATCHDAY_SUBS:

@@ -1020,6 +1020,27 @@ class MatchDayMatchFrame(ctk.CTkFrame):
         self.scoreLabel = ctk.CTkLabel(self, text = f"0 - 0", font = (APP_FONT_BOLD, scoreSize), fg_color = self.fgColor)
         self.scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
 
+        if self.packFrame:
+            self.halfTimeLabel = ctk.CTkLabel(self, text = "HT", font = (APP_FONT, 10), fg_color = self.fgColor)
+            self.fullTimeLabel = ctk.CTkLabel(self, text = "FT", font = (APP_FONT, 10), fg_color = self.fgColor)
+            self.labelY = 0.8
+        else:
+            self.halfTimeLabel = ctk.CTkLabel(self, text = "HT", font = (APP_FONT, 20), fg_color = self.fgColor)
+            self.fullTimeLabel = ctk.CTkLabel(self, text = "FT", font = (APP_FONT, 20), fg_color = self.fgColor)
+            self.labelY = 0.7
+
+    def HTLabel(self, place = True):
+        if place:
+            self.halfTimeLabel.place(relx = 0.5, rely = self.labelY, anchor = "center")
+        else:
+            self.halfTimeLabel.place_forget()
+    
+    def FTLabel(self, place = True):
+        if place:
+            self.fullTimeLabel.place(relx = 0.5, rely = self.labelY, anchor = "center")
+        else:
+            self.fullTimeLabel.place_forget()
+
     def updateScoreLabel(self, home = True, textAdd = None):
         if home:
             if textAdd:

@@ -330,7 +330,7 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def add_player(cls, team_id, position, required_position, role, commit = False):
+    def add_player(cls, team_id, position, required_position, role):
         session = DatabaseManager().get_session()
         try:
             selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
@@ -343,6 +343,7 @@ class Players(Base):
             faker = Faker()
             date_of_birth = faker.date_of_birth(minimum_age = 15, maximum_age = 17)
             new_player = Players(
+                id = str(uuid.uuid4()),
                 team_id = team_id,
                 first_name = faker.first_name_male(),
                 last_name = faker.last_name(),
@@ -378,11 +379,10 @@ class Players(Base):
 
             new_player.specific_positions = ','.join(player_positions)
 
-            if commit:
-                session.add(new_player)
-                session.commit()
+            session.add(new_player)
+            session.commit()
 
-            return new_player
+            return new_player.id
         except Exception as e:
             session.rollback()
             raise e
@@ -533,6 +533,15 @@ class Players(Base):
         try:
             player = session.query(Players).filter(Players.id == id).first()
             return player
+        finally:
+            session.close()
+
+    @classmethod
+    def get_players_by_ids(cls, ids):
+        session = DatabaseManager().get_session()
+        try:
+            players = session.query(Players).filter(Players.id.in_(ids)).all()
+            return players
         finally:
             session.close()
 

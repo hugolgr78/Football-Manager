@@ -7,15 +7,14 @@ import io
 from utils.frames import PlayerFrame
 
 class Squad(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id):
+    def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id
 
-        self.team = Teams.get_teams_by_manager(session, manager_id)[0]
-        self.players = Players.get_all_players_by_team(session, self.team.id)
+        self.team = Teams.get_teams_by_manager(manager_id)[0]
+        self.players = Players.get_all_players_by_team(self.team.id)
 
         self.titleFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 100, corner_radius = 0)
         self.titleFrame.pack(expand = True, fill = "both", padx = 10, pady = 10)
@@ -49,4 +48,4 @@ class Squad(ctk.CTkFrame):
 
         for player in self.players:
             if player.player_role != "Youth Team":
-                PlayerFrame(self, self.session, self.manager_id, player, self.playersFrame)
+                PlayerFrame(self, self.manager_id, player, self.playersFrame)

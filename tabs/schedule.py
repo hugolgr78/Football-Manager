@@ -5,18 +5,17 @@ from data.gamesDatabase import *
 from utils.frames import MatchFrame
 
 class Schedule(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id):
+    def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
-        self.session = session
         self.manager_id = manager_id
         self.parent = parent
 
         self.frames = []
 
-        self.team = Teams.get_teams_by_manager(session, manager_id)[0]
-        self.matches = Matches.get_all_matches_by_team(session, self.team.id)
-        self.league = League.get_league_by_id(session, self.matches[0].league_id)
+        self.team = Teams.get_teams_by_manager(manager_id)[0]
+        self.matches = Matches.get_all_matches_by_team(self.team.id)
+        self.league = League.get_league_by_id(self.matches[0].league_id)
 
         self.titleFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 60, corner_radius = 0)
         self.titleFrame.place(relx = 0.5, rely = 0.05, anchor = "center")
@@ -41,5 +40,5 @@ class Schedule(ctk.CTkFrame):
                 widget.destroy()
 
         for match in self.matches:
-            frame = MatchFrame(self, self.session, self.manager_id, match, self.scheduleFrame, self.matchInfoFrame, self)
+            frame = MatchFrame(self, self.manager_id, match, self.scheduleFrame, self.matchInfoFrame, self)
             self.frames.append(frame)

@@ -48,4 +48,7 @@ class Squad(ctk.CTkFrame):
 
         for player in self.players:
             if player.player_role != "Youth Team":
-                PlayerFrame(self, self.manager_id, player, self.playersFrame)
+                PlayerFrame(self, self.manager_id, player, self.playersFrame, talkFunction = self.talkToPlayer)
+
+    def talkToPlayer(self, player):
+        print(player.first_name)

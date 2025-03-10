@@ -5,6 +5,7 @@ from data.gamesDatabase import *
 from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame
 from utils.shouts import ShoutFrame
 import threading, time
+import concurrent.futures
 from PIL import Image
 
 class MatchDay(ctk.CTkFrame):
@@ -658,7 +659,8 @@ class MatchDay(ctk.CTkFrame):
                 self.confirmButton.configure(state = "disabled")
 
         if redCardPlayer:
-            self.addSubstitute(redCardPlayer.first_name + " " + redCardPlayer.last_name, redCardPlayer.specific_positions, unavailablePlayer = True)
+            player = Players.get_player_by_id(redCardPlayer.id)
+            self.addSubstitute(player.first_name + " " + player.last_name, player.specific_positions, unavailablePlayer = True)
 
     def addSubstitute(self, playerName, positions, unavailablePlayer = False):
         frame = ctk.CTkFrame(self.substitutesFrame, width = 520, height = 30, fg_color = GREY_BACKGROUND)
@@ -964,8 +966,9 @@ class MatchDay(ctk.CTkFrame):
 
     def endSimulation(self):
 
-        for frame in self.otherMatchesFrame.winfo_children():
-            frame.matchInstance.saveData()
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [executor.submit(frame.matchInstance.saveData) for frame in self.otherMatchesFrame.winfo_children()]
+            concurrent.futures.wait(futures)
 
         self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away")
 

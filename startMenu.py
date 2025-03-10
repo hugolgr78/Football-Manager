@@ -117,20 +117,16 @@ class StartMenu(ctk.CTkFrame):
             first_name = value.split()[0]
             last_name = value.split()[1]
 
-            URL = f"sqlite:///data/{first_name}{last_name}.db"
+            self.db_manager = DatabaseManager()
+            self.db_manager.set_database(f"{first_name}{last_name}")
 
-            # Create an engine and a session
-            engine = create_engine(URL)
-            SessionLocal = sessionmaker(autocommit = False, autoflush = False, bind = engine)
-            self.gamesSession = SessionLocal()
-
-            manager = Managers.get_manager_by_name(self.gamesSession, first_name, last_name)
-            managedTeam = Teams.get_teams_by_manager(self.gamesSession, manager.id)
-            league = LeagueTeams.get_league_by_team(self.gamesSession, managedTeam[0].id)
+            manager = Managers.get_manager_by_name(first_name, last_name)
+            managedTeam = Teams.get_teams_by_manager(manager.id)
+            league = LeagueTeams.get_league_by_team(managedTeam[0].id)
 
             self.chosenManager_Id = manager.id
 
-            self.tableFrame.defineManager(self.gamesSession, self.chosenManager_Id)
+            self.tableFrame.defineManager(self.chosenManager_Id)
 
             logo_blob = managedTeam[0].logo
             image = Image.open(io.BytesIO(logo_blob))
@@ -378,8 +374,9 @@ class StartMenu(ctk.CTkFrame):
 
         setUpProgressBar(self.progressBar, self.progressLabel, self.progressFrame, self.percentageLabel)
         
-        self.gamesSession = create_tables(f"{self.first_name}{self.last_name}")
-        manager = Managers.add_manager(self.gamesSession, self.first_name, self.last_name, self.selectedCountry, self.dob, True, self.selectedTeam)
+        self.db_manager = DatabaseManager()
+        self.db_manager.set_database(f"{self.first_name}{self.last_name}", create_tables = True)
+        manager = Managers.add_manager(self.first_name, self.last_name, self.selectedCountry, self.dob, True, self.selectedTeam)
         self.chosenManager_Id = manager.id
         game = Game.add_game(self.session, self.chosenManager_Id, manager.first_name, manager.last_name, f"sqlite:///data/{self.first_name}{self.last_name}.db")
 
@@ -387,4 +384,4 @@ class StartMenu(ctk.CTkFrame):
 
     def startGame(self):
         self.pack_forget()
-        MainMenu(self.parent, self.gamesSession, self.chosenManager_Id)
+        MainMenu(self.parent, self.chosenManager_Id)

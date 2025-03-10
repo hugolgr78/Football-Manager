@@ -11,7 +11,7 @@ from utils.playerProfileLink import PlayerProfileLink
 from utils.match import Match
 
 class MatchFrame(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id, match, parentFrame, matchInfoFrame, parentTab):
+    def __init__(self, parent, manager_id, match, parentFrame, matchInfoFrame, parentTab):
         super().__init__(parentFrame, fg_color = TKINTER_BACKGROUND, width = 640, height = 50, corner_radius = 5)
         self.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
 
@@ -21,7 +21,6 @@ class MatchFrame(ctk.CTkFrame):
 
         self.parent = parent
         self.parentFrame = parentFrame
-        self.session = session
         self.manager_id = manager_id
         self.match = match
         self.matchInfoFrame = matchInfoFrame
@@ -31,8 +30,8 @@ class MatchFrame(ctk.CTkFrame):
         
         self.played = False
 
-        self.homeTeam = Teams.get_team_by_id(self.session, self.match.home_id)
-        self.awayTeam = Teams.get_team_by_id(self.session, self.match.away_id) 
+        self.homeTeam = Teams.get_team_by_id(self.match.home_id)
+        self.awayTeam = Teams.get_team_by_id(self.match.away_id) 
 
         if self.homeTeam.id == self.parent.team.id:
             self.home = True
@@ -42,7 +41,7 @@ class MatchFrame(ctk.CTkFrame):
             src = Image.open(io.BytesIO(self.homeTeam.logo))
 
         src.thumbnail((35, 35))
-        self.logo = TeamLogo(self, self.session, src, self.awayTeam if self.home else self.homeTeam, TKINTER_BACKGROUND, 0.05, 0.5, "center", self.parentTab)
+        self.logo = TeamLogo(self, src, self.awayTeam if self.home else self.homeTeam, TKINTER_BACKGROUND, 0.05, 0.5, "center", self.parentTab)
         self.logo.getImageLabel().bind("<Enter>", lambda event: self.onFrameHover())
 
         self.oponent = ctk.CTkLabel(self, text = self.awayTeam.name if self.home else self.homeTeam.name, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
@@ -138,11 +137,11 @@ class MatchFrame(ctk.CTkFrame):
 
         srcHome = Image.open(io.BytesIO(self.homeTeam.logo))
         srcHome.thumbnail((50, 50))
-        homeLogo = TeamLogo(self.scoreFrame, self.session, srcHome, self.homeTeam, DARK_GREY, 0.2, 0.5, "center", self.parentTab)
+        homeLogo = TeamLogo(self.scoreFrame, srcHome, self.homeTeam, DARK_GREY, 0.2, 0.5, "center", self.parentTab)
 
         srcAway = Image.open(io.BytesIO(self.awayTeam.logo))
         srcAway.thumbnail((50, 50))
-        awayLogo = TeamLogo(self.scoreFrame, self.session, srcAway, self.awayTeam, DARK_GREY, 0.8, 0.5, "center", self.parentTab)
+        awayLogo = TeamLogo(self.scoreFrame, srcAway, self.awayTeam, DARK_GREY, 0.8, 0.5, "center", self.parentTab)
 
         if self.played:
             scoreLabel = ctk.CTkLabel(self.scoreFrame, text = f"{self.match.score_home} - {self.match.score_away}", fg_color = DARK_GREY, font = (APP_FONT_BOLD, 30))
@@ -151,12 +150,12 @@ class MatchFrame(ctk.CTkFrame):
         
         scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
 
-        self.matchdayEvents = MatchEvents.get_events_by_match(self.session, self.match.id)
+        self.matchdayEvents = MatchEvents.get_events_by_match(self.match.id)
         self.homeEvents = []
         self.awayEvents = []
         if self.played:
             for event in self.matchdayEvents:
-                player = Players.get_player_by_id(self.session, event.player_id)
+                player = Players.get_player_by_id(event.player_id)
                 if player.team_id == self.homeTeam.id:
                     if event.event_type == "own_goal":
                         self.awayEvents.append(event)
@@ -172,8 +171,8 @@ class MatchFrame(ctk.CTkFrame):
             self.homeEvents = [event for event in self.homeEvents if event.event_type != "assist" and event.event_type != "clean_sheet" and event.event_type != "penalty_saved" and event.event_type != "penalty_miss" and event.event_type != "sub_on" and event.event_type != "sub_off"]
             self.awayEvents = [event for event in self.awayEvents if event.event_type != "assist" and event.event_type != "clean_sheet" and event.event_type != "penalty_saved" and event.event_type != "penalty_miss" and event.event_type != "sub_on" and event.event_type != "sub_off"]
 
-            self.homeLineup = TeamLineup.get_lineup_by_match_and_team(self.session, self.match.id, self.homeTeam.id)
-            self.awayLineup = TeamLineup.get_lineup_by_match_and_team(self.session, self.match.id, self.awayTeam.id)
+            self.homeLineup = TeamLineup.get_lineup_by_match_and_team(self.match.id, self.homeTeam.id)
+            self.awayLineup = TeamLineup.get_lineup_by_match_and_team(self.match.id, self.awayTeam.id)
 
             if (max(len(self.homeLineup), len(self.awayLineup)) * 15) + (max(len(self.homeEvents), len(self.awayEvents)) * 30) > 320:
                 self.eventsAndLineupsFrame = ctk.CTkScrollableFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 235, height = 330, corner_radius = 10)
@@ -223,7 +222,7 @@ class MatchFrame(ctk.CTkFrame):
             ctk.CTkLabel(self.matchEventsFrame, text = "General Kenobi!", fg_color = DARK_GREY, font = (APP_FONT, 10), text_color = DARK_GREY).grid(row = 0, column = 1, sticky = "w")
 
     def addEvent(self, event, home, i):
-        player = Players.get_player_by_id(self.session, event.player_id)
+        player = Players.get_player_by_id(event.player_id)
 
         if "+" in event.time:
             font = 9
@@ -270,42 +269,41 @@ class MatchFrame(ctk.CTkFrame):
         self.lineupFrame.grid_propagate(False)
 
         for i, lineupEntry in enumerate(self.homeLineup):
-            player = Players.get_player_by_id(self.session, lineupEntry.player_id)
+            player = Players.get_player_by_id(lineupEntry.player_id)
             rating = lineupEntry.rating
 
             ctk.CTkLabel(self.lineupFrame, text = f"{player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 0, sticky = "e")
             ctk.CTkLabel(self.lineupFrame, text = rating, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 1, sticky = "e", padx = (5, 10))
 
         for i, lineupEntry in enumerate(self.awayLineup):
-            player = Players.get_player_by_id(self.session, lineupEntry.player_id)
+            player = Players.get_player_by_id(lineupEntry.player_id)
             rating = lineupEntry.rating
 
             ctk.CTkLabel(self.lineupFrame, text = rating, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 2, sticky = "w", padx = (10, 5))
             ctk.CTkLabel(self.lineupFrame, text = f"{player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 3, sticky = "w")
 
     def otherInfo(self):
-        self.matchReferee = Referees.get_referee_by_id(self.session, self.match.referee_id)
+        self.matchReferee = Referees.get_referee_by_id(self.match.referee_id)
 
         ctk.CTkLabel(self.otherInfoFrame, text = f"Referee: {self.matchReferee.first_name} {self.matchReferee.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.13, anchor = "w")
         ctk.CTkLabel(self.otherInfoFrame, text = f"Stadium: {self.homeTeam.stadium}", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.38, anchor = "w")
         ctk.CTkLabel(self.otherInfoFrame, text = f"Time: {self.match.time}", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.62, anchor = "w")
         
         if self.played:
-            playerOTM = TeamLineup.get_player_OTM(self.session, self.match.id)
-            player = Players.get_player_by_id(self.session, playerOTM.player_id)
+            playerOTM = TeamLineup.get_player_OTM(self.match.id)
+            player = Players.get_player_by_id(playerOTM.player_id)
 
             ctk.CTkLabel(self.otherInfoFrame, text = f"PoTM: {player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
         else:
             ctk.CTkLabel(self.otherInfoFrame, text = "PoTM: N/A", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
 
 class MatchdayFrame(ctk.CTkFrame):
-    def __init__(self, parent, session, matchday, matchdayNum, currentMatchday, parentFrame, parentTab, width, heigth, fgColor, relx, rely, anchor):
+    def __init__(self, parent, matchday, matchdayNum, currentMatchday, parentFrame, parentTab, width, heigth, fgColor, relx, rely, anchor):
         super().__init__(parent, fg_color = fgColor, width = width, height = heigth, corner_radius = 15)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
         self.parent = parent
         self.parentFrame = parentFrame
-        self.session = session
         self.matchday = matchday
         self.matchdayNum = matchdayNum
         self.currentMatchday = currentMatchday
@@ -322,17 +320,17 @@ class MatchdayFrame(ctk.CTkFrame):
 
         for i, match in enumerate(self.matchday):
 
-            homeTeam = Teams.get_team_by_id(self.session, match.home_id)
-            awayTeam = Teams.get_team_by_id(self.session, match.away_id) 
+            homeTeam = Teams.get_team_by_id(match.home_id)
+            awayTeam = Teams.get_team_by_id(match.away_id) 
 
             homeSrc = Image.open(io.BytesIO(homeTeam.logo))
             homeSrc.thumbnail((35, 35))
-            homeLogo = TeamLogo(self, self.session, homeSrc, homeTeam, fgColor, 0.4, startY + gap * i, "center", self.parentTab)
+            homeLogo = TeamLogo(self, homeSrc, homeTeam, fgColor, 0.4, startY + gap * i, "center", self.parentTab)
             ctk.CTkLabel(self, text = homeTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * i, anchor = "e")
 
             awaySrc = Image.open(io.BytesIO(awayTeam.logo))
             awaySrc.thumbnail((35, 35))
-            awayLogo = TeamLogo(self, self.session, awaySrc, awayTeam, fgColor, 0.6, startY + gap * i, "center", self.parentTab)
+            awayLogo = TeamLogo(self, awaySrc, awayTeam, fgColor, 0.6, startY + gap * i, "center", self.parentTab)
             ctk.CTkLabel(self, text = awayTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * i, anchor = "w")
 
             if self.currentMatchday > self.matchdayNum:
@@ -345,7 +343,7 @@ class MatchdayFrame(ctk.CTkFrame):
         self.place(relx = self.relx, rely = self.rely, anchor = self.anchor)
 
 class PlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id, player, parentFrame, teamSquad = True):
+    def __init__(self, parent, manager_id, player, parentFrame, teamSquad = True):
         super().__init__(parentFrame, fg_color = TKINTER_BACKGROUND, width = 982, height = 50, corner_radius = 5)
         self.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
 
@@ -354,7 +352,6 @@ class PlayerFrame(ctk.CTkFrame):
 
         self.parent = parent
         self.parentFrame = parentFrame
-        self.session = session
         self.manager_id = manager_id
         self.player = player
         self.parentTab = self.parent
@@ -366,7 +363,7 @@ class PlayerFrame(ctk.CTkFrame):
         self.playerNumber.place(relx = 0.05, rely = 0.5, anchor = "center")
         self.playerNumber.bind("<Enter>", lambda event: self.onFrameHover())
 
-        self.playerName = PlayerProfileLink(self, self.session, self.player, self.player.first_name + " " + self.player.last_name, "white", 0.155, 0.5, "w", TKINTER_BACKGROUND, self.parentTab)
+        self.playerName = PlayerProfileLink(self, self.player, self.player.first_name + " " + self.player.last_name, "white", 0.155, 0.5, "w", TKINTER_BACKGROUND, self.parentTab)
         self.playerName.bind("<Enter>", lambda event: self.onFrameHover())
 
         self.playerAge = ctk.CTkLabel(self, text = self.player.age, font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND)
@@ -463,18 +460,17 @@ class LeagueTableScrollable(ctk.CTkScrollableFrame):
         ctk.CTkLabel(self, text = "Team", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 2, sticky = "w", pady = (5, 0))
         ctk.CTkLabel(self, text = "GP", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 3, pady = (5, 0))
 
-    def defineManager(self, session, manager_id):
-        self.session = session
+    def defineManager(self, manager_id):
         self.manager_id = manager_id
-        self.team = Teams.get_teams_by_manager(self.session, self.manager_id)[0]
-        self.league = LeagueTeams.get_league_by_team(self.session, self.team.id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.league = LeagueTeams.get_league_by_team(self.team.id)
 
     def addLeagueTable(self):
 
-        teamsData = LeagueTeams.get_teams_by_position(self.session, self.league.league_id)
+        teamsData = LeagueTeams.get_teams_by_position(self.league.league_id)
 
         for i, team in enumerate(teamsData):
-            teamName = Teams.get_team_by_id(self.session, team.team_id)
+            teamName = Teams.get_team_by_id(team.team_id)
             team_logo_blob = teamName.logo
             team_image = Image.open(io.BytesIO(team_logo_blob))
             team_image.thumbnail((20, 20))
@@ -547,19 +543,18 @@ class LeagueTable(ctk.CTkFrame):
 
         self.grid_propagate(False)
 
-    def defineManager(self, session, manager_id):
-        self.session = session
+    def defineManager(self, manager_id):
         self.manager_id = manager_id
-        self.team = Teams.get_teams_by_manager(self.session, self.manager_id)[0]
-        self.league = LeagueTeams.get_league_by_team(self.session, self.team.id)
-        self.leagueData = League.get_league_by_id(self.session, self.league.league_id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.league = LeagueTeams.get_league_by_team(self.team.id)
+        self.leagueData = League.get_league_by_id(self.league.league_id)
 
     def addLeagueTable(self):
 
-        teamsData = LeagueTeams.get_teams_by_position(self.session, self.league.league_id)
+        teamsData = LeagueTeams.get_teams_by_position(self.league.league_id)
 
         for i, team in enumerate(teamsData):
-            teamName = Teams.get_team_by_id(self.session, team.team_id)
+            teamName = Teams.get_team_by_id(team.team_id)
             team_logo_blob = teamName.logo
             team_image = Image.open(io.BytesIO(team_logo_blob))
             team_image.thumbnail((20, 20))
@@ -607,12 +602,11 @@ class LeagueTable(ctk.CTkFrame):
                 widget.destroy()
 
 class next5Matches(ctk.CTkFrame):
-    def __init__(self, parent, session, manager_id, fg_color, width, height, frameHeight, relx, rely, anchor, textY, parentTab, corner_radius = 0):
+    def __init__(self, parent, manager_id, fg_color, width, height, frameHeight, relx, rely, anchor, textY, parentTab, corner_radius = 0):
         super().__init__(parent, fg_color = fg_color, width = width, height = height, corner_radius = corner_radius)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
         self.parent = parent
-        self.session = session
         self.manager_id = manager_id
         self.fgColor = fg_color
         self.width = width
@@ -623,12 +617,12 @@ class next5Matches(ctk.CTkFrame):
 
         self.pack_propagate(False)
 
-        self.team = Teams.get_teams_by_manager(self.session, self.manager_id)[0]
-        self.league = LeagueTeams.get_league_by_team(self.session, self.team.id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.league = LeagueTeams.get_league_by_team(self.team.id)
 
     def showNext5Matches(self):
 
-        next5 = Matches.get_team_next_5_matches(self.session, self.team.id, self.league.league_id)
+        next5 = Matches.get_team_next_5_matches(self.team.id, self.league.league_id)
 
         ctk.CTkLabel(self, text = "Next 5 Matches", font = (APP_FONT_BOLD, 30), text_color = "white", fg_color = self.fgColor).pack(fill = "both", pady = (10, 0))
 
@@ -638,16 +632,16 @@ class next5Matches(ctk.CTkFrame):
 
             ctk.CTkLabel(matchFrame, text = "VS", font = (APP_FONT_BOLD, 20), text_color = "white", fg_color = self.fgColor).place(relx = 0.5, rely = 0.5, anchor = "center")
 
-            homeTeam = Teams.get_team_by_id(self.session, match.home_id)
-            awayTeam = Teams.get_team_by_id(self.session, match.away_id) 
+            homeTeam = Teams.get_team_by_id(match.home_id)
+            awayTeam = Teams.get_team_by_id(match.away_id) 
 
             homeImage = Image.open(io.BytesIO(homeTeam.logo))
             homeImage.thumbnail((50, 50))
-            homeLogo = TeamLogo(matchFrame, self.session, homeImage, homeTeam, self.fgColor, 0.35, 0.5, "center", self.parentTab)
+            homeLogo = TeamLogo(matchFrame, homeImage, homeTeam, self.fgColor, 0.35, 0.5, "center", self.parentTab)
 
             awayImage = Image.open(io.BytesIO(awayTeam.logo))
             awayImage.thumbnail((50, 50))
-            awayLogo = TeamLogo(matchFrame, self.session, awayImage, awayTeam, self.fgColor, 0.65, 0.5, "center", self.parentTab)
+            awayLogo = TeamLogo(matchFrame, awayImage, awayTeam, self.fgColor, 0.65, 0.5, "center", self.parentTab)
 
             ctk.CTkLabel(matchFrame, text = homeTeam.name.split()[0], font = (APP_FONT, 13), text_color = "white", fg_color = self.fgColor).place(relx = 0.15, rely = self.textY, anchor = "center")
             ctk.CTkLabel(matchFrame, text = homeTeam.name.split()[1], font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = self.fgColor).place(relx = 0.15, rely = 0.63, anchor = "center")
@@ -692,19 +686,18 @@ class WinRatePieChart(ctk.CTkCanvas):
         canvas.get_tk_widget().place(relx = relx, rely = rely, anchor = anchor)
 
 class TrophiesFrame(ctk.CTkFrame):
-    def __init__(self, parent, session, id_, fg_color, width, height, corner_radius, relx, rely, anchor, team = True):
+    def __init__(self, parent, id_, fg_color, width, height, corner_radius, relx, rely, anchor, team = True):
         super().__init__(parent, fg_color = fg_color, width = width, height = height, corner_radius = corner_radius)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
-        self.session = session
         self.id = id_
 
         ctk.CTkLabel(self, text = "Trophies", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.1, anchor = "center")
 
         if team:
-            self.trophies = Trophies.get_all_trophies_by_team(self.session, self.id)
+            self.trophies = Trophies.get_all_trophies_by_team(self.id)
         else:
-            self.trophies = Trophies.get_all_trophies_by_manager(self.session, self.id)
+            self.trophies = Trophies.get_all_trophies_by_manager(self.id)
 
         self.comps = {}
 
@@ -717,7 +710,7 @@ class TrophiesFrame(ctk.CTkFrame):
                     self.comps[trophy.competition_id]["years"] += f"{trophy.year}, "
 
             for competition in self.comps:
-                self.league = League.get_league_by_id(self.session, competition)
+                self.league = League.get_league_by_id(competition)
 
                 src = Image.open(io.BytesIO(self.league.logo))
                 src.thumbnail((100, 100))
@@ -928,12 +921,12 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.removeButton.place(relx = 0.95, rely = 0.05, anchor = "ne")
 
 class SubstitutePlayer(ctk.CTkFrame):
-    def __init__(self, parent, fgColor, height, width, player, checkBoxFunction, session, parentTab, comp_id):
+    def __init__(self, parent, fgColor, height, width, player, checkBoxFunction, parentTab, comp_id):
         super().__init__(parent, fg_color = fgColor, width = width, height = height)
         self.pack(pady = 5)
 
         self.player = player
-        self.playerBanned = PlayerBans.check_bans_for_player(session, self.player.id, comp_id)
+        self.playerBanned = PlayerBans.check_bans_for_player(self.player.id, comp_id)
 
         if not self.playerBanned:
             textColor = "white"
@@ -942,7 +935,7 @@ class SubstitutePlayer(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = "SUB", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
         
-        self.playerName = PlayerProfileLink(self, session, player, player.first_name + " " + player.last_name, textColor, 0.15, 0.5, "w", GREY_BACKGROUND, parentTab, 15)
+        self.playerName = PlayerProfileLink(self, player, player.first_name + " " + player.last_name, textColor, 0.15, 0.5, "w", GREY_BACKGROUND, parentTab, 15)
 
         ctk.CTkLabel(self, text = player.specific_positions.split(","), font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.85, rely = 0.5, anchor = "e")
 
@@ -970,10 +963,9 @@ class SubstitutePlayer(ctk.CTkFrame):
         self.checkBox.deselect()
 
 class MatchDayMatchFrame(ctk.CTkFrame):
-    def __init__(self, parent, session, match, fgColor, height, width, imageSize = 40, relx = 0, rely = 0, anchor = "nw", border_width = None, border_color = None, pack = True):
+    def __init__(self, parent, match, fgColor, height, width, imageSize = 40, relx = 0, rely = 0, anchor = "nw", border_width = None, border_color = None, pack = True):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, border_width = border_width, border_color = border_color)
         
-        self.session = session
         self.match = match
         self.fgColor = fgColor
         self.imageSize = imageSize
@@ -984,13 +976,14 @@ class MatchDayMatchFrame(ctk.CTkFrame):
 
         self.score = "0 - 0" # Instance of Score class
 
-        self.matchInstance = Match(self.session, self.match)
+        self.matchInstance = Match(self.match)
 
         self.addFrame()
 
     def addFrame(self):
         
-        if self.packFrame:
+        if self.packFrame: 
+            # smaller frames on the side
             self.pack(expand = True, fill = "both", pady = (0, 3))
             scoreSize = 23
             teamNameSize1 = 10
@@ -998,6 +991,7 @@ class MatchDayMatchFrame(ctk.CTkFrame):
             teamNamePlaceY1 = 0.3
             teamNamePlaceY2 = 0.7
         else:
+            # large frame for team match
             self.place(relx = self.relx, rely = self.rely, anchor = self.anchor)
             scoreSize = 30
             teamNameSize1 = 15
@@ -1005,7 +999,7 @@ class MatchDayMatchFrame(ctk.CTkFrame):
             teamNamePlaceY1 = 0.4
             teamNamePlaceY2 = 0.6
 
-        self.homeTeam = Teams.get_team_by_id(self.session, self.match.home_id)
+        self.homeTeam = Teams.get_team_by_id(self.match.home_id)
         ctk.CTkLabel(self, text = self.homeTeam.name.split(" ")[0], font = (APP_FONT, teamNameSize1), fg_color = self.fgColor).place(relx = 0.12, rely = teamNamePlaceY1, anchor = "center")
         ctk.CTkLabel(self, text = self.homeTeam.name.split(" ")[1], font = (APP_FONT_BOLD, teamNameSize2), fg_color = self.fgColor).place(relx = 0.12, rely = teamNamePlaceY2, anchor = "center")
 
@@ -1014,7 +1008,7 @@ class MatchDayMatchFrame(ctk.CTkFrame):
         homeLogo = ctk.CTkImage(srcHome, None, (srcHome.width, srcHome.height))
         ctk.CTkLabel(self, image = homeLogo, text = "", fg_color = self.fgColor).place(relx = 0.3, rely = 0.5, anchor = "center")
 
-        self.awayTeam = Teams.get_team_by_id(self.session, self.match.away_id)
+        self.awayTeam = Teams.get_team_by_id(self.match.away_id)
         ctk.CTkLabel(self, text = self.awayTeam.name.split(" ")[0], font = (APP_FONT, teamNameSize1), fg_color = self.fgColor).place(relx = 0.88, rely = teamNamePlaceY1, anchor = "center")
         ctk.CTkLabel(self, text = self.awayTeam.name.split(" ")[1], font = (APP_FONT_BOLD, teamNameSize2), fg_color = self.fgColor).place(relx = 0.88, rely = teamNamePlaceY2, anchor = "center")
 
@@ -1025,6 +1019,27 @@ class MatchDayMatchFrame(ctk.CTkFrame):
 
         self.scoreLabel = ctk.CTkLabel(self, text = f"0 - 0", font = (APP_FONT_BOLD, scoreSize), fg_color = self.fgColor)
         self.scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        if self.packFrame:
+            self.halfTimeLabel = ctk.CTkLabel(self, text = "HT", font = (APP_FONT, 10), fg_color = self.fgColor)
+            self.fullTimeLabel = ctk.CTkLabel(self, text = "FT", font = (APP_FONT, 10), fg_color = self.fgColor)
+            self.labelY = 0.8
+        else:
+            self.halfTimeLabel = ctk.CTkLabel(self, text = "HT", font = (APP_FONT, 20), fg_color = self.fgColor)
+            self.fullTimeLabel = ctk.CTkLabel(self, text = "FT", font = (APP_FONT, 20), fg_color = self.fgColor)
+            self.labelY = 0.7
+
+    def HTLabel(self, place = True):
+        if place:
+            self.halfTimeLabel.place(relx = 0.5, rely = self.labelY, anchor = "center")
+        else:
+            self.halfTimeLabel.place_forget()
+    
+    def FTLabel(self, place = True):
+        if place:
+            self.fullTimeLabel.place(relx = 0.5, rely = self.labelY, anchor = "center")
+        else:
+            self.fullTimeLabel.place_forget()
 
     def updateScoreLabel(self, home = True, textAdd = None):
         if home:

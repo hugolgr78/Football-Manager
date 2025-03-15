@@ -51,4 +51,46 @@ class Squad(ctk.CTkFrame):
                 PlayerFrame(self, self.manager_id, player, self.playersFrame, talkFunction = self.talkToPlayer)
 
     def talkToPlayer(self, player):
-        print(player.first_name)
+
+        self.talkFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 650, height = 500, corner_radius = 15, border_width = 3, border_color = GREY_BACKGROUND)
+        self.talkFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        for frame in self.playersFrame.winfo_children():
+            frame.disableTalkButton()
+
+        managerFrame = ctk.CTkFrame(self.talkFrame, fg_color = TKINTER_BACKGROUND, width = 145, height = 490, corner_radius = 0)
+        managerFrame.place(x = 150, y = 5, anchor = "ne")
+
+        src = Image.open("Images/default_user.png")
+        src.thumbnail((75, 75))
+        managerImage = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(managerFrame, image = managerImage, text = "").place(relx = 0.5, rely = 0.1, anchor = "n")
+
+        manager = Managers.get_manager_by_id(self.manager_id)
+        ctk.CTkLabel(managerFrame, text = f"{manager.first_name} {manager.last_name}", font = (APP_FONT_BOLD, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.27, anchor = "n")
+
+
+        playerFrame = ctk.CTkFrame(self.talkFrame, fg_color = TKINTER_BACKGROUND, width = 145, height = 490, corner_radius = 0)
+        playerFrame.place(x = 500, y = 5, anchor = "nw")
+
+        src = Image.open("Images/default_user.png")
+        src.thumbnail((75, 75))
+        playerImage = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(playerFrame, image = playerImage, text = "").place(relx = 0.5, rely = 0.1, anchor = "n")
+        ctk.CTkLabel(playerFrame, text = f"{player.first_name} {player.last_name}", font = (APP_FONT_BOLD, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.27, anchor = "n")
+
+        talkingFrame = ctk.CTkFrame(self.talkFrame, fg_color = TKINTER_BACKGROUND, width = 350, height = 390, corner_radius = 0)
+        talkingFrame.place(x = 150, y = 5, anchor = "nw")
+
+        promptsFrame = ctk.CTkFrame(self.talkFrame, fg_color = TKINTER_BACKGROUND, width = 350, height = 95, corner_radius = 0)
+        promptsFrame.place(x = 150, y = 400, anchor = "nw")
+
+        canvas = ctk.CTkCanvas(self.talkFrame, width = 5, height = 700, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
+        canvas.place(x = 185, rely = 0.5, anchor = "center")
+
+        canvas = ctk.CTkCanvas(self.talkFrame, width = 5, height = 700, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
+        canvas.place(x = 625, rely = 0.5, anchor = "center")
+
+        canvas = ctk.CTkCanvas(self.talkFrame, width = 440, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
+        canvas.place(relx = 0.5, rely = 0.8, anchor = "center")
+

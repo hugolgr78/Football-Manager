@@ -416,6 +416,7 @@ class PlayerFrame(ctk.CTkFrame):
             talkImage = ctk.CTkImage(src, None, (src.width, src.height))
             self.talkButton = ctk.CTkButton(self, text = "", image = talkImage, width = 20, fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, command = lambda: talkFunction(player))
             self.talkButton.place(relx = 0.93, rely = 0.5, anchor = "center")
+            self.talkButton.bind("<Enter>", lambda event: self.onFrameHover())
 
     def onFrameHover(self):
         self.configure(fg_color = DARK_GREY)
@@ -438,6 +439,12 @@ class PlayerFrame(ctk.CTkFrame):
 
         if self.teamSquad:
             self.talkButton.configure(fg_color = TKINTER_BACKGROUND)
+
+    def disableTalkButton(self):
+        self.talkButton.configure(state = "disabled")
+
+    def enableTalkButton(self):
+        self.talkButton.configure(state = "normal")
 
 class LeagueTableScrollable(ctk.CTkScrollableFrame):
     def __init__(self, parent, height, width, x, y, fg_color, scrollbar_button_color, scrollbar_button_hover_color, anchor, textColor = "white", small = False, highlightManaged = False):

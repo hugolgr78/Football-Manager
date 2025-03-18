@@ -386,9 +386,9 @@ class PlayerFrame(ctk.CTkFrame):
 
         PROGRESS_COLOR = MORALE_GREEN
 
-        if self.player.morale < 25:
+        if self.player.morale <= 25:
             PROGRESS_COLOR = MORALE_RED
-        elif self.player.morale < 75:
+        elif self.player.morale <= 75:
             PROGRESS_COLOR = MORALE_YELLOW
 
         self.moraleSlider = ctk.CTkSlider(self, 
@@ -408,7 +408,8 @@ class PlayerFrame(ctk.CTkFrame):
         self.moraleSlider.set(self.player.morale)
         self.moraleSlider.configure(state = "disabled")
         self.moraleSlider.place(relx = 0.825, rely = 0.5, anchor = "center")
-        self.moraleSlider.bind("<Enter>", lambda event: self.onFrameHover())
+        self.moraleSlider.bind("<Enter>", lambda event: self.onSliderHover())
+        self.moraleSlider.bind("<Leave>", lambda event: self.onSliderLeave())
 
         if self.teamSquad:
             src = Image.open("Images/conversation.png")
@@ -429,6 +430,16 @@ class PlayerFrame(ctk.CTkFrame):
         if self.teamSquad:
             self.talkButton.configure(fg_color = DARK_GREY)
 
+    def onSliderHover(self):
+        self.onFrameHover()
+
+        self.moraleLabel = ctk.CTkLabel(self, text = f"{self.moraleSlider.get()}%", fg_color = DARK_GREY, width = 5, height = 5)
+        self.moraleLabel.place(relx = 0.75, rely = 0.5, anchor = "center")
+
+    def onSliderLeave(self):
+        self.onFrameHover()
+        self.moraleLabel.place_forget()
+
     def onFrameLeave(self):
         self.configure(fg_color = TKINTER_BACKGROUND)
         self.playerNumber.configure(fg_color = TKINTER_BACKGROUND)
@@ -445,6 +456,20 @@ class PlayerFrame(ctk.CTkFrame):
 
     def enableTalkButton(self):
         self.talkButton.configure(state = "normal")
+
+    def updateMorale(self, moraleChange):
+        currMorale = self.moraleSlider.get()
+        newMorale = currMorale + moraleChange
+
+        PROGRESS_COLOR = MORALE_GREEN
+
+        if newMorale <= 25:
+            PROGRESS_COLOR = MORALE_RED
+        elif newMorale <= 75:
+            PROGRESS_COLOR = MORALE_YELLOW
+
+        self.moraleSlider.set(newMorale)
+        self.moraleSlider.configure(progress_color = PROGRESS_COLOR, button_color = PROGRESS_COLOR)
 
 class LeagueTableScrollable(ctk.CTkScrollableFrame):
     def __init__(self, parent, height, width, x, y, fg_color, scrollbar_button_color, scrollbar_button_hover_color, anchor, textColor = "white", small = False, highlightManaged = False):

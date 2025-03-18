@@ -59,6 +59,9 @@ class Hub(ctk.CTkFrame):
 
         self.addCanvas()
 
+    def resetMorale(self):
+        self.playerMorale.addPlayerMorale(replace = True)
+
 class nextMatch(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 200, corner_radius = 0)

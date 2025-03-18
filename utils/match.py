@@ -752,7 +752,7 @@ class Match():
 
         homeManager = Managers.get_manager_by_id(self.homeTeam.manager_id)
         awayManager = Managers.get_manager_by_id(self.awayTeam.manager_id)
-
+        
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = []
 
@@ -974,8 +974,8 @@ class Match():
         elif sub_off_time:
             return True if sub_off_time >= 20 else False
         else:
-            # Player hasnt played
-            return False
+            # Player played the full 90 minutes
+            return True
 
     def returnWinner(self):
         finalScore = self.score.getScore()

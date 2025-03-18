@@ -365,3 +365,84 @@ def get_morale_decrease_role(player):
         return -1
     
     return 0 # Backup keepers and youth players
+
+INTRODUCTORY_TEXTS = [
+    "Hey Boss, what did you want to see me for?",
+    "Gaffer, everything alright? What’s on your mind?",
+    "Coach, you wanted to speak to me?",
+    "Boss, I wasn’t expecting this. What’s up?",
+    "Hey Boss, is something up?"
+]
+
+CONGRATULATE = "I just wanted to say, fantastic job out there!\nYou were outstanding, and your effort made a\nreal difference. Keep it up!"
+INJURY = "I know injuries are tough, but don’t let this get\nyou down. Focus on your recovery, and we’ll be here\nto support you every step of the way. You’ll\ncome back even stronger!"
+CRITIZE = "I have to be honest with you — your performance\nwasn’t up to the standard I expect. I know you can do\nbetter, and I need you to step up next time. Let’s\nwork on what went wrong and put things right."
+MOTIVATE = "I know you’ve got more to give, and I want to see\nthat hunger in the next match. You’ve got the\ntalent — now go out there and prove it to everyone!"
+
+PROMPT_TO_TEXT = {
+    "Congratulate": CONGRATULATE,
+    "Injury": INJURY,
+    "Criticize": CRITIZE,
+    "Motivate": MOTIVATE
+}
+
+def get_player_response(prompt, rating, is_injured):
+    responses = {
+        "Congratulate": {
+            "accept": [
+                "Thanks, Boss! Means a lot coming from you.",
+                "Appreciate that, Coach! I'll keep giving my best."
+            ],
+            "challenge": [
+                "I think I could have done even better, to be honest.",
+                "Glad you think so, but I know I’ve got more in me."
+            ]
+        },
+        "Injury": {
+            "thankful": [
+                "Thanks, Boss. I really needed that.",
+                "Appreciate it, Coach. I'll do everything to come back stronger."
+            ],
+            "confused": [
+                "Wait, am I injured? Did I miss something?",
+                "Uh... I’m not injured, Boss. Is there something wrong?"
+            ]
+        },
+        "Criticize": {
+            "accept": [
+                "You're right, Boss. I need to step up.",
+                "I know I wasn’t good enough. I’ll work harder."
+            ],
+            "challenge": [
+                "I don’t think I was that bad, to be honest.",
+                "I see where you’re coming from, but I disagree."
+            ]
+        },
+        "Motivate": {
+            "accept": [
+                "I hear you, Boss. I’ll push myself harder.",
+                "Got it, Coach! I’ll prove myself."
+            ],
+            "challenge": [
+                "I’m already giving my all, Boss. What more do you want?",
+                "I thought I played well, but I guess I’ll try harder."
+            ]
+        }
+    }
+    
+    if prompt == "Congratulate":
+        response_type = "accept" if rating >= 7.5 else "challenge"
+        accepted = response_type == "accept"
+    elif prompt == "Injury":
+        response_type = "thankful" if is_injured else "confused"
+        accepted = response_type == "thankful"
+    elif prompt == "Criticize":
+        response_type = "accept" if rating < 5.5 else "challenge"
+        accepted = response_type == "accept"
+    elif prompt == "Motivate":
+        response_type = "accept" if rating < 7.5 else "challenge"
+        accepted = response_type == "accept"
+    else:
+        return "I’m not sure what to say to that, Boss."
+    
+    return random.choice(responses[prompt][response_type]), accepted

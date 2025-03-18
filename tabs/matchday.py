@@ -474,27 +474,27 @@ class MatchDay(ctk.CTkFrame):
                     if event_details["extra"]:
                         if self.halfTime or self.fullTime:
                             if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
-                                self.matchFrame.updateScoreLabel(home=False)
+                                self.matchFrame.updateScoreLabel(home = False)
                             newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, False, event_time, teamMatch = self, managing_team = True if not self.home else False)
                             self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
 
                             if not self.home and event_details["type"] == "injury":
-                                self.substitution(forceSub=True, injuredPlayer=newEvent["player"])
+                                self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
                             if not self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer=newEvent["player"])
+                                self.substitution(redCardPlayer = newEvent["player"])
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
                     else:
                         if not (self.halfTime or self.fullTime):
                             if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
-                                self.matchFrame.updateScoreLabel(home=False)
+                                self.matchFrame.updateScoreLabel(home = False)
                             newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, False, event_time, teamMatch = self, managing_team = True if not self.home else False)
                             self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
 
                             if not self.home and event_details["type"] == "injury":
-                                self.substitution(forceSub=True, injuredPlayer=newEvent["player"])
+                                self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
                             if not self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer=newEvent["player"])
+                                self.substitution(redCardPlayer = newEvent["player"])
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
 
@@ -659,7 +659,7 @@ class MatchDay(ctk.CTkFrame):
                 self.confirmButton.configure(state = "disabled")
 
         if redCardPlayer:
-            player = Players.get_player_by_id(redCardPlayer.id)
+            player = Players.get_player_by_id(redCardPlayer)
             self.addSubstitute(player.first_name + " " + player.last_name, player.specific_positions, unavailablePlayer = True)
 
     def addSubstitute(self, playerName, positions, unavailablePlayer = False):

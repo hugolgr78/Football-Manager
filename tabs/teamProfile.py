@@ -162,7 +162,6 @@ class Squad(ctk.CTkFrame):
         ctk.CTkLabel(self.infoFrame, text = "Positions", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.59, rely = 0.5, anchor = "center")
         ctk.CTkLabel(self.infoFrame, text = "Nat", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.685, rely = 0.5, anchor = "center")
         ctk.CTkLabel(self.infoFrame, text = "Morale", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.795, rely = 0.5, anchor = "center")
-        ctk.CTkLabel(self.infoFrame, text = "Talk", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
 
         self.playersFrame = ctk.CTkScrollableFrame(self, fg_color = TKINTER_BACKGROUND, width = 965, height = 590, corner_radius = 0)
         self.playersFrame.pack()

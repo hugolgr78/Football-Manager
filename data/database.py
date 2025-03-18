@@ -1103,6 +1103,22 @@ class TeamLineup(Base):
             session.close()
 
     @classmethod
+    def get_player_rating(cls, player_id, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            rating = session.query(TeamLineup).filter(
+                TeamLineup.player_id == player_id,
+                TeamLineup.match_id == match_id
+            ).first()
+
+            if rating:
+                return rating.rating
+            else:
+                return None
+        finally:
+            session.close()
+
+    @classmethod
     def get_all_average_ratings(cls, league_id):
         session = DatabaseManager().get_session()
         try:

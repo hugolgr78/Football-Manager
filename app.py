@@ -25,7 +25,7 @@ class FootballManager(ctk.CTk):
         
         db_path = "data/JohnLocke.db"
         backup_dir = "data/backups"
-        # backup_database(db_path, backup_dir)
+        backup_database(db_path, backup_dir)
 
         # Create an engine and a session
         engine = create_engine(DATABASE_URL)

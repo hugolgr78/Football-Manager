@@ -13,7 +13,7 @@ class RefereeProfile(ctk.CTkFrame):
         self.referee = referee
         self.changeBackFunction = changeBackFunction
 
-        self.profile = Profile(self, self.player)
+        self.profile = Profile(self, self.referee)
         self.titles = ["Profile"]
         self.tabs = [self.profile]
         self.classNames = [Profile]
@@ -64,7 +64,7 @@ class RefereeProfile(ctk.CTkFrame):
         self.buttons[self.activeButton].configure(state = "disabled")
 
         if not self.tabs[self.activeButton]:
-            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.player)
+            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.referee)
 
         self.tabs[self.activeButton].pack()
 

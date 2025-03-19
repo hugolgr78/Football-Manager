@@ -9,6 +9,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from utils.playerProfileLink import PlayerProfileLink
 from utils.match import Match
+from utils.refereeProfileLink import RefereeProfileLabel
 
 class MatchFrame(ctk.CTkFrame):
     def __init__(self, parent, manager_id, match, parentFrame, matchInfoFrame, parentTab):
@@ -285,7 +286,9 @@ class MatchFrame(ctk.CTkFrame):
     def otherInfo(self):
         self.matchReferee = Referees.get_referee_by_id(self.match.referee_id)
 
-        ctk.CTkLabel(self.otherInfoFrame, text = f"Referee: {self.matchReferee.first_name} {self.matchReferee.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.13, anchor = "w")
+        RefereeProfileLabel(self.otherInfoFrame, self.matchReferee, f"{self.matchReferee.first_name} {self.matchReferee.last_name}", "Referee: ", "", 260, 30, self.parentTab, "white", DARK_GREY, 15).place(relx = 0.03, rely = 0.13, anchor = "w")
+        
+        # ctk.CTkLabel(self.otherInfoFrame, text = f"Referee: {self.matchReferee.first_name} {self.matchReferee.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.13, anchor = "w")
         ctk.CTkLabel(self.otherInfoFrame, text = f"Stadium: {self.homeTeam.stadium}", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.38, anchor = "w")
         ctk.CTkLabel(self.otherInfoFrame, text = f"Time: {self.match.time}", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.62, anchor = "w")
         

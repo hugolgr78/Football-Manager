@@ -546,10 +546,10 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def get_player_by_name(cls, first_name, last_name):
+    def get_player_by_name(cls, first_name, last_name, team_id):
         session = DatabaseManager().get_session()
         try:
-            player = session.query(Players).filter(Players.first_name == first_name, Players.last_name == last_name).first()
+            player = session.query(Players).filter(Players.first_name == first_name, Players.last_name == last_name, Players.team_id == team_id).first()
             return player
         finally:
             session.close()
@@ -591,6 +591,12 @@ class Players(Base):
             player = session.query(Players).filter(Players.id == id).first()
             if player:
                 player.morale += morale
+
+                if player.morale < 0:
+                    player.morale = 0
+                elif player.morale > 100:
+                    player.morale = 100
+
                 session.commit()
             else:
                 return None

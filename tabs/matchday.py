@@ -690,7 +690,7 @@ class MatchDay(ctk.CTkFrame):
         self.dropDown.configure(state = "readonly")
         self.dropDown.configure(values = self.values)
 
-        playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1])
+        playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1], self.team.id)
         if playerData.id in self.startTeamLineup.values():
             self.playersOff[playerPosition] = playerData.id
             self.currentSubs += 1
@@ -722,7 +722,7 @@ class MatchDay(ctk.CTkFrame):
                     positions = labels[0].cget("text")
                     unavailable = frame.unavailable
 
-                    player = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1])
+                    player = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1], self.team.id)
                     if self.currentSubs > MAX_SUBS - self.completedSubs:
                         if POSITION_CODES[selected_position] in positions.split(",") and player.id in self.startTeamLineup.values() and player.id not in self.teamLineup.values() and not unavailable:
                             values.append(playerName)
@@ -758,7 +758,7 @@ class MatchDay(ctk.CTkFrame):
 
         self.dropDown.configure(values = self.values)
 
-        playerData = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1])
+        playerData = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1], self.team.id)
         if playerData.id in self.startTeamLineup.values():
             for position, playerID in list(self.playersOff.items()):
                 if playerID == playerData.id:

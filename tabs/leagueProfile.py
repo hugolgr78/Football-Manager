@@ -119,7 +119,7 @@ class Profile(ctk.CTkFrame):
         self.expandEnabled = ctk.CTkImage(expandedImage, None, (expandedImage.width, expandedImage.height))
 
         for stat, statName in zip(self.stats, self.statNames):
-            
+
             frame = ctk.CTkFrame(self.statsFrame, fg_color = GREY_BACKGROUND, width = 280, height = 75, corner_radius = 15)
             frame.pack(pady = 5, padx = 5)
 
@@ -138,7 +138,7 @@ class Profile(ctk.CTkFrame):
             if stat[0][0] == 0:
                 ctk.CTkLabel(frame, text = "N/A", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.7, anchor = "w")
             else:
-                player = Players.get_player_by_name(str(stat[0][1]), str(stat[0][2]))
+                player = Players.get_player_by_id(stat[0][0])
                 PlayerProfileLink(frame, player, str(stat[0][1] + " " + stat[0][2]), "white", 0.05, 0.7, "w", GREY_BACKGROUND, self.parent)
 
             ctk.CTkLabel(frame, text = round(stat[0][3], 2), font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.75, rely = 0.7, anchor = "center")

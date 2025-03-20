@@ -124,9 +124,9 @@ class StartMenu(ctk.CTkFrame):
             managedTeam = Teams.get_teams_by_manager(manager.id)
             league = LeagueTeams.get_league_by_team(managedTeam[0].id)
 
-            self.chosenManager_Id = manager.id
+            self.chosenManagerID = manager.id
 
-            self.tableFrame.defineManager(self.chosenManager_Id)
+            self.tableFrame.defineManager(self.chosenManagerID)
 
             logo_blob = managedTeam[0].logo
             image = Image.open(io.BytesIO(logo_blob))
@@ -376,12 +376,12 @@ class StartMenu(ctk.CTkFrame):
         
         self.db_manager = DatabaseManager()
         self.db_manager.set_database(f"{self.first_name}{self.last_name}", create_tables = True)
-        manager = Managers.add_manager(self.first_name, self.last_name, self.selectedCountry, self.dob, True, self.selectedTeam)
-        self.chosenManager_Id = manager.id
-        game = Game.add_game(self.session, self.chosenManager_Id, manager.first_name, manager.last_name, f"sqlite:///data/{self.first_name}{self.last_name}.db")
+        self.chosenManagerID = Managers.add_manager(self.first_name, self.last_name, self.selectedCountry, self.dob, True, self.selectedTeam)
+
+        Game.add_game(self.session, self.chosenManagerID, self.first_name,self.last_name, f"sqlite:///data/{self.first_name}{self.last_name}.db")
 
         self.startGame()
 
     def startGame(self):
         self.pack_forget()
-        MainMenu(self.parent, self.chosenManager_Id)
+        MainMenu(self.parent, self.chosenManagerID)

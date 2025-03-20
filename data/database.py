@@ -48,7 +48,6 @@ class DatabaseManager:
             raise ValueError("Database has not been set. Call set_database() first.")
         return self.scoped_session()
 
-
 class Managers(Base):
     __tablename__ = 'managers'
 
@@ -71,6 +70,7 @@ class Managers(Base):
         try:
             if user:
                 new_manager  =  Managers(
+                    id = str(uuid.uuid4()),
                     first_name = first_name,
                     last_name = last_name,
                     nationality = nationality,
@@ -83,6 +83,7 @@ class Managers(Base):
                 country = random.choices(list(COUNTRIES[selectedContinent][1].keys()), weights = list(COUNTRIES[selectedContinent][1].values()), k = 1)[0]
                 date_of_birth = Faker().date_of_birth(minimum_age = 32, maximum_age = 65)
                 new_manager = Managers(
+                    id = str(uuid.uuid4()),
                     first_name = Faker().first_name_male(),
                     last_name = Faker().first_name(),
                     nationality = country,
@@ -94,19 +95,21 @@ class Managers(Base):
             with open(f"Images/Countries/{new_manager.nationality.lower()}.png", 'rb') as file:
                 new_manager.flag  =  file.read()
 
+            managerID = new_manager.id
+
             session.add(new_manager)
             session.commit()
             updateProgress(1)
 
             if user:
-                Teams.add_teams(chosenTeam, new_manager.first_name, new_manager.last_name)
+                Teams.add_teams(chosenTeam, new_manager.first_name, new_manager.last_name, managerID)
                 updateProgress(2)
                 Referees.add_referees()
                 updateProgress(3)
                 League.add_league(LEAGUE_NAME, FIRST_YEAR, 0, 3)
                 updateProgress(None)
 
-            return new_manager
+            return managerID
         except Exception as e:
             session.rollback()
             raise e
@@ -209,7 +212,7 @@ class Teams(Base):
     level = Column(Integer, nullable = False)
 
     @classmethod
-    def add_teams(cls, chosenTeamName, manager_first_name, manager_last_name):
+    def add_teams(cls, chosenTeamName, manager_first_name, manager_last_name, manager_id):
         session = DatabaseManager().get_session()
         try:
             with open("data/teams.json", 'r') as file:
@@ -225,13 +228,13 @@ class Teams(Base):
                     logo = file.read()
 
                 if name != chosenTeamName:
-                    manager = Managers.add_manager()
+                    managerID = Managers.add_manager()
                 else:
-                    manager = Managers.get_manager_by_name(manager_first_name, manager_last_name)
+                    managerID = manager_id 
 
                 new_team = Teams(
                     id = str(uuid.uuid4()),
-                    manager_id = manager.id,
+                    manager_id = managerID,
                     name = name,
                     year_created = year_created,
                     stadium = stadium,
@@ -283,7 +286,7 @@ class Teams(Base):
         session = DatabaseManager().get_session()
         try:
             teams = session.query(Teams).all()
-            return teams
+            return [team.id for team in teams]
         finally:
             session.close()
 
@@ -546,10 +549,10 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def get_player_by_name(cls, first_name, last_name):
+    def get_player_by_name(cls, first_name, last_name, team_id):
         session = DatabaseManager().get_session()
         try:
-            player = session.query(Players).filter(Players.first_name == first_name, Players.last_name == last_name).first()
+            player = session.query(Players).filter(Players.first_name == first_name, Players.last_name == last_name, Players.team_id == team_id).first()
             return player
         finally:
             session.close()
@@ -591,6 +594,12 @@ class Players(Base):
             player = session.query(Players).filter(Players.id == id).first()
             if player:
                 player.morale += morale
+
+                if player.morale < 0:
+                    player.morale = 0
+                elif player.morale > 100:
+                    player.morale = 100
+
                 session.commit()
             else:
                 return None
@@ -932,6 +941,22 @@ class Matches(Base):
             session.close()
 
     @classmethod
+    def get_all_played_referee_matches(cls, referee_id):
+        session = DatabaseManager().get_session()
+        try:
+            matches = (
+                session.query(Matches)
+                .join(TeamLineup, TeamLineup.match_id == Matches.id)
+                .filter(Matches.referee_id == referee_id)
+                .distinct()
+                .all()
+            )
+            return matches
+        finally:
+            session.close()
+
+
+    @classmethod
     def get_matchday_for_league(cls, league_id, matchday):
         session = DatabaseManager().get_session()
         try:
@@ -1246,6 +1271,15 @@ class MatchEvents(Base):
         session = DatabaseManager().get_session()
         try:
             events = session.query(MatchEvents).filter(MatchEvents.event_type == event_type).all()
+            return events
+        finally:
+            session.close()
+
+    @classmethod
+    def get_event_by_type_and_match(cls, event_type, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            events = session.query(MatchEvents).filter(MatchEvents.event_type == event_type, MatchEvents.match_id == match_id).all()
             return events
         finally:
             session.close()
@@ -1673,6 +1707,8 @@ class League(Base):
                 relegation = relegation
             )
 
+            leagueID = new_league.id
+
             session.add(new_league)
             session.commit()
 
@@ -1680,13 +1716,13 @@ class League(Base):
 
             teams = Teams.get_all_teams()
 
-            for i, team in enumerate(teams):
-                LeagueTeams.add_team(new_league.id, team.id, i + 1)
+            for i, teamID in enumerate(teams):
+                LeagueTeams.add_team(leagueID, teamID, i + 1)
                 updateProgress(None)
 
             updateProgress(4)
 
-            cls.generate_schedule(teams, new_league.id)
+            cls.generate_schedule(teams, leagueID)
 
             return new_league
         except Exception as e:
@@ -1696,10 +1732,9 @@ class League(Base):
             session.close()
 
     @classmethod
-    def generate_schedule(cls, teams, league_id):
+    def generate_schedule(cls, team_ids, league_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.id for team in teams]
             schedule = []
 
             # Generate the first round of matches
@@ -1987,15 +2022,32 @@ class Referees(Base):
     first_name = Column(String(128), nullable = False)
     last_name = Column(String(128), nullable = False)
     severity = Column(Enum("low", "medium", "high"), nullable = False)
+    flag = Column(BLOB)
+    nationality = Column(String(128), nullable = False)
+    age = Column(Integer, nullable = False)
+    date_of_birth = Column(String(128), nullable = False)
 
     @classmethod
     def add_referee(cls):
         session = DatabaseManager().get_session()
         try:
+            selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
+            _, countryWeights = COUNTRIES[selectedContinent]
+            country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
+
+            with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
+                flag = file.read()
+
+            faker = Faker()
+            date_of_birth = faker.date_of_birth(minimum_age = 15, maximum_age = 17)
             new_referee = Referees(
-                first_name = Faker().first_name_male(),
-                last_name = Faker().last_name(),
-                severity = random.choices(["low", "medium", "high"], k = 1)[0]
+                first_name = faker.first_name_male(),
+                last_name = faker.last_name(),
+                severity = random.choices(["low", "medium", "high"], k = 1)[0],
+                flag = flag,
+                nationality = country,
+                age = 2024 - date_of_birth.year,
+                date_of_birth = str(date_of_birth)
             )
 
             session.add(new_referee)
@@ -2013,10 +2065,23 @@ class Referees(Base):
         session = DatabaseManager().get_session()
         try:
             for _ in range(NUM_TEAMS * 2):
+                selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
+                _, countryWeights = COUNTRIES[selectedContinent]
+                country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
+
+                with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
+                    flag = file.read()
+
+                faker = Faker()
+                date_of_birth = faker.date_of_birth(minimum_age = 30, maximum_age = 65)
                 new_referee = Referees(
-                    first_name = Faker().first_name_male(),
-                    last_name = Faker().last_name_male(),
-                    severity = random.choices(["low", "medium", "high"], k = 1)[0]
+                    first_name = faker.first_name_male(),
+                    last_name = faker.last_name_male(),
+                    severity = random.choices(["low", "medium", "high"], k = 1)[0],
+                    flag = flag,
+                    nationality = country,
+                    age = 2024 - date_of_birth.year,
+                    date_of_birth = str(date_of_birth)
                 )
 
                 session.add(new_referee)

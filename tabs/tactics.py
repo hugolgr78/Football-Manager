@@ -230,7 +230,7 @@ class Tactics(ctk.CTkFrame):
 
         self.lineupPitch.increment_counter()
 
-        player = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1])
+        player = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1], self.team.id)
         self.selectedLineup[self.selected_position] = player.id
 
         LineupPlayerFrame(self.lineupPitch, 
@@ -258,7 +258,7 @@ class Tactics(ctk.CTkFrame):
                     frame.showCheckBox()
 
     def removePlayer(self, frame, playerName, playerPosition):
-        playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1])
+        playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1], self.team.id)
         for position, playerID in self.selectedLineup.items():
             if playerID == playerData.id:
                 del self.selectedLineup[position]

@@ -4,6 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 from PIL import Image
 import io
+from utils.teamLogo import TeamLogo
 
 class RefereeProfile(ctk.CTkFrame):
     def __init__(self, parent, referee, changeBackFunction = None):
@@ -74,6 +75,7 @@ class Profile(ctk.CTkFrame):
 
         self.parent = parent
         self.referee = referee
+        self.parentTab = self.parent.parent
 
         src = Image.open("Images/default_user.png")
         src.thumbnail((200, 200))
@@ -93,3 +95,69 @@ class Profile(ctk.CTkFrame):
 
         canvas = ctk.CTkCanvas(self, width = 1000, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = 0.5, rely = 0.4, anchor = "center")
+
+        statsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 750, height = 300, corner_radius = 15)
+        statsFrame.place(relx = 0.5, rely = 0.7, anchor = "center")
+
+        gamesRefereed = Matches.get_all_played_referee_matches(self.referee.id)
+
+        if gamesRefereed:
+            headerFrame = ctk.CTkFrame(statsFrame, fg_color = GREY_BACKGROUND, width = 740, height = 50, corner_radius = 15)
+            headerFrame.pack(expand = True, fill = "both", pady = 5, padx = 5)
+
+            headerFrame.grid_columnconfigure(0, weight = 5)
+            headerFrame.grid_columnconfigure((1, 2), weight = 1)
+            headerFrame.grid_propagate(False)
+
+            ctk.CTkLabel(headerFrame, text = "Game", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).grid(row = 0, column = 0, sticky = "w", padx = 10, pady = 5)
+
+            src = Image.open("Images/yellowCard.png")
+            src.thumbnail((35, 35))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(headerFrame, text = "", image = img, width = 20, fg_color = GREY_BACKGROUND).grid(row = 0, column = 1, pady = 5)
+
+            src = Image.open("Images/redCard.png")
+            src.thumbnail((35, 35))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(headerFrame, text = "", image = img, width = 20, fg_color = GREY_BACKGROUND).grid(row = 0, column = 2, pady = 5)
+
+            if len(gamesRefereed) > 4:
+                dataFrame = ctk.CTkScrollableFrame(statsFrame, fg_color = GREY_BACKGROUND, width = 740, height = 240, corner_radius = 15)
+            else:
+                dataFrame = ctk.CTkFrame(statsFrame, fg_color = GREY_BACKGROUND, width = 740, height = 240, corner_radius = 15)
+
+            dataFrame.pack(expand = True, fill = "both", pady = 5, padx = 5)
+
+            dataFrame.grid_columnconfigure(0, weight = 5)
+            dataFrame.grid_columnconfigure((1, 2), weight = 1)
+            dataFrame.grid_propagate(False)
+
+            for match in gamesRefereed:
+                matchFrame = ctk.CTkFrame(dataFrame, fg_color = GREY_BACKGROUND, width = 10, height = 50, corner_radius = 0)
+                matchFrame.grid(row = gamesRefereed.index(match), column = 0, pady = 5, padx = 10, sticky = "ew")
+
+                homeTeam = Teams.get_team_by_id(match.home_id)
+                awayTeam = Teams.get_team_by_id(match.away_id) 
+
+                homeSrc = Image.open(io.BytesIO(homeTeam.logo))
+                homeSrc.thumbnail((35, 35))
+                homeLogo = TeamLogo(matchFrame, homeSrc, homeTeam, GREY_BACKGROUND, 0.4, 0.5, "center", self.parentTab)
+                ctk.CTkLabel(matchFrame, text = homeTeam.name, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.35, rely = 0.5, anchor = "e")
+
+                awaySrc = Image.open(io.BytesIO(awayTeam.logo))
+                awaySrc.thumbnail((35, 35))
+                awayLogo = TeamLogo(matchFrame, awaySrc, awayTeam, GREY_BACKGROUND, 0.6, 0.5, "center", self.parentTab)
+                ctk.CTkLabel(matchFrame, text = awayTeam.name, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.65, rely = 0.5, anchor = "w")
+
+                text = f"{match.score_home} - {match.score_away}"
+                ctk.CTkLabel(matchFrame, text = text, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+                yellowCards = MatchEvents.get_event_by_type_and_match("yellow_card", match.id)
+                redCards = MatchEvents.get_event_by_type_and_match("red_card", match.id)
+
+                ctk.CTkLabel(dataFrame, text = len(yellowCards), fg_color = GREY_BACKGROUND, width = 20, font = (APP_FONT, 15)).grid(row = gamesRefereed.index(match), column = 1, pady = 5, padx = 5)
+                ctk.CTkLabel(dataFrame, text = len(redCards), fg_color = GREY_BACKGROUND, width = 20, font = (APP_FONT, 15)).grid(row = gamesRefereed.index(match), column = 2, pady = 5, padx = 5)
+
+        else:
+            ctk.CTkLabel(statsFrame, text = "No games refereed yet", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+

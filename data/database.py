@@ -941,6 +941,22 @@ class Matches(Base):
             session.close()
 
     @classmethod
+    def get_all_played_referee_matches(cls, referee_id):
+        session = DatabaseManager().get_session()
+        try:
+            matches = (
+                session.query(Matches)
+                .join(TeamLineup, TeamLineup.match_id == Matches.id)
+                .filter(Matches.referee_id == referee_id)
+                .distinct()
+                .all()
+            )
+            return matches
+        finally:
+            session.close()
+
+
+    @classmethod
     def get_matchday_for_league(cls, league_id, matchday):
         session = DatabaseManager().get_session()
         try:
@@ -1255,6 +1271,15 @@ class MatchEvents(Base):
         session = DatabaseManager().get_session()
         try:
             events = session.query(MatchEvents).filter(MatchEvents.event_type == event_type).all()
+            return events
+        finally:
+            session.close()
+
+    @classmethod
+    def get_event_by_type_and_match(cls, event_type, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            events = session.query(MatchEvents).filter(MatchEvents.event_type == event_type, MatchEvents.match_id == match_id).all()
             return events
         finally:
             session.close()

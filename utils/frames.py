@@ -288,17 +288,16 @@ class MatchFrame(ctk.CTkFrame):
 
         RefereeProfileLabel(self.otherInfoFrame, self.matchReferee, f"{self.matchReferee.first_name} {self.matchReferee.last_name}", "Referee: ", "", 260, 30, self.parentTab, "white", DARK_GREY, 15).place(relx = 0.03, rely = 0.13, anchor = "w")
         
-        # ctk.CTkLabel(self.otherInfoFrame, text = f"Referee: {self.matchReferee.first_name} {self.matchReferee.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.13, anchor = "w")
-        ctk.CTkLabel(self.otherInfoFrame, text = f"Stadium: {self.homeTeam.stadium}", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.38, anchor = "w")
-        ctk.CTkLabel(self.otherInfoFrame, text = f"Time: {self.match.time}", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.62, anchor = "w")
+        ctk.CTkLabel(self.otherInfoFrame, text = f"Stadium: {self.homeTeam.stadium}", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.38, anchor = "w")
+        ctk.CTkLabel(self.otherInfoFrame, text = f"Time: {self.match.time}", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.62, anchor = "w")
         
         if self.played:
             playerOTM = TeamLineup.get_player_OTM(self.match.id)
             player = Players.get_player_by_id(playerOTM.player_id)
 
-            ctk.CTkLabel(self.otherInfoFrame, text = f"PoTM: {player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
+            ctk.CTkLabel(self.otherInfoFrame, text = f"PoTM: {player.first_name} {player.last_name}", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
         else:
-            ctk.CTkLabel(self.otherInfoFrame, text = "PoTM: N/A", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
+            ctk.CTkLabel(self.otherInfoFrame, text = "PoTM: N/A", fg_color = DARK_GREY, text_color = "white", font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
 
 class MatchdayFrame(ctk.CTkFrame):
     def __init__(self, parent, matchday, matchdayNum, currentMatchday, parentFrame, parentTab, width, heigth, fgColor, relx, rely, anchor):

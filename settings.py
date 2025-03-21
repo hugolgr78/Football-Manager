@@ -338,7 +338,7 @@ def get_morale_change(match_result, player_rating, goal_difference):
     if match_result == "win":
         base_morale = 5
     elif match_result == "draw":
-        base_morale = 0
+        base_morale = 1
     else:  # loss
         base_morale = -5
     

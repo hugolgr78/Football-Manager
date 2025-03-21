@@ -594,11 +594,7 @@ class Players(Base):
             player = session.query(Players).filter(Players.id == id).first()
             if player:
                 player.morale += morale
-
-                if player.morale < 0:
-                    player.morale = 0
-                elif player.morale > 100:
-                    player.morale = 100
+                player.morale = min(100, max(0, player.morale))
 
                 session.commit()
             else:
@@ -614,6 +610,8 @@ class Players(Base):
                 player = session.query(Players).filter(Players.id == morale[0]).first()
                 if player:
                     player.morale += morale[1]
+                    player.morale = min(100, max(0, player.morale))
+
             session.commit()
         except Exception as e:
             session.rollback()
@@ -1759,9 +1757,19 @@ class League(Base):
 
             # Add matches to the database
             for i, matchday in enumerate(schedule):
+                assigned_referees = set()  # Keep track of referees assigned for this matchday
                 for home_id, away_id in matchday:
-                    referee = Referees.get_referee_by_id(random.choice([referee.id for referee in session.query(Referees).all()]))
-                    Matches.add_match(league_id, home_id, away_id, referee.id, i + 1)
+                    available_referees = [
+                        referee.id for referee in session.query(Referees).all()
+                        if referee.id not in assigned_referees
+                    ]
+                    if not available_referees:
+                        raise ValueError("Not enough referees to cover all matches for this matchday.")
+
+                    referee_id = random.choice(available_referees)
+                    assigned_referees.add(referee_id)
+
+                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1)
 
                 updateProgress(None)
         except Exception as e:
@@ -2409,3 +2417,4 @@ def setUpProgressBar(progressB, progressL, progressF, percentageL):
     progressLabel = progressL
     progressFrame = progressF
     percentageLabel = percentageL
+

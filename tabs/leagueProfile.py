@@ -6,6 +6,7 @@ from PIL import Image
 import io
 from utils.frames import LeagueTable, MatchdayFrame
 from utils.playerProfileLink import PlayerProfileLink
+from utils.teamLogo import TeamLogo
 
 class LeagueProfile(ctk.CTkFrame):
     def __init__(self, parent, manager_id, changeBackFunction = None):
@@ -567,6 +568,53 @@ class Stats(ctk.CTkFrame):
 
         self.parent = parent
         self.league = league
+
+        self.currentStat = None
+
+        self.statsFrame = ctk.CTkScrollableFrame(self, fg_color = GREY_BACKGROUND, width = 200, height = 590, corner_radius = 15)
+        self.statsFrame.place(relx = 0, rely = 0, anchor = "nw")
+
+        self.statsDataFrame = ctk.CTkScrollableFrame(self, fg_color = GREY_BACKGROUND, width = 700, height = 590, corner_radius = 15)
+        self.statsDataFrame.place(relx = 0.98, rely = 0, anchor = "ne")
+
+        self.leagueTeams = LeagueTeams.get_teams_by_league(self.league.id)
+
+        for cat in TEAM_STATS:
+            ctk.CTkLabel(self.statsFrame, text = cat[0], font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND, height = 10).pack(pady = 5)
+            canvas = ctk.CTkCanvas(self.statsFrame, width = 200, height = 5, bg = APP_BLUE, bd = 0, highlightthickness = 0)
+            canvas.pack(pady = 5)
+
+            for stat in cat[1:]:
+                fontSize = 15 if len(stat) < 25 else 14
+                button = ctk.CTkButton(self.statsFrame, text = stat, font = (APP_FONT, fontSize), fg_color = GREY_BACKGROUND, corner_radius = 5, height = 30, width = 300, hover_color = DARK_GREY, anchor = "w", command = lambda statName = stat: self.getStat(statName))
+                button.pack(pady = 5)
+
+    def getStat(self, statName):
+
+        if self.currentStat == statName:
+            return
+
+        for frame in self.statsDataFrame.winfo_children():
+            frame.destroy()
+
+        self.currentStat = statName
+        stats = STAT_FUNCTIONS[statName](self.leagueTeams, self.league.id)
+        
+        for i, statsData in enumerate(stats):
+            frame = ctk.CTkFrame(self.statsDataFrame, fg_color = GREY_BACKGROUND, width = 690, height = 40)
+            frame.pack(pady = 5)
+
+            team = Teams.get_team_by_id(statsData[0])
+
+            ctk.CTkLabel(frame, text = f"{i + 1}.", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+            src = Image.open(io.BytesIO(team.logo))
+            src.thumbnail((30, 30))
+            TeamLogo(frame, src, team, GREY_BACKGROUND, 0.15, 0.5, "center", self.parent)
+
+            ctk.CTkLabel(frame, text = team.name, font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.2, rely = 0.5, anchor = "w")
+
+            ctk.CTkLabel(frame, text = statsData[1], font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
 
 class History(ctk.CTkScrollableFrame):
     def __init__(self, parent, league):

@@ -1263,6 +1263,36 @@ class MatchEvents(Base):
             return events
         finally:
             session.close()
+
+    @classmethod
+    def get_events_by_team(cls, team_id, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            matches = session.query(Matches).filter(
+                or_(Matches.home_id == team_id, Matches.away_id == team_id),
+                Matches.league_id == league_id
+            ).all()
+
+            all_events = []
+            for match in matches:
+                events = cls.get_events_by_match_and_team(team_id, match.id)
+                all_events.extend(events)
+
+            return all_events
+        finally:
+            session.close()
+        
+    @classmethod
+    def get_events_by_match_and_team(cls, team_id, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            events = session.query(MatchEvents).join(Players).filter(
+                MatchEvents.match_id == match_id,
+                Players.team_id == team_id
+            ).all()
+            return events
+        finally:
+            session.close()
         
     @classmethod
     def get_event_by_type(cls, event_type):
@@ -2388,6 +2418,133 @@ class PlayerBans(Base):
         finally:
             session.close()
 
+class StatsManager:
+    @staticmethod
+    def get_goals_scored(leagueTeams, league_id):
+        goals_scored = []
+        for team in leagueTeams:
+            goals_scored.append((team.team_id, team.goals_scored))
+        
+        goals_scored.sort(key = lambda x: x[1], reverse = True)
+        return goals_scored
+
+    @staticmethod
+    def get_penalties_scored(leagueTeams, league_id):
+        # get the number of total penalties and then the number scored returned as a string "scored/total"
+        penalties = []
+        for team in leagueTeams:
+            events = MatchEvents.get_events_by_team(team.team_id, league_id)
+
+            penalties_scored = 0
+            penalties_taken = 0
+            for event in events:
+                if event.event_type == "penalty_goal":
+                    penalties_scored += 1
+                    penalties_taken += 1
+                if event.event_type == "penalty_miss":
+                    penalties_taken += 1
+
+            penalties.append((team.team_id, f"{penalties_scored}/{penalties_taken}", penalties_scored, penalties_taken))
+
+        # Sort by penalties scored (descending) and penalties taken (ascending)
+        penalties.sort(key=lambda x: (-x[2], x[3]))
+        return penalties
+
+    @staticmethod
+    def get_goals_scored_in_first_15(leagueTeams, league_id):
+        goals_scored = []
+        for team in leagueTeams:
+            events = MatchEvents.get_events_by_team(team.team_id, league_id)
+
+            goals = 0
+            for event in events:
+
+                if "+" in event.time:
+                    time = event.time.split("+")[0]
+                else:
+                    time = event.time
+
+                if (event.event_type == "goal" or event.event_type == "penalty_goal" or event.event_type == "own_goal") and int(time) <= 15:
+                    goals += 1
+
+            goals_scored.append((team.team_id, goals))
+
+        goals_scored.sort(key = lambda x: x[1], reverse = True)
+        return goals_scored
+    
+    @staticmethod
+    def get_goals_scored_in_last_15(leagueTeams, league_id):
+        goals_scored = []
+        for team in leagueTeams:
+            events = MatchEvents.get_events_by_team(team.team_id, league_id)
+
+            goals = 0
+            for event in events:
+
+                if "+" in event.time:
+                    time = event.time.split("+")[0]
+                else:
+                    time = event.time
+
+                if (event.event_type == "goal" or event.event_type == "penalty_goal" or event.event_type == "own_goal") and int(time) >= 75:
+                    goals += 1
+
+            goals_scored.append((team.team_id, goals))
+
+        goals_scored.sort(key = lambda x: x[1], reverse = True)
+        return goals_scored
+
+    @staticmethod
+    def get_goals_by_substitutes(leagueteams, league_id):
+        goals_scored = []
+        for team in leagueteams:
+            events = MatchEvents.get_events_by_team(team.team_id, league_id)
+
+            goal_events = [event for event in events if event.event_type == "goal" or event.event_type == "penalty_goal"]
+            substitutes = [event.player_id for event in events if event.event_type == "sub_on"]
+
+            goals = 0
+            for event in goal_events:
+                if event.player_id in substitutes:
+                    goals += 1
+
+            goals_scored.append((team.team_id, goals))
+        
+        goals_scored.sort(key = lambda x: x[1], reverse = True)
+        return goals_scored
+
+    @staticmethod
+    def get_fastest_goal_scored(leagueTeams, league_id):
+        fastest_goals = []
+        for team in leagueTeams:
+            events = MatchEvents.get_events_by_team(team.team_id, league_id)
+
+            goals = [event for event in events if event.event_type in ["goal", "penalty_goal"]]
+            if not goals:
+                fastest_goals.append((team.team_id, "N/A"))
+            else:
+                fastest = min(goals, key=lambda x: int(x.time.split("+")[0].strip()))
+                fastest_goals.append((team.team_id, fastest.time))
+
+        fastest_goals.sort(key=lambda x: int(x[1].split("+")[0].strip()) if x[1] != "N/A" else float("inf"))
+        return fastest_goals
+
+    @staticmethod
+    def get_latest_goal_scored(leagueTeams, league_id):
+        latest_goals = []
+        for team in leagueTeams:
+            events = MatchEvents.get_events_by_team(team.team_id, league_id)
+
+            goals = [event for event in events if event.event_type in ["goal", "penalty_goal"]]
+            if not goals:
+                latest_goals.append((team.team_id, "N/A"))
+            else:
+                latest = max(goals, key=lambda x: int(x.time.split("+")[0].strip()))
+                latest_goals.append((team.team_id, latest.time))
+
+        latest_goals.sort(key=lambda x: int(x[1].split("+")[0].strip()) if x[1] != "N/A" else float("-inf"), reverse=True)
+        return latest_goals
+    
 def updateProgress(textIndex):
     global progressBar, progressLabel, progressFrame, percentageLabel, PROGRESS
     PROGRESS += 1

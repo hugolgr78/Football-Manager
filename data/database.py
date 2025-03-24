@@ -921,6 +921,18 @@ class Matches(Base):
             session.close()
 
     @classmethod
+    def get_all_matches_by_team_and_comp(cls, team_id, comp_id):
+        session = DatabaseManager().get_session()
+        try:
+            matches = session.query(Matches).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                Matches.league_id == comp_id
+            ).all()
+            return matches
+        finally:
+            session.close()
+
+    @classmethod
     def get_all_matches_by_league(cls, league_id):
         session = DatabaseManager().get_session()
         try:
@@ -2519,14 +2531,31 @@ class StatsManager:
         for team in leagueTeams:
             events = MatchEvents.get_events_by_team(team.team_id, league_id)
 
+            # Filter only goal events
             goals = [event for event in events if event.event_type in ["goal", "penalty_goal"]]
             if not goals:
                 fastest_goals.append((team.team_id, "N/A"))
             else:
-                fastest = min(goals, key=lambda x: int(x.time.split("+")[0].strip()))
-                fastest_goals.append((team.team_id, fastest.time))
+                def parse_time(time_str):
+                    parts = time_str.split("+")
+                    main_time = int(parts[0].strip())
+                    stoppage_time = int(parts[1].strip()) if len(parts) > 1 else 0
+                    return main_time + stoppage_time
 
-        fastest_goals.sort(key=lambda x: int(x[1].split("+")[0].strip()) if x[1] != "N/A" else float("inf"))
+                # Find the fastest goal
+                fastest = min(goals, key=lambda x: parse_time(x.time))
+                fastest_goals.append((team.team_id, fastest.time + "'"))
+
+        def parse_time_for_sorting(time_str):
+            if time_str == "N/A":
+                return float("inf")
+            time_str = time_str.replace("'", "")
+            parts = time_str.split("+")
+            main_time = int(parts[0].strip())
+            stoppage_time = int(parts[1].strip()) if len(parts) > 1 else 0
+            return main_time + stoppage_time
+
+        fastest_goals.sort(key=lambda x: parse_time_for_sorting(x[1]))
         return fastest_goals
 
     @staticmethod
@@ -2535,16 +2564,248 @@ class StatsManager:
         for team in leagueTeams:
             events = MatchEvents.get_events_by_team(team.team_id, league_id)
 
+
             goals = [event for event in events if event.event_type in ["goal", "penalty_goal"]]
             if not goals:
                 latest_goals.append((team.team_id, "N/A"))
             else:
-                latest = max(goals, key=lambda x: int(x.time.split("+")[0].strip()))
-                latest_goals.append((team.team_id, latest.time))
+                def parse_time(time_str):
+                    parts = time_str.split("+")
+                    main_time = int(parts[0].strip())
+                    stoppage_time = int(parts[1].strip()) if len(parts) > 1 else 0
+                    return main_time + stoppage_time
+                
+                latest = max(goals, key=lambda x: parse_time(x.time))
+                latest_goals.append((team.team_id, latest.time + "'"))
 
-        latest_goals.sort(key=lambda x: int(x[1].split("+")[0].strip()) if x[1] != "N/A" else float("-inf"), reverse=True)
+        def parse_time_for_sorting(time_str):
+            if time_str == "N/A":
+                return float("-inf") 
+            
+            time_str = time_str.replace("'", "")
+            parts = time_str.split("+")
+            main_time = int(parts[0].strip())
+            stoppage_time = int(parts[1].strip()) if len(parts) > 1 else 0
+            return main_time + stoppage_time
+
+        latest_goals.sort(key=lambda x: parse_time_for_sorting(x[1]), reverse=True)
         return latest_goals
+        
+    @staticmethod
+    def get_goals_conceded(leagueTeams, league_id):
+        goals_conceded = []
+        for team in leagueTeams:
+            goals_conceded.append((team.team_id, team.goals_conceded))
+        
+        goals_conceded.sort(key = lambda x: x[1])
+        return goals_conceded
+
+    @staticmethod
+    def get_clean_sheets(leagueTeams, league_id):
+        clean_sheets = []
+        for team in leagueTeams:
+            events = MatchEvents.get_events_by_team(team.team_id, league_id)
+
+            clean_sheets_count = 0
+            for event in events:
+                if event.event_type == "clean_sheet":
+                    clean_sheets_count += 1
+
+            clean_sheets.append((team.team_id, clean_sheets_count))
+
+        clean_sheets.sort(key = lambda x: x[1], reverse = True)
+        return clean_sheets
+
+    @staticmethod
+    def get_yellow_cards(leagueTeams, league_id):
+        yellow_cards = []
+        for team in leagueTeams:
+            events = MatchEvents.get_events_by_team(team.team_id, league_id)
+
+            yellow_cards_count = 0
+            for event in events:
+                if event.event_type == "yellow_card":
+                    yellow_cards_count += 1
+            
+            yellow_cards.append((team.team_id, yellow_cards_count))
+
+        yellow_cards.sort(key = lambda x: x[1], reverse = True)
+        return yellow_cards
+
+    @staticmethod
+    def get_red_cards(leagueTeams, league_id):
+        red_cards = []
+        for team in leagueTeams:
+            events = MatchEvents.get_events_by_team(team.team_id, league_id)
+
+            red_cards_count = 0
+            for event in events:
+                if event.event_type == "red_card":
+                    red_cards_count += 1
+            
+            red_cards.append((team.team_id, red_cards_count))
+
+        red_cards.sort(key = lambda x: x[1], reverse = True)
+        return red_cards
+
+    @staticmethod
+    def get_own_goals(leagueTeams, league_id):
+        own_goals = []
+        league_own_goals = MatchEvents.get_all_own_goals(league_id)
+        for team in leagueTeams:
+            
+            own_goal_count = 0
+            for goal in league_own_goals:
+                player = Players.get_player_by_id(goal.player_id)
+                if player.team_id == team.team_id:
+                    own_goal_count += 1
+                    league_own_goals.remove(goal)
     
+            own_goals.append((team.team_id, own_goal_count))
+
+        own_goals.sort(key = lambda x: x[1], reverse = True)
+        return own_goals
+
+    @staticmethod
+    def get_penalties_saved(leagueTeams, league_id):
+        penalties_saved = []
+        for team in leagueTeams:
+            events = MatchEvents.get_events_by_team(team.team_id, league_id)
+
+            penalties_saved_count = 0
+            for event in events:
+                if event.event_type == "penalty_saved":
+                    penalties_saved_count += 1
+            
+            penalties_saved.append((team.team_id, penalties_saved_count))
+
+        penalties_saved.sort(key = lambda x: x[1], reverse = True)
+        return penalties_saved
+
+    @staticmethod
+    def get_goals_conceded_in_first_15(leagueTeams, league_id):
+        goals_conceded = []
+        for team in leagueTeams:
+            matches = Matches.get_all_matches_by_team_and_comp(team.team_id, league_id)
+
+            goals = 0
+            for match in matches:
+                oppID = match.home_id if match.away_id == team.team_id else match.away_id
+                events = MatchEvents.get_events_by_match_and_team(oppID, match.id)
+
+                for event in events:
+                    if "+" in event.time:
+                        time = event.time.split("+")[0]
+                    else:
+                        time = event.time
+
+                    if (event.event_type == "goal" or event.event_type == "penalty_goal" or event.event_type == "own_goal") and int(time) <= 15:
+                        goals += 1
+                
+            goals_conceded.append((team.team_id, goals))
+        
+        goals_conceded.sort(key = lambda x: x[1], reverse = True)
+        return goals_conceded
+
+    @staticmethod
+    def get_goals_conceded_in_last_15(leagueTeams, league_id):
+        goals_conceded = []
+        for team in leagueTeams:
+            matches = Matches.get_all_matches_by_team_and_comp(team.team_id, league_id)
+
+            goals = 0
+            for match in matches:
+                oppID = match.home_id if match.away_id == team.team_id else match.away_id
+                events = MatchEvents.get_events_by_match_and_team(oppID, match.id)
+
+                for event in events:
+                    if "+" in event.time:
+                        time = event.time.split("+")[0]
+                    else:
+                        time = event.time
+
+                    if (event.event_type == "goal" or event.event_type == "penalty_goal" or event.event_type == "own_goal") and int(time) >= 75:
+                        goals += 1
+                
+            goals_conceded.append((team.team_id, goals))
+        
+        goals_conceded.sort(key = lambda x: x[1], reverse = True)
+        return goals_conceded
+
+    @staticmethod
+    def get_fastest_goal_conceded(leagueTeams, league_id):
+        fastest_goals = []
+        for team in leagueTeams:
+            matches = Matches.get_all_matches_by_team_and_comp(team.team_id, league_id)
+
+            goals = []
+            for match in matches:
+                oppID = match.home_id if match.away_id == team.team_id else match.away_id
+                events = MatchEvents.get_events_by_match_and_team(oppID, match.id)
+
+                goals += [event for event in events if event.event_type in ["goal", "penalty_goal"]]
+
+            if not goals:
+                fastest_goals.append((team.team_id, "N/A"))
+            else:
+                def parse_time(time_str):
+                    parts = time_str.split("+")
+                    main_time = int(parts[0].strip())
+                    stoppage_time = int(parts[1].strip()) if len(parts) > 1 else 0
+                    return main_time + stoppage_time
+
+                fastest = min(goals, key=lambda x: parse_time(x.time))
+                fastest_goals.append((team.team_id, fastest.time + "'"))
+
+        def parse_time_for_sorting(time_str):
+            if time_str == "N/A":
+                return float("inf")
+            time_str = time_str.replace("'", "")
+            parts = time_str.split("+")
+            main_time = int(parts[0].strip())
+            stoppage_time = int(parts[1].strip()) if len(parts) > 1 else 0
+            return main_time + stoppage_time
+
+        fastest_goals.sort(key=lambda x: parse_time_for_sorting(x[1]))
+        return fastest_goals
+    
+    @staticmethod
+    def get_latest_goal_conceded(leagueTeams, league_id):
+        latest_goals = []
+        for team in leagueTeams:
+            matches = Matches.get_all_matches_by_team_and_comp(team.team_id, league_id)
+
+            goals = []
+            for match in matches:
+                oppID = match.home_id if match.away_id == team.team_id else match.away_id
+                events = MatchEvents.get_events_by_match_and_team(oppID, match.id)
+
+                goals += [event for event in events if event.event_type in ["goal", "penalty_goal"]]
+
+            if not goals:
+                latest_goals.append((team.team_id, "N/A"))
+            else:
+                def parse_time(time_str):
+                    parts = time_str.split("+")
+                    main_time = int(parts[0].strip())
+                    stoppage_time = int(parts[1].strip()) if len(parts) > 1 else 0
+                    return main_time + stoppage_time
+
+                latest = max(goals, key=lambda x: parse_time(x.time))
+                latest_goals.append((team.team_id, latest.time + "'"))
+
+        def parse_time_for_sorting(time_str):
+            if time_str == "N/A":
+                return float("-inf")
+            time_str = time_str.replace("'", "")
+            parts = time_str.split("+")
+            main_time = int(parts[0].strip())
+            stoppage_time = int(parts[1].strip()) if len(parts) > 1 else 0
+            return main_time + stoppage_time
+
+        latest_goals.sort(key=lambda x: parse_time_for_sorting(x[1]), reverse=True)
+        return latest_goals
+
 def updateProgress(textIndex):
     global progressBar, progressLabel, progressFrame, percentageLabel, PROGRESS
     PROGRESS += 1

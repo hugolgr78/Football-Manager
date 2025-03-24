@@ -448,7 +448,7 @@ def get_player_response(prompt, rating, is_injured):
     return random.choice(responses[prompt][response_type]), accepted
 
 ATTACK_STATS = ["Attack", "Goals scored", "Penalties scored", "Goals scored in the first 15", "Goals scored in the last 15", "Goals by substitutes", "Fastest goal scored", "Latest goal scored"]
-DEFENSIVE_STATS = ["Defense", "Yellow cards", "Red cards", "Clean sheets", "Goals conceeded", "Own goals", "Penalties saved", "Goal conceeded in the first 15", "Goal conceeded in the last 15", "Fastest goal conceeded", "Latest goal conceeded"]
+DEFENSIVE_STATS = ["Defense", "Goals conceded", "Clean sheets", "Yellow cards", "Red cards", "Own goals", "Penalties saved", "Goal conceded in the first 15", "Goal conceded in the last 15", "Fastest goal conceded", "Latest goal conceded"]
 MISC_STATS = ["Misc", "Goal difference", "Winning from losing position", "Losing from winning position", "Biggest win", "Biggest loss", "Home performance", "Away performance"]
 STREAK_STATS = ["Streaks", "Longest unbeaten run", "Longest winning streak", "Longest losing streak", "Longest winless streak"]
 
@@ -464,16 +464,16 @@ STAT_FUNCTIONS = {
     "Goals by substitutes": StatsManager.get_goals_by_substitutes,
     "Fastest goal scored": StatsManager.get_fastest_goal_scored,
     "Latest goal scored": StatsManager.get_latest_goal_scored,
-#     "Yellow cards": StatsManager.get_yellow_cards,
-#     "Red cards": StatsManager.get_red_cards,
-#     "Clean sheets": StatsManager.get_clean_sheets,
-#     "Goals conceeded": StatsManager.get_goals_conceeded,
-#     "Own goals": StatsManager.get_own_goals,
-#     "Penalties saved": StatsManager.get_penalties_saved,
-#     "Goal conceeded in the first 15": StatsManager.get_goals_conceeded_in_first_15,
-#     "Goal conceeded in the last 15": StatsManager.get_goals_conceeded_in_last_15,
-#     "Fastest goal conceeded": StatsManager.get_fastest_goal_conceeded,
-#     "Latest goal conceeded": StatsManager.get_latest_goal_conceeded,
+    "Goals conceded": StatsManager.get_goals_conceded,
+    "Clean sheets": StatsManager.get_clean_sheets,
+    "Yellow cards": StatsManager.get_yellow_cards,
+    "Red cards": StatsManager.get_red_cards,
+    "Own goals": StatsManager.get_own_goals,
+    "Penalties saved": StatsManager.get_penalties_saved,
+    "Goal conceded in the first 15": StatsManager.get_goals_conceded_in_first_15,
+    "Goal conceded in the last 15": StatsManager.get_goals_conceded_in_last_15,
+    "Fastest goal conceded": StatsManager.get_fastest_goal_conceded,
+    "Latest goal conceded": StatsManager.get_latest_goal_conceded,
 #     "Goal difference": StatsManager.get_goal_difference,
 #     "Winning from losing position": StatsManager.get_winning_from_losing_position,
 #     "Losing from winning position": StatsManager.get_losing_from_winning_position,

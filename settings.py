@@ -450,7 +450,7 @@ def get_player_response(prompt, rating, is_injured):
 ATTACK_STATS = ["Attack", "Goals scored", "Penalties scored", "Goals scored in the first 15", "Goals scored in the last 15", "Goals by substitutes", "Fastest goal scored", "Latest goal scored"]
 DEFENSIVE_STATS = ["Defense", "Goals conceded", "Clean sheets", "Yellow cards", "Red cards", "Own goals", "Penalties saved", "Goal conceded in the first 15", "Goal conceded in the last 15", "Fastest goal conceded", "Latest goal conceded"]
 MISC_STATS = ["Misc", "Goal difference", "Winning from losing position", "Losing from winning position", "Biggest win", "Biggest loss", "Home performance", "Away performance"]
-STREAK_STATS = ["Streaks", "Longest unbeaten run", "Longest winning streak", "Longest losing streak", "Longest winless streak"]
+STREAK_STATS = ["Streaks", "Longest unbeaten run", "Longest winning streak", "Longest losing streak", "Longest winless streak", "Longest scoring streak", "Longest scoreless streak"]
 
 TEAM_STATS = [ATTACK_STATS, DEFENSIVE_STATS, MISC_STATS, STREAK_STATS]
 
@@ -495,5 +495,7 @@ STAT_FUNCTIONS = {
 #     "Longest unbeaten run": StatsManager.get_longest_unbeaten_run,
 #     "Longest winning streak": StatsManager.get_longest_winning_streak,
 #     "Longest losing streak": StatsManager.get_longest_losing_streak,
-#     "Longest winless streak": StatsManager.get_longest_winless_streak
+#     "Longest winless streak": StatsManager.get_longest_winless_streak,
+#     "Longest scoring streak": StatsManager.get_longest_scoring_streak,
+#     "Longest scoreless streak": StatsManager.get_longest_scoreless_streak,
 }

@@ -454,6 +454,17 @@ STREAK_STATS = ["Streaks", "Longest unbeaten run", "Longest winning streak", "Lo
 
 TEAM_STATS = [ATTACK_STATS, DEFENSIVE_STATS, MISC_STATS, STREAK_STATS]
 
+def parse_time(time_str, reverse = False):
+    if time_str == "N/A":
+        return float("inf") if not reverse else -float("inf")
+    
+    time_str = time_str.replace("'", "")
+
+    parts = time_str.split("+")
+    main_time = int(parts[0].strip())
+    stoppage_time = int(parts[1].strip()) if len(parts) > 1 else 0
+    return main_time + stoppage_time
+
 from data.database import StatsManager
 
 STAT_FUNCTIONS = {
@@ -474,13 +485,13 @@ STAT_FUNCTIONS = {
     "Goal conceded in the last 15": StatsManager.get_goals_conceded_in_last_15,
     "Fastest goal conceded": StatsManager.get_fastest_goal_conceded,
     "Latest goal conceded": StatsManager.get_latest_goal_conceded,
-#     "Goal difference": StatsManager.get_goal_difference,
-#     "Winning from losing position": StatsManager.get_winning_from_losing_position,
-#     "Losing from winning position": StatsManager.get_losing_from_winning_position,
-#     "Biggest win": StatsManager.get_biggest_win,
-#     "Biggest loss": StatsManager.get_biggest_loss,
-#     "Home performance": StatsManager.get_home_performance,
-#     "Away performance": StatsManager.get_away_performance,
+    "Goal difference": StatsManager.get_goal_difference,
+    "Winning from losing position": StatsManager.get_winning_from_losing_position,
+    "Losing from winning position": StatsManager.get_losing_from_winning_position,
+    "Biggest win": StatsManager.get_biggest_win,
+    "Biggest loss": StatsManager.get_biggest_loss,
+    "Home performance": StatsManager.get_home_performance,
+    "Away performance": StatsManager.get_away_performance,
 #     "Longest unbeaten run": StatsManager.get_longest_unbeaten_run,
 #     "Longest winning streak": StatsManager.get_longest_winning_streak,
 #     "Longest losing streak": StatsManager.get_longest_losing_streak,

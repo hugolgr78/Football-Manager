@@ -3111,6 +3111,220 @@ class StatsManager:
         results.sort(key=lambda x: (x[2], -x[3] if x[2] == 0 else x[3]), reverse=True)
         return results
 
+    @staticmethod
+    def get_longest_unbeaten_run(leagueTeams, league_id):
+        """Fetch the longest unbeaten run for each team using multithreading."""
+        
+        def fetch_team_unbeaten_run(team):
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+
+            unbeaten_run = None
+            current_run = 0
+            for match in matches:
+                if match.score_home == match.score_away:
+                    current_run += 1
+                elif match.home_id == team.team_id and match.score_home > match.score_away:
+                    current_run += 1
+                elif match.home_id != team.team_id and match.score_away > match.score_home:
+                    current_run += 1
+                else:
+                    if not unbeaten_run:
+                        unbeaten_run = current_run
+                    elif current_run > unbeaten_run:
+                        unbeaten_run = current_run
+                    current_run = 0
+
+            if not unbeaten_run:
+                unbeaten_run = current_run
+
+            return team.team_id, unbeaten_run
+
+        results = []
+        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
+            futures = {executor.submit(fetch_team_unbeaten_run, team): team for team in leagueTeams}
+            for future in futures:
+                results.append(future.result())
+
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
+    @staticmethod
+    def get_longest_winning_streak(leagueTeams, league_id):
+        """Fetch the longest winning streak for each team using multithreading."""
+        
+        def fetch_team_winning_streak(team):
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+
+            winning_streak = None
+            current_streak = 0
+            for match in matches:
+                if match.home_id == team.team_id and match.score_home > match.score_away:
+                    current_streak += 1
+                elif match.away_id == team.team_id and match.score_away > match.score_home:
+                    current_streak += 1
+                else:
+                    if not winning_streak:
+                        winning_streak = current_streak
+                    elif current_streak > winning_streak:
+                        winning_streak = current_streak
+                    current_streak = 0
+                    
+            if not winning_streak:
+                winning_streak = current_streak
+
+            return team.team_id, winning_streak
+
+        results = []
+        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
+            futures = {executor.submit(fetch_team_winning_streak, team): team for team in leagueTeams}
+            for future in futures:
+                results.append(future.result())
+
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
+    @staticmethod
+    def get_longest_losing_streak(leagueTeams, league_id):
+        """Fetch the longest losing streak for each team using multithreading."""
+        
+        def fetch_team_losing_streak(team):
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+
+            losing_streak = None
+            current_streak = 0
+            for match in matches:
+                if match.home_id == team.team_id and match.score_home < match.score_away:
+                    current_streak += 1
+                elif match.away_id == team.team_id and match.score_away < match.score_home:
+                    current_streak += 1
+                else:
+                    if not losing_streak:
+                        losing_streak = current_streak
+                    elif current_streak > losing_streak:
+                        losing_streak = current_streak
+                    current_streak = 0
+
+            if not losing_streak:
+                losing_streak = current_streak
+
+            return team.team_id, losing_streak
+
+        results = []
+        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
+            futures = {executor.submit(fetch_team_losing_streak, team): team for team in leagueTeams}
+            for future in futures:
+                results.append(future.result())
+
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
+    @staticmethod
+    def get_longest_winless_streak(leagueTeams, league_id):
+        """Fetch the longest winless streak for each team using multithreading."""
+        
+        def fetch_team_winless_streak(team):
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+
+            winless_streak = None
+            current_streak = 0
+            for match in matches:
+                if match.score_home == match.score_away:
+                    current_streak += 1
+                elif match.home_id == team.team_id and match.score_home < match.score_away:
+                    current_streak += 1
+                elif match.away_id == team.team_id and match.score_away < match.score_home:
+                    current_streak += 1
+                else:
+                    if not winless_streak:
+                        winless_streak = current_streak
+                    elif current_streak > winless_streak:
+                        winless_streak = current_streak
+                    current_streak = 0
+
+            if not winless_streak:
+                winless_streak = current_streak
+
+            return team.team_id, winless_streak
+
+        results = []
+        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
+            futures = {executor.submit(fetch_team_winless_streak, team): team for team in leagueTeams}
+            for future in futures:
+                results.append(future.result())
+
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
+    @staticmethod
+    def get_longest_scoring_streak(leagueTeams, league_id):
+        """Fetch the longest scoring streak for each team using multithreading."""
+        
+        def fetch_team_scoring_streak(team):
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+
+            scoring_streak = None
+            current_streak = 0
+            for match in matches:
+                if match.home_id == team.team_id and match.score_home > 0:
+                    current_streak += 1
+                elif match.away_id == team.team_id and match.score_away > 0:
+                    current_streak += 1
+                else:
+                    if not scoring_streak:
+                        scoring_streak = current_streak
+                    elif current_streak > scoring_streak:
+                        scoring_streak = current_streak
+                    current_streak = 0
+
+            if not scoring_streak:
+                scoring_streak = current_streak
+
+            return team.team_id, scoring_streak
+
+        results = []
+        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
+            futures = {executor.submit(fetch_team_scoring_streak, team): team for team in leagueTeams}
+            for future in futures:
+                results.append(future.result())
+
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
+    @staticmethod
+    def get_longest_scoreless_streak(leagueTeams, league_id):
+        """Fetch the longest scoreless streak for each team using multithreading."""
+        
+        def fetch_team_scoreless_streak(team):
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+
+            scoreless_streak = None
+            current_streak = 0
+            for match in matches:
+                if match.home_id == team.team_id and match.score_home == 0:
+                    current_streak += 1
+                elif match.away_id == team.team_id and match.score_away == 0:
+                    current_streak += 1
+                else:
+                    if not scoreless_streak:
+                        scoreless_streak = current_streak
+                    elif current_streak > scoreless_streak:
+                        scoreless_streak = current_streak
+                    current_streak = 0
+
+            if not scoreless_streak:
+                scoreless_streak = current_streak
+
+            return team.team_id, scoreless_streak
+
+        results = []
+        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
+            futures = {executor.submit(fetch_team_scoreless_streak, team): team for team in leagueTeams}
+            for future in futures:
+                results.append(future.result())
+
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
 def updateProgress(textIndex):
     global progressBar, progressLabel, progressFrame, percentageLabel, PROGRESS
     PROGRESS += 1

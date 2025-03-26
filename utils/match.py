@@ -795,12 +795,12 @@ class Match():
                 minute = int(time.split(":")[0]) + 1
 
                 if event["extra"]:
-                    if minute < 50:
+                    if minute <= 50:
                         extraTime = minute - 45
-                        minute = f"45 + {extraTime}'"
+                        minute = f"45 + {extraTime}"
                     else:
                         extraTime = minute - 90
-                        minute = f"90 + {extraTime}'"
+                        minute = f"90 + {extraTime}"
                 else:
                     minute = str(minute)
 
@@ -839,12 +839,12 @@ class Match():
                 minute = int(time.split(":")[0]) + 1
 
                 if event["extra"]:
-                    if minute < 50:
+                    if minute <= 50:
                         extraTime = minute - 45
-                        minute = f"45 + {extraTime}'"
+                        minute = f"45 + {extraTime}"
                     else:
                         extraTime = minute - 90
-                        minute = f"90 + {extraTime}'"
+                        minute = f"90 + {extraTime}"
                 else:
                     minute = str(minute)
 

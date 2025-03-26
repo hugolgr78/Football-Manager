@@ -6,6 +6,7 @@ from PIL import Image
 import io
 from utils.frames import LeagueTable, MatchdayFrame
 from utils.playerProfileLink import PlayerProfileLink
+from utils.teamLogo import TeamLogo
 
 class LeagueProfile(ctk.CTkFrame):
     def __init__(self, parent, manager_id, changeBackFunction = None):
@@ -22,10 +23,11 @@ class LeagueProfile(ctk.CTkFrame):
         self.profile = Profile(self, self.league)
         self.matchdays = None
         self.graphs = None
+        self.stats = None
         self.history = None
-        self.titles = ["Profile", "Matchdays", "Graphs", "History"]
-        self.tabs = [self.profile, self.matchdays, self.graphs, self.history]
-        self.classNames = [Profile, Matchdays, Graphs, History]
+        self.titles = ["Profile", "Matchdays", "Graphs", "Stats", "History"]
+        self.tabs = [self.profile, self.matchdays, self.graphs, self.stats, self.history]
+        self.classNames = [Profile, Matchdays, Graphs, Stats, History]
 
         self.activeButton = 0
         self.buttons = []
@@ -39,10 +41,10 @@ class LeagueProfile(ctk.CTkFrame):
     def createTabs(self):
 
         self.buttonHeight = 40
-        self.buttonWidth = 200
+        self.buttonWidth = 180
         self.button_background = TKINTER_BACKGROUND
         self.hover_background = GREY_BACKGROUND
-        self.gap = 0.102
+        self.gap = 0.09
 
         gapCount = 0
         for i in range(len(self.tabs)):
@@ -103,7 +105,7 @@ class Profile(ctk.CTkFrame):
         self.addStats()
 
     def addStats(self):
-        ctk.CTkLabel(self.statsFrame, text = "Stats", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).pack(pady = 10)
+        ctk.CTkLabel(self.statsFrame, text = "Player stats", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).pack(pady = 10)
 
         self.topScorers = MatchEvents.get_all_goals(self.league.id)
         self.topAssisters = MatchEvents.get_all_assists(self.league.id)
@@ -130,7 +132,7 @@ class Profile(ctk.CTkFrame):
                 stat = [(0, "N/A", "N/A", 0)]
                 expandButton.configure(image = None, state = "disabled")
             else:
-                stat = stat[:5]
+                stat = [entry for entry in stat if entry[3] > 0][:20]
                 expandButton.configure(command = lambda stat = stat, statName = statName: self.expandStats(stat, statName)) 
 
             ctk.CTkLabel(frame, text = statName, font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.15, anchor = "w")
@@ -139,12 +141,63 @@ class Profile(ctk.CTkFrame):
                 ctk.CTkLabel(frame, text = "N/A", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.7, anchor = "w")
             else:
                 player = Players.get_player_by_id(stat[0][0])
-                PlayerProfileLink(frame, player, str(stat[0][1] + " " + stat[0][2]), "white", 0.05, 0.7, "w", GREY_BACKGROUND, self.parent)
+                PlayerProfileLink(frame, player, f"{stat[0][1]} {stat[0][2]}", "white", 0.05, 0.7, "w", GREY_BACKGROUND, self.parent)
 
             ctk.CTkLabel(frame, text = round(stat[0][3], 2), font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.75, rely = 0.7, anchor = "center")
 
     def expandStats(self, stats, statName):
-        pass
+        
+        for frame in self.statsFrame.winfo_children(): 
+            for widget in frame.winfo_children():
+                if isinstance(widget, ctk.CTkButton):
+                    widget.configure(state = "disabled")
+
+        frame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 500, height = 320, corner_radius = 15, background_corner_colors = [GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND], border_width = 3, border_color = APP_BLUE)
+
+        headerFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 485, height = 50, corner_radius = 15)
+        headerFrame.pack(pady = 10, padx = 5)
+
+        ctk.CTkLabel(headerFrame, text = statName, font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+        backButton = ctk.CTkButton(headerFrame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeStats(frame))
+        backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
+                         
+        if len(stats) <= 5:
+            statsFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
+            statsFrame.pack(pady = 10, padx = 5)
+
+            statsFrame.pack_propagate(False)
+        else:
+            statsFrame = ctk.CTkScrollableFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
+            statsFrame.pack(pady = 10, padx = 5)
+
+        for stat in stats:
+            player_id = stat[0]
+            player_name = f"{stat[1]} {stat[2]}"
+            stat_value = stat[3]
+
+            player_frame = ctk.CTkFrame(statsFrame, fg_color = GREY_BACKGROUND, width = 450, height = 40)
+            player_frame.pack(pady = 5, padx = 5)
+
+            src = Image.open("Images/default_user.png")
+            src.thumbnail((30, 30))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(player_frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+            player = Players.get_player_by_id(player_id)
+            PlayerProfileLink(player_frame, player, player_name, "white", 0.2, 0.5, "w", GREY_BACKGROUND, self.parent)
+
+            ctk.CTkLabel(player_frame, text = round(stat_value, 2), font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
+
+        frame.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+    def closeStats(self, frame):
+        frame.destroy()
+
+        for frame in self.statsFrame.winfo_children():
+            for widget in frame.winfo_children():
+                if isinstance(widget, ctk.CTkButton):
+                    widget.configure(state = "enabled")
 
 class Matchdays(ctk.CTkFrame):
     def __init__(self, parent, league):
@@ -508,6 +561,82 @@ class Graphs(ctk.CTkFrame):
         frame.bind("<Button-1>", lambda event, team_id = team_id, i = index, f = frame, im = img, n = name: self.selectTeam(team_id, i, f, im, n))
         img.bind("<Button-1>", lambda event, team_id = team_id, i = index, f = frame, im = img, n = name: self.selectTeam(team_id, i, f, im, n))
         name.bind("<Button-1>", lambda event, team_id = team_id, i = index, f = frame, im = img, n = name: self.selectTeam(team_id, i, f, im, n))
+
+class Stats(ctk.CTkFrame):
+    def __init__(self, parent, league):
+        super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
+
+        self.parent = parent
+        self.league = league
+
+        self.statsFrames = [None] * len(STAT_FUNCTIONS)
+
+        self.currentStat = None
+        self.currentFrame = None
+
+        self.statsFrame = ctk.CTkScrollableFrame(self, fg_color = GREY_BACKGROUND, width = 200, height = 590, corner_radius = 15)
+        self.statsFrame.place(relx = 0, rely = 0, anchor = "nw")
+
+        self.leagueTeams = LeagueTeams.get_teams_by_league(self.league.id)
+
+        for cat in TEAM_STATS:
+            ctk.CTkLabel(self.statsFrame, text = cat[0], font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND, height = 10).pack(pady = 5)
+            canvas = ctk.CTkCanvas(self.statsFrame, width = 200, height = 5, bg = APP_BLUE, bd = 0, highlightthickness = 0)
+            canvas.pack(pady = 5)
+
+            for stat in cat[1:]:
+                fontSize = 15 if len(stat) < 25 else 14
+                button = ctk.CTkButton(self.statsFrame, text = stat, font = (APP_FONT, fontSize), fg_color = GREY_BACKGROUND, border_color = APP_BLUE, border_width = 0, corner_radius = 5, height = 30, width = 300, hover_color = DARK_GREY, anchor = "w")
+                button.pack(pady = 5)
+                button.configure(command = lambda statName = stat, b = button: self.getStat(statName, b))
+
+    def getStat(self, statName, button):
+
+        if self.currentStat == statName:
+            return
+
+        if self.currentFrame:
+            self.currentFrame.place_forget()
+
+        for widget in self.statsFrame.winfo_children():
+            if isinstance(widget, ctk.CTkButton):
+                widget.configure(border_width = 0)
+        
+        stat_index = list(STAT_FUNCTIONS.keys()).index(statName)
+        if self.statsFrames[stat_index]:
+            self.statsFrames[stat_index].place(relx = 0.98, rely = 0, anchor = "ne")
+            self.currentFrame = self.statsFrames[stat_index]
+            self.currentStat = statName
+
+            button.configure(border_width = 1)
+
+        else:
+            statsFrame = ctk.CTkScrollableFrame(self, fg_color = GREY_BACKGROUND, width = 700, height = 590, corner_radius = 15)
+            statsFrame.place(relx = 0.98, rely = 0, anchor = "ne")
+
+            self.statsFrames[stat_index] = statsFrame
+            self.currentFrame = self.statsFrames[stat_index]
+            self.currentStat = statName
+
+            button.configure(border_width = 1)
+
+            stats = STAT_FUNCTIONS[statName](self.leagueTeams, self.league.id)
+            
+            for i, statsData in enumerate(stats):
+                frame = ctk.CTkFrame(statsFrame, fg_color = GREY_BACKGROUND, width = 690, height = 40)
+                frame.pack(pady = 5)
+
+                team = Teams.get_team_by_id(statsData[0])
+
+                ctk.CTkLabel(frame, text = f"{i + 1}.", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+                src = Image.open(io.BytesIO(team.logo))
+                src.thumbnail((30, 30))
+                TeamLogo(frame, src, team, GREY_BACKGROUND, 0.15, 0.5, "center", self.parent)
+
+                ctk.CTkLabel(frame, text = team.name, font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.2, rely = 0.5, anchor = "w")
+
+                ctk.CTkLabel(frame, text = statsData[1], font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
 
 class History(ctk.CTkScrollableFrame):
     def __init__(self, parent, league):

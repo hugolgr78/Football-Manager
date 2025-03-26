@@ -7,7 +7,6 @@ from utils.shouts import ShoutFrame
 import threading, time
 import concurrent.futures
 from PIL import Image
-
 class MatchDay(ctk.CTkFrame):
     def __init__(self, parent, teamLineup, teamSubstitutes, team, players):
         super().__init__(parent, width = APP_SIZE[0], height = APP_SIZE[1], fg_color = TKINTER_BACKGROUND)
@@ -180,7 +179,7 @@ class MatchDay(ctk.CTkFrame):
         self.shoutsButton.configure(state = "normal")
 
         self.timerThread_running = True
-        self.timerThread = threading.Thread(target = self.increaseTimer)
+        self.timerThread = threading.Thread(target = self.gameLoop)
         self.timerThread.daemon = True
         self.timerThread.start()
 
@@ -188,19 +187,23 @@ class MatchDay(ctk.CTkFrame):
         self.pauseButton.configure(text = "Resume", command = self.resumeMatch)
         self.timerThread_running = False
 
-    def resumeMatch(self):
+    def resumeMatch(self, halfTime = False):
+
+        if halfTime:
+            self.halfTimeFrame.pack_forget()   
+
         self.pauseButton.configure(text = "Pause", command = self.pauseMatch)
         self.timerThread_running = True
-        self.timerThread = threading.Thread(target = self.increaseTimer)
+        self.timerThread = threading.Thread(target = self.gameLoop)
         self.timerThread.daemon = True
         self.timerThread.start()
 
-    def increaseTimer(self):
+    def gameLoop(self):
         while self.timerThread_running:
             
             currTime = self.timeLabel.cget("text")
 
-
+            # After HT, once the player hits Resume
             if currTime == "HT":
                 minutes = 45
                 seconds = 0
@@ -215,7 +218,6 @@ class MatchDay(ctk.CTkFrame):
 
                 self.shoutsButton.configure(state = "normal")
                 self.substitutionButton.configure(state = "normal")
-
             else:
                 currTime = currTime.split(":")
                 minutes = int(currTime[0])
@@ -224,7 +226,6 @@ class MatchDay(ctk.CTkFrame):
             if seconds == 59:
                 minutes += 1
                 seconds = 0
-
             else:
                 seconds += 1
 
@@ -232,7 +233,7 @@ class MatchDay(ctk.CTkFrame):
                 self.shoutsButton.configure(state = "normal")
 
             ## ----------- half time ------------
-            if minutes == 45 and seconds == 0: ## half time
+            if minutes == 45 and seconds == 0:
 
                 ## extra time
                 self.halfTime = True
@@ -246,7 +247,7 @@ class MatchDay(ctk.CTkFrame):
                     combined_events = {**frame.matchInstance.homeEvents, **frame.matchInstance.awayEvents}
                     for event_time, event_details in list(combined_events.items()):
                         minute = int(event_time.split(":")[0])
-                        if event_details["extra"] and minute < 90: # first hald extra time events
+                        if event_details["extra"] and minute < 90: # first half extra time events
                             eventsExtraTime += 1
                             
                             if minute + 1 > maxMinute:
@@ -290,12 +291,15 @@ class MatchDay(ctk.CTkFrame):
 
                 self.matchFrame.matchInstance.extraTimeHalf = extraTime
 
+            ## Half time for every time now
             if self.halfTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
                 if minutes == 45 + self.maxExtraTimeHalf and seconds == 0:
                     self.timerThread_running = False
-                    self.pauseButton.configure(text = "Resume", command = self.resumeMatch)
+                    self.halfTimeTalks()
+                    # self.pauseButton.configure(text = "Resume", command = self.resumeMatch)
 
+                    ## Add HT labels if they are not already there
                     for frame in self.otherMatchesFrame.winfo_children():
                         if not frame.halfTimeLabel.winfo_ismapped():
                             frame.HTLabel()
@@ -891,6 +895,22 @@ class MatchDay(ctk.CTkFrame):
 
         if self.completedSubs == MAX_SUBS:
             self.substitutionButton.configure(state = "disabled")
+
+    def halfTimeTalks(self):
+        self.halfTimeFrame = ctk.CTkFrame(self, width = APP_SIZE[0], height = APP_SIZE[1], fg_color = TKINTER_BACKGROUND)
+        self.halfTimeFrame.pack(fill = "both", expand = True)
+
+        self.HTbuttonsFrame = ctk.CTkFrame(self.halfTimeFrame, width = APP_SIZE[0] - 20, height = 120, fg_color = TKINTER_BACKGROUND, corner_radius = 10)
+        self.HTbuttonsFrame.place(relx = 0.99, rely = 0.99, anchor = "se")
+
+        self.HTresumeButton = ctk.CTkButton(self.HTbuttonsFrame, text = "Resume Game >>", width = 400, height = 55, font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, bg_color = TKINTER_BACKGROUND, command = lambda: self.resumeMatch(halfTime = True))
+        self.rHTesumeButton.place(relx = 1, rely = 1, anchor = "se")
+
+        self.HTsubsButton = ctk.CTkButton(self.HTbuttonsFrame, text = "Substitutions", width = 400, height = 55, font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, bg_color = TKINTER_BACKGROUND)
+        self.HTsubsButton.place(relx = 1, rely = 0, anchor = "ne")
+
+        self.HTscoreDataFrame = ctk.CTkFrame(self.HTbuttonsFrame, width = 765, height = 120, fg_color = GREY_BACKGROUND, corner_radius = 10)
+        self.HtscoreDataFrame.place(relx = 0, rely = 0, anchor = "nw")
 
     def updateTimeLabel(self, minutes, seconds):
         self.timeLabel.configure(text = f"{str(minutes).zfill(2)}:{str(seconds).zfill(2)}")

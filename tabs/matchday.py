@@ -106,6 +106,8 @@ class MatchDay(ctk.CTkFrame):
                 self.matchDataFrame.place(relx = 0.5, rely = 0.27, anchor = "n")
                 self.matchDataFrame._scrollbar.grid_configure(padx = 5)
 
+                self.opposition = Teams.get_team_by_id(match.away_id if match.home_id == self.team.id else match.home_id)
+
                 if match.home_id != self.team.id:
                     self.home = False
                     self.matchFrame.matchInstance.awayCurrentLineup = self.teamLineup
@@ -135,7 +137,7 @@ class MatchDay(ctk.CTkFrame):
         teamSubFrame = self.homeSubstituteFrame if self.home else self.awaySubstituteFrame
         oppPitch = self.awayLineupPitch if self.home else self.homeLineupPitch
         oppSubFrame = self.awaySubstituteFrame if self.home else self.homeSubstituteFrame
-        oppTeamID = self.teamMatch.away_id if self.home else self.teamMatch.home_id
+        oppTeamID = self.opposition.id
 
         self.matchFrame.matchInstance.createTeamLineup(oppTeamID, not self.home)
         self.oppositionLineup = self.matchFrame.matchInstance.awayCurrentLineup if self.home else self.matchFrame.matchInstance.homeCurrentLineup
@@ -562,7 +564,7 @@ class MatchDay(ctk.CTkFrame):
         self.playersOff = {}
 
         self.forceSub = forceSub
-        self.injuredPlayer = injuredPlayer
+        self.injuredPlayer = Players.get_player_by_id(injuredPlayer) if injuredPlayer else None
 
         self.currentSubs = 0
 
@@ -904,13 +906,43 @@ class MatchDay(ctk.CTkFrame):
         self.HTbuttonsFrame.place(relx = 0.99, rely = 0.99, anchor = "se")
 
         self.HTresumeButton = ctk.CTkButton(self.HTbuttonsFrame, text = "Resume Game >>", width = 400, height = 55, font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, bg_color = TKINTER_BACKGROUND, command = lambda: self.resumeMatch(halfTime = True))
-        self.rHTesumeButton.place(relx = 1, rely = 1, anchor = "se")
+        self.HTresumeButton.place(relx = 1, rely = 1, anchor = "se")
 
         self.HTsubsButton = ctk.CTkButton(self.HTbuttonsFrame, text = "Substitutions", width = 400, height = 55, font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, bg_color = TKINTER_BACKGROUND)
         self.HTsubsButton.place(relx = 1, rely = 0, anchor = "ne")
 
         self.HTscoreDataFrame = ctk.CTkFrame(self.HTbuttonsFrame, width = 765, height = 120, fg_color = GREY_BACKGROUND, corner_radius = 10)
-        self.HtscoreDataFrame.place(relx = 0, rely = 0, anchor = "nw")
+        self.HTscoreDataFrame.place(relx = 0, rely = 0, anchor = "nw")
+
+        self.HTpromptsFrame = ctk.CTkFrame(self.halfTimeFrame, width = 650, height = 550, fg_color = GREY_BACKGROUND, corner_radius = 10)
+        self.HTpromptsFrame.place(relx = 0.01, rely = 0.01, anchor = "nw")
+
+        self.HTplayersFrame = ctk.CTkFrame(self.halfTimeFrame, width = 520, height = 550, fg_color = GREY_BACKGROUND, corner_radius = 10)
+        self.HTplayersFrame.place(relx = 0.99, rely = 0.01, anchor = "ne")
+
+        src = Image.open(f"Images/Teams/{self.team.name}.png")
+        src.thumbnail((75, 75))
+        teamImage = ctk.CTkImage(src, None, (src.width, src.height))
+
+        src = Image.open(f"Images/Teams/{self.opposition.name}.png")
+        src.thumbnail((75, 75))
+        opponentImage = ctk.CTkImage(src, None, (src.width, src.height))
+        
+        if self.home:
+            ctk.CTkLabel(self.HTscoreDataFrame, text = self.team.name, font = (APP_FONT, 25), fg_color = GREY_BACKGROUND).place(relx = 0.3, rely = 0.5, anchor = "e")
+            ctk.CTkLabel(self.HTscoreDataFrame, text = "", image = teamImage, fg_color = GREY_BACKGROUND).place(relx = 0.4, rely = 0.5, anchor = "e")     
+            
+            ctk.CTkLabel(self.HTscoreDataFrame, text = "", image = opponentImage, fg_color = GREY_BACKGROUND).place(relx = 0.6, rely = 0.5, anchor = "w")     
+            ctk.CTkLabel(self.HTscoreDataFrame, text = self.opposition.name, font = (APP_FONT, 25), fg_color = GREY_BACKGROUND).place(relx = 0.7, rely = 0.5, anchor = "w")   
+        else:
+            ctk.CTkLabel(self.HTscoreDataFrame, text = self.opposition.name, font = (APP_FONT, 25), fg_color = GREY_BACKGROUND).place(relx = 0.3, rely = 0.5, anchor = "e")
+            ctk.CTkLabel(self.HTscoreDataFrame, text = "", image = opponentImage, fg_color = GREY_BACKGROUND).place(relx = 0.4, rely = 0.5, anchor = "e")     
+            
+            ctk.CTkLabel(self.HTscoreDataFrame, text = "", image = teamImage, fg_color = GREY_BACKGROUND).place(relx = 0.6, rely = 0.5, anchor = "w")
+            ctk.CTkLabel(self.HTscoreDataFrame, text = self.team.name, font = (APP_FONT, 25), fg_color = GREY_BACKGROUND).place(relx = 0.7, rely = 0.5, anchor = "w")   
+        
+        ctk.CTkLabel(self.HTscoreDataFrame, text = self.matchFrame.score, font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
 
     def updateTimeLabel(self, minutes, seconds):
         self.timeLabel.configure(text = f"{str(minutes).zfill(2)}:{str(seconds).zfill(2)}")

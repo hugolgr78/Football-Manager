@@ -1023,7 +1023,7 @@ class MatchDayMatchFrame(ctk.CTkFrame):
         self.anchor = anchor
         self.packFrame = pack
 
-        self.score = "0 - 0" # Instance of Score class
+        self.score = "0 - 0"
 
         self.matchInstance = Match(self.match)
 

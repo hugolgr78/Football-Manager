@@ -929,19 +929,71 @@ class MatchDay(ctk.CTkFrame):
         opponentImage = ctk.CTkImage(src, None, (src.width, src.height))
         
         if self.home:
-            ctk.CTkLabel(self.HTscoreDataFrame, text = self.team.name, font = (APP_FONT, 25), fg_color = GREY_BACKGROUND).place(relx = 0.3, rely = 0.5, anchor = "e")
+            fontSize = 25 if len(self.team.name) <= 18 else 20
+            ctk.CTkLabel(self.HTscoreDataFrame, text = self.team.name, font = (APP_FONT, fontSize), fg_color = GREY_BACKGROUND).place(relx = 0.3, rely = 0.5, anchor = "e")
             ctk.CTkLabel(self.HTscoreDataFrame, text = "", image = teamImage, fg_color = GREY_BACKGROUND).place(relx = 0.4, rely = 0.5, anchor = "e")     
             
+            fontSize = 25 if len(self.opposition.name) <= 18 else 20
             ctk.CTkLabel(self.HTscoreDataFrame, text = "", image = opponentImage, fg_color = GREY_BACKGROUND).place(relx = 0.6, rely = 0.5, anchor = "w")     
-            ctk.CTkLabel(self.HTscoreDataFrame, text = self.opposition.name, font = (APP_FONT, 25), fg_color = GREY_BACKGROUND).place(relx = 0.7, rely = 0.5, anchor = "w")   
+            ctk.CTkLabel(self.HTscoreDataFrame, text = self.opposition.name, font = (APP_FONT, fontSize), fg_color = GREY_BACKGROUND).place(relx = 0.7, rely = 0.5, anchor = "w")   
         else:
-            ctk.CTkLabel(self.HTscoreDataFrame, text = self.opposition.name, font = (APP_FONT, 25), fg_color = GREY_BACKGROUND).place(relx = 0.3, rely = 0.5, anchor = "e")
+            fontSize = 25 if len(self.opposition.name) <= 18 else 20
+            ctk.CTkLabel(self.HTscoreDataFrame, text = self.opposition.name, font = (APP_FONT, fontSize), fg_color = GREY_BACKGROUND).place(relx = 0.3, rely = 0.5, anchor = "e")
             ctk.CTkLabel(self.HTscoreDataFrame, text = "", image = opponentImage, fg_color = GREY_BACKGROUND).place(relx = 0.4, rely = 0.5, anchor = "e")     
             
+            fontSize = 25 if len(self.team.name) <= 18 else 20
             ctk.CTkLabel(self.HTscoreDataFrame, text = "", image = teamImage, fg_color = GREY_BACKGROUND).place(relx = 0.6, rely = 0.5, anchor = "w")
-            ctk.CTkLabel(self.HTscoreDataFrame, text = self.team.name, font = (APP_FONT, 25), fg_color = GREY_BACKGROUND).place(relx = 0.7, rely = 0.5, anchor = "w")   
+            ctk.CTkLabel(self.HTscoreDataFrame, text = self.team.name, font = (APP_FONT, fontSize), fg_color = GREY_BACKGROUND).place(relx = 0.7, rely = 0.5, anchor = "w")   
         
         ctk.CTkLabel(self.HTscoreDataFrame, text = self.matchFrame.score, font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        self.HTplayersFrame.grid_rowconfigure((0, 1, 2, 3, 4), weight = 1)
+        self.HTplayersFrame.grid_columnconfigure((0, 1, 2, 3), weight = 1)
+        self.HTplayersFrame.grid_propagate(False)
+
+        matchInstance = self.matchFrame.matchInstance
+        lineup = matchInstance.homeCurrentLineup if self.home else matchInstance.awayCurrentLineup
+        substitutes = matchInstance.homeCurrentSubs if self.home else matchInstance.awayCurrentSubs
+        currentEvents = matchInstance.homeProcessedEvents if self.home else matchInstance.awayProcessedEvents
+
+        homeScore = int(self.matchFrame.score.split("-")[0])
+        awayScore = int(self.matchFrame.score.split("-")[1])
+
+        row, column = 0, 0
+        for _, playerID in lineup.items():
+            player = Players.get_player_by_id(playerID)
+            frame = ctk.CTkFrame(self.HTplayersFrame, width = 120, height = 100, fg_color = TKINTER_BACKGROUND)
+            frame.grid(row = row, column = column, padx = 5, pady = 5)
+            ctk.CTkLabel(frame, text = player.first_name + " " + player.last_name, font = (APP_FONT, 12), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.25, anchor = "center")
+            
+            player_events = [ev for ev in currentEvents.values() if ev["player"] == playerID]
+            reaction, bg_color = player_reaction(homeScore if self.home else awayScore, awayScore if self.home else homeScore, player_events)
+            
+            ctk.CTkLabel(frame, text = reaction, font = (APP_FONT, 15), width = 100, height = 35, fg_color = bg_color, corner_radius = 15).place(relx = 0.5, rely = 0.75, anchor = "center")
+
+            column += 1
+
+            if column == 4:
+                row += 1
+                column = 0
+
+
+        for playerID in substitutes:
+            player = Players.get_player_by_id(playerID)
+            frame = ctk.CTkFrame(self.HTplayersFrame, width = 120, height = 100, fg_color = TKINTER_BACKGROUND)
+            frame.grid(row = row, column = column, padx = 5, pady = 5)
+            ctk.CTkLabel(frame, text = player.first_name + " " + player.last_name, font = (APP_FONT, 12), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.25, anchor = "center")
+            
+            player_events = [ev for ev in currentEvents.values() if ev["player"] == playerID]
+            reaction, bg_color = player_reaction(homeScore if self.home else awayScore, awayScore if self.home else homeScore, player_events)
+            
+            ctk.CTkLabel(frame, text = reaction, font = (APP_FONT, 15), width = 100, height = 35, fg_color = bg_color, corner_radius = 15).place(relx = 0.5, rely = 0.75, anchor = "center")
+
+            column += 1
+
+            if column == 4:
+                row += 1
+                column = 0
 
 
     def updateTimeLabel(self, minutes, seconds):

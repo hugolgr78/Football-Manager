@@ -8,6 +8,12 @@ GREY_BACKGROUND = "#333333"
 CLOSE_RED = "#8a0606"
 UNDERLINE_BLUE = "#1276ed"
 
+DELIGHTED_COLOR = "#4CAF50"  
+HAPPY_COLOR = "#8BC34A"      
+NEUTRAL_COLOR = "#FFC107"    
+FRUSTRATED_COLOR = "#FF9800" 
+ANGRY_COLOR = "#F44336"   
+
 PIE_RED = "#d61c0f"
 PIE_GREY = "#b3b3b3"
 PIE_GREEN = "#64e80c"
@@ -499,3 +505,46 @@ STAT_FUNCTIONS = {
     "Longest scoring streak": StatsManager.get_longest_scoring_streak,
     "Longest scoreless streak": StatsManager.get_longest_scoreless_streak,
 }
+
+def player_reaction(score_for: int, score_against: int, player_events: dict) -> str:
+    reaction_score = 0
+    
+    # Adjust based on team performance
+    goal_diff = score_for - score_against
+    if goal_diff > 2:
+        reaction_score += 2  # Comfortable win
+    elif goal_diff > 0:
+        reaction_score += 1  # Narrow win
+    elif goal_diff == 0:
+        reaction_score += 0  # Draw
+    elif goal_diff >= -2:
+        reaction_score -= 1  # Narrow loss
+    else:
+        reaction_score -= 2  # Heavy defeat
+
+    if len(player_events) > 0 :
+        for event in player_events:
+            if event["type"] == "goal":
+                reaction_score += 1
+            elif event["type"] == "penalty_goal":
+                reaction_score += 1
+            elif event["type"] == "own_goal":
+                reaction_score -= 2
+            elif event["type"] == "penalty_missed":
+                reaction_score -= 1
+            elif event["type"] == "penalty_saved":
+                reaction_score += 1
+            elif event["type"] == "yellow_card":
+                reaction_score -= 1
+
+    # Determine final reaction
+    if reaction_score >= 3:
+        return "Delighted", DELIGHTED_COLOR
+    elif reaction_score == 2:
+        return "Happy", HAPPY_COLOR
+    elif reaction_score == 1 or reaction_score == 0:
+        return "Neutral", NEUTRAL_COLOR
+    elif reaction_score == -1:
+        return "Frustrated", FRUSTRATED_COLOR
+    else:
+        return "Angry", ANGRY_COLOR

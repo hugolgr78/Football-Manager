@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import tkinter.font as tkFont
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
@@ -702,6 +703,17 @@ class MatchdayPreview():
         self.opponent = homeTeam if homeTeam.id != self.parent.team.id else awayTeam
         self.opponentData = TeamHistory.get_team_data_matchday(self.opponent.id, self.matchday - 1)
 
+        font = tkFont.Font(family = APP_FONT, size = 15)  # Use same font/size as emailFrame_2 content
+        text_width_px = font.measure(homeTeam.name)
+
+        # Measure parent frame width (fallback to fixed value if needed)
+        frame_width_px = self.frame.winfo_width() or 800  # adjust 800 if you know the actual width
+
+        # Convert to relx
+        rel_offset = 0.165 + (text_width_px / frame_width_px) 
+
+        self.emailFrame_3_x = rel_offset
+
         self.emailFrame_1 = TeamProfileLabel(
             self.frame,
             self.opponent.manager_id,
@@ -743,11 +755,6 @@ class MatchdayPreview():
             self.parent.parentTab,
             fontSize = 15
         )
-
-        if len(homeTeam.name) >= 16:
-            self.emailFrame_3_x = 0.34
-        else:
-            self.emailFrame_3_x = 0.32
 
         self.emailText_2 = (
             f"- Date: \n"

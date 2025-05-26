@@ -977,7 +977,6 @@ class MatchDay(ctk.CTkFrame):
                 row += 1
                 column = 0
 
-
         for playerID in substitutes:
             player = Players.get_player_by_id(playerID)
             frame = ctk.CTkFrame(self.HTplayersFrame, width = 120, height = 100, fg_color = TKINTER_BACKGROUND)

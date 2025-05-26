@@ -568,6 +568,7 @@ class Stats(ctk.CTkFrame):
 
         self.parent = parent
         self.league = league
+        self.managedTeam = Teams.get_teams_by_manager(self.parent.manager_id)[0]
 
         self.statsFrames = [None] * len(STAT_FUNCTIONS)
 
@@ -628,15 +629,21 @@ class Stats(ctk.CTkFrame):
 
                 team = Teams.get_team_by_id(statsData[0])
 
-                ctk.CTkLabel(frame, text = f"{i + 1}.", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
 
                 src = Image.open(io.BytesIO(team.logo))
                 src.thumbnail((30, 30))
                 TeamLogo(frame, src, team, GREY_BACKGROUND, 0.15, 0.5, "center", self.parent)
 
-                ctk.CTkLabel(frame, text = team.name, font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.2, rely = 0.5, anchor = "w")
+                if self.managedTeam.name == team.name:
+                    font = (APP_FONT_BOLD, 20)
+                else:
+                    font = (APP_FONT, 20)
 
-                ctk.CTkLabel(frame, text = statsData[1], font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
+                ctk.CTkLabel(frame, text = f"{i + 1}.", font = font, fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+                ctk.CTkLabel(frame, text = team.name, font = font, fg_color = GREY_BACKGROUND).place(relx = 0.2, rely = 0.5, anchor = "w")
+
+                ctk.CTkLabel(frame, text = statsData[1], font = font, fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
 
 class History(ctk.CTkScrollableFrame):
     def __init__(self, parent, league):

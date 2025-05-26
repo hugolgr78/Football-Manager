@@ -122,7 +122,7 @@ class Profile(ctk.CTkFrame):
             ctk.CTkLabel(headerFrame, text = "", image = img, width = 20, fg_color = GREY_BACKGROUND).grid(row = 0, column = 2, pady = 5)
 
             if len(gamesRefereed) > 4:
-                dataFrame = ctk.CTkScrollableFrame(statsFrame, fg_color = GREY_BACKGROUND, width = 740, height = 240, corner_radius = 15)
+                dataFrame = ctk.CTkScrollableFrame(statsFrame, fg_color = GREY_BACKGROUND, width = 720, height = 210, corner_radius = 15)
             else:
                 dataFrame = ctk.CTkFrame(statsFrame, fg_color = GREY_BACKGROUND, width = 740, height = 240, corner_radius = 15)
 
@@ -130,7 +130,9 @@ class Profile(ctk.CTkFrame):
 
             dataFrame.grid_columnconfigure(0, weight = 5)
             dataFrame.grid_columnconfigure((1, 2), weight = 1)
-            dataFrame.grid_propagate(False)
+            
+            if len(gamesRefereed) <= 4:
+                dataFrame.grid_propagate(False)
 
             for match in gamesRefereed:
                 matchFrame = ctk.CTkFrame(dataFrame, fg_color = GREY_BACKGROUND, width = 10, height = 50, corner_radius = 0)

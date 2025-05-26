@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import tkinter.font as tkFont
 from settings import *
 from data.database import *
 from PIL import Image
@@ -136,6 +137,29 @@ class PlayerMorale(ctk.CTkScrollableFrame):
             playerFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 315, height = 35, corner_radius = 0)
             playerFrame.pack()
 
-            ctk.CTkLabel(playerFrame, text = player.first_name + " " + player.last_name, font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.05, rely = 0.15, anchor = "nw")
+            font_first = tkFont.Font(family=APP_FONT, size=15)
+            first_name_width_px = font_first.measure(player.first_name)
+
+            # Convert pixels to relative frame width (assuming playerFrame has fixed width)
+            frame_width_px = playerFrame.winfo_reqwidth()  # or use actual width if set
+            rel_offset = first_name_width_px / frame_width_px
+
+            # Now place the labels accordingly
+            ctk.CTkLabel(
+                playerFrame,
+                text = player.first_name,
+                font = (APP_FONT, 15),
+                text_color = "white",
+                fg_color = TKINTER_BACKGROUND
+            ).place(relx = 0.05, rely = 0.15, anchor = "nw")
+
+            ctk.CTkLabel(
+                playerFrame,
+                text = " " + player.last_name,
+                font = (APP_FONT_BOLD, 18),
+                text_color = "white",
+                fg_color = TKINTER_BACKGROUND
+            ).place(relx = 0.05 + rel_offset, rely = 0.15, anchor = "nw")
+
             ctk.CTkLabel(playerFrame, text = str(morale) + "%", font = (APP_FONT_BOLD, 13), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.7, rely = 0.5, anchor = "center")
             ctk.CTkLabel(playerFrame, image = ctk_image, text = "").place(relx = 0.9, rely = 0.5, anchor = "center")

@@ -524,27 +524,62 @@ def player_reaction(score_for: int, score_against: int, player_events: dict) -> 
 
     if len(player_events) > 0 :
         for event in player_events:
-            if event["type"] == "goal":
+            if event["type"] == "goal" or event["type"] == "penalty_goal" or event["type"] == "penalty_saved":
                 reaction_score += 1
-            elif event["type"] == "penalty_goal":
-                reaction_score += 1
-            elif event["type"] == "own_goal":
+            elif event["type"] == "own_goal" or event["type"] == "red_card":
                 reaction_score -= 2
-            elif event["type"] == "penalty_missed":
-                reaction_score -= 1
-            elif event["type"] == "penalty_saved":
-                reaction_score += 1
-            elif event["type"] == "yellow_card":
+            elif event["type"] == "penalty_missed" or event["type"] == "yellow_card":
                 reaction_score -= 1
 
     # Determine final reaction
     if reaction_score >= 3:
-        return "Delighted", DELIGHTED_COLOR
+        return reaction_score, "Delighted"
     elif reaction_score == 2:
-        return "Happy", HAPPY_COLOR
+        return reaction_score, "Happy", 
     elif reaction_score == 1 or reaction_score == 0:
-        return "Neutral", NEUTRAL_COLOR
+        return reaction_score, "Neutral", 
     elif reaction_score == -1:
-        return "Frustrated", FRUSTRATED_COLOR
+        return reaction_score, "Frustrated"
     else:
-        return "Angry", ANGRY_COLOR
+        return reaction_score, "Angry"
+
+REACTION_COLOURS = [
+    (lambda x: x >= 3, DELIGHTED_COLOR),
+    (lambda x: x == 2, HAPPY_COLOR),
+    (lambda x: x in (0, 1), NEUTRAL_COLOR),
+    (lambda x: x == -1, FRUSTRATED_COLOR),
+    (lambda x: x <= -2, ANGRY_COLOR),
+]
+
+def get_reaction_colour(score):
+    for cond, color in REACTION_COLOURS:
+        if cond(score):
+            return color
+
+HALF_TIME_PROMPTS = {
+    "Encourage": (
+        "Keep your heads up — we’re still in this. One good moment changes everything.",
+        "I know it’s tough, but we can turn this around. Let’s show some fight in the second half.",
+        "I believe in you. Let’s go out there and show them what we’re made of."
+    ),
+    "Berate": (
+        "Wake up! Some of you look like you don’t even want to be out there.",
+        "This is unacceptable. I expect you to show me more in the second half.",
+        "You need to do better. I won’t accept this kind of performance."
+    ),
+    "Neutral": (
+        "Decent first half. Let’s stay composed and keep doing the basics right.",
+        "We’ve done okay, but we can do better. Let’s keep our focus and finish strong.",
+        "We’re in a good position, but we can’t let our guard down. Let’s keep pushing."
+    ),
+    "Happy": (
+        "Good first half, lads. Let’s keep it going and finish the job.",
+        "I’m pleased with that performance. Let’s keep the momentum going in the second half.",
+        "Solid first half. Let’s build on this and secure the win."
+    ),
+    "Dissapointed": (
+        "I expected more from you boys. Let’s put it right in the second half.",
+        "We need to step it up. I want to see more fight and determination in the second half.",
+        "This isn’t good enough. I need to see a reaction in the second half."
+    )
+}

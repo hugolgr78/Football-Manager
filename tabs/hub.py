@@ -137,14 +137,13 @@ class PlayerMorale(ctk.CTkScrollableFrame):
             playerFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 315, height = 35, corner_radius = 0)
             playerFrame.pack()
 
-            font_first = tkFont.Font(family=APP_FONT, size=15)
+            font_first = tkFont.Font(family = APP_FONT, size = 15)
             first_name_width_px = font_first.measure(player.first_name)
 
             # Convert pixels to relative frame width (assuming playerFrame has fixed width)
             frame_width_px = playerFrame.winfo_reqwidth()  # or use actual width if set
             rel_offset = first_name_width_px / frame_width_px
 
-            # Now place the labels accordingly
             ctk.CTkLabel(
                 playerFrame,
                 text = player.first_name,

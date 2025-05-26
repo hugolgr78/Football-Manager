@@ -899,6 +899,8 @@ class MatchDay(ctk.CTkFrame):
             self.substitutionButton.configure(state = "disabled")
 
     def halfTimeTalks(self):
+
+        ## Create frames
         self.halfTimeFrame = ctk.CTkFrame(self, width = APP_SIZE[0], height = APP_SIZE[1], fg_color = TKINTER_BACKGROUND)
         self.halfTimeFrame.pack(fill = "both", expand = True)
 
@@ -915,11 +917,10 @@ class MatchDay(ctk.CTkFrame):
         self.HTscoreDataFrame.place(relx = 0, rely = 0, anchor = "nw")
 
         self.HTpromptsFrame = ctk.CTkFrame(self.halfTimeFrame, width = 650, height = 550, fg_color = GREY_BACKGROUND, corner_radius = 10)
-        self.HTpromptsFrame.place(relx = 0.01, rely = 0.01, anchor = "nw")
 
         self.HTplayersFrame = ctk.CTkFrame(self.halfTimeFrame, width = 520, height = 550, fg_color = GREY_BACKGROUND, corner_radius = 10)
-        self.HTplayersFrame.place(relx = 0.99, rely = 0.01, anchor = "ne")
 
+        ## Half time score data frame
         src = Image.open(f"Images/Teams/{self.team.name}.png")
         src.thumbnail((75, 75))
         teamImage = ctk.CTkImage(src, None, (src.width, src.height))
@@ -947,6 +948,7 @@ class MatchDay(ctk.CTkFrame):
         
         ctk.CTkLabel(self.HTscoreDataFrame, text = self.matchFrame.score, font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
+        ## Half time players frame
         self.HTplayersFrame.grid_rowconfigure((0, 1, 2, 3, 4), weight = 1)
         self.HTplayersFrame.grid_columnconfigure((0, 1, 2, 3), weight = 1)
         self.HTplayersFrame.grid_propagate(False)
@@ -964,12 +966,15 @@ class MatchDay(ctk.CTkFrame):
             player = Players.get_player_by_id(playerID)
             frame = ctk.CTkFrame(self.HTplayersFrame, width = 120, height = 100, fg_color = TKINTER_BACKGROUND)
             frame.grid(row = row, column = column, padx = 5, pady = 5)
-            ctk.CTkLabel(frame, text = player.first_name + " " + player.last_name, font = (APP_FONT, 12), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.25, anchor = "center")
+            ctk.CTkLabel(frame, text = player.first_name, font = (APP_FONT, 12), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.2, anchor = "center")
+            ctk.CTkLabel(frame, text = player.last_name,  font = (APP_FONT_BOLD, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.4, anchor = "center")
             
             player_events = [ev for ev in currentEvents.values() if ev["player"] == playerID]
-            reaction, bg_color = player_reaction(homeScore if self.home else awayScore, awayScore if self.home else homeScore, player_events)
+            score, reaction = player_reaction(homeScore if self.home else awayScore, awayScore if self.home else homeScore, player_events)
+
+            frame.score = score
             
-            ctk.CTkLabel(frame, text = reaction, font = (APP_FONT, 15), width = 100, height = 35, fg_color = bg_color, corner_radius = 15).place(relx = 0.5, rely = 0.75, anchor = "center")
+            ctk.CTkLabel(frame, text = reaction, font = (APP_FONT_BOLD, 15), width = 100, height = 35, fg_color = get_reaction_colour(score), corner_radius = 15).place(relx = 0.5, rely = 0.75, anchor = "center")
 
             column += 1
 
@@ -981,12 +986,15 @@ class MatchDay(ctk.CTkFrame):
             player = Players.get_player_by_id(playerID)
             frame = ctk.CTkFrame(self.HTplayersFrame, width = 120, height = 100, fg_color = TKINTER_BACKGROUND)
             frame.grid(row = row, column = column, padx = 5, pady = 5)
-            ctk.CTkLabel(frame, text = player.first_name + " " + player.last_name, font = (APP_FONT, 12), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.25, anchor = "center")
+            ctk.CTkLabel(frame, text = player.first_name, font = (APP_FONT, 12), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.2, anchor = "center")
+            ctk.CTkLabel(frame, text = player.last_name,  font = (APP_FONT_BOLD, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.4, anchor = "center")
             
             player_events = [ev for ev in currentEvents.values() if ev["player"] == playerID]
-            reaction, bg_color = player_reaction(homeScore if self.home else awayScore, awayScore if self.home else homeScore, player_events)
+            score, reaction = player_reaction(homeScore if self.home else awayScore, awayScore if self.home else homeScore, player_events)
+
+            frame.score = score
             
-            ctk.CTkLabel(frame, text = reaction, font = (APP_FONT, 15), width = 100, height = 35, fg_color = bg_color, corner_radius = 15).place(relx = 0.5, rely = 0.75, anchor = "center")
+            ctk.CTkLabel(frame, text = reaction, font = (APP_FONT_BOLD, 15), width = 100, height = 35, fg_color = get_reaction_colour(score), corner_radius = 15).place(relx = 0.5, rely = 0.75, anchor = "center")
 
             column += 1
 
@@ -994,6 +1002,21 @@ class MatchDay(ctk.CTkFrame):
                 row += 1
                 column = 0
 
+        self.HTplayersFrame.place(relx = 0.99, rely = 0.01, anchor = "ne")
+
+        ## Half time prompts frame
+        for prompt, promptTuple in HALF_TIME_PROMPTS.items():
+
+            ctk.CTkLabel(self.HTpromptsFrame, text = prompt, font = (APP_FONT_BOLD, 18), fg_color = GREY_BACKGROUND, width = 50, height = 30).pack(pady = 2, padx = 10, anchor = "w")
+
+            for promptText in promptTuple:
+                frame = ctk.CTkFrame(self.HTpromptsFrame, width = 620, height = 30, fg_color = GREY_BACKGROUND, corner_radius = 10)
+                frame.pack(padx = (10, 0), anchor = "w")
+
+                ctk.CTkButton(frame, text = promptText, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, width = 10, height = 25, command = lambda p = prompt: self.halfTimePrompt(p), anchor = "w").pack()
+
+        self.HTpromptsFrame.place(relx = 0.01, rely = 0.01, anchor = "nw")
+        self.HTpromptsFrame.pack_propagate(False)
 
     def updateTimeLabel(self, minutes, seconds):
         self.timeLabel.configure(text = f"{str(minutes).zfill(2)}:{str(seconds).zfill(2)}")

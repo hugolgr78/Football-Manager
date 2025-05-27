@@ -118,7 +118,8 @@ class Profile(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = f"Founded: {self.parent.team.year_created}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.1, anchor = "w")
         ctk.CTkLabel(self, text = f"Stadium: {self.parent.team.stadium}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.15, anchor = "w")
-        self.managerLink = ManagerProfileLink(self, self.parent.manager_id, f"Manager: {self.parent.manager.first_name} {self.parent.manager.last_name}", "white", 0.6, 0.2, "w", TKINTER_BACKGROUND, self.parent)
+        ctk.CTkLabel(self, text = f"Manager: ", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.2, anchor = "w")
+        self.managerLink = ManagerProfileLink(self, self.parent.manager_id, f"{self.parent.manager.first_name} {self.parent.manager.last_name}", "white", 0.69, 0.2, "w", TKINTER_BACKGROUND, self.parent)
 
         self.players = Players.get_all_players_by_team(self.parent.team.id)
         ctk.CTkLabel(self, text = f"Average Age: {self.averageAge(self.players)}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.25, anchor = "w")

@@ -456,9 +456,9 @@ class MatchDay(ctk.CTkFrame):
                             self.matchFrame.matchInstance.homeProcessedEvents[event_time] = event_details
 
                             if self.home and event_details["type"] == "injury":
-                                self.substitution(forceSub=True, injuredPlayer=newEvent["player"])
+                                self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
                             if self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer=newEvent["player"])
+                                self.substitution(redCardPlayer = newEvent["player"])
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, True)
                     else:
@@ -469,9 +469,9 @@ class MatchDay(ctk.CTkFrame):
                             self.matchFrame.matchInstance.homeProcessedEvents[event_time] = event_details
 
                             if self.home and event_details["type"] == "injury":
-                                self.substitution(forceSub=True, injuredPlayer=newEvent["player"])
+                                self.substitution(forceSub = True, injuredPlayer=newEvent["player"])
                             if self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer=newEvent["player"])
+                                self.substitution(redCardPlayer = newEvent["player"])
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, True)
 
@@ -916,7 +916,7 @@ class MatchDay(ctk.CTkFrame):
         self.HTscoreDataFrame = ctk.CTkFrame(self.HTbuttonsFrame, width = 765, height = 120, fg_color = GREY_BACKGROUND, corner_radius = 10)
         self.HTscoreDataFrame.place(relx = 0, rely = 0, anchor = "nw")
 
-        self.HTpromptsFrame = ctk.CTkFrame(self.halfTimeFrame, width = 650, height = 550, fg_color = GREY_BACKGROUND, corner_radius = 10)
+        self.HTpromptsFrame = ctk.CTkFrame(self.halfTimeFrame, width = 670, height = 550, fg_color = GREY_BACKGROUND, corner_radius = 10)
 
         self.HTplayersFrame = ctk.CTkFrame(self.halfTimeFrame, width = 520, height = 550, fg_color = GREY_BACKGROUND, corner_radius = 10)
 
@@ -970,11 +970,11 @@ class MatchDay(ctk.CTkFrame):
             ctk.CTkLabel(frame, text = player.last_name,  font = (APP_FONT_BOLD, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.4, anchor = "center")
             
             player_events = [ev for ev in currentEvents.values() if ev["player"] == playerID]
-            score, reaction = player_reaction(homeScore if self.home else awayScore, awayScore if self.home else homeScore, player_events)
+            score = player_reaction(homeScore if self.home else awayScore, awayScore if self.home else homeScore, player_events)
 
             frame.score = score
-            
-            ctk.CTkLabel(frame, text = reaction, font = (APP_FONT_BOLD, 15), width = 100, height = 35, fg_color = get_reaction_colour(score), corner_radius = 15).place(relx = 0.5, rely = 0.75, anchor = "center")
+            frame.reactionLabel = ctk.CTkLabel(frame, text = get_reaction_text(score), font = (APP_FONT_BOLD, 15), width = 100, height = 35, fg_color = get_reaction_colour(score), corner_radius = 15)
+            frame.reactionLabel.place(relx = 0.5, rely = 0.75, anchor = "center")
 
             column += 1
 
@@ -990,11 +990,11 @@ class MatchDay(ctk.CTkFrame):
             ctk.CTkLabel(frame, text = player.last_name,  font = (APP_FONT_BOLD, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.4, anchor = "center")
             
             player_events = [ev for ev in currentEvents.values() if ev["player"] == playerID]
-            score, reaction = player_reaction(homeScore if self.home else awayScore, awayScore if self.home else homeScore, player_events)
+            score = player_reaction(homeScore if self.home else awayScore, awayScore if self.home else homeScore, player_events)
 
             frame.score = score
-            
-            ctk.CTkLabel(frame, text = reaction, font = (APP_FONT_BOLD, 15), width = 100, height = 35, fg_color = get_reaction_colour(score), corner_radius = 15).place(relx = 0.5, rely = 0.75, anchor = "center")
+            frame.reactionLabel = ctk.CTkLabel(frame, text = get_reaction_text(score), font = (APP_FONT_BOLD, 15), width = 100, height = 35, fg_color = get_reaction_colour(score), corner_radius = 15)
+            frame.reactionLabel.place(relx = 0.5, rely = 0.75, anchor = "center")
 
             column += 1
 
@@ -1013,11 +1013,58 @@ class MatchDay(ctk.CTkFrame):
                 frame = ctk.CTkFrame(self.HTpromptsFrame, width = 620, height = 30, fg_color = GREY_BACKGROUND, corner_radius = 10)
                 frame.pack(padx = (10, 0), anchor = "w")
 
-                ctk.CTkButton(frame, text = promptText, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, width = 10, height = 25, command = lambda p = prompt: self.halfTimePrompt(p), anchor = "w").pack()
+                ctk.CTkButton(frame, text = promptText, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, width = 10, height = 25, command = lambda p = prompt: self.halfTimePrompt(p, matchInstance), anchor = "w").pack()
 
         self.HTpromptsFrame.place(relx = 0.01, rely = 0.01, anchor = "nw")
         self.HTpromptsFrame.pack_propagate(False)
 
+    def halfTimePrompt(self, prompt, matchInstance):
+
+        def addGoal(home):
+            events = matchInstance.homeEvents if home else matchInstance.awayEvents
+            addEvent = True
+            for event_time, event_data in events.items():
+                eventMinute = int(event_time.split(":")[0])
+                if eventMinute < 55 and eventMinute > 45 and (event_data["type"] == "goal" or event_data["type"] == "penalty_goal" or event_data["type"] == "own_goal") and not event_data["extra"]:
+                    addEvent = False
+                    break
+
+            if addEvent:
+                type_ = random.choices(list(GOAL_TYPE_CHANCES.keys()), weights = [GOAL_TYPE_CHANCES[goalType] for goalType in GOAL_TYPE_CHANCES])[0]
+                if type_ == "penalty":
+                    type_ = "penalty_goal"
+
+                minute = 45 + random.randint(1, 10)
+                second = random.randint(0, 59)
+
+                extra = False
+                if minute >= 90:
+                    extra = True
+
+                events[str(minute) + ":" + str(second)] = {"type": type_, "extra": extra}
+                matchInstance.score.appendScore(1, home)
+
+        homeScore = int(self.matchFrame.score.split("-")[0])
+        awayScore = int(self.matchFrame.score.split("-")[1])
+
+        reaction = get_prompt_reaction(prompt, homeScore if self.home else awayScore, awayScore if self.home else homeScore)
+
+        for frame in self.HTplayersFrame.winfo_children():
+            frame.score += reaction
+            frame.reactionLabel.configure(text = get_reaction_text(frame.score), fg_color = get_reaction_colour(frame.score))
+
+        for frame in self.HTpromptsFrame.winfo_children():
+            for child in frame.winfo_children():
+                if isinstance(child, ctk.CTkButton):
+                    child.configure(state = "disabled")
+
+        if reaction == 1 and random.random() < 0.1:
+            addGoal(self.home)
+        elif reaction == -1 and random.random() < 0.1:
+            addGoal(not self.home)
+        elif reaction == -2 and random.random() < 0.25:
+            addGoal(not self.home)
+    
     def updateTimeLabel(self, minutes, seconds):
         self.timeLabel.configure(text = f"{str(minutes).zfill(2)}:{str(seconds).zfill(2)}")
 

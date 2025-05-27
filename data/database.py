@@ -3118,7 +3118,7 @@ class StatsManager:
         def fetch_team_unbeaten_run(team):
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
 
-            unbeaten_run = None
+            unbeaten_run = 0
             current_run = 0
             for match in matches:
                 if match.score_home == match.score_away:
@@ -3128,13 +3128,11 @@ class StatsManager:
                 elif match.home_id != team.team_id and match.score_away > match.score_home:
                     current_run += 1
                 else:
-                    if not unbeaten_run:
-                        unbeaten_run = current_run
-                    elif current_run > unbeaten_run:
+                    if current_run > unbeaten_run:
                         unbeaten_run = current_run
                     current_run = 0
 
-            if not unbeaten_run:
+            if current_run > unbeaten_run:
                 unbeaten_run = current_run
 
             return team.team_id, unbeaten_run
@@ -3155,7 +3153,7 @@ class StatsManager:
         def fetch_team_winning_streak(team):
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
 
-            winning_streak = None
+            winning_streak = 0
             current_streak = 0
             for match in matches:
                 if match.home_id == team.team_id and match.score_home > match.score_away:
@@ -3163,13 +3161,11 @@ class StatsManager:
                 elif match.away_id == team.team_id and match.score_away > match.score_home:
                     current_streak += 1
                 else:
-                    if not winning_streak:
-                        winning_streak = current_streak
-                    elif current_streak > winning_streak:
+                    if current_streak > winning_streak:
                         winning_streak = current_streak
                     current_streak = 0
                     
-            if not winning_streak:
+            if current_streak > winning_streak:
                 winning_streak = current_streak
 
             return team.team_id, winning_streak
@@ -3190,7 +3186,7 @@ class StatsManager:
         def fetch_team_losing_streak(team):
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
 
-            losing_streak = None
+            losing_streak = 0
             current_streak = 0
             for match in matches:
                 if match.home_id == team.team_id and match.score_home < match.score_away:
@@ -3198,13 +3194,11 @@ class StatsManager:
                 elif match.away_id == team.team_id and match.score_away < match.score_home:
                     current_streak += 1
                 else:
-                    if not losing_streak:
-                        losing_streak = current_streak
-                    elif current_streak > losing_streak:
+                    if current_streak > losing_streak:
                         losing_streak = current_streak
                     current_streak = 0
 
-            if not losing_streak:
+            if current_streak > losing_streak:
                 losing_streak = current_streak
 
             return team.team_id, losing_streak
@@ -3225,7 +3219,7 @@ class StatsManager:
         def fetch_team_winless_streak(team):
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
 
-            winless_streak = None
+            winless_streak = 0
             current_streak = 0
             for match in matches:
                 if match.score_home == match.score_away:
@@ -3235,13 +3229,11 @@ class StatsManager:
                 elif match.away_id == team.team_id and match.score_away < match.score_home:
                     current_streak += 1
                 else:
-                    if not winless_streak:
-                        winless_streak = current_streak
-                    elif current_streak > winless_streak:
+                    if current_streak > winless_streak:
                         winless_streak = current_streak
                     current_streak = 0
 
-            if not winless_streak:
+            if current_streak > winless_streak:
                 winless_streak = current_streak
 
             return team.team_id, winless_streak
@@ -3262,7 +3254,7 @@ class StatsManager:
         def fetch_team_scoring_streak(team):
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
 
-            scoring_streak = None
+            scoring_streak = 0
             current_streak = 0
             for match in matches:
                 if match.home_id == team.team_id and match.score_home > 0:
@@ -3270,13 +3262,11 @@ class StatsManager:
                 elif match.away_id == team.team_id and match.score_away > 0:
                     current_streak += 1
                 else:
-                    if not scoring_streak:
-                        scoring_streak = current_streak
-                    elif current_streak > scoring_streak:
+                    if current_streak > scoring_streak:
                         scoring_streak = current_streak
                     current_streak = 0
 
-            if not scoring_streak:
+            if current_streak > scoring_streak:
                 scoring_streak = current_streak
 
             return team.team_id, scoring_streak
@@ -3297,7 +3287,7 @@ class StatsManager:
         def fetch_team_scoreless_streak(team):
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
 
-            scoreless_streak = None
+            scoreless_streak = 0
             current_streak = 0
             for match in matches:
                 if match.home_id == team.team_id and match.score_home == 0:
@@ -3305,13 +3295,11 @@ class StatsManager:
                 elif match.away_id == team.team_id and match.score_away == 0:
                     current_streak += 1
                 else:
-                    if not scoreless_streak:
-                        scoreless_streak = current_streak
-                    elif current_streak > scoreless_streak:
+                    if current_streak > scoreless_streak:
                         scoreless_streak = current_streak
                     current_streak = 0
 
-            if not scoreless_streak:
+            if current_streak > scoreless_streak:
                 scoreless_streak = current_streak
 
             return team.team_id, scoreless_streak

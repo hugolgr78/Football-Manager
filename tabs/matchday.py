@@ -74,7 +74,7 @@ class MatchDay(ctk.CTkFrame):
         self.speedButtonsFrame.place(relx = 0.5, rely = 0.98, anchor = "s")
 
         self.addSpeedButtons()
-
+        
     def addSpeedButtons(self):
         veryFast = ctk.CTkButton(self.speedButtonsFrame, text = "Very Fast", width = 75, height = 40, font = (APP_FONT, 10), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, command = lambda: self.setSpeed(1 / 120))
         veryFast.place(relx = 0, rely = 0.5, anchor = "w")
@@ -90,7 +90,7 @@ class MatchDay(ctk.CTkFrame):
 
         verySlow = ctk.CTkButton(self.speedButtonsFrame, text = "Very Slow", width = 75, height = 40, font = (APP_FONT, 10), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, command = lambda: self.setSpeed(8 / 60))
         verySlow.place(relx = 0.8125, rely = 0.5, anchor = "w")
-
+    
     def setSpeed(self, speed):
         self.timerThread_running = False
         self.speed = speed

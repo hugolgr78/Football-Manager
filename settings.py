@@ -196,7 +196,7 @@ RED_CARD_CHANCES = {
     'forward': 0.8
 }
 
-INJURY_CHANCE = 0.1 # chance for a team to get an injury in a match
+INJURY_CHANCE = 0 # chance for a team to get an injury in a match
 
 MATCHDAY_SUBS = 7
 MAX_SUBS = 5
@@ -533,15 +533,15 @@ def player_reaction(score_for: int, score_against: int, player_events: dict) -> 
 
     # Determine final reaction
     if reaction_score >= 3:
-        return reaction_score, "Delighted"
+        return reaction_score
     elif reaction_score == 2:
-        return reaction_score, "Happy", 
+        return reaction_score
     elif reaction_score == 1 or reaction_score == 0:
-        return reaction_score, "Neutral", 
+        return reaction_score
     elif reaction_score == -1:
-        return reaction_score, "Frustrated"
+        return reaction_score
     else:
-        return reaction_score, "Angry"
+        return reaction_score
 
 REACTION_COLOURS = [
     (lambda x: x >= 3, DELIGHTED_COLOR),
@@ -551,10 +551,24 @@ REACTION_COLOURS = [
     (lambda x: x <= -2, ANGRY_COLOR),
 ]
 
+REACTION_TEXTS = {
+    (lambda x: x >= 3): "Delighted",
+    (lambda x: x == 2): "Happy",
+    (lambda x: x in (0, 1)): "Neutral",
+    (lambda x: x == -1): "Frustrated",
+    (lambda x: x <= -2): "Angry"
+}
+
 def get_reaction_colour(score):
     for cond, color in REACTION_COLOURS:
         if cond(score):
             return color
+
+def get_reaction_text(score):
+    for cond, text in REACTION_TEXTS.items():
+        if cond(score):
+            return text
+    return "N/A"
 
 HALF_TIME_PROMPTS = {
     "Encourage": (
@@ -583,3 +597,21 @@ HALF_TIME_PROMPTS = {
         "This isn’t good enough. I need to see a reaction in the second half."
     )
 }
+
+PROMPT_REACTIONS = {
+    "Encourage": {"win": -1 , "draw": 0, "lose": 1},
+    "Berate": {"win": -2, "draw": -1, "lose": 1},
+    "Neutral": {"win": 0, "draw": 1, "lose": 0},
+    "Happy": {"win": 1, "draw": 0, "lose": -1},
+    "Dissapointed": {"win": -1, "draw": 0, "lose": 1}
+}
+
+def get_prompt_reaction(prompt, score_for: int, score_against: int):
+    if score_for > score_against:
+        result = "win"
+    elif score_for < score_against:
+        result = "lose"
+    else:
+        result = "draw"
+
+    return PROMPT_REACTIONS[prompt][result]

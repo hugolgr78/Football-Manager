@@ -29,7 +29,7 @@ class ShoutFrame(ctk.CTkFrame):
         addEvent = True
         for event_time, event_data in events.items():
             eventMinute = int(event_time.split(":")[0])
-            if eventMinute < self.currMinute + 10 and (event_data["type"] == "goal" or event_data["type"] == "penalty_goal" or event_data["type"] == "own_goal"):
+            if eventMinute < self.currMinute + 10 and eventMinute > self.currMinute and (event_data["type"] == "goal" or event_data["type"] == "penalty_goal" or event_data["type"] == "own_goal"):
                 addEvent = False
                 break
         
@@ -44,8 +44,6 @@ class ShoutFrame(ctk.CTkFrame):
             extra = False
             if minute >= 90:
                 extra = True
-            elif 45 <= minute < 50:
-                extra = True
 
             events[str(minute) + ":" + str(second)] = {"type": type_, "extra": extra}
             self.match.score.appendScore(1, home)
@@ -55,7 +53,7 @@ class ShoutFrame(ctk.CTkFrame):
         
         for event_time, event_data in events.items():
             eventMinute = int(event_time.split(":")[0])
-            if eventMinute < self.currMinute + 10 and (event_data["type"] == "goal" or event_data["type"] == "penalty_goal" or event_data["type"] == "own_goal"):
+            if eventMinute < self.currMinute + 10 and eventMinute > self.currMinute and (event_data["type"] == "goal" or event_data["type"] == "penalty_goal" or event_data["type"] == "own_goal"):
                 del events[event_time]
                 self.match.score.appendScore(-1, home)
                 break

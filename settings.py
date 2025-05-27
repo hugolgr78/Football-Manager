@@ -223,7 +223,7 @@ def generate_lower_div_objectives(min_level, max_level):
         (max_level - 2 * range_size - 1, min_level): "avoid relegation",
     }
 
-GOAL_RATINGS = [1.00, 1.12, 1.05, 1.15, 1.07, 1.01, 1.04, 1.11]
+GOAL_RATINGS = [1.00, 1.03, 1.06, 1.09, 1.12, 1.15, 1.17, 1.20]
 PENALTY_GOAL_RATINGS = [0.75, 0.78, 0.82, 0.84, 0.90, 0.94, 1.03, 1.08]
 PENALTY_MISS_RATINGS = [-0.32, -0.42, -0.47, -0.51, -0.57, -0.63, -0.66, -0.72]
 YELLOW_CARD_RATINGS = [-0.21, -0.28, -0.32, -0.37, -0.41, -0.45, -0.49, -0.53]

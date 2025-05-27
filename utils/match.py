@@ -747,6 +747,9 @@ class Match():
         PlayerBans.reduce_all_player_bans_for_team(self.homeTeam.id, self.match.league_id)
         PlayerBans.reduce_all_player_bans_for_team(self.awayTeam.id, self.match.league_id)
 
+        if len(self.awayProcessedEvents) == 0:
+            print(self.awayTeam.name)
+
         self.getPlayerRatings(self.homeTeam, self.homeFinalLineup, self.homeCurrentLineup, self.homeProcessedEvents)
         self.getPlayerRatings(self.awayTeam, self.awayFinalLineup, self.awayCurrentLineup, self.awayProcessedEvents)
 

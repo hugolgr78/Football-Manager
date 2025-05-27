@@ -425,14 +425,14 @@ class MatchDay(ctk.CTkFrame):
                                 if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                     frame.updateScoreLabel(home = False)
                                 frame.matchInstance.getEventPlayer(event_details, False, event_time)
-                                frame.matchInstance.homeProcessedEvents[event_time] = event_details
+                                frame.matchInstance.awayProcessedEvents[event_time] = event_details
                         else:
                             if not (self.halfTime or self.fullTime):
                                 if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                     frame.updateScoreLabel(home = False)
 
                                 frame.matchInstance.getEventPlayer(event_details, False, event_time)
-                                frame.matchInstance.homeProcessedEvents[event_time] = event_details
+                                frame.matchInstance.awayProcessedEvents[event_time] = event_details
 
             if minutes == 45 + self.matchFrame.matchInstance.extraTimeHalf and self.halfTime and seconds == 0:
                 self.shoutsButton.configure(state = "disabled")

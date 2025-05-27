@@ -333,12 +333,6 @@ MEDIUM_RED_CARD = [0.88, 0.08, 0.03]
 HIGH_YELLOW_CARD = [0.5, 0.3, 0.1, 0.05, 0.05]
 HIGH_RED_CARD = [0.84, 0.1, 0.05, 0.01]
 
-# Extra yellows scenario
-YELLOWS_EXTRA = [0.1] * 10
-
-# 100% red card scenario
-RED_100 = [1.0]
-
 def get_morale_change(match_result, player_rating, goal_difference):
     # Base morale change based on match result
     if match_result == "win":

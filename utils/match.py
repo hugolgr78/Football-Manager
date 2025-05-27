@@ -787,8 +787,6 @@ class Match():
         
             ## ----------------------------- Match events ----------------------------- ##
             events_to_add = []
-            bans_to_add = []
-            emails_to_add = []
             for time, event in self.homeProcessedEvents.items():
 
                 player_id = event["player"] if "player" in event and event["player"] else None
@@ -820,12 +818,12 @@ class Match():
                 elif event["type"] == "injury" or event["type"] == "red_card":
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
                     ban = get_player_ban(event["type"])
-                    bans_to_add.append((player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"]))
+                    PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
                     if managing_team == "home" and event["type"] == "injury":
-                        emails_to_add.append(("player_injury", None, player_id, ban, self.match.league_id))
+                        Emails.add_email("player_injury", None, player_id, ban, self.match.league_id)
                     elif managing_team == "home" and event["type"] == "red_card":
-                        emails_to_add.append(("player_ban", None, player_id, ban, self.match.league_id))
+                        Emails.add_email("player_ban", None, player_id, ban, self.match.league_id)
 
                 elif event["type"] == "yellow_card":
                     events_to_add.append((self.match.id, "yellow_card", minute, player_id))
@@ -864,12 +862,12 @@ class Match():
                 elif event["type"] == "injury" or event["type"] == "red_card":
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
                     ban = get_player_ban(event["type"])
-                    bans_to_add.append((player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"]))
+                    PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
                     if managing_team == "away" and event["type"] == "injury":
-                        emails_to_add.append(("player_injury", None, player_id, ban, self.match.league_id))
+                        Emails.add_email("player_injury", None, player_id, ban, self.match.league_id)
                     elif managing_team == "away" and event["type"] == "red_card":
-                        emails_to_add.append(("player_ban", None, player_id, ban, self.match.league_id))
+                        Emails.add_email("player_ban", None, player_id, ban, self.match.league_id)
 
                 elif event["type"] == "yellow_card":
                     events_to_add.append((self.match.id, "yellow_card", minute, player_id))
@@ -884,8 +882,6 @@ class Match():
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"]))
 
             futures.append(executor.submit(MatchEvents.batch_add_events, events_to_add))
-            futures.append(executor.submit(PlayerBans.batch_add_bans, bans_to_add))
-            futures.append(executor.submit(Emails.batch_add_emails, emails_to_add))
 
             ## ----------------------------- Matches ----------------------------- ##
             futures.append(executor.submit(Matches.update_score, self.match.id, self.score.getScore()[0], self.score.getScore()[1]))

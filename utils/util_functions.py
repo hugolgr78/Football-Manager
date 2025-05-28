@@ -1,4 +1,5 @@
 from settings import *
+import random
 
 def get_objective_for_level(level):
     for (max_level, min_level), objective in OBJECTIVES.items():

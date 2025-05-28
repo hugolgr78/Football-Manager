@@ -389,6 +389,8 @@ class MatchDay(ctk.CTkFrame):
                         self.matchFrame.FTLabel()
                     
                     self.extraTimeLabel.place_forget()
+                
+                    self.shoutsButton.configure(state = "normal")
 
             ## ----------- substitution end ------------
             if minutes == 89 + self.maxExtraTimeFull and seconds == 0:

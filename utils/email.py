@@ -173,8 +173,8 @@ class Welcome():
         )
 
         self.emailTextBetFrame_1 = (
-            f"proudly supports us every step of the way. We play our home matches at {self.parent.team.stadium}, a venue\n"
-            f"known for its electric atmosphere and passionate crowd."
+            f"proudly supports us every step of the way. We play our home matches at {self.parent.team.stadium},\n"
+            f"a venue known for its electric atmosphere and passionate crowd."
         )
 
         self.emailFrame_3 = LeagueProfileLabel(

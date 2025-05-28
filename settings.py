@@ -277,10 +277,10 @@ LOW_YELLOW_CARD = [0.7, 0.2, 0.1]
 LOW_RED_CARD = [0.95, 0.05]
 
 MEDIUM_YELLOW_CARD = [0.6, 0.2, 0.1, 0.1]
-MEDIUM_RED_CARD = [0.88, 0.08, 0.03]
+MEDIUM_RED_CARD = [0.895, 0.1, 0.005]
 
 HIGH_YELLOW_CARD = [0.5, 0.3, 0.1, 0.05, 0.05]
-HIGH_RED_CARD = [0.84, 0.1, 0.05, 0.01]
+HIGH_RED_CARD = [0.894, 0.1, 0.005, 0.001]
 
 INTRODUCTORY_TEXTS = [
     "Hey Boss, what did you want to see me for?",

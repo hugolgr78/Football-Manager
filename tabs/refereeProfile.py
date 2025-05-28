@@ -5,6 +5,7 @@ from data.gamesDatabase import *
 from PIL import Image
 import io
 from utils.teamLogo import TeamLogo
+from utils.util_functions import *
 
 class RefereeProfile(ctk.CTkFrame):
     def __init__(self, parent, referee, changeBackFunction = None):

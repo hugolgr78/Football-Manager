@@ -4,6 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 from PIL import Image
 from utils.frames import PlayerFrame
+from utils.util_functions import *
 
 class Squad(ctk.CTkFrame):
     def __init__(self, parent, manager_id):

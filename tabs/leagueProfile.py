@@ -7,6 +7,7 @@ import io
 from utils.frames import LeagueTable, MatchdayFrame
 from utils.playerProfileLink import PlayerProfileLink
 from utils.teamLogo import TeamLogo
+from utils.util_functions import *
 
 class LeagueProfile(ctk.CTkFrame):
     def __init__(self, parent, manager_id, changeBackFunction = None):

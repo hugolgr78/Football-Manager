@@ -3,6 +3,7 @@ from settings import *
 from data.database import *
 from data.gamesDatabase import *
 from utils.email import *
+from utils.util_functions import *
 
 class Inbox(ctk.CTkFrame):
     def __init__(self, parent, manager_id):

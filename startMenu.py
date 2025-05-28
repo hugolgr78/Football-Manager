@@ -5,8 +5,6 @@ from data.gamesDatabase import *
 from PIL import Image
 import os, datetime, io
 from CTkMessagebox import CTkMessagebox
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tabs.mainMenu import MainMenu
 from utils.frames import LeagueTable, WinRatePieChart
 
@@ -104,6 +102,16 @@ class StartMenu(ctk.CTkFrame):
 
         self.playButton = ctk.CTkButton(self.showFrame, text = "Play", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 200, height = 40, command = lambda: self.startGame())
         self.playButton.place(relx = 0.95, rely = 0.95, anchor = "se")
+
+        ## ----------------------------- Quit button ----------------------------- ##
+        src = Image.open("Images/cross.png")
+        logo = ctk.CTkImage(src, None, (20, 20))
+        ctk.CTkButton(self.menuFrame, text = "", image = logo, fg_color = DARK_GREY, hover_color = CLOSE_RED, width = 10, height = 10, corner_radius = 15, command = lambda: self.closeApp()).place(relx = 0.98, rely = 0.01, anchor = "ne")
+
+    def closeApp(self):
+        response = CTkMessagebox(title = "Exit", message = "Are you sure you want to exit?", icon = "question", option_1 = "Yes", option_2 = "No")
+        if response.get() == "Yes":
+            self.parent.destroy()
 
     def chooseManager(self, value):
 

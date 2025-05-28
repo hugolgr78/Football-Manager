@@ -295,7 +295,8 @@ class MatchFrame(ctk.CTkFrame):
             playerOTM = TeamLineup.get_player_OTM(self.match.id)
             player = Players.get_player_by_id(playerOTM.player_id)
 
-            ctk.CTkLabel(self.otherInfoFrame, text = f"PoTM: {player.first_name} {player.last_name}", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
+            ctk.CTkLabel(self.otherInfoFrame, text = f"PoTM:", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
+            PlayerProfileLink(self.otherInfoFrame, player, f"{player.first_name} {player.last_name}", "white", 0.225, 0.88, "w", DARK_GREY, self.parentTab, fontSize = 15)
         else:
             ctk.CTkLabel(self.otherInfoFrame, text = "PoTM: N/A", fg_color = DARK_GREY, text_color = "white", font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
 

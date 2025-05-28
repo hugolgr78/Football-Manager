@@ -3,6 +3,7 @@ from settings import *
 from data.database import *
 from data.gamesDatabase import *
 from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame
+from utils.util_functions import *
 from tabs.matchday import MatchDay
 
 class Tactics(ctk.CTkFrame):

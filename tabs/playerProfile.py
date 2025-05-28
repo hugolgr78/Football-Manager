@@ -6,6 +6,7 @@ from PIL import Image
 import io
 from utils.teamLogo import TeamLogo
 from utils.frames import FootballPitchPlayerPos
+from utils.util_functions import *
 
 class PlayerProfile(ctk.CTkFrame):
     def __init__(self, parent, player, changeBackFunction = None):

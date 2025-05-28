@@ -6,6 +6,7 @@ from PIL import Image
 import io
 from utils.teamLogo import TeamLogo
 from utils.frames import WinRatePieChart, TrophiesFrame
+from utils.util_functions import *
 
 class ManagerProfile(ctk.CTkFrame):
     def __init__(self, parent, manager_id, changeBackFunction = None):

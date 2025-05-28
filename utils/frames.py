@@ -10,6 +10,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from utils.playerProfileLink import PlayerProfileLink
 from utils.match import Match
 from utils.refereeProfileLink import RefereeProfileLabel
+from utils.util_functions import *
 
 class MatchFrame(ctk.CTkFrame):
     def __init__(self, parent, manager_id, match, parentFrame, matchInfoFrame, parentTab):

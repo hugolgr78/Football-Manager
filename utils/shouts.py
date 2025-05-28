@@ -2,6 +2,7 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
+from utils.util_functions import *
 
 class ShoutFrame(ctk.CTkFrame):
     def __init__(self, parent, width, height, corner_radius, fgColor, shout, matchFrame, home, time, shoutMadeFunction, closeFunction):

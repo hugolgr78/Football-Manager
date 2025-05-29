@@ -1,11 +1,9 @@
-import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
 from utils.score import Score
 from collections import defaultdict
-from sqlalchemy.orm import Session
-import itertools, threading, concurrent.futures
+import concurrent.futures
 from utils.util_functions import *
 
 class Match():

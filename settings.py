@@ -309,41 +309,6 @@ STREAK_STATS = ["Streaks", "Longest unbeaten run", "Longest winning streak", "Lo
 
 TEAM_STATS = [ATTACK_STATS, DEFENSIVE_STATS, MISC_STATS, STREAK_STATS]
 
-from data.database import StatsManager
-
-STAT_FUNCTIONS = {
-    "Goals scored": StatsManager.get_goals_scored,
-    "Penalties scored": StatsManager.get_penalties_scored,
-    "Goals scored in the first 15": StatsManager.get_goals_scored_in_first_15,
-    "Goals scored in the last 15": StatsManager.get_goals_scored_in_last_15,
-    "Goals by substitutes": StatsManager.get_goals_by_substitutes,
-    "Fastest goal scored": StatsManager.get_fastest_goal_scored,
-    "Latest goal scored": StatsManager.get_latest_goal_scored,
-    "Goals conceded": StatsManager.get_goals_conceded,
-    "Clean sheets": StatsManager.get_clean_sheets,
-    "Yellow cards": StatsManager.get_yellow_cards,
-    "Red cards": StatsManager.get_red_cards,
-    "Own goals": StatsManager.get_own_goals,
-    "Penalties saved": StatsManager.get_penalties_saved,
-    "Goal conceded in the first 15": StatsManager.get_goals_conceded_in_first_15,
-    "Goal conceded in the last 15": StatsManager.get_goals_conceded_in_last_15,
-    "Fastest goal conceded": StatsManager.get_fastest_goal_conceded,
-    "Latest goal conceded": StatsManager.get_latest_goal_conceded,
-    "Goal difference": StatsManager.get_goal_difference,
-    "Winning from losing position": StatsManager.get_winning_from_losing_position,
-    "Losing from winning position": StatsManager.get_losing_from_winning_position,
-    "Biggest win": StatsManager.get_biggest_win,
-    "Biggest loss": StatsManager.get_biggest_loss,
-    "Home performance": StatsManager.get_home_performance,
-    "Away performance": StatsManager.get_away_performance,
-    "Longest unbeaten run": StatsManager.get_longest_unbeaten_run,
-    "Longest winning streak": StatsManager.get_longest_winning_streak,
-    "Longest losing streak": StatsManager.get_longest_losing_streak,
-    "Longest winless streak": StatsManager.get_longest_winless_streak,
-    "Longest scoring streak": StatsManager.get_longest_scoring_streak,
-    "Longest scoreless streak": StatsManager.get_longest_scoreless_streak,
-}
-
 REACTION_COLOURS = [
     (lambda x: x >= 3, DELIGHTED_COLOR),
     (lambda x: x == 2, HAPPY_COLOR),
@@ -352,13 +317,14 @@ REACTION_COLOURS = [
     (lambda x: x <= -2, ANGRY_COLOR),
 ]
 
-REACTION_TEXTS = {
-    (lambda x: x >= 3): "Delighted",
-    (lambda x: x == 2): "Happy",
-    (lambda x: x in (0, 1)): "Neutral",
-    (lambda x: x == -1): "Frustrated",
-    (lambda x: x <= -2): "Angry"
-}
+REACTION_TEXTS = [
+    (lambda x: x >= 3, "Ecstatic"),
+    (lambda x: x == 2, "Very Happy"),
+    (lambda x: x == 1, "Happy"),
+    (lambda x: x == 0, "Content"),
+    (lambda x: x == -1, "Disappointed"),
+    (lambda x: x <= -2, "Angry"),
+]
 
 HALF_TIME_PROMPTS = {
     "Encourage": (
@@ -395,3 +361,40 @@ PROMPT_REACTIONS = {
     "Happy": {"win": 1, "draw": 0, "lose": -1},
     "Dissapointed": {"win": -1, "draw": 0, "lose": 1}
 }
+
+from data.database import StatsManager
+
+STAT_FUNCTIONS = {
+    "Goals scored": StatsManager.get_goals_scored,
+    "Penalties scored": StatsManager.get_penalties_scored,
+    "Goals scored in the first 15": StatsManager.get_goals_scored_in_first_15,
+    "Goals scored in the last 15": StatsManager.get_goals_scored_in_last_15,
+    "Goals by substitutes": StatsManager.get_goals_by_substitutes,
+    "Fastest goal scored": StatsManager.get_fastest_goal_scored,
+    "Latest goal scored": StatsManager.get_latest_goal_scored,
+    "Goals conceded": StatsManager.get_goals_conceded,
+    "Clean sheets": StatsManager.get_clean_sheets,
+    "Yellow cards": StatsManager.get_yellow_cards,
+    "Red cards": StatsManager.get_red_cards,
+    "Own goals": StatsManager.get_own_goals,
+    "Penalties saved": StatsManager.get_penalties_saved,
+    "Goal conceded in the first 15": StatsManager.get_goals_conceded_in_first_15,
+    "Goal conceded in the last 15": StatsManager.get_goals_conceded_in_last_15,
+    "Fastest goal conceded": StatsManager.get_fastest_goal_conceded,
+    "Latest goal conceded": StatsManager.get_latest_goal_conceded,
+    "Goal difference": StatsManager.get_goal_difference,
+    "Winning from losing position": StatsManager.get_winning_from_losing_position,
+    "Losing from winning position": StatsManager.get_losing_from_winning_position,
+    "Biggest win": StatsManager.get_biggest_win,
+    "Biggest loss": StatsManager.get_biggest_loss,
+    "Home performance": StatsManager.get_home_performance,
+    "Away performance": StatsManager.get_away_performance,
+    "Longest unbeaten run": StatsManager.get_longest_unbeaten_run,
+    "Longest winning streak": StatsManager.get_longest_winning_streak,
+    "Longest losing streak": StatsManager.get_longest_losing_streak,
+    "Longest winless streak": StatsManager.get_longest_winless_streak,
+    "Longest scoring streak": StatsManager.get_longest_scoring_streak,
+    "Longest scoreless streak": StatsManager.get_longest_scoreless_streak,
+}
+
+## ANYTHING HERE WILL NOT BE IMPORTED CORRECTLY DUE TO THE STATSMANAGER IMPORT

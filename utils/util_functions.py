@@ -14,6 +14,7 @@ def generate_lower_div_objectives(min_level, max_level):
         (max_level - range_size - 1, max_level - 2 * range_size): "finish in the top half",
         (max_level - 2 * range_size - 1, min_level): "avoid relegation",
     }
+
 def get_fan_reaction(result, expectation):
     """ Get the fan reaction based on match result and expectation level. """
 
@@ -48,6 +49,7 @@ def get_player_ban(ban_type):
         ban = random.randint(1,3)
 
     return ban
+
 def get_morale_change(match_result, player_rating, goal_difference):
     # Base morale change based on match result
     if match_result == "win":
@@ -80,6 +82,7 @@ def get_morale_decrease_role(player):
         return -1
     
     return 0 # Backup keepers and youth players
+
 def get_player_response(prompt, rating, is_injured):
     responses = {
         "Congratulate": {
@@ -140,6 +143,7 @@ def get_player_response(prompt, rating, is_injured):
         return "I’m not sure what to say to that, Boss."
     
     return random.choice(responses[prompt][response_type]), accepted
+
 def parse_time(time_str, reverse = False):
     if time_str == "N/A":
         return float("inf") if not reverse else -float("inf")
@@ -150,6 +154,7 @@ def parse_time(time_str, reverse = False):
     main_time = int(parts[0].strip())
     stoppage_time = int(parts[1].strip()) if len(parts) > 1 else 0
     return main_time + stoppage_time
+
 def player_reaction(score_for: int, score_against: int, player_events: dict) -> str:
     reaction_score = 0
     
@@ -186,16 +191,18 @@ def player_reaction(score_for: int, score_against: int, player_events: dict) -> 
         return reaction_score
     else:
         return reaction_score
+    
 def get_reaction_colour(score):
     for cond, color in REACTION_COLOURS:
         if cond(score):
             return color
 
 def get_reaction_text(score):
-    for cond, text in REACTION_TEXTS.items():
+    for cond, text in REACTION_TEXTS:
         if cond(score):
             return text
     return "N/A"
+
 def get_prompt_reaction(prompt, score_for: int, score_against: int):
     if score_for > score_against:
         result = "win"

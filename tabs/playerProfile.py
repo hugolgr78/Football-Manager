@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import tkinter.font as tkFont
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
@@ -102,19 +103,30 @@ class Profile(ctk.CTkFrame):
         ctk.CTkLabel(self, text = self.player.nationality.capitalize(), font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.36, rely = 0.2, anchor = "w")
 
         ctk.CTkLabel(self, text = f"{self.player.age} years old / {self.player.date_of_birth}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.27, anchor = "w")
+        ctk.CTkLabel(self, text = self.player.player_role, font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.33, anchor = "w")
 
         playerBans = PlayerBans.get_bans_for_player(self.player.id)
 
         for ban in playerBans:
             if ban.ban_type == "injury":
-                ctk.CTkLabel(self, text = f"Injured. Expected return in {ban.ban_length} matchday(s)", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.33, anchor = "w")
-                self.injured = True
+                injuryLabel = ctk.CTkLabel(self, text = f"Expected return in {ban.ban_length} matchday(s)", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND)
+
+                font = tkFont.Font(family = APP_FONT_BOLD, size = 40)
+                name_width_px = font.measure(f"{self.player.first_name} {self.player.last_name}")
+                frame_width_px = 1000
+                relx = 0.23 + (name_width_px / frame_width_px)
+
+                src = Image.open("Images/hospital.png")
+                src.thumbnail((35, 35))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                injuryImage = ctk.CTkLabel(self, image = img, text = "")
+                injuryImage.place(relx = relx, rely = 0.12, anchor = "center")
+
+                injuryImage.bind("<Enter>", lambda e: injuryLabel.place(relx = relx, rely = 0.07, anchor = "center"))
+                injuryImage.bind("<Leave>", lambda e: injuryLabel.place_forget())
             else:
                 self.suspended = True
                 self.susBan = ban
-
-        if not self.injured:
-            ctk.CTkLabel(self, text = self.player.player_role, font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.33, anchor = "w")
 
         teamLogo = Image.open(io.BytesIO(self.parent.team.logo))
         teamLogo.thumbnail((200, 200))
@@ -140,10 +152,13 @@ class Profile(ctk.CTkFrame):
 
     def addStats(self):
 
-        if not self.suspended:
-            ctk.CTkLabel(self.statsFrame, text = "Eclipse League stats: ", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.03, rely = 0.5, anchor = "w")
-        else:
-            ctk.CTkLabel(self.statsFrame, text = f"Eclipse League stats: (# for {self.susBan.ban_length} match(es))", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.03, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(self.statsFrame, text = "Eclipse League stats: ", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.03, rely = 0.5, anchor = "w")
+        
+        if self.suspended:
+            src = Image.open(f"Images/redCard_{self.susBan.ban_length}.png")
+            src.thumbnail((35, 35))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(self.statsFrame, image = img, text = "").place(relx = 0.98, rely = 0.5, anchor = "e")
 
         played = TeamLineup.get_number_matches_by_player(self.player.id, self.parent.league.league_id)
         yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id)

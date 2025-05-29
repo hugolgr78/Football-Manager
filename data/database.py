@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 import uuid, json, random
 from faker import Faker
 from settings import *
+from utils.util_functions import *
 
 Base = declarative_base()
 

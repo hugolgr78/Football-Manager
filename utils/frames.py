@@ -865,7 +865,7 @@ class FootballPitchPlayerPos(FootballPitchVertical):
                 outline_color = APP_BLUE
             else:
                 fill_color = TKINTER_BACKGROUND
-                outline_color = GREY_BACKGROUND
+                outline_color = GREY
             self.canvas.create_oval(x - player_radius, y - player_radius, x + player_radius, y + player_radius, fill = fill_color, outline = outline_color) 
 
 class FootballPitchLineup(FootballPitchHorizontal):

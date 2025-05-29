@@ -294,13 +294,16 @@ class MatchDay(ctk.CTkFrame):
 
                 self.matchFrame.matchInstance.extraTimeHalf = extraTime
 
+                frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
+                frame.pack(expand = True, fill = "both")
+                ctk.CTkLabel(frame, text = f"+{self.matchFrame.matchInstance.extraTimeHalf} minute(s) added", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
             ## Half time for every time now
             if self.halfTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
                 if minutes == 45 + self.maxExtraTimeHalf and seconds == 0:
                     self.timerThread_running = False
                     self.halfTimeTalks()
-                    # self.pauseButton.configure(text = "Resume", command = self.resumeMatch)
 
                     ## Add HT labels if they are not already there
                     for frame in self.otherMatchesFrame.winfo_children():
@@ -374,6 +377,10 @@ class MatchDay(ctk.CTkFrame):
 
                 self.matchFrame.matchInstance.extraTimeFull = extraTime
 
+                frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
+                frame.pack(expand = True, fill = "both")
+                ctk.CTkLabel(frame, text = f"+{self.matchFrame.matchInstance.extraTimeFull} minute(s) added", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
             if self.fullTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
                 if minutes == 90 + self.maxExtraTimeFull and seconds == 0:
@@ -391,7 +398,11 @@ class MatchDay(ctk.CTkFrame):
                     
                     self.extraTimeLabel.place_forget()
                 
-                    self.shoutsButton.configure(state = "disabled")
+                    if self.matchFrame.matchInstance.extraTimeFull == 5:
+                        self.shoutsButton.configure(state = "disabled")
+                        frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
+                        frame.pack(expand = True, fill = "both")
+                        ctk.CTkLabel(frame, text = "------------------ Full Time ------------------", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
             ## ----------- substitution end ------------
             if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
@@ -441,11 +452,19 @@ class MatchDay(ctk.CTkFrame):
                 self.shoutsButton.configure(state = "disabled")
                 self.substitutionButton.configure(state = "disabled")
                 self.matchFrame.HTLabel()
+
+                frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
+                frame.pack(expand = True, fill = "both")
+                ctk.CTkLabel(frame, text = "------------------ Half Time ------------------", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
             
             if minutes == 90 + self.matchFrame.matchInstance.extraTimeFull and self.fullTime and seconds == 0:
                 self.shoutsButton.configure(state = "disabled")
                 self.substitutionButton.configure(state = "disabled")
                 self.matchFrame.FTLabel()
+
+                frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
+                frame.pack(expand = True, fill = "both")
+                ctk.CTkLabel(frame, text = "------------------ Full Time ------------------", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
             ## ----------- managing team match ------------
             for event_time, event_details in list(self.matchFrame.matchInstance.homeEvents.items()):

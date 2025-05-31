@@ -114,10 +114,11 @@ class Tactics(ctk.CTkFrame):
                             GREY_BACKGROUND,
                             65, 
                             65, 
-                            name,
+                            player.id,
                             positionCode,
                             position,
-                            self.removePlayer
+                            self.removePlayer,
+                            self.updateLineup
                         )
             
         self.lineupPitch.set_counter(playersCount)
@@ -241,10 +242,11 @@ class Tactics(ctk.CTkFrame):
                             GREY_BACKGROUND,
                             65, 
                             65, 
-                            selected_player,
+                            player.id,
                             POSITION_CODES[self.selected_position],
                             self.selected_position,
-                            self.removePlayer
+                            self.removePlayer,
+                            self.updateLineup
                         )
 
         for frame in self.substituteFrame.winfo_children():
@@ -293,6 +295,31 @@ class Tactics(ctk.CTkFrame):
                 if isinstance(frame, SubstitutePlayer):
                     frame.hideCheckBox()
                     frame.uncheckCheckBox()
+
+    def updateLineup(self, player, old_position, new_position):
+        if old_position in self.selectedLineup:
+            del self.selectedLineup[old_position]
+
+        self.selectedLineup[new_position] = player.id
+
+        ## Add the old position back into to dropdown, accouting for related positions and remove the new position
+        if new_position in self.positionsCopy:
+            del self.positionsCopy[new_position]
+
+            if new_position in RELATED_POSITIONS:
+                for related_position in RELATED_POSITIONS[new_position]:
+                    if related_position in self.positionsCopy:
+                        del self.positionsCopy[related_position]
+    
+        if old_position not in self.positionsCopy:
+            self.positionsCopy[old_position] = POSITION_CODES[old_position]
+
+            if old_position in RELATED_POSITIONS:
+                for related_position in RELATED_POSITIONS[old_position]:
+                    self.positionsCopy[related_position] = POSITION_CODES[old_position]
+
+        self.dropDown.configure(values = list(self.positionsCopy.keys()))
+        print(self.selectedLineup)
 
     def reset(self):
         self.lineupPitch.destroy()

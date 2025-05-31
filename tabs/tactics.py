@@ -24,7 +24,7 @@ class Tactics(ctk.CTkFrame):
         self.positionsCopy = POSITION_CODES.copy()
 
         ctk.CTkLabel(self, text = "Lineup", font = (APP_FONT_BOLD, 35), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.05, anchor = "w")
-        
+
         self.addFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 50, corner_radius = 10)
         self.addFrame.place(relx = 0.02, rely = 0.98, anchor = "sw")
 
@@ -188,7 +188,7 @@ class Tactics(ctk.CTkFrame):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).pack(pady = 5)
         
         for player in self.players:
-            SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self, self.league.id)
+            SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 25, 525, player, self.checkSubstitute, self, self.league.id)
 
     def choosePlayer(self, selected_position):
         self.selected_position = selected_position

@@ -883,7 +883,7 @@ class FootballPitchLineup(FootballPitchHorizontal):
 
     def create_drop_zones(self):
         for pos, pitch_pos in POSITIONS_PITCH_POSITIONS.items():
-            zone = ctk.CTkFrame(self, width = 65, height = 65, fg_color = self.pitchColor, border_color = "red", border_width = 2, background_corner_colors = [self.pitchColor, self.pitchColor, self.pitchColor, self.pitchColor], corner_radius = 10)
+            zone = ctk.CTkFrame(self, width = 65, height = 65, fg_color = self.pitchColor, bg_color = self.pitchColor, border_color = "red", border_width = 2, background_corner_colors = [self.pitchColor, self.pitchColor, self.pitchColor, self.pitchColor], corner_radius = 10)
             zone.pos = pos
             zone.pitch_pos = pitch_pos
 
@@ -970,7 +970,7 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         self.canvas.delete(text_tag)
 
 class LineupPlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup):
+    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, background_corner_colors = [fgColor, fgColor, fgColor, fgColor])
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -979,6 +979,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.player = Players.get_player_by_id(playerID)
         self.removePlayer = removePlayer
         self.updateLineup = updateLineup
+        self.substitutesFrame = substitutesFrame
 
         self.parent.zone_occupancies[self.position] = 1  # Set the initial occupancy status
         self.current_zone = self.position
@@ -1049,13 +1050,29 @@ class LineupPlayerFrame(ctk.CTkFrame):
         parent_w = self.parent.winfo_width()
         parent_h = self.parent.winfo_height()
 
+        # Substitutes frame position
+        subs_x = self.substitutesFrame.winfo_rootx() - parent_x
+        subs_w = self.substitutesFrame.winfo_width()
+        subs_right = subs_x + subs_w
+
         # Mouse position relative to parent
         rel_mouse_x = event.x_root - parent_x - self.drag_start_x + self.winfo_width() // 2
         rel_mouse_y = event.y_root - parent_y - self.drag_start_y + self.winfo_height() // 2
 
-        # Convert to relative (0-1) coordinates, clamped to parent bounds
-        relx = min(max(rel_mouse_x / parent_w, 0), 1)
-        rely = min(max(rel_mouse_y / parent_h, 0), 1)
+        # Clamping bounds
+        min_x = self.winfo_width() // 2  # left bound = left of main frame
+        max_x = subs_right - self.winfo_width() // 2  # right bound = right of subs frame
+
+        min_y = self.winfo_height() // 2
+        max_y = parent_h - self.winfo_height() // 2
+
+        # Clamp values
+        clamped_x = max(min_x, min(rel_mouse_x, max_x))
+        clamped_y = max(min_y, min(rel_mouse_y, max_y))
+
+        # Apply new position
+        relx = clamped_x / parent_w
+        rely = clamped_y / parent_h
 
         self.place(relx = relx, rely = rely, anchor = "center")
 
@@ -1071,6 +1088,22 @@ class LineupPlayerFrame(ctk.CTkFrame):
         return (target_x <= center_x <= target_x + drag_w) and (target_y <= center_y <= target_y + drag_h)
 
     def stop_drag(self, event):
+
+        # Get absolute mouse position
+        mouse_x = event.x_root
+        mouse_y = event.y_root
+
+        # Get substitutes frame absolute position and size
+        subs_abs_x = self.substitutesFrame.winfo_rootx()
+        subs_abs_y = self.substitutesFrame.winfo_rooty()
+        subs_w = self.substitutesFrame.winfo_width()
+        subs_h = self.substitutesFrame.winfo_height()
+
+        # If mouse is inside the substitutes frame, remove the player
+        if (subs_abs_x <= mouse_x <= subs_abs_x + subs_w) and (subs_abs_y <= mouse_y <= subs_abs_y + subs_h):
+            self.remove()
+            return
+        
         dropped = False
 
         for drop_zone in self.parent.drop_zones:
@@ -1105,6 +1138,10 @@ class LineupPlayerFrame(ctk.CTkFrame):
 
         player_name = f"{self.player.first_name} {self.player.last_name}"
         self.parent.zone_occupancies[self.current_zone] = 0  # Clear the occupancy status for the current zone
+
+        for drop_zone in self.parent.drop_zones:
+            if drop_zone.winfo_manager() == "place":
+                drop_zone.place_forget()
 
         self.removePlayer(self, player_name, self.position)
 

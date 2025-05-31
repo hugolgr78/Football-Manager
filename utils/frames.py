@@ -1150,6 +1150,7 @@ class SubstitutePlayer(ctk.CTkFrame):
     def __init__(self, parent, fgColor, height, width, player, checkBoxFunction, parentTab, comp_id):
         super().__init__(parent, fg_color = fgColor, width = width, height = height)
         self.pack(pady = 5)
+        self.fgColor = fgColor
 
         self.player = player
         self.playerBanned = PlayerBans.check_bans_for_player(self.player.id, comp_id)
@@ -1159,11 +1160,11 @@ class SubstitutePlayer(ctk.CTkFrame):
         else:
             textColor = GREY
 
-        ctk.CTkLabel(self, text = "SUB", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
-        
+        self.subLabel = ctk.CTkLabel(self, text = "SUB", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND)
+        self.subLabel.place(relx = 0.02, rely = 0.5, anchor = "w")
         self.playerName = PlayerProfileLink(self, player, player.first_name + " " + player.last_name, textColor, 0.15, 0.5, "w", GREY_BACKGROUND, parentTab, 15)
-
-        ctk.CTkLabel(self, text = player.specific_positions.split(","), font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.85, rely = 0.5, anchor = "e")
+        self.positionsLabel = ctk.CTkLabel(self, text = player.specific_positions.split(","), font = (APP_FONT, 15), fg_color = GREY_BACKGROUND)
+        self.positionsLabel.place(relx = 0.85, rely = 0.5, anchor = "e")
 
         self.checkBox = ctk.CTkCheckBox(self, text = "", fg_color = DARK_GREY, checkbox_height = 20, width = 20)
         self.checkBox.configure(command = lambda: checkBoxFunction(self.checkBox, player))

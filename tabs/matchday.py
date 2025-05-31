@@ -632,10 +632,12 @@ class MatchDay(ctk.CTkFrame):
                                     INJURY_RED,
                                     65,
                                     65,
-                                    name,
+                                    playerID,
                                     positionCode,
                                     position,
-                                    self.removePlayer)
+                                    self.removePlayer,
+                                    self.updateLineup
+                                )
             else:
                 LineupPlayerFrame(self.lineupPitch,
                                 POSITIONS_PITCH_POSITIONS[position][0],
@@ -644,10 +646,12 @@ class MatchDay(ctk.CTkFrame):
                                 GREY_BACKGROUND,
                                 65,
                                 65,
-                                name,
+                                playerID,
                                 positionCode,
                                 position,
-                                self.removePlayer)
+                                self.removePlayer,
+                                self.updateLineup
+                            )
             
             if position in self.values:
                 self.values.remove(position)
@@ -734,6 +738,32 @@ class MatchDay(ctk.CTkFrame):
             if isinstance(frame, LineupPlayerFrame):
                 frame.removeButton.configure(state = "disabled")
 
+    def updateLineup(self, player, old_position, new_position):
+        # update the lineup with the change of position and upodate the drop down values
+
+        if old_position in self.teamLineup:
+            del self.teamLineup[old_position]
+
+        self.teamLineup[new_position] = player.id
+
+        if old_position in self.values:
+            self.values.remove(old_position)
+
+            if old_position in RELATED_POSITIONS:
+                for related_position in RELATED_POSITIONS[old_position]:
+                    if related_position in self.values:
+                        self.values.remove(related_position)
+        
+        if new_position in self.values:
+            self.values.remove(new_position)
+
+            if new_position in RELATED_POSITIONS:
+                for related_position in RELATED_POSITIONS[new_position]:
+                    if related_position in self.values:
+                        self.values.remove(related_position)
+
+        self.dropDown.configure(values = self.values)
+
     def choosePlayer(self, selected_position):
         self.selected_position = selected_position
         self.dropDown.configure(state = "disabled")
@@ -816,10 +846,11 @@ class MatchDay(ctk.CTkFrame):
                             color,
                             65, 
                             65, 
-                            selected_player,
+                            playerData.id,
                             POSITION_CODES[self.selected_position],
                             self.selected_position,
-                            self.removePlayer
+                            self.removePlayer,
+                            self.updateLineup
                         )
         
         for frame in self.substitutesFrame.winfo_children():

@@ -1030,12 +1030,8 @@ class LineupPlayerFrame(ctk.CTkFrame):
 
             # Check related positions: allow if all are empty or occupied by self
             related_positions = RELATED_POSITIONS.get(pos, [])
-            
-            for rel_pos in related_positions:
-                print(rel_pos, self.parent.zone_occupancies.get(rel_pos))
-
             if any(
-                self.parent.zone_occupancies.get(rel_pos) is not 0
+                self.parent.zone_occupancies.get(rel_pos) == 1 and rel_pos != self.position
                 for rel_pos in related_positions
             ):
                 continue

@@ -303,20 +303,28 @@ class Tactics(ctk.CTkFrame):
         self.selectedLineup[new_position] = player.id
 
         ## Add the old position back into to dropdown, accouting for related positions and remove the new position
+        if old_position not in self.positionsCopy:
+            # Don't add old_position if new_position is a related position of old_position, or vice versa
+            related_to_old = RELATED_POSITIONS.get(old_position, [])
+            related_to_new = RELATED_POSITIONS.get(new_position, [])
+            if new_position not in related_to_old and old_position not in related_to_new:
+                self.positionsCopy[old_position] = POSITION_CODES[old_position]
+
+        if old_position in RELATED_POSITIONS:
+            for related_position in RELATED_POSITIONS[old_position]:
+                # Only add the related position if none of its other related positions are in the lineup
+                other_related = [r for r in RELATED_POSITIONS.get(related_position, []) if r != old_position]
+                if all(r not in self.selectedLineup for r in other_related):
+                    if related_position not in self.selectedLineup:
+                        self.positionsCopy[related_position] = POSITION_CODES[old_position]
+
         if new_position in self.positionsCopy:
             del self.positionsCopy[new_position]
 
-            if new_position in RELATED_POSITIONS:
-                for related_position in RELATED_POSITIONS[new_position]:
-                    if related_position in self.positionsCopy:
-                        del self.positionsCopy[related_position]
-    
-        if old_position not in self.positionsCopy:
-            self.positionsCopy[old_position] = POSITION_CODES[old_position]
-
-            if old_position in RELATED_POSITIONS:
-                for related_position in RELATED_POSITIONS[old_position]:
-                    self.positionsCopy[related_position] = POSITION_CODES[old_position]
+        if new_position in RELATED_POSITIONS:
+            for related_position in RELATED_POSITIONS[new_position]:
+                if related_position in self.positionsCopy:
+                    del self.positionsCopy[related_position]
 
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
         print(self.selectedLineup)

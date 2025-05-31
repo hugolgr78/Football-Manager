@@ -24,9 +24,7 @@ class Tactics(ctk.CTkFrame):
         self.positionsCopy = POSITION_CODES.copy()
 
         ctk.CTkLabel(self, text = "Lineup", font = (APP_FONT_BOLD, 35), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.05, anchor = "w")
-
-        self.lineupPitch = FootballPitchLineup(self, 450, 675, 0.02, 0.08, "nw", TKINTER_BACKGROUND, "green")
-
+        
         self.addFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 50, corner_radius = 10)
         self.addFrame.place(relx = 0.02, rely = 0.98, anchor = "sw")
 
@@ -45,6 +43,8 @@ class Tactics(ctk.CTkFrame):
 
         self.substituteFrame = ctk.CTkScrollableFrame(self, fg_color = GREY_BACKGROUND, width = 520, height = 520, corner_radius = 10)
         self.substituteFrame.place(relx = 0.98, rely = 0.1, anchor = "ne")
+
+        self.lineupPitch = FootballPitchLineup(self, 450, 675, 0.02, 0.08, "nw", TKINTER_BACKGROUND, "green")
 
         self.createChoosePlayerFrame()
         self.importLineup()
@@ -118,7 +118,8 @@ class Tactics(ctk.CTkFrame):
                             positionCode,
                             position,
                             self.removePlayer,
-                            self.updateLineup
+                            self.updateLineup,
+                            self.substituteFrame
                         )
             
         self.lineupPitch.set_counter(playersCount)
@@ -246,7 +247,8 @@ class Tactics(ctk.CTkFrame):
                             POSITION_CODES[self.selected_position],
                             self.selected_position,
                             self.removePlayer,
-                            self.updateLineup
+                            self.updateLineup,
+                            self.substituteFrame
                         )
 
         for frame in self.substituteFrame.winfo_children():

@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import math
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
@@ -41,7 +42,7 @@ class Tactics(ctk.CTkFrame):
         self.finishButton = ctk.CTkButton(self, text = "Matchday >>", font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, height = 50, width = 300, state = "disabled", command = self.finishLineup)
         self.finishButton.place(relx = 0.98, rely = 0.98, anchor = "se")
 
-        self.substituteFrame = ctk.CTkScrollableFrame(self, fg_color = GREY_BACKGROUND, width = 520, height = 520, corner_radius = 10)
+        self.substituteFrame = ctk.CTkScrollableFrame(self, fg_color = DARK_GREY, width = 520, height = 520, corner_radius = 10)
         self.substituteFrame.place(relx = 0.98, rely = 0.1, anchor = "ne")
 
         self.lineupPitch = FootballPitchLineup(self, 450, 675, 0.02, 0.08, "nw", TKINTER_BACKGROUND, "green")
@@ -104,9 +105,7 @@ class Tactics(ctk.CTkFrame):
 
             playersCount += 1
 
-            name = player.first_name + " " + player.last_name
             self.selectedLineup[position] = player.id
-
             LineupPlayerFrame(self.lineupPitch, 
                             POSITIONS_PITCH_POSITIONS[position][0], 
                             POSITIONS_PITCH_POSITIONS[position][1], 
@@ -127,14 +126,7 @@ class Tactics(ctk.CTkFrame):
         if playersCount == 11:
             self.dropDown.configure(state = "disabled")
 
-        ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).pack(pady = 5)
-        for player in self.players:
-            name = player.first_name + " " + player.last_name
-            if player.id not in self.selectedLineup.values():
-                frame = SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, player, self.checkSubstitute, self, self.league.id) 
-
-                if playersCount == 11:
-                    frame.showCheckBox()
+        self.addSubstitutePlayers(importing = True, playersCount = playersCount)
 
         for position in POSITION_CODES.keys():
             if position in self.selectedLineup:
@@ -184,11 +176,63 @@ class Tactics(ctk.CTkFrame):
                     newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
                     self.players.append(newYouth)
 
-    def addSubstitutePlayers(self):
-        ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).pack(pady = 5)
+    def addSubstitutePlayers(self, importing = False, playersCount = None):
+        ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)
         
-        for player in self.players:
-            SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 25, 525, player, self.checkSubstitute, self, self.league.id)
+        players_per_row = 5
+
+        # Define position groups and their display names
+        position_groups = [
+            ("goalkeeper", "Goalkeepers"),
+            ("defender", "Defenders"),
+            ("midfielder", "Midfielders"),
+            ("forward", "Forwards"),
+        ]
+
+        playersList = self.players.copy()
+        playersList.sort(key = lambda x: (POSITION_ORDER.get(x.position, 99), x.last_name))
+
+        for pos_key, heading in position_groups:
+            group_players = [p for p in playersList if p.position == pos_key and p.id not in self.selectedLineup.values()]
+            num_players = len(group_players)
+
+            if num_players == 0:
+                continue
+
+            frame = ctk.CTkFrame(self.substituteFrame, fg_color = DARK_GREY, width = 500, height = 100 * max(1, math.ceil(num_players / players_per_row)))
+            frame.grid_columnconfigure(players_per_row, weight = 1)
+            frame.grid_rowconfigure(1 + math.ceil(num_players / 4), weight = 1)
+            ctk.CTkLabel(frame, text = heading, font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).grid(row = 0, column = 0, padx = 5, pady = 5, sticky = "w", columnspan = 4)
+
+            count = 0
+            for player in group_players:
+
+                if importing and player.id in self.selectedLineup.values():
+                    count -= 1
+                    continue
+
+                row = 1 + count // players_per_row
+                col = count % players_per_row
+                sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self.checkSubstitute, self, self.league.id, row, col)
+
+                if importing and playersCount == 11:
+                    sub_frame.showCheckBox()
+
+                count += 1
+
+            frame.pack(fill = "x", padx = 10, pady = 5)
+
+        if playersCount == 11:
+            self.dropDown.configure(state = "disabled")
+        else:
+            self.dropDown.configure(state = "readonly")
+            self.finishButton.configure(state = "disabled")
+
+            for frame in self.substituteFrame.winfo_children():
+                for child in frame.winfo_children():
+                    if isinstance(child, SubstitutePlayer):
+                        child.hideCheckBox()
+                        child.uncheckCheckBox()
 
     def choosePlayer(self, selected_position):
         self.selected_position = selected_position
@@ -251,16 +295,17 @@ class Tactics(ctk.CTkFrame):
                             self.substituteFrame
                         )
 
-        for frame in self.substituteFrame.winfo_children():
-            if frame.winfo_children()[1].cget("text") == selected_player:
-                frame.destroy()
+        for widget in self.substituteFrame.winfo_children():
+            widget.destroy()
 
-        if self.lineupPitch.get_counter() == 11:
-            self.dropDown.configure(state = "disabled")
+        self.addSubstitutePlayers(importing = True, playersCount = self.lineupPitch.get_counter())
 
-            for frame in self.substituteFrame.winfo_children():
-                if isinstance(frame, SubstitutePlayer):
-                    frame.showCheckBox()
+        # if self.lineupPitch.get_counter() == 11:
+        #     self.dropDown.configure(state = "disabled")
+
+        #     for frame in self.substituteFrame.winfo_children():
+        #         if isinstance(frame, SubstitutePlayer):
+        #             frame.showCheckBox()
 
     def removePlayer(self, frame, playerName, playerPosition):
         playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1], self.team.id)
@@ -282,21 +327,27 @@ class Tactics(ctk.CTkFrame):
 
                 break
 
-        SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 20, 550, playerData, self.checkSubstitute, self, self.league.id)
+        # SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 85, 85, playerData, self.checkSubstitute, self, self.league.id)
 
+        for widget in self.substituteFrame.winfo_children():
+            widget.destroy()
+
+        self.addSubstitutePlayers(importing = True, playersCount = self.lineupPitch.get_counter())
+
+        # Reset the substitutes chosen
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
         self.substitutePlayers = []
-
         self.subCounter = 0
 
-        if self.lineupPitch.get_counter() < 11:
-            self.dropDown.configure(state = "readonly")
-            self.finishButton.configure(state = "disabled")
 
-            for frame in self.substituteFrame.winfo_children():
-                if isinstance(frame, SubstitutePlayer):
-                    frame.hideCheckBox()
-                    frame.uncheckCheckBox()
+        # if self.lineupPitch.get_counter() < 11:
+        #     self.dropDown.configure(state = "readonly")
+        #     self.finishButton.configure(state = "disabled")
+
+        #     for frame in self.substituteFrame.winfo_children():
+        #         if isinstance(frame, SubstitutePlayer):
+        #             frame.hideCheckBox()
+        #             frame.uncheckCheckBox()
 
     def updateLineup(self, player, old_position, new_position):
         if old_position in self.selectedLineup:

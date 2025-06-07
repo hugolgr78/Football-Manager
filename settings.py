@@ -102,6 +102,13 @@ POSITION_CODES = {
     "Striker Right": "CF",
 }
 
+POSITION_ORDER = {
+    "goalkeeper": 0,
+    "defender": 1,
+    "midfielder": 2,
+    "forward": 3
+}
+
 POSITIONS_PITCH_POSITIONS = {
     "Goalkeeper": (0.5, 0.9),  # Goalkeeper
     "Left Back": (0.15, 0.75),  # Left Back

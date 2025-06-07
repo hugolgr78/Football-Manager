@@ -38,14 +38,15 @@ class PlayerProfileLabel(ctk.CTkFrame):
         self.suffix_label.pack(side = "left")
 
 class PlayerProfileLink(ctk.CTkLabel):
-    def __init__(self, parent, player, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20):
-        super().__init__(parent, text = text, font = (APP_FONT, fontSize), fg_color = fg_color, text_color = textColor)
+    def __init__(self, parent, player, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20, font = APP_FONT):
+        super().__init__(parent, text = text, font = (font, fontSize), fg_color = fg_color, text_color = textColor)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
         self.player = player
         self.textColor = textColor
         self.tab = tab
         self.fontSize = fontSize
+        self.font = font
 
         self.bind("<Enter>", self.on_enter)
         self.bind("<Leave>", self.on_leave)
@@ -53,10 +54,10 @@ class PlayerProfileLink(ctk.CTkLabel):
         self.bind("<Button-1>", self.openPlayerProfile)
 
     def on_enter(self, event):
-        self.configure(font = (APP_FONT, self.fontSize, "underline"), text_color = UNDERLINE_BLUE, cursor = "hand2")
+        self.configure(font = (self.font, self.fontSize, "underline"), text_color = UNDERLINE_BLUE, cursor = "hand2")
 
     def on_leave(self, event):
-        self.configure(font = (APP_FONT, self.fontSize), text_color = self.textColor, cursor = "")
+        self.configure(font = (self.font, self.fontSize), text_color = self.textColor, cursor = "")
 
     def openPlayerProfile(self, event):
         from tabs.playerProfile import PlayerProfile

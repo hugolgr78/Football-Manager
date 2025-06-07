@@ -30,3 +30,16 @@ This project is an extension of my previous project, **Football League Simulator
   - The match outcome algorithm is based on the same system used in the **Football League Simulator**, where match results are influenced by team levels.
   - The database is updated in real-time with match results, player performance, and league standings.
   - In the future, player contributions will be decided based on the player's form, fitness, and morale rather than chance. Players will have defined attributes/levels that determine the overall force of a team in each position (defenders, midfielders and forwards) rather than the team having an overall level, which will serve as the basis on determining match outcome, goals scored and conceded
+
+## 📸 Screenshots
+
+Here are some screenshots from the project:
+
+- ![Home screen](Images/Screenshots/main_menu.png)
+- ![Main hub](Images/Screenshots/main_hub.png)
+- ![Tactics page](Images/Screenshots/tactics_page.png)
+- ![League profile](Images/Screenshots/league_profile.png)
+- ![League graphs](Images/Screenshots/league_graphs.png)
+- ![Player profile](Images/Screenshots/player_profile.png)
+- ![Macth screen 1](Images/Screenshots/before_match.png)
+- ![Match screen 2](Images/Screenshots/after_match.png)

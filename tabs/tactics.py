@@ -118,7 +118,8 @@ class Tactics(ctk.CTkFrame):
                             position,
                             self.removePlayer,
                             self.updateLineup,
-                            self.substituteFrame
+                            self.substituteFrame,
+                            self.swapLineupPositions
                         )
             
         self.lineupPitch.set_counter(playersCount)
@@ -292,7 +293,8 @@ class Tactics(ctk.CTkFrame):
                             self.selected_position,
                             self.removePlayer,
                             self.updateLineup,
-                            self.substituteFrame
+                            self.substituteFrame,
+                            self.swapLineupPositions
                         )
 
         for widget in self.substituteFrame.winfo_children():
@@ -380,6 +382,13 @@ class Tactics(ctk.CTkFrame):
                     del self.positionsCopy[related_position]
 
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
+        print(self.selectedLineup)
+
+    def swapLineupPositions(self, position_1, position_2):
+        temp = self.selectedLineup[position_1]
+        self.selectedLineup[position_1] = self.selectedLineup[position_2]
+        self.selectedLineup[position_2] = temp
+
         print(self.selectedLineup)
 
     def reset(self):

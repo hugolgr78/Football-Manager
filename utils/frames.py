@@ -970,7 +970,7 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         self.canvas.delete(text_tag)
 
 class LineupPlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame):
+    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, background_corner_colors = [fgColor, fgColor, fgColor, fgColor])
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -980,6 +980,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.removePlayer = removePlayer
         self.updateLineup = updateLineup
         self.substitutesFrame = substitutesFrame
+        self.swapLineupPositions = swapLineupPositions
 
         self.parent.zone_occupancies[self.position] = 1  # Set the initial occupancy status
         self.current_zone = self.position
@@ -1015,18 +1016,26 @@ class LineupPlayerFrame(ctk.CTkFrame):
                 child.bind("<B1-Motion>", self.do_drag)
                 child.bind("<ButtonRelease-1>", self.stop_drag)
 
+    def updateFrame(self):
+        self.firstName.configure(text = self.player.first_name)
+        self.lastName.configure(text = self.player.last_name)
+        self.positionLabel.configure(text = POSITION_CODES[self.position])
+
+        playerPositions = self.player.specific_positions.split(",")
+        self.positionsTitles = []
+        for pos in playerPositions:
+            matching_titles = [position for position, code in POSITION_CODES.items() if code == pos]
+            self.positionsTitles.extend(matching_titles)
+
     def start_drag(self, event):
         self.drag_start_x = event.x_root - self.winfo_rootx()
         self.drag_start_y = event.y_root - self.winfo_rooty()
+        self.lift()
 
         for drop_zone in self.parent.drop_zones:
             pos = drop_zone.pos
 
             if pos not in self.positionsTitles:
-                continue
-
-            # If the drop zone is occupied by another player (not self), skip
-            if self.parent.zone_occupancies.get(pos) == 1:
                 continue
 
             # Check related positions: allow if all are empty or occupied by self
@@ -1038,9 +1047,9 @@ class LineupPlayerFrame(ctk.CTkFrame):
                 continue
 
             # If all checks pass, show the drop zone
-            drop_zone.place(relx=drop_zone.pitch_pos[0], rely=drop_zone.pitch_pos[1], anchor="center")
+            drop_zone.place(relx = drop_zone.pitch_pos[0], rely = drop_zone.pitch_pos[1], anchor = "center")
 
-        ## TODO: check related positions
+        self.parent.update_idletasks()
 
     def do_drag(self, event):
 
@@ -1076,16 +1085,22 @@ class LineupPlayerFrame(ctk.CTkFrame):
 
         self.place(relx = relx, rely = rely, anchor = "center")
 
-    def check_overlap(self, target_x, target_y):
-        drag_x = self.winfo_x()
-        drag_y = self.winfo_y()
+    def check_overlap(self, target_widget):
+        # Get absolute positions
+        drag_x = self.winfo_rootx()
+        drag_y = self.winfo_rooty()
         drag_w = self.winfo_width()
         drag_h = self.winfo_height()
 
-        center_x = drag_x + drag_w // 2
-        center_y = drag_y + drag_h // 2
+        target_x = target_widget.winfo_rootx()
+        target_y = target_widget.winfo_rooty()
+        target_w = target_widget.winfo_width()
+        target_h = target_widget.winfo_height()
 
-        return (target_x <= center_x <= target_x + drag_w) and (target_y <= center_y <= target_y + drag_h)
+        # Check for rectangle overlap
+        overlap_x = (drag_x < target_x + target_w) and (drag_x + drag_w > target_x)
+        overlap_y = (drag_y < target_y + target_h) and (drag_y + drag_h > target_y)
+        return overlap_x and overlap_y
 
     def stop_drag(self, event):
 
@@ -1108,24 +1123,45 @@ class LineupPlayerFrame(ctk.CTkFrame):
 
         for drop_zone in self.parent.drop_zones:
             if drop_zone.winfo_manager() == "place":
-                target_x = drop_zone.winfo_x()
-                target_y = drop_zone.winfo_y()
+                if self.parent.zone_occupancies[drop_zone.pos] == 0:
+                    if self.check_overlap(drop_zone):
+                        self.place(relx = drop_zone.pitch_pos[0], rely = drop_zone.pitch_pos[1], anchor = "center")
+                        self.origin = [drop_zone.pitch_pos[0], drop_zone.pitch_pos[1]]
 
-                if self.check_overlap(target_x, target_y):
-                    self.place(relx = drop_zone.pitch_pos[0], rely = drop_zone.pitch_pos[1], anchor = "center")
-                    self.origin = [drop_zone.pitch_pos[0], drop_zone.pitch_pos[1]]
+                        if self.current_zone:
+                            self.parent.zone_occupancies[self.current_zone] = 0
 
-                    if self.current_zone:
-                        self.parent.zone_occupancies[self.current_zone] = 0
+                        self.parent.zone_occupancies[drop_zone.pos] = 1  # Update occupancy status
+                        self.updateLineup(self.player, self.position, drop_zone.pos)
+                        self.position = drop_zone.pos
+                        self.positionLabel.configure(text = POSITION_CODES[self.position])
+                        self.current_zone = drop_zone.pos
 
-                    self.parent.zone_occupancies[drop_zone.pos] = 1  # Update occupancy status
-                    self.updateLineup(self.player, self.position, drop_zone.pos)
-                    self.position = drop_zone.pos
-                    self.positionLabel.configure(text = POSITION_CODES[self.position])
-                    self.current_zone = drop_zone.pos
+                        dropped = True
+                        break
 
-                    dropped = True
-                    break
+                else:
+                    if self.check_overlap(drop_zone) and drop_zone.pos != self.position:
+                        # We already know that the draged frame can be placed in the new positin. Only remains to check that the one being replaced can be placed in the dragged position.
+                        for frame in self.parent.winfo_children():
+                            # Find the frame that we are dropping onto
+                            if isinstance(frame, LineupPlayerFrame) and frame.origin == list(drop_zone.pitch_pos) and POSITION_CODES[self.position] in frame.player.specific_positions:
+                                # frame.place(relx = self.origin[0], rely = self.origin[1], anchor = "center")
+                                self.place(relx = self.origin[0], rely = self.origin[1], anchor = "center")
+
+                                # temp = frame.player
+                                # frame.player = self.player
+                                # self.player = temp
+
+                                frame.player, self.player = self.player, frame.player
+
+                                self.updateFrame()
+                                frame.updateFrame()
+
+                                self.swapLineupPositions(self.position, drop_zone.pos)
+
+                                dropped = True
+                                break
 
         for drop_zone in self.parent.drop_zones:
             if drop_zone.winfo_manager() == "place":

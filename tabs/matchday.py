@@ -637,7 +637,8 @@ class MatchDay(ctk.CTkFrame):
                                     position,
                                     self.removePlayer,
                                     self.updateLineup,
-                                    self.substituteFrame
+                                    self.substituteFrame,
+                                    self.swapLineupPositions
                                 )
             else:
                 LineupPlayerFrame(self.lineupPitch,
@@ -652,7 +653,8 @@ class MatchDay(ctk.CTkFrame):
                                 position,
                                 self.removePlayer,
                                 self.updateLineup,
-                                self.substituteFrame
+                                self.substituteFrame,
+                                self.swapLineupPositions
                             )
             
             if position in self.values:
@@ -853,7 +855,8 @@ class MatchDay(ctk.CTkFrame):
                             self.selected_position,
                             self.removePlayer,
                             self.updateLineup,
-                            self.substituteFrame
+                            self.substituteFrame,
+                            self.swapLineupPositions
                         )
         
         for frame in self.substitutesFrame.winfo_children():

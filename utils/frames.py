@@ -1086,20 +1086,30 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.place(relx = relx, rely = rely, anchor = "center")
 
     def check_overlap(self, target_widget):
-        # Get absolute positions
+        # Get absolute positions of the dragged frame
         drag_x = self.winfo_rootx()
         drag_y = self.winfo_rooty()
         drag_w = self.winfo_width()
         drag_h = self.winfo_height()
 
+        # Get center of the target widget
         target_x = target_widget.winfo_rootx()
         target_y = target_widget.winfo_rooty()
         target_w = target_widget.winfo_width()
         target_h = target_widget.winfo_height()
+        center_x = target_x + target_w // 2
+        center_y = target_y + target_h // 2
 
-        # Check for rectangle overlap
-        overlap_x = (drag_x < target_x + target_w) and (drag_x + drag_w > target_x)
-        overlap_y = (drag_y < target_y + target_h) and (drag_y + drag_h > target_y)
+        # Define the square region centered at the target's center
+        half = 20 // 2
+        square_left = center_x - half
+        square_top = center_y - half
+        square_right = center_x + half
+        square_bottom = center_y + half
+
+        # Check for rectangle overlap with the square region
+        overlap_x = (drag_x < square_right) and (drag_x + drag_w > square_left)
+        overlap_y = (drag_y < square_bottom) and (drag_y + drag_h > square_top)
         return overlap_x and overlap_y
 
     def stop_drag(self, event):
@@ -1146,14 +1156,11 @@ class LineupPlayerFrame(ctk.CTkFrame):
                         for frame in self.parent.winfo_children():
                             # Find the frame that we are dropping onto
                             if isinstance(frame, LineupPlayerFrame) and frame.origin == list(drop_zone.pitch_pos) and POSITION_CODES[self.position] in frame.player.specific_positions:
-                                # frame.place(relx = self.origin[0], rely = self.origin[1], anchor = "center")
                                 self.place(relx = self.origin[0], rely = self.origin[1], anchor = "center")
 
-                                # temp = frame.player
-                                # frame.player = self.player
-                                # self.player = temp
-
-                                frame.player, self.player = self.player, frame.player
+                                temp = frame.player
+                                frame.player = self.player
+                                self.player = temp
 
                                 self.updateFrame()
                                 frame.updateFrame()
@@ -1162,6 +1169,9 @@ class LineupPlayerFrame(ctk.CTkFrame):
 
                                 dropped = True
                                 break
+                        
+                        if dropped:
+                            break
 
         for drop_zone in self.parent.drop_zones:
             if drop_zone.winfo_manager() == "place":

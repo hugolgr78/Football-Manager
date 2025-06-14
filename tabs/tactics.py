@@ -382,14 +382,11 @@ class Tactics(ctk.CTkFrame):
                     del self.positionsCopy[related_position]
 
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
-        print(self.selectedLineup)
 
     def swapLineupPositions(self, position_1, position_2):
         temp = self.selectedLineup[position_1]
         self.selectedLineup[position_1] = self.selectedLineup[position_2]
         self.selectedLineup[position_2] = temp
-
-        print(self.selectedLineup)
 
     def reset(self):
         self.lineupPitch.destroy()

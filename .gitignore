@@ -3,3 +3,4 @@ data/__pycache__/
 utils/__pycache__/
 tabs/__pycache__/
 old_stats_funcs.py
+venv/

@@ -710,21 +710,15 @@ class MatchDay(ctk.CTkFrame):
         else:
             ctk.CTkLabel(frame, text = playerName, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, text_color = INJURY_RED).place(relx = 0.05, rely = 0.5, anchor = "w")
 
+    def swapLineupPositions(self, position_1, position_2):
+
+        temp = self.teamLineup[position_1]
+        self.teamLineup[position_1] = self.teamLineup[position_2]
+        self.teamLineup[position_2] = temp
+
     def removePlayer(self, frame, playerName, playerPosition): 
-        
-        for position in POSITION_CODES.keys():
-            if position == playerPosition:
-                self.values.append(position)
-
-                if position in RELATED_POSITIONS:
-                    for related_position in RELATED_POSITIONS[position]:
-                        self.values.append(related_position)
-                break
-
+    
         frame.place_forget()
-
-        self.dropDown.configure(state = "readonly")
-        self.dropDown.configure(values = self.values)
 
         playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1], self.team.id)
         if playerData.id in self.startTeamLineup.values():
@@ -738,6 +732,10 @@ class MatchDay(ctk.CTkFrame):
         self.teamSubstitutes.append(playerData.id)
         self.teamLineup.pop(playerPosition)
 
+        self.dropDown.configure(state = "readonly")
+        new_values = reset_available_positions(self.teamLineup)
+        self.dropDown.configure(values = new_values)
+
         for frame in self.lineupPitch.winfo_children():
             if isinstance(frame, LineupPlayerFrame):
                 frame.removeButton.configure(state = "disabled")
@@ -750,23 +748,8 @@ class MatchDay(ctk.CTkFrame):
 
         self.teamLineup[new_position] = player.id
 
-        if old_position in self.values:
-            self.values.remove(old_position)
-
-            if old_position in RELATED_POSITIONS:
-                for related_position in RELATED_POSITIONS[old_position]:
-                    if related_position in self.values:
-                        self.values.remove(related_position)
-        
-        if new_position in self.values:
-            self.values.remove(new_position)
-
-            if new_position in RELATED_POSITIONS:
-                for related_position in RELATED_POSITIONS[new_position]:
-                    if related_position in self.values:
-                        self.values.remove(related_position)
-
-        self.dropDown.configure(values = self.values)
+        new_values = reset_available_positions(self.teamLineup)
+        self.dropDown.configure(values = new_values)
 
     def choosePlayer(self, selected_position):
         self.selected_position = selected_position
@@ -808,20 +791,10 @@ class MatchDay(ctk.CTkFrame):
 
     def choosePosition(self, selected_player):
         self.stop_choosePlayer()
-        self.dropDown.configure(state = "disabled")
-
-        if self.selected_position in self.values:
-            self.values.remove(self.selected_position)
-
-            if self.selected_position in RELATED_POSITIONS:
-                for related_position in RELATED_POSITIONS[self.selected_position]:
-                    if related_position in self.values:
-                        self.values.remove(related_position)
-
-        self.dropDown.configure(values = self.values)
 
         playerData = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1], self.team.id)
         if playerData.id in self.startTeamLineup.values():
+            # If adding a player that was already in the lineup (before any subs were made), remove from the playersOff
             for position, playerID in list(self.playersOff.items()):
                 if playerID == playerData.id:
                     del self.playersOff[position]
@@ -829,10 +802,13 @@ class MatchDay(ctk.CTkFrame):
 
             self.currentSubs -= 1
         else:
+            # Otherwise, add to the playersOn
             self.playersOn[self.selected_position] = playerData.id
 
+        # Add the player to the lineup
         self.teamLineup[self.selected_position] = playerData.id
 
+        # Remove the player from the substitutes
         for playerID in self.teamSubstitutes:
             if playerID == playerData.id:
                 self.teamSubstitutes.remove(playerID)
@@ -843,6 +819,7 @@ class MatchDay(ctk.CTkFrame):
             if selected_player == injured_player_name:
                 color = INJURY_RED
 
+        # Create a frame for the player in the lineup pitch
         LineupPlayerFrame(self.lineupPitch, 
                             POSITIONS_PITCH_POSITIONS[self.selected_position][0], 
                             POSITIONS_PITCH_POSITIONS[self.selected_position][1], 
@@ -859,10 +836,17 @@ class MatchDay(ctk.CTkFrame):
                             self.swapLineupPositions
                         )
         
+        # Reset the dropdown a
+        self.dropDown.configure(state = "disabled")
+        new_values = reset_available_positions(self.teamLineup)
+        self.dropDown.configure(values = new_values)
+        
+        # Remove the player frame from the substitutes frame
         for frame in self.substitutesFrame.winfo_children():
             if frame.winfo_children()[1].cget("text") == selected_player:
                 frame.destroy()
 
+        # Reset all the remove buttons in the lineup pitch
         for frame in self.lineupPitch.winfo_children():
             if isinstance(frame, LineupPlayerFrame):
                 frame.removeButton.configure(state = "normal")
@@ -874,12 +858,24 @@ class MatchDay(ctk.CTkFrame):
                 self.confirmButton.configure(state = "disabled")
 
     def finishSubstitution(self):
-        if self.currentSubs != 0:
-            lineup = self.matchFrame.matchInstance.homeCurrentLineup if self.home else self.matchFrame.matchInstance.awayCurrentLineup
-            finalLineup = self.matchFrame.matchInstance.homeFinalLineup if self.home else self.matchFrame.matchInstance.awayFinalLineup
-            subs = self.matchFrame.matchInstance.homeCurrentSubs if self.home else self.matchFrame.matchInstance.awayCurrentSubs
-            events = self.matchFrame.matchInstance.homeEvents if self.home else self.matchFrame.matchInstance.awayEvents
+        lineup = self.matchFrame.matchInstance.homeCurrentLineup if self.home else self.matchFrame.matchInstance.awayCurrentLineup
+        finalLineup = self.matchFrame.matchInstance.homeFinalLineup if self.home else self.matchFrame.matchInstance.awayFinalLineup
+        subs = self.matchFrame.matchInstance.homeCurrentSubs if self.home else self.matchFrame.matchInstance.awayCurrentSubs
+        events = self.matchFrame.matchInstance.homeEvents if self.home else self.matchFrame.matchInstance.awayEvents
+        pitch = self.homeLineupPitch if self.home else self.awayLineupPitch
 
+        ## Adding / removing players from the lineup and lineup pitch (checking differences between startTeamLineup and teamLineup)
+        for position, playerID in self.startTeamLineup.items(): # changing a player's position 
+            if position in self.teamLineup and playerID != self.teamLineup[position]:
+                lineup[position] = self.teamLineup[position]
+            elif position not in self.teamLineup: # removing a player from the lineup
+                lineup.pop(position)
+
+        for position, playerID in list(self.teamLineup.items()):
+            if position not in self.startTeamLineup: # adding a player to the lineup
+                lineup[position] = playerID
+
+        if self.currentSubs != 0:
             times = []
             for i in range(1, self.currentSubs + 1):
                 currMinute = int(self.timeLabel.cget("text").split(":")[0])
@@ -903,25 +899,6 @@ class MatchDay(ctk.CTkFrame):
                     "injury": False,
                     "extra": True if self.halfTime else False
                 }
-
-            ## Adding / removing players from the lineup and lineup pitch (checking differences between startTeamLineup and teamLineup)
-            pitch = self.homeLineupPitch if self.home else self.awayLineupPitch
-            for position, playerID in self.startTeamLineup.items(): # changing a player's position 
-                if position in self.teamLineup and playerID != self.teamLineup[position]:
-                    lineupPlayer = Players.get_player_by_id(self.teamLineup[position])
-                    pitch.removePlayer(position)
-                    pitch.addPlayer(position, lineupPlayer.last_name)
-
-                    lineup[position] = self.teamLineup[position]
-                elif position not in self.teamLineup: # removing a player from the lineup
-                    pitch.removePlayer(position)
-                    lineup.pop(position)
-
-            for position, playerID in list(self.teamLineup.items()):
-                if position not in self.startTeamLineup: # adding a player to the lineup
-                    player = Players.get_player_by_id(playerID)
-                    pitch.addPlayer(position, player.last_name)
-                    lineup[position] = playerID
 
             ## Substitution events
             for i, (positionOff, playerOffID) in enumerate(list(self.playersOff.items()), 1):
@@ -948,6 +925,13 @@ class MatchDay(ctk.CTkFrame):
                         positionOn, playerOnID = random.choice(list(self.playersOn.items()))
                         self.matchFrame.matchInstance.addPlayerToLineup(event, playerOnID, playerOffID, positionOn, subs, lineup, self, self.home, managing_team = True)
                         del self.playersOn[positionOn]
+
+        # Reset the positions pitch
+        pitch.destroy()
+        pitch = FootballPitchMatchDay(self.teamMatchFrame, 270, 600, 0.02, 0.02, "nw", TKINTER_BACKGROUND, GREY_BACKGROUND)
+
+        for position, playerID in lineup.items():
+            pitch.addPlayer(position, Players.get_player_by_id(playerID).last_name)
 
         self.substitutionFrame.place_forget()
         self.resumeMatch()

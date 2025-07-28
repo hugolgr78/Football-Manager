@@ -212,3 +212,19 @@ def get_prompt_reaction(prompt, score_for: int, score_against: int):
         result = "draw"
 
     return PROMPT_REACTIONS[prompt][result]
+
+def reset_available_positions(lineup):
+    new_values = []
+    # Add any positions that are not occupied in the lineup
+    for position in POSITION_CODES.keys():
+        if position not in lineup.keys():
+            new_values.append(position)
+    
+    # Remove any related positions to the ones currently occupied in the lineup
+    for position in lineup.keys():
+        if position in RELATED_POSITIONS:
+            for related_position in RELATED_POSITIONS[position]:
+                if related_position in new_values:
+                    new_values.remove(related_position)
+    
+    return new_values

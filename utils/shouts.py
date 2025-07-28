@@ -193,7 +193,7 @@ class Focus():
             if random.random() < 0.2:
                 self.parent.addGoal(not self.home)
         
-        elif result == "win" and self.parent.oppScoredLast5(): # if the team isnt winning by more than two goals (2-1, 3-2), and the opponenet scored in the last 5 minutes, chance to remove opponent goal
+        elif result == "win" and self.parent.opponentScoredLast5(): # if the team isnt winning by more than two goals (2-1, 3-2), and the opponenet scored in the last 5 minutes, chance to remove opponent goal
             if random.random() < 0.2:
                 self.parent.removeGoal(not self.home)
             

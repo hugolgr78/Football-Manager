@@ -223,7 +223,7 @@ class Squad(ctk.CTkFrame):
         reply.place(relx = 0.95, rely = 0.7, anchor = "e")
 
         if not accepted:
-            moraleChange = get_morale_change(player)
+            moraleChange = get_morale_decrease_role(player)
         else:
             moraleChange = random.randint(3, 8)
 

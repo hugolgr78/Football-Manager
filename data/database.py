@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine, func, case, or_
+from sqlalchemy import create_engine, func, or_, case
 from sqlalchemy.orm import sessionmaker, aliased, scoped_session
 from sqlalchemy.types import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -630,7 +630,7 @@ class Players(Base):
                     (Players.position == 'goalkeeper', 1),
                     (Players.position == 'defender', 2),
                     (Players.position == 'midfielder', 3),
-                    (Players.position == 'forward', 4)
+                    (Players.position == 'forward', 4),
                 ],
                 else_ = 5
             )
@@ -668,9 +668,11 @@ class Players(Base):
         session = DatabaseManager().get_session()
         try:
             role_order = case(
-                [(Players.player_role == 'Star player', 1),
-                (Players.player_role == 'First Team', 2),
-                (Players.player_role == 'Rotation', 3)],
+                [ 
+                    (Players.player_role == 'Star player', 1),
+                    (Players.player_role == 'First Team', 2),
+                    (Players.player_role == 'Rotation', 3),
+                ],
                 else_ = 4
             )
 
@@ -684,9 +686,11 @@ class Players(Base):
         session = DatabaseManager().get_session()
         try:
             role_order = case(
-                [(Players.player_role == 'Star player', 1),
-                (Players.player_role == 'First Team', 2),
-                (Players.player_role == 'Rotation', 3)],
+                [
+                    (Players.player_role == 'Star player', 1),
+                    (Players.player_role == 'First Team', 2),
+                    (Players.player_role == 'Rotation', 3),
+                ],
                 else_ = 4
             )
 
@@ -700,9 +704,11 @@ class Players(Base):
         session = DatabaseManager().get_session()
         try:
             role_order = case(
-                [(Players.player_role == 'Star player', 1),
-                (Players.player_role == 'First Team', 2),
-                (Players.player_role == 'Rotation', 3)],
+                [
+                    (Players.player_role == 'Star player', 1),
+                    (Players.player_role == 'First Team', 2),
+                    (Players.player_role == 'Rotation', 3),
+                ],
                 else_ = 4
             )
 
@@ -716,8 +722,10 @@ class Players(Base):
         session = DatabaseManager().get_session()
         try:
             role_order = case(
-                [(Players.player_role == 'First Team', 1),
-                (Players.player_role == 'Backup', 2)],
+                [
+                    (Players.player_role == 'First Team', 1),
+                    (Players.player_role == 'Backup', 2),
+                ],
                 else_ = 3
             )
 
@@ -1116,10 +1124,12 @@ class TeamLineup(Base):
                 Players.team_id == team_id
             ).order_by(
                 case(
-                    [(Players.position == "goalkeeper", 1),
-                    (Players.position == "defender", 2),
-                    (Players.position == "midfielder", 3),
-                    (Players.position == "forward", 4)],
+                    [
+                        (Players.position == "goalkeeper", 1),
+                        (Players.position == "defender", 2),
+                        (Players.position == "midfielder", 3),
+                        (Players.position == "forward", 4),
+                    ],
                     else_ = 5
                 )
             ).all()

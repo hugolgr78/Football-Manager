@@ -2,12 +2,14 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
-from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame
+from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame, SubstitutePlayer
 from utils.shouts import ShoutFrame
 from utils.util_functions import *
 import threading, time
 import concurrent.futures
 from PIL import Image
+import math
+
 class MatchDay(ctk.CTkFrame):
     def __init__(self, parent, teamLineup, teamSubstitutes, team, players):
         super().__init__(parent, width = APP_SIZE[0], height = APP_SIZE[1], fg_color = TKINTER_BACKGROUND)
@@ -608,14 +610,14 @@ class MatchDay(ctk.CTkFrame):
         self.dropDown.place(relx = 0.4, rely = 0.5, anchor = "w")
         self.dropDown.set("Choose Position")
 
-        self.substitutesFrame = ctk.CTkFrame(self.substitutionFrame, width = 520, height = 615, fg_color = GREY_BACKGROUND, corner_radius = 10)
+        self.substitutesFrame = ctk.CTkFrame(self.substitutionFrame, width = 520, height = 615, fg_color = DARK_GREY, corner_radius = 10)
         self.substitutesFrame.place(relx = 0.33, rely = 0.02, anchor = "nw")
         self.substitutesFrame.pack_propagate(False)
 
+        self.addSubstitutePlayers()
+
         self.confirmButton = ctk.CTkButton(self.substitutionFrame, text = "Confirm", width = 520, height = 50, font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, corner_radius = 10, command = self.finishSubstitution)
         self.confirmButton.place(relx = 0.33, rely = 0.98, anchor = "sw")
-
-        ctk.CTkLabel(self.substitutesFrame, text = "Substitutes", font = (APP_FONT, 30), fg_color = GREY_BACKGROUND).pack(pady = 10)
 
         for position, playerID in self.startTeamLineup.items():
             player = Players.get_player_by_id(playerID)
@@ -660,10 +662,6 @@ class MatchDay(ctk.CTkFrame):
             if position in self.values:
                 self.values.remove(position)
 
-        for playerID in self.startTeamSubstitutes:
-            player = Players.get_player_by_id(playerID)
-            self.addSubstitute(player.first_name + " " + player.last_name, player.specific_positions)
-
         self.choosePlayerFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 50, corner_radius = 0, border_color = APP_BLUE, border_width = 2)
 
         self.backButton = ctk.CTkButton(self.choosePlayerFrame, text = "Back", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 100, hover_color = CLOSE_RED, command = self.stop_choosePlayer)
@@ -697,6 +695,46 @@ class MatchDay(ctk.CTkFrame):
         if redCardPlayer:
             player = Players.get_player_by_id(redCardPlayer)
             self.addSubstitute(player.first_name + " " + player.last_name, player.specific_positions, unavailablePlayer = True)
+    
+    def addSubstitutePlayers(self):
+        ctk.CTkLabel(self.substitutesFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)
+        
+        players_per_row = 5
+
+        # Define position groups and their display names
+        position_groups = [
+            ("goalkeeper", "Goalkeepers"),
+            ("defender", "Defenders"),
+            ("midfielder", "Midfielders"),
+            ("forward", "Forwards"),
+        ]
+
+        playerIDs = self.teamSubstitutes.copy()
+        playersList = [Players.get_player_by_id(pid) for pid in playerIDs]
+        playersList.sort(key = lambda x: (POSITION_ORDER.get(x.position, 99), x.last_name))
+
+        for pos_key, heading in position_groups:
+            group_players = [p for p in playersList if p.position == pos_key]
+            num_players = len(group_players)
+
+            if num_players == 0:
+                continue
+
+            frame = ctk.CTkFrame(self.substitutesFrame, fg_color = DARK_GREY, width = 500, height = 100 * max(1, math.ceil(num_players / players_per_row)))
+            frame.grid_columnconfigure(players_per_row, weight = 1)
+            frame.grid_rowconfigure(1 + math.ceil(num_players / 4), weight = 1)
+            ctk.CTkLabel(frame, text = heading, font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).grid(row = 0, column = 0, padx = 5, pady = 5, sticky = "w", columnspan = 4)
+
+            count = 0
+            for player in group_players:
+
+                row = 1 + count // players_per_row
+                col = count % players_per_row
+                SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col)
+
+                count += 1
+
+            frame.pack(fill = "x", padx = 10, pady = 5)
 
     def addSubstitute(self, playerName, positions, unavailablePlayer = False):
         frame = ctk.CTkFrame(self.substitutesFrame, width = 520, height = 30, fg_color = GREY_BACKGROUND)

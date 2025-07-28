@@ -1191,9 +1191,8 @@ class LineupPlayerFrame(ctk.CTkFrame):
 
         self.removePlayer(self, player_name, self.position)
 
-
 class SubstitutePlayer(ctk.CTkFrame):
-    def __init__(self, parent, fgColor, height, width, player, checkBoxFunction, parentTab, comp_id, row, column):
+    def __init__(self, parent, fgColor, height, width, player, parentTab, comp_id, row, column, checkBoxFunction = None):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.grid(row = row, column = column, padx = 5, pady = 5)
         self.fgColor = fgColor
@@ -1215,8 +1214,9 @@ class SubstitutePlayer(ctk.CTkFrame):
 
         PlayerProfileLink(self, player, self.player.last_name, textColor, 0.5, 0.59, "center", fgColor, parentTab, 15, APP_FONT_BOLD)
 
-        self.checkBox = ctk.CTkCheckBox(self, text = "", fg_color = GREY, checkbox_height = 10, checkbox_width = 60, border_width = 1, border_color = GREY)
-        self.checkBox.configure(command = lambda: checkBoxFunction(self.checkBox, player))
+        if checkBoxFunction is not None:
+            self.checkBox = ctk.CTkCheckBox(self, text = "", fg_color = GREY, checkbox_height = 10, checkbox_width = 60, border_width = 1, border_color = GREY)
+            self.checkBox.configure(command = lambda: checkBoxFunction(self.checkBox, player))
 
     def showCheckBox(self):
 

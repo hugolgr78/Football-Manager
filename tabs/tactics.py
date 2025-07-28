@@ -214,7 +214,7 @@ class Tactics(ctk.CTkFrame):
 
                 row = 1 + count // players_per_row
                 col = count % players_per_row
-                sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self.checkSubstitute, self, self.league.id, row, col)
+                sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, self.checkSubstitute)
 
                 if importing and playersCount == 11:
                     sub_frame.showCheckBox()

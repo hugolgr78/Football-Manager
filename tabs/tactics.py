@@ -302,13 +302,6 @@ class Tactics(ctk.CTkFrame):
 
         self.addSubstitutePlayers(importing = True, playersCount = self.lineupPitch.get_counter())
 
-        # if self.lineupPitch.get_counter() == 11:
-        #     self.dropDown.configure(state = "disabled")
-
-        #     for frame in self.substituteFrame.winfo_children():
-        #         if isinstance(frame, SubstitutePlayer):
-        #             frame.showCheckBox()
-
     def removePlayer(self, frame, playerName, playerPosition):
         playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1], self.team.id)
         for position, playerID in self.selectedLineup.items():
@@ -329,8 +322,6 @@ class Tactics(ctk.CTkFrame):
 
                 break
 
-        # SubstitutePlayer(self.substituteFrame, GREY_BACKGROUND, 85, 85, playerData, self.checkSubstitute, self, self.league.id)
-
         for widget in self.substituteFrame.winfo_children():
             widget.destroy()
 
@@ -340,16 +331,6 @@ class Tactics(ctk.CTkFrame):
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
         self.substitutePlayers = []
         self.subCounter = 0
-
-
-        # if self.lineupPitch.get_counter() < 11:
-        #     self.dropDown.configure(state = "readonly")
-        #     self.finishButton.configure(state = "disabled")
-
-        #     for frame in self.substituteFrame.winfo_children():
-        #         if isinstance(frame, SubstitutePlayer):
-        #             frame.hideCheckBox()
-        #             frame.uncheckCheckBox()
 
     def updateLineup(self, player, old_position, new_position):
         if old_position in self.selectedLineup:
@@ -417,8 +398,9 @@ class Tactics(ctk.CTkFrame):
                 self.finishButton.configure(state = "disabled")
 
                 for frame in self.substituteFrame.winfo_children():
-                    if isinstance(frame, SubstitutePlayer):
-                        frame.enableCheckBox()
+                    for widget in frame.winfo_children():
+                        if isinstance(widget, SubstitutePlayer):
+                            widget.enableCheckBox()
         else:
             self.substitutePlayers.append(player.id)
             self.subCounter += 1
@@ -427,9 +409,10 @@ class Tactics(ctk.CTkFrame):
                 self.finishButton.configure(state = "normal")
 
                 for frame in self.substituteFrame.winfo_children():
-                    if isinstance(frame, SubstitutePlayer):
-                        if frame.checkBox.get() == 0:
-                            frame.disableCheckBox()
+                    for widget in frame.winfo_children():
+                        if isinstance(widget, SubstitutePlayer):
+                            if widget.checkBox.get() == 0:
+                                widget.disableCheckBox()
 
     def finishLineup(self):
         MatchDay(self.parent, self.selectedLineup, self.substitutePlayers, self.team, self.players)

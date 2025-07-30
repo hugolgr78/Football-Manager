@@ -33,6 +33,7 @@ class MatchDay(ctk.CTkFrame):
         self.speed = 1 / 120
 
         self.completedSubs = 0
+        self.redCardPlayers = []
 
         self.lastShout = 0
 
@@ -642,6 +643,9 @@ class MatchDay(ctk.CTkFrame):
                                     self.substitutesFrame,
                                     self.swapLineupPositions
                                 )
+                else:
+                    pass
+                    # Handle the case where a player gets injured but no more substitutions can be made???
             else:
                 LineupPlayerFrame(self.lineupPitch,
                                 POSITIONS_PITCH_POSITIONS[position][0],
@@ -730,23 +734,16 @@ class MatchDay(ctk.CTkFrame):
 
                 row = 1 + count // players_per_row
                 col = count % players_per_row
-                SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col)
+
+                if self.injuredPlayer:
+                    if player.id in self.redCardPlayers or player.id == self.injuredPlayer.id:
+                        SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True)
+                else:
+                    SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col)
 
                 count += 1
 
             frame.pack(fill = "x", padx = 10, pady = 5)
-
-    def addSubstitute(self, playerName, positions, unavailablePlayer = False):
-        frame = ctk.CTkFrame(self.substitutesFrame, width = 520, height = 30, fg_color = GREY_BACKGROUND)
-        frame.pack()
-        
-        frame.unavailable = unavailablePlayer
-        ctk.CTkLabel(frame, text = positions, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.95, rely = 0.5, anchor = "e")
-        
-        if not unavailablePlayer:
-            ctk.CTkLabel(frame, text = playerName, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
-        else:
-            ctk.CTkLabel(frame, text = playerName, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, text_color = INJURY_RED).place(relx = 0.05, rely = 0.5, anchor = "w")
 
     def swapLineupPositions(self, position_1, position_2):
 
@@ -760,15 +757,21 @@ class MatchDay(ctk.CTkFrame):
 
         playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1], self.team.id)
         if playerData.id in self.startTeamLineup.values():
+            # If the player was in the lineup, add them to the playersOff
             self.playersOff[playerPosition] = playerData.id
-            self.currentSubs += 1
         else:
+            # Otherwise, remove from the playersOn
             del self.playersOn[playerPosition]
-
-        self.addSubstitute(playerName, playerData.specific_positions)
+            self.currentSubs -= 1
         
+        # Changes to lists
         self.teamSubstitutes.append(playerData.id)
         self.teamLineup.pop(playerPosition)
+
+        # Reset the substitutes frame
+        for widget in self.substitutesFrame.winfo_children():
+            widget.destroy()
+        self.addSubstitutePlayers()
 
         self.dropDown.configure(state = "readonly")
         new_values = reset_available_positions(self.teamLineup)
@@ -798,19 +801,17 @@ class MatchDay(ctk.CTkFrame):
 
         values = []
         for frame in self.substitutesFrame.winfo_children():
-            if isinstance(frame, ctk.CTkFrame):
-                labels = frame.winfo_children()
-                if len(labels) >= 2:
-                    playerName = labels[1].cget("text")
-                    positions = labels[0].cget("text")
-                    unavailable = frame.unavailable
-
-                    player = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1], self.team.id)
-                    if self.currentSubs > MAX_SUBS - self.completedSubs:
-                        if POSITION_CODES[selected_position] in positions.split(",") and player.id in self.startTeamLineup.values() and player.id not in self.teamLineup.values() and not unavailable:
+            for widget in frame.winfo_children():
+                if isinstance(widget, SubstitutePlayer):
+                    player = widget.player
+                    playerName = player.first_name + " " + player.last_name
+                    positions = player.specific_positions
+                    if self.currentSubs >= MAX_SUBS - self.completedSubs:
+                        # If the max amount of allowed subs have been made, then the only available players are those who were in the lineup at the start of your substitutions
+                        if POSITION_CODES[selected_position] in positions.split(",") and player.id in self.startTeamLineup.values() and player.id not in self.teamLineup.values() and not widget.unavailable:
                             values.append(playerName)
                     else:
-                        if POSITION_CODES[selected_position] in positions.split(",") and player.id not in self.teamLineup.values() and not unavailable:
+                        if POSITION_CODES[selected_position] in positions.split(",") and player.id not in self.teamLineup.values() and not widget.unavailable:
                             values.append(playerName)
         
         if len(values) == 0:
@@ -838,10 +839,10 @@ class MatchDay(ctk.CTkFrame):
                     del self.playersOff[position]
                     break
 
-            self.currentSubs -= 1
         else:
             # Otherwise, add to the playersOn
             self.playersOn[self.selected_position] = playerData.id
+            self.currentSubs += 1
 
         # Add the player to the lineup
         self.teamLineup[self.selected_position] = playerData.id
@@ -850,6 +851,11 @@ class MatchDay(ctk.CTkFrame):
         for playerID in self.teamSubstitutes:
             if playerID == playerData.id:
                 self.teamSubstitutes.remove(playerID)
+
+        # Reset the substitutes frame
+        for widget in self.substitutesFrame.winfo_children():
+            widget.destroy()
+        self.addSubstitutePlayers()
 
         color = GREY_BACKGROUND
         if self.injuredPlayer:
@@ -874,15 +880,10 @@ class MatchDay(ctk.CTkFrame):
                             self.swapLineupPositions
                         )
         
-        # Reset the dropdown a
+        # Reset the dropdown
         self.dropDown.configure(state = "disabled")
         new_values = reset_available_positions(self.teamLineup)
         self.dropDown.configure(values = new_values)
-        
-        # Remove the player frame from the substitutes frame
-        for frame in self.substitutesFrame.winfo_children():
-            if frame.winfo_children()[1].cget("text") == selected_player:
-                frame.destroy()
 
         # Reset all the remove buttons in the lineup pitch
         for frame in self.lineupPitch.winfo_children():
@@ -975,9 +976,6 @@ class MatchDay(ctk.CTkFrame):
         self.resumeMatch()
         self.completedSubs += self.currentSubs
         self.currentSubs = 0
-
-        if self.completedSubs == MAX_SUBS:
-            self.substitutionButton.configure(state = "disabled")
 
     def halfTimeTalks(self):
 

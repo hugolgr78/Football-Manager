@@ -1192,16 +1192,19 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.removePlayer(self, player_name, self.position)
 
 class SubstitutePlayer(ctk.CTkFrame):
-    def __init__(self, parent, fgColor, height, width, player, parentTab, comp_id, row, column, checkBoxFunction = None):
+    def __init__(self, parent, fgColor, height, width, player, parentTab, comp_id, row, column, checkBoxFunction = None, unavailable = False):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.grid(row = row, column = column, padx = 5, pady = 5)
         self.fgColor = fgColor
 
         self.player = player
-        self.playerBanned = PlayerBans.check_bans_for_player(self.player.id, comp_id)
+        self.playerBanned = PlayerBans.check_bans_for_player(self.player.id, comp_id) # For greying out a name when choosing a lineup
+        self.unavailable = unavailable # For greying out a name when making in-game substitutions (injury/red card)
 
         if not self.playerBanned:
             textColor = "white"
+        elif self.unavailable:
+            textColor = PIE_RED
         else:
             textColor = GREY
 

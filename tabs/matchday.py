@@ -2,7 +2,7 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
-from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame, SubstitutePlayer
+from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame, SubstitutePlayer, FormGraph
 from utils.shouts import ShoutFrame
 from utils.util_functions import *
 import threading, time
@@ -620,6 +620,9 @@ class MatchDay(ctk.CTkFrame):
         self.confirmButton = ctk.CTkButton(self.substitutionFrame, text = "Confirm", width = 520, height = 50, font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, corner_radius = 10, command = self.finishSubstitution)
         self.confirmButton.place(relx = 0.33, rely = 0.98, anchor = "sw")
 
+        self.playerStatsFrame = ctk.CTkFrame(self.substitutionFrame, width = 260, height = 670, fg_color = DARK_GREY, corner_radius = 10)
+        self.playerStatsFrame.place(relx = 0.99, rely = 0.02, anchor = "ne")
+
         for position, playerID in self.startTeamLineup.items():
             player = Players.get_player_by_id(playerID)
             positionCode = POSITION_CODES[position]
@@ -737,13 +740,28 @@ class MatchDay(ctk.CTkFrame):
 
                 if self.injuredPlayer:
                     if player.id in self.redCardPlayers or player.id == self.injuredPlayer.id:
-                        SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True)
+                        SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
                 else:
-                    SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col)
+                    SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, ingame = True, ingameFunction = self.showPlayerStats)
 
                 count += 1
 
             frame.pack(fill = "x", padx = 10, pady = 5)
+
+    def showPlayerStats(self, player):
+
+        for widget in self.playerStatsFrame.winfo_children():
+            widget.destroy()
+
+        ctk.CTkLabel(self.playerStatsFrame, text = f"{player.first_name} {player.last_name}", font = (APP_FONT_BOLD, 23), fg_color = DARK_GREY).place(relx = 0.5, rely = 0.05, anchor = "n")
+        ctk.CTkLabel(self.playerStatsFrame, text = f"Last 5 games", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = 0.5, rely = 0.1, anchor = "n")
+
+        ctk.CTkLabel(self.playerStatsFrame, text = "Form", font = (APP_FONT_BOLD, 15), fg_color = DARK_GREY).place(relx = 0.05, rely = 0.2, anchor = "w")
+
+        formFrame = ctk.CTkFrame(self.playerStatsFrame, width = 248, height = 170, fg_color = GREY, corner_radius = 5)
+        formFrame.place(relx = 0.02, rely = 0.23, anchor = "nw")
+
+        FormGraph(formFrame, player, 290, 200, 0.02, 0.05, "nw", GREY)
 
     def swapLineupPositions(self, position_1, position_2):
 

@@ -1192,7 +1192,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.removePlayer(self, player_name, self.position)
 
 class SubstitutePlayer(ctk.CTkFrame):
-    def __init__(self, parent, fgColor, height, width, player, parentTab, comp_id, row, column, checkBoxFunction = None, unavailable = False):
+    def __init__(self, parent, fgColor, height, width, player, parentTab, comp_id, row, column, checkBoxFunction = None, unavailable = False, ingame = False, ingameFunction = None):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.grid(row = row, column = column, padx = 5, pady = 5)
         self.fgColor = fgColor
@@ -1215,7 +1215,7 @@ class SubstitutePlayer(ctk.CTkFrame):
         self.firstName = ctk.CTkLabel(self, text = self.player.first_name, font = (APP_FONT, 13), height = 10, fg_color = fgColor)
         self.firstName.place(relx = 0.5, rely = 0.35, anchor = "center")
 
-        PlayerProfileLink(self, player, self.player.last_name, textColor, 0.5, 0.59, "center", fgColor, parentTab, 15, APP_FONT_BOLD)
+        PlayerProfileLink(self, player, self.player.last_name, textColor, 0.5, 0.59, "center", fgColor, parentTab, 15, APP_FONT_BOLD, ingame = ingame, ingameFunction = ingameFunction)
 
         if checkBoxFunction is not None:
             self.checkBox = ctk.CTkCheckBox(self, text = "", fg_color = GREY, checkbox_height = 10, checkbox_width = 60, border_width = 1, border_color = GREY)
@@ -1352,3 +1352,120 @@ class MatchEventFrame(ctk.CTkFrame):
     def __init__(self, parent, width, height, corner_radius, fgColor, event, time):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = corner_radius)
         self.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
+
+class FormGraph(ctk.CTkCanvas):
+    def __init__(self, frame, player, width, height, relx, rely, anchor, fgColor):
+        super().__init__(frame, width = width, height = height, bg = fgColor, bd = 0, highlightthickness = 0)
+        self.place(relx = relx, rely = rely, anchor = anchor)
+
+        self.player = player
+        self.fgColor = fgColor
+        self.width = width
+        self.height = height
+
+        self.draw_axes()
+
+        self.leagueTeams = LeagueTeams.get_league_by_team(self.player.team_id)
+        self.last5 = Matches.get_team_last_5_matches(self.player.team_id, self.leagueTeams.league_id)
+        
+        self.draw_bars()
+
+    def draw_axes(self):
+        # Vertical axis line (left border of canvas)
+        self.create_line(0, 0, 0, self.height - 30, fill = "black", width = 8)
+        
+        # Horizontal axis line (moved up to leave space for text below)
+        self.create_line(0, self.height - 30, self.width, self.height - 30, fill = "black", width = 4)
+
+    def draw_bars(self):
+        bar_width = self.width / 5  # Canvas width divided by 5 bars
+        max_bar_height = self.height - 50  # Leave space for axes and text
+        
+        # Check if player played in any of the 5 matches and collect ratings
+        played_any = False
+        ratings = []
+        for match in self.last5:
+            lineup = TeamLineup.get_lineup_by_match(match.id)
+            playerIDs = [player.player_id for player in lineup]
+            if self.player.id in playerIDs:
+                played_any = True
+                playerLineupData = [player for player in lineup if player.player_id == self.player.id][0]
+                ratings.append(playerLineupData.rating)
+        
+        # If player didn't play in any match, show "No data" message
+        if not played_any:
+            self.create_text(self.width / 2, self.height / 2 - 20, text = "No data", fill = "white", font = ("Arial Bold", 25))
+            return
+        
+        # Find maximum rating to scale the chart
+        max_rating = max(ratings)
+        # Ensure minimum scale of 5 for better visibility
+        scale_max = max(max_rating + 1, 5)
+        
+        for i, match in enumerate(self.last5):
+            lineup = TeamLineup.get_lineup_by_match(match.id)
+            playerIDs = [player.player_id for player in lineup]
+            
+            # Calculate bar position
+            bar_x = i * bar_width + bar_width / 2
+            
+            if self.player.id not in playerIDs:
+                # Player didn't play - skip this match (no text or bar)
+                continue
+
+            # Get player data
+            playerLineupData = [player for player in lineup if player.player_id == self.player.id][0]
+            rating = playerLineupData.rating
+
+            # Calculate minutes played
+            matchEvents = MatchEvents.get_events_by_match_and_player(match.id, self.player.id)
+            timePlayed = 90
+            subbedOn = None
+            subbedOff = None
+
+            if matchEvents:
+                for event in matchEvents:
+                    if event.event_type == "sub_on":
+                        subbedOn = event.minute
+                        break
+                    elif event.event_type == "sub_off":
+                        subbedOff = event.minute
+                        break
+            
+            if subbedOn is not None and subbedOff is not None:
+                timePlayed = subbedOff - subbedOn
+            elif subbedOn is not None:
+                timePlayed = 90 - subbedOn
+            elif subbedOff is not None:
+                timePlayed = subbedOff
+
+            # Determine bar color based on rating
+            if rating >= 7:
+                bar_color = PIE_GREEN
+            elif rating >= 5:
+                bar_color = NEUTRAL_COLOR
+            else:
+                bar_color = PIE_RED
+
+            # Calculate bar height using dynamic scale
+            bar_height = (rating / scale_max) * max_bar_height
+            
+            # Draw the bar without outline
+            bar_left = bar_x - bar_width / 4  # Make bars a bit thinner than full width
+            bar_right = bar_x + bar_width / 4
+            bar_top = self.height - 32 - bar_height
+            bar_bottom = self.height - 32
+            
+            bar_rect = self.create_rectangle(bar_left, bar_top, bar_right, bar_bottom, fill = bar_color, outline = "")
+            
+            # Create rating text but don't show it initially
+            rating_text = self.create_text(bar_x, bar_top - 10, text = f"{rating:.1f}", fill = "white", font = ("Arial", 10), state = "hidden")
+            
+            # Bind mouse events to show/hide rating on hover
+            self.tag_bind(bar_rect, "<Enter>", lambda event, text_id = rating_text: self.itemconfig(text_id, state = "normal"))
+            self.tag_bind(bar_rect, "<Leave>", lambda event, text_id = rating_text: self.itemconfig(text_id, state = "hidden"))
+            
+            # Add minutes played text below the axis
+            self.create_text(bar_x, self.height - 15, text = f"{timePlayed}'", fill = "white", font = ("Arial", 10))
+
+        

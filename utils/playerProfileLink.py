@@ -38,7 +38,7 @@ class PlayerProfileLabel(ctk.CTkFrame):
         self.suffix_label.pack(side = "left")
 
 class PlayerProfileLink(ctk.CTkLabel):
-    def __init__(self, parent, player, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20, font = APP_FONT):
+    def __init__(self, parent, player, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20, font = APP_FONT, ingame = False, ingameFunction = None):
         super().__init__(parent, text = text, font = (font, fontSize), fg_color = fg_color, text_color = textColor)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -47,6 +47,8 @@ class PlayerProfileLink(ctk.CTkLabel):
         self.tab = tab
         self.fontSize = fontSize
         self.font = font
+        self.ingame = ingame
+        self.ingameFunction = ingameFunction
 
         self.bind("<Enter>", self.on_enter)
         self.bind("<Leave>", self.on_leave)
@@ -60,12 +62,16 @@ class PlayerProfileLink(ctk.CTkLabel):
         self.configure(font = (self.font, self.fontSize), text_color = self.textColor, cursor = "")
 
     def openPlayerProfile(self, event):
-        from tabs.playerProfile import PlayerProfile
 
-        self.profile = PlayerProfile(self.tab, self.player, self.changeBack)
-        self.profile.place(x = 0, y = 0, anchor = "nw")
+        if self.ingame:
+            self.ingameFunction(self.player)
+        else:
+            from tabs.playerProfile import PlayerProfile
 
-        self.tab.parent.overlappingProfiles.append(self.profile)
+            self.profile = PlayerProfile(self.tab, self.player, self.changeBack)
+            self.profile.place(x = 0, y = 0, anchor = "nw")
+
+            self.tab.parent.overlappingProfiles.append(self.profile)
 
     def changeBack(self):
         self.profile.place_forget()

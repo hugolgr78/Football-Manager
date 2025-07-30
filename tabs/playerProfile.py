@@ -21,12 +21,12 @@ class PlayerProfile(ctk.CTkFrame):
         self.league = LeagueTeams.get_league_by_team(self.team.id)
 
         self.profile = Profile(self, self.player)
+        self.matches = None
         self.attributes = None
-        self.contract = None
         self.history = None
-        self.titles = ["Profile", "Attributes", "Contract", "History"]
-        self.tabs = [self.profile, self.attributes, self.contract, self.history]
-        self.classNames = [Profile, Attributes, Contract, History]
+        self.titles = ["Profile", "Matches", "Attributes", "History"]
+        self.tabs = [self.profile, self.matches, self.attributes, self.history]
+        self.classNames = [Profile, Matches, Attributes, History]
 
         self.activeButton = 0
         self.buttons = []
@@ -191,14 +191,14 @@ class Profile(ctk.CTkFrame):
 
             ctk.CTkLabel(self.statsFrame, text = stat, font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = relx_position, rely = 0.7, anchor = "center")
 
-class Attributes(ctk.CTkFrame):
+class Matches(ctk.CTkFrame):
     def __init__(self, parent, player):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
         self.player = player
 
-class Contract(ctk.CTkFrame):
+class Attributes(ctk.CTkFrame):
     def __init__(self, parent, player):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 

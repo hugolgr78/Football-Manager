@@ -756,12 +756,140 @@ class MatchDay(ctk.CTkFrame):
         ctk.CTkLabel(self.playerStatsFrame, text = f"{player.first_name} {player.last_name}", font = (APP_FONT_BOLD, 23), fg_color = DARK_GREY).place(relx = 0.5, rely = 0.05, anchor = "n")
         ctk.CTkLabel(self.playerStatsFrame, text = f"Last 5 games", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = 0.5, rely = 0.1, anchor = "n")
 
-        ctk.CTkLabel(self.playerStatsFrame, text = "Form", font = (APP_FONT_BOLD, 15), fg_color = DARK_GREY).place(relx = 0.05, rely = 0.2, anchor = "w")
+        ctk.CTkLabel(self.playerStatsFrame, text = "Form", font = (APP_FONT_BOLD, 18), fg_color = DARK_GREY).place(relx = 0.05, rely = 0.2, anchor = "w")
+        ctk.CTkLabel(self.playerStatsFrame, text = f"Stats", font = (APP_FONT_BOLD, 18), fg_color = DARK_GREY).place(relx = 0.05, rely = 0.48, anchor = "w")
 
-        formFrame = ctk.CTkFrame(self.playerStatsFrame, width = 248, height = 170, fg_color = GREY, corner_radius = 5)
+        formFrame = ctk.CTkFrame(self.playerStatsFrame, width = 248, height = 130, fg_color = GREY, corner_radius = 5)
         formFrame.place(relx = 0.02, rely = 0.23, anchor = "nw")
 
-        FormGraph(formFrame, player, 290, 200, 0.02, 0.05, "nw", GREY)
+        graph = FormGraph(formFrame, player, 290, 160, 0.02, 0.05, "nw", GREY)
+        playerEvents = graph.last5Events
+        playerRatings = graph.ratings
+
+        averageRating = round(sum(playerRatings) / len(playerRatings), 2) if playerRatings else 0
+
+        # Mids and Fwds stats
+        goals = 0
+        assists = 0
+        yellowCards = 0
+        redCards = 0
+
+        # Gks stats
+        cleanSheets = 0
+        ownGoals = 0
+
+        # All for a defender
+
+        if len(playerEvents) > 0:
+            for match in playerEvents:
+                for event in match:
+                    if event.event_type == "goal" or event.event_type == "penalty_goal":
+                        goals += 1
+                    elif event.event_type == "assist":
+                        assists += 1
+                    elif event.event_type == "yellow_card":
+                        yellowCards += 1
+                    elif event.event_type == "red_card":
+                        redCards += 1
+                    elif event.event_type == "own_goal":
+                        ownGoals += 1
+                    elif event.event_type == "clean_sheet":
+                        cleanSheets += 1
+
+            img_relx = 0.05
+            relx = 0.15
+            rely = 0.53
+
+            if player.position in ["goalkeeper"]:
+                src = Image.open("Images/cleanSheet.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Clean Sheets: {cleanSheets}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely, anchor = "w")
+
+                src = Image.open("Images/ownGoal.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.05, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Own Goals: {ownGoals}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.05, anchor = "w")
+
+                src = Image.open("Images/averageRating.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.1, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Average Rating: {averageRating}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.1, anchor = "w")
+            elif player.position in ["midfielder", "forward"]:
+                src = Image.open("Images/goal.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Goals: {goals}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely, anchor = "w")
+
+                src = Image.open("Images/assist.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.05, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Assists: {assists}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.05, anchor = "w")
+
+                src = Image.open("Images/yellowCard.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.1, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Yellow Cards: {yellowCards}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.1, anchor = "w")
+
+                src = Image.open("Images/redCard.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.15, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Red Cards: {redCards}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.15, anchor = "w")
+
+                src = Image.open("Images/averageRating.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.2, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Average Rating: {averageRating}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.2, anchor = "w")
+            else:
+                src = Image.open("Images/cleanSheet.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Clean Sheets: {cleanSheets}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely, anchor = "w")
+
+                src = Image.open("Images/ownGoal.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.05, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Own Goals: {ownGoals}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.05, anchor = "w")
+
+                src = Image.open("Images/yellowCard.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.1, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Yellow Cards: {yellowCards}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.1, anchor = "w")
+
+                src = Image.open("Images/redCard.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.15, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Red Cards: {redCards}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.15, anchor = "w")
+
+                src = Image.open("Images/goal.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.2, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Goals: {goals}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.2, anchor = "w")
+
+                src = Image.open("Images/assist.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.25, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Assists: {assists}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.25, anchor = "w")
+
+                src = Image.open("Images/averageRating.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.3, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Average Rating: {averageRating}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.3, anchor = "w")
 
     def swapLineupPositions(self, position_1, position_2):
 

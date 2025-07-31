@@ -6,7 +6,7 @@ from data.gamesDatabase import *
 from PIL import Image
 import io
 from utils.teamLogo import TeamLogo
-from utils.frames import FootballPitchPlayerPos
+from utils.frames import FootballPitchPlayerPos, FormGraph
 from utils.util_functions import *
 
 class PlayerProfile(ctk.CTkFrame):
@@ -144,6 +144,8 @@ class Profile(ctk.CTkFrame):
         self.formFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 520, height = 250, corner_radius = 15)
         self.formFrame.place(relx = 0.67, rely = 0.63, anchor = "center")
         ctk.CTkLabel(self.formFrame, text = "Form", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.1, anchor = "center")
+
+        FormGraph(self.formFrame, self.player, 520, 250, 0.5, 0.6, "center", GREY_BACKGROUND)
 
         self.statsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 907, height = 75, corner_radius = 15)
         self.statsFrame.place(relx = 0.04, rely = 0.85, anchor = "nw")

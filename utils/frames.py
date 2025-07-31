@@ -1363,6 +1363,8 @@ class FormGraph(ctk.CTkCanvas):
         self.width = width
         self.height = height
 
+        self.last5Events = []
+
         self.draw_axes()
 
         self.leagueTeams = LeagueTeams.get_league_by_team(self.player.team_id)
@@ -1383,14 +1385,14 @@ class FormGraph(ctk.CTkCanvas):
         
         # Check if player played in any of the 5 matches and collect ratings
         played_any = False
-        ratings = []
+        self.ratings = []
         for match in self.last5:
             lineup = TeamLineup.get_lineup_by_match(match.id)
             playerIDs = [player.player_id for player in lineup]
             if self.player.id in playerIDs:
                 played_any = True
                 playerLineupData = [player for player in lineup if player.player_id == self.player.id][0]
-                ratings.append(playerLineupData.rating)
+                self.ratings.append(playerLineupData.rating)
         
         # If player didn't play in any match, show "No data" message
         if not played_any:
@@ -1398,7 +1400,7 @@ class FormGraph(ctk.CTkCanvas):
             return
         
         # Find maximum rating to scale the chart
-        max_rating = max(ratings)
+        max_rating = max(self.ratings)
         # Ensure minimum scale of 5 for better visibility
         scale_max = max(max_rating + 1, 5)
         
@@ -1410,7 +1412,7 @@ class FormGraph(ctk.CTkCanvas):
             bar_x = i * bar_width + bar_width / 2
             
             if self.player.id not in playerIDs:
-                # Player didn't play - skip this match (no text or bar)
+                self.create_text(bar_x, self.height - 15, text = f"0'", fill = "white", font = ("Arial", 10))
                 continue
 
             # Get player data
@@ -1419,6 +1421,7 @@ class FormGraph(ctk.CTkCanvas):
 
             # Calculate minutes played
             matchEvents = MatchEvents.get_events_by_match_and_player(match.id, self.player.id)
+            self.last5Events.append(matchEvents)
             timePlayed = 90
             subbedOn = None
             subbedOff = None
@@ -1426,10 +1429,10 @@ class FormGraph(ctk.CTkCanvas):
             if matchEvents:
                 for event in matchEvents:
                     if event.event_type == "sub_on":
-                        subbedOn = event.minute
+                        subbedOn = int(event.time)
                         break
                     elif event.event_type == "sub_off":
-                        subbedOff = event.minute
+                        subbedOff = int(event.time)
                         break
             
             if subbedOn is not None and subbedOff is not None:
@@ -1459,7 +1462,7 @@ class FormGraph(ctk.CTkCanvas):
             bar_rect = self.create_rectangle(bar_left, bar_top, bar_right, bar_bottom, fill = bar_color, outline = "")
             
             # Create rating text but don't show it initially
-            rating_text = self.create_text(bar_x, bar_top - 10, text = f"{rating:.1f}", fill = "white", font = ("Arial", 10), state = "hidden")
+            rating_text = self.create_text(bar_x, bar_top - 10, text = f"{rating:.2f}", fill = "white", font = ("Arial", 10), state = "hidden")
             
             # Bind mouse events to show/hide rating on hover
             self.tag_bind(bar_rect, "<Enter>", lambda event, text_id = rating_text: self.itemconfig(text_id, state = "normal"))

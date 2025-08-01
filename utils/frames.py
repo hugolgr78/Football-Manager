@@ -971,7 +971,7 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
 
 class LineupPlayerFrame(ctk.CTkFrame):
     def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions):
-        super().__init__(parent, fg_color = fgColor, width = width, height = height, background_corner_colors = [fgColor, fgColor, fgColor, fgColor])
+        super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
         self.position = position
@@ -1000,7 +1000,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
 
         self.firstName = ctk.CTkLabel(self, text = self.player.first_name, font = (APP_FONT, 10), height = 10, fg_color = fgColor)
         self.firstName.place(relx = 0.5, rely = 0.45, anchor = "center")
-        self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 13), fg_color = fgColor)
+        self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 13), fg_color = fgColor, height = 1)
         self.lastName.place(relx = 0.5, rely = 0.75, anchor = "center")
 
         self.removeButton = ctk.CTkButton(self, text = "X", width = 10, height = 10, fg_color = fgColor, hover_color = CLOSE_RED, corner_radius = 0, command = self.remove)
@@ -1015,6 +1015,9 @@ class LineupPlayerFrame(ctk.CTkFrame):
                 child.bind("<Button-1>", self.start_drag)
                 child.bind("<B1-Motion>", self.do_drag)
                 child.bind("<ButtonRelease-1>", self.stop_drag)
+
+    def showBorder(self):
+        self.configure(border_color = PIE_GREEN, border_width = 2)
 
     def updateFrame(self):
         self.firstName.configure(text = self.player.first_name)
@@ -1240,6 +1243,9 @@ class SubstitutePlayer(ctk.CTkFrame):
 
     def uncheckCheckBox(self):
         self.checkBox.deselect()
+
+    def showBorder(self):
+        self.configure(border_color = PIE_RED, border_width = 2)
 
 class MatchDayMatchFrame(ctk.CTkFrame):
     def __init__(self, parent, match, fgColor, height, width, imageSize = 40, relx = 0, rely = 0, anchor = "nw", border_width = None, border_color = None, pack = True):

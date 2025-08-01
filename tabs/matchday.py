@@ -18,6 +18,7 @@ class MatchDay(ctk.CTkFrame):
         self.parent = parent
         self.teamLineup = teamLineup
         self.teamSubstitutes = teamSubstitutes
+        self.startSubs = teamSubstitutes.copy()
         self.team = team
         self.players = players
         self.teamMatch = None
@@ -646,10 +647,14 @@ class MatchDay(ctk.CTkFrame):
             positionCode = POSITION_CODES[position]
             name = player.first_name + " " + player.last_name
 
+            subbed_on = False
+            if player.id in self.startSubs and player.id in self.teamLineup.values():
+                subbed_on = True
+
             if self.injuredPlayer and self.injuredPlayer.first_name + " " + self.injuredPlayer.last_name == name:
                 self.injuredPosition = position
                 if self.completedSubs != MAX_SUBS:
-                    LineupPlayerFrame(self.lineupPitch,
+                    playerFrame = LineupPlayerFrame(self.lineupPitch,
                                     POSITIONS_PITCH_POSITIONS[position][0],
                                     POSITIONS_PITCH_POSITIONS[position][1],
                                     "center",
@@ -668,7 +673,7 @@ class MatchDay(ctk.CTkFrame):
                     pass
                     # Handle the case where a player gets injured but no more substitutions can be made???
             else:
-                LineupPlayerFrame(self.lineupPitch,
+                playerFrame = LineupPlayerFrame(self.lineupPitch,
                                 POSITIONS_PITCH_POSITIONS[position][0],
                                 POSITIONS_PITCH_POSITIONS[position][1],
                                 "center",
@@ -683,6 +688,9 @@ class MatchDay(ctk.CTkFrame):
                                 self.substitutesFrame,
                                 self.swapLineupPositions
                             )
+                
+                if subbed_on:
+                    playerFrame.showBorder()
             
             if position in self.values:
                 self.values.remove(position)
@@ -758,9 +766,12 @@ class MatchDay(ctk.CTkFrame):
 
                 if self.injuredPlayer:
                     if player.id in self.redCardPlayers or player.id == self.injuredPlayer.id:
-                        SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
+                        subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
                 else:
-                    SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, ingame = True, ingameFunction = self.showPlayerStats)
+                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, ingame = True, ingameFunction = self.showPlayerStats)
+
+                if player.id in self.playersOff.values():
+                    subFrame.showBorder()
 
                 count += 1
 
@@ -1028,7 +1039,7 @@ class MatchDay(ctk.CTkFrame):
                 color = INJURY_RED
 
         # Create a frame for the player in the lineup pitch
-        LineupPlayerFrame(self.lineupPitch, 
+        playerFrame = LineupPlayerFrame(self.lineupPitch, 
                             POSITIONS_PITCH_POSITIONS[self.selected_position][0], 
                             POSITIONS_PITCH_POSITIONS[self.selected_position][1], 
                             "center", 
@@ -1043,6 +1054,9 @@ class MatchDay(ctk.CTkFrame):
                             self.substitutesFrame,
                             self.swapLineupPositions
                         )
+
+        if playerData.id in self.playersOn.values():
+            playerFrame.showBorder()
         
         # Reset the dropdown
         self.dropDown.configure(state = "disabled")

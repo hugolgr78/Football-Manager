@@ -301,6 +301,9 @@ class MatchDay(ctk.CTkFrame):
                 frame.pack(expand = True, fill = "both")
                 ctk.CTkLabel(frame, text = f"+{self.matchFrame.matchInstance.extraTimeHalf} minute(s) added", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
+                self.matchDataFrame.update_idletasks()
+                self.matchDataFrame._parent_canvas.yview_moveto(1)
+
             ## Half time for every time now
             if self.halfTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
@@ -384,6 +387,9 @@ class MatchDay(ctk.CTkFrame):
                 frame.pack(expand = True, fill = "both")
                 ctk.CTkLabel(frame, text = f"+{self.matchFrame.matchInstance.extraTimeFull} minute(s) added", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
+                self.matchDataFrame.update_idletasks()
+                self.matchDataFrame._parent_canvas.yview_moveto(1)
+
             if self.fullTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
                 if minutes == 90 + self.maxExtraTimeFull and seconds == 0:
@@ -406,6 +412,9 @@ class MatchDay(ctk.CTkFrame):
                         frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
                         frame.pack(expand = True, fill = "both")
                         ctk.CTkLabel(frame, text = "------------------ Full Time ------------------", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+                        self.matchDataFrame.update_idletasks()
+                        self.matchDataFrame._parent_canvas.yview_moveto(1)
 
             ## ----------- substitution end ------------
             if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
@@ -457,8 +466,11 @@ class MatchDay(ctk.CTkFrame):
                 self.matchFrame.HTLabel()
 
                 frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
-                frame.pack(expand = True, fill = "both")
                 ctk.CTkLabel(frame, text = "------------------ Half Time ------------------", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+                frame.pack(expand = True, fill = "both")
+
+                self.matchDataFrame.update_idletasks()
+                self.matchDataFrame._parent_canvas.yview_moveto(1)
             
             if minutes == 90 + self.matchFrame.matchInstance.extraTimeFull and self.fullTime and seconds == 0:
                 self.shoutsButton.configure(state = "disabled")
@@ -466,8 +478,11 @@ class MatchDay(ctk.CTkFrame):
                 self.matchFrame.FTLabel()
 
                 frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
-                frame.pack(expand = True, fill = "both")
                 ctk.CTkLabel(frame, text = "------------------ Full Time ------------------", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+                frame.pack(expand = True, fill = "both")
+
+                self.matchDataFrame.update_idletasks()
+                self.matchDataFrame._parent_canvas.yview_moveto(1)
 
             ## ----------- managing team match ------------
             for event_time, event_details in list(self.matchFrame.matchInstance.homeEvents.items()):
@@ -617,8 +632,11 @@ class MatchDay(ctk.CTkFrame):
 
         self.addSubstitutePlayers()
 
-        self.confirmButton = ctk.CTkButton(self.substitutionFrame, text = "Confirm", width = 520, height = 50, font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, corner_radius = 10, command = self.finishSubstitution)
+        self.confirmButton = ctk.CTkButton(self.substitutionFrame, text = "Confirm", width = 255, height = 50, font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, corner_radius = 10, command = self.finishSubstitution)
         self.confirmButton.place(relx = 0.33, rely = 0.98, anchor = "sw")
+
+        self.cancelButton = ctk.CTkButton(self.substitutionFrame, text = "Cancel", width = 255, height = 50, font = (APP_FONT, 20), fg_color = CLOSE_RED, bg_color = TKINTER_BACKGROUND, corner_radius = 10, command = self.stopSubstitution)
+        self.cancelButton.place(relx = 0.763, rely = 0.98, anchor = "se")
 
         self.playerStatsFrame = ctk.CTkFrame(self.substitutionFrame, width = 260, height = 670, fg_color = DARK_GREY, corner_radius = 10)
         self.playerStatsFrame.place(relx = 0.99, rely = 0.02, anchor = "ne")
@@ -1063,9 +1081,9 @@ class MatchDay(ctk.CTkFrame):
         if self.currentSubs != 0:
             times = []
             for i in range(1, self.currentSubs + 1):
-                currMinute = int(self.timeLabel.cget("text").split(":")[0])
-                currSeconds = int(self.timeLabel.cget("text").split(":")[1])
-                
+                currMinute = int(self.timeLabel.cget("text").split(":")[0]) if self.timeLabel.cget("text") != "HT" else 45
+                currSeconds = int(self.timeLabel.cget("text").split(":")[1]) if self.timeLabel.cget("text") != "HT" else 0
+
                 if currSeconds + (i * 10) > 60:
                     eventSeconds = (currSeconds + (i * 10)) - 60
                     eventMinute = currMinute + 1
@@ -1074,6 +1092,8 @@ class MatchDay(ctk.CTkFrame):
                     eventMinute = currMinute
 
                 eventTime = str(eventMinute) + ":" + str(eventSeconds)
+                eventTime = self.checkEventTime(events, eventTime)
+                eventTime = self.checkEventTime(times, eventTime)
                 times.append(eventTime)
 
                 events[eventTime] = {
@@ -1113,15 +1133,36 @@ class MatchDay(ctk.CTkFrame):
 
         # Reset the positions pitch
         pitch.destroy()
-        pitch = FootballPitchMatchDay(self.teamMatchFrame, 270, 600, 0.02, 0.02, "nw", TKINTER_BACKGROUND, GREY_BACKGROUND)
+        pitch = FootballPitchMatchDay(self.teamMatchFrame, 270, 600, 0.02 if self.home else 0.98, 0.02, "nw" if self.home else "ne", TKINTER_BACKGROUND, GREY_BACKGROUND)
 
         for position, playerID in lineup.items():
             pitch.addPlayer(position, Players.get_player_by_id(playerID).last_name)
 
         self.substitutionFrame.place_forget()
-        self.resumeMatch()
+
+        if self.timeLabel.cget("text") != "HT":
+            self.resumeMatch()
+
         self.completedSubs += self.currentSubs
         self.currentSubs = 0
+
+    def stopSubstitution(self):
+        self.substitutionFrame.place_forget()
+
+        if self.timeLabel.cget("text") != "HT":
+            self.resumeMatch()
+
+    def checkEventTime(self, events, time):
+        # Check if the time already exists in the events
+        while time in events:
+            # If it does, increment the seconds by 1 until a unique time is found
+            minute, second = map(int, time.split(":"))
+            second += 1
+            if second >= 60:
+                second = 0
+                minute += 1
+            time = f"{minute}:{second:02d}"
+        return time
 
     def halfTimeTalks(self):
 
@@ -1135,7 +1176,7 @@ class MatchDay(ctk.CTkFrame):
         self.HTresumeButton = ctk.CTkButton(self.HTbuttonsFrame, text = "Resume Game >>", width = 400, height = 55, font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, bg_color = TKINTER_BACKGROUND, command = lambda: self.resumeMatch(halfTime = True))
         self.HTresumeButton.place(relx = 1, rely = 1, anchor = "se")
 
-        self.HTsubsButton = ctk.CTkButton(self.HTbuttonsFrame, text = "Substitutions", width = 400, height = 55, font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, bg_color = TKINTER_BACKGROUND)
+        self.HTsubsButton = ctk.CTkButton(self.HTbuttonsFrame, text = "Substitutions", width = 400, height = 55, font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, bg_color = TKINTER_BACKGROUND, command = self.substitution)
         self.HTsubsButton.place(relx = 1, rely = 0, anchor = "ne")
 
         self.HTscoreDataFrame = ctk.CTkFrame(self.HTbuttonsFrame, width = 765, height = 120, fg_color = GREY_BACKGROUND, corner_radius = 10)

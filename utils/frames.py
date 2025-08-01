@@ -1436,10 +1436,8 @@ class FormGraph(ctk.CTkCanvas):
                 for event in matchEvents:
                     if event.event_type == "sub_on":
                         subbedOn = int(event.time)
-                        break
                     elif event.event_type == "sub_off":
                         subbedOff = int(event.time)
-                        break
             
             if subbedOn is not None and subbedOff is not None:
                 timePlayed = subbedOff - subbedOn

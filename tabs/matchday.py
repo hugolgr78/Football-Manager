@@ -697,7 +697,7 @@ class MatchDay(ctk.CTkFrame):
 
         self.choosePlayerFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 50, corner_radius = 0, border_color = APP_BLUE, border_width = 2)
 
-        self.backButton = ctk.CTkButton(self.choosePlayerFrame, text = "Back", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 100, hover_color = CLOSE_RED, command = self.stop_choosePlayer)
+        self.backButton = ctk.CTkButton(self.choosePlayerFrame, text = "Back", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 100, hover_color = CLOSE_RED, command = self.stopChoosePlayer)
         self.backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
 
         self.playerDropDown = ctk.CTkComboBox(self.choosePlayerFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY, width = 220, height = 30, state = "readonly", command = self.choosePosition)
@@ -731,6 +731,7 @@ class MatchDay(ctk.CTkFrame):
     
     def addSubstitutePlayers(self):
         ctk.CTkLabel(self.substitutesFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)
+        ctk.CTkLabel(self.substitutesFrame, text = f"{MAX_SUBS - self.completedSubs} changes left", font = (APP_FONT, 17), fg_color = DARK_GREY).place(relx = 0.01, rely = 0.005, anchor = "nw")
         
         players_per_row = 5
 
@@ -956,6 +957,8 @@ class MatchDay(ctk.CTkFrame):
             if isinstance(frame, LineupPlayerFrame):
                 frame.removeButton.configure(state = "disabled")
 
+        self.confirmButton.configure(state = "disabled")
+
     def updateLineup(self, player, old_position, new_position):
         # update the lineup with the change of position and upodate the drop down values
 
@@ -997,14 +1000,14 @@ class MatchDay(ctk.CTkFrame):
             self.playerDropDown.configure(values = values)
             self.playerDropDown.configure(state = "normal")
 
-    def stop_choosePlayer(self):
+    def stopChoosePlayer(self):
         self.choosePlayerFrame.place_forget()
         self.dropDown.configure(state = "normal")
         self.playerDropDown.set("Choose Player")
         self.confirmButton.configure(state = "normal")
 
     def choosePosition(self, selected_player):
-        self.stop_choosePlayer()
+        self.stopChoosePlayer()
 
         playerData = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1], self.team.id)
         if playerData.id in self.startTeamLineup.values():
@@ -1073,6 +1076,8 @@ class MatchDay(ctk.CTkFrame):
                 self.confirmButton.configure(state = "normal")
             elif self.injuredPlayer not in self.playersOn.values():
                 self.confirmButton.configure(state = "disabled")
+        else:
+            self.confirmButton.configure(state = "normal")
 
     def finishSubstitution(self):
         lineup = self.matchFrame.matchInstance.homeCurrentLineup if self.home else self.matchFrame.matchInstance.awayCurrentLineup
@@ -1098,11 +1103,11 @@ class MatchDay(ctk.CTkFrame):
                 currMinute = int(self.timeLabel.cget("text").split(":")[0]) if self.timeLabel.cget("text") != "HT" else 45
                 currSeconds = int(self.timeLabel.cget("text").split(":")[1]) if self.timeLabel.cget("text") != "HT" else 0
 
-                if currSeconds + (i * 10) > 60:
-                    eventSeconds = (currSeconds + (i * 10)) - 60
+                if currSeconds + (i * 2) > 60:
+                    eventSeconds = (currSeconds + (i * 2)) - 60
                     eventMinute = currMinute + 1
                 else:
-                    eventSeconds = currSeconds + (i * 10)
+                    eventSeconds = currSeconds + (i * 2)
                     eventMinute = currMinute
 
                 eventTime = str(eventMinute) + ":" + str(eventSeconds)

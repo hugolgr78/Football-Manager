@@ -6,15 +6,26 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import shutil
 import os
+import glob
 
-def backup_database(db_path, backup_dir):
+def backup_all_databases(data_dir, backup_dir):
+    """Backup all .db files in the data directory"""
     if not os.path.exists(backup_dir):
         os.makedirs(backup_dir)
+
+    # Find all .db files in the data directory
+    db_files = glob.glob(os.path.join(data_dir, "*.db"))
     
-    backup_path = os.path.join(backup_dir, f"JohnLocke.db")
-    
-    shutil.copy2(db_path, backup_path)
-    print(f"Database backed up to {backup_path}")
+    for db_path in db_files:
+        # Get the filename without extension
+        db_name = os.path.splitext(os.path.basename(db_path))[0]
+        backup_path = os.path.join(backup_dir, f"{db_name}.db")
+        
+        try:
+            shutil.copy2(db_path, backup_path)
+            print(f"Database backed up: {db_name}.db -> {backup_path}")
+        except Exception as e:
+            print(f"Failed to backup {db_name}.db: {e}")
 
 class FootballManager(ctk.CTk):
     def __init__(self):
@@ -23,9 +34,8 @@ class FootballManager(ctk.CTk):
         # Games database set up
         DATABASE_URL = "sqlite:///data/games.db" 
         
-        db_path = "data/JohnLocke.db"
-        backup_dir = "data/backups"
-        backup_database(db_path, backup_dir)
+        # Backup all databases in the data folder
+        backup_all_databases("data", "data/backups")
 
         # Create an engine and a session
         engine = create_engine(DATABASE_URL)

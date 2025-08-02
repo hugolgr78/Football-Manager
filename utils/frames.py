@@ -981,6 +981,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.updateLineup = updateLineup
         self.substitutesFrame = substitutesFrame
         self.swapLineupPositions = swapLineupPositions
+        self.additionalPositions = []
 
         self.parent.zone_occupancies[self.position] = 1  # Set the initial occupancy status
         self.current_zone = self.position
@@ -1038,7 +1039,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
         for drop_zone in self.parent.drop_zones:
             pos = drop_zone.pos
 
-            if pos not in self.positionsTitles:
+            if pos not in self.positionsTitles and pos not in self.additionalPositions:
                 continue
 
             # Check related positions: allow if all are empty or occupied by self

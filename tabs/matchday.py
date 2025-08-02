@@ -603,6 +603,7 @@ class MatchDay(ctk.CTkFrame):
 
         self.playersOn = {}
         self.playersOff = {}
+        self.freePositions = []
 
         self.forceSub = forceSub
         self.injuredPlayer = Players.get_player_by_id(injuredPlayer) if injuredPlayer else None
@@ -667,6 +668,22 @@ class MatchDay(ctk.CTkFrame):
                                     self.substitutesFrame,
                                     self.swapLineupPositions
                                 )
+                
+                    # Check if there are any players available who can play in the injured player's position
+                    injured_position_code = POSITION_CODES[self.injuredPosition]
+
+                    # If no subs can play the injured player's position, then the position is free to everyone
+                    hasPosssibleSubs = any(
+                        injured_position_code in Players.get_player_by_id(player_id).specific_positions.split(", ")
+                        for player_id in self.teamSubstitutes
+                    )
+
+                    if not hasPosssibleSubs:
+                        self.freePositions.append(self.injuredPosition) 
+
+                else:
+                    self.freePositions.append(self.injuredPosition)
+
             else:
                 playerFrame = LineupPlayerFrame(self.lineupPitch,
                                 POSITIONS_PITCH_POSITIONS[position][0],
@@ -691,6 +708,10 @@ class MatchDay(ctk.CTkFrame):
                 self.values.remove(position)
             elif not self.injuredPlayer and position in self.values:
                 self.values.remove(position)
+
+        for playerFrame in self.lineupPitch.winfo_children():
+            if isinstance(playerFrame, LineupPlayerFrame):
+                playerFrame.additionalPositions = self.freePositions.copy()
 
         self.choosePlayerFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 50, corner_radius = 0, border_color = APP_BLUE, border_width = 2)
 
@@ -981,13 +1002,24 @@ class MatchDay(ctk.CTkFrame):
                     player = widget.player
                     playerName = player.first_name + " " + player.last_name
                     positions = player.specific_positions
-                    if self.currentSubs >= MAX_SUBS - self.completedSubs:
-                        # If the max amount of allowed subs have been made, then the only available players are those who were in the lineup at the start of your substitutions
-                        if POSITION_CODES[selected_position] in positions.split(",") and player.id in self.startTeamLineup.values() and player.id not in self.teamLineup.values() and not widget.unavailable:
-                            values.append(playerName)
+                    
+                    # Determine if player is a valid substitution candidate
+                    can_substitute = self.currentSubs < MAX_SUBS - self.completedSubs
+                    player_in_starting_lineup = player.id in self.startTeamLineup.values()
+                    player_on_pitch = player.id in self.teamLineup.values()
+                    player_available = not widget.unavailable
+                    can_play_selected_position = POSITION_CODES[selected_position] in positions.split(",")
+
+                    # Determine eligibility based on substitution limits and injury rule
+                    if not can_substitute:
+                        # Only allow players from starting lineup if substitution limit reached
+                        if player_in_starting_lineup and not player_on_pitch and player_available:
+                            if (self.freePositions and selected_position in self.freePositions) or can_play_selected_position:
+                                values.append(playerName)
                     else:
-                        if POSITION_CODES[selected_position] in positions.split(",") and player.id not in self.teamLineup.values() and not widget.unavailable:
-                            values.append(playerName)
+                        if not player_on_pitch and player_available:
+                            if (self.freePositions and selected_position in self.freePositions) or can_play_selected_position:
+                                values.append(playerName)
         
         if len(values) == 0:
             self.playerDropDown.set("No available players")

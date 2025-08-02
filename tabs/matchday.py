@@ -631,8 +631,6 @@ class MatchDay(ctk.CTkFrame):
         self.substitutesFrame.place(relx = 0.33, rely = 0.02, anchor = "nw")
         self.substitutesFrame.pack_propagate(False)
 
-        self.addSubstitutePlayers()
-
         self.confirmButton = ctk.CTkButton(self.substitutionFrame, text = "Confirm", width = 255, height = 50, font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, corner_radius = 10, command = self.finishSubstitution)
         self.confirmButton.place(relx = 0.33, rely = 0.98, anchor = "sw")
 
@@ -669,9 +667,6 @@ class MatchDay(ctk.CTkFrame):
                                     self.substitutesFrame,
                                     self.swapLineupPositions
                                 )
-                else:
-                    pass
-                    # Handle the case where a player gets injured but no more substitutions can be made???
             else:
                 playerFrame = LineupPlayerFrame(self.lineupPitch,
                                 POSITIONS_PITCH_POSITIONS[position][0],
@@ -692,7 +687,9 @@ class MatchDay(ctk.CTkFrame):
                 if subbed_on:
                     playerFrame.showBorder()
             
-            if position in self.values:
+            if self.injuredPlayer and self.completedSubs != MAX_SUBS:
+                self.values.remove(position)
+            elif not self.injuredPlayer and position in self.values:
                 self.values.remove(position)
 
         self.choosePlayerFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 50, corner_radius = 0, border_color = APP_BLUE, border_width = 2)
@@ -706,14 +703,7 @@ class MatchDay(ctk.CTkFrame):
 
         if self.forceSub: 
             if self.completedSubs == MAX_SUBS: # if injury occurs after making all 5 substitutions
-                self.confirmButton.configure(state = "normal")
-                self.dropDown.configure(state = "disabled")
-
-                for frame in self.lineupPitch.winfo_children():
-                    if isinstance(frame, LineupPlayerFrame):
-                        frame.removeButton.configure(state = "disabled")
-
-                self.addSubstitute(self.injuredPlayer.first_name + " " + self.injuredPlayer.last_name, self.injuredPlayer.specific_positions, unavailablePlayer = True)
+                self.forceSub = False
 
                 lineup = self.matchFrame.matchInstance.homeCurrentLineup if self.home else self.matchFrame.matchInstance.awayCurrentLineup
                 finalLineup = self.matchFrame.matchInstance.homeFinalLineup if self.home else self.matchFrame.matchInstance.awayFinalLineup
@@ -721,15 +711,21 @@ class MatchDay(ctk.CTkFrame):
 
                 pitch.removePlayer(self.injuredPosition)
                 lineup.pop(self.injuredPosition)
-                finalLineup[self.injuredPosition] = self.injuredPlayer
+                self.teamSubstitutes.append(self.injuredPlayer.id)
+                finalLineup[self.injuredPosition] = self.injuredPlayer.id
             else:
                 self.confirmButton.configure(state = "disabled")
 
         if redCardPlayer:
             player = Players.get_player_by_id(redCardPlayer)
             self.addSubstitute(player.first_name + " " + player.last_name, player.specific_positions, unavailablePlayer = True)
+
+        self.addSubstitutePlayers()
     
     def addSubstitutePlayers(self):
+        for widget in self.substitutesFrame.winfo_children():
+            widget.destroy()
+
         ctk.CTkLabel(self.substitutesFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)
         ctk.CTkLabel(self.substitutesFrame, text = f"{MAX_SUBS - self.completedSubs} changes left", font = (APP_FONT, 17), fg_color = DARK_GREY).place(relx = 0.01, rely = 0.005, anchor = "nw")
         
@@ -768,6 +764,9 @@ class MatchDay(ctk.CTkFrame):
                 if self.injuredPlayer:
                     if player.id in self.redCardPlayers or player.id == self.injuredPlayer.id:
                         subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
+                        subFrame.showBorder()
+                    else:
+                        subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, ingame = True, ingameFunction = self.showPlayerStats)
                 else:
                     subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, ingame = True, ingameFunction = self.showPlayerStats)
 
@@ -945,8 +944,6 @@ class MatchDay(ctk.CTkFrame):
         self.teamLineup.pop(playerPosition)
 
         # Reset the substitutes frame
-        for widget in self.substitutesFrame.winfo_children():
-            widget.destroy()
         self.addSubstitutePlayers()
 
         self.dropDown.configure(state = "readonly")
@@ -1031,8 +1028,6 @@ class MatchDay(ctk.CTkFrame):
                 self.teamSubstitutes.remove(playerID)
 
         # Reset the substitutes frame
-        for widget in self.substitutesFrame.winfo_children():
-            widget.destroy()
         self.addSubstitutePlayers()
 
         color = GREY_BACKGROUND
@@ -1072,9 +1067,9 @@ class MatchDay(ctk.CTkFrame):
                 frame.removeButton.configure(state = "normal")
 
         if self.forceSub:
-            if self.injuredPlayer in self.playersOff.values():
+            if self.injuredPlayer.id in self.playersOff.values():
                 self.confirmButton.configure(state = "normal")
-            elif self.injuredPlayer not in self.playersOn.values():
+            elif self.injuredPlayer.id not in self.playersOn.values():
                 self.confirmButton.configure(state = "disabled")
         else:
             self.confirmButton.configure(state = "normal")
@@ -1089,12 +1084,19 @@ class MatchDay(ctk.CTkFrame):
         ## Adding / removing players from the lineup and lineup pitch (checking differences between startTeamLineup and teamLineup)
         for position, playerID in self.startTeamLineup.items(): # changing a player's position 
             if position in self.teamLineup and playerID != self.teamLineup[position]:
+                lineupPlayer = Players.get_player_by_id(self.teamLineup[position])
+                pitch.removePlayer(position)
+                pitch.addPlayer(position, lineupPlayer.last_name)
+                
                 lineup[position] = self.teamLineup[position]
             elif position not in self.teamLineup: # removing a player from the lineup
+                pitch.removePlayer(position)
                 lineup.pop(position)
 
         for position, playerID in list(self.teamLineup.items()):
             if position not in self.startTeamLineup: # adding a player to the lineup
+                player = Players.get_player_by_id(playerID)
+                pitch.addPlayer(position, player.last_name)
                 lineup[position] = playerID
 
         if self.currentSubs != 0:
@@ -1149,13 +1151,6 @@ class MatchDay(ctk.CTkFrame):
                         positionOn, playerOnID = random.choice(list(self.playersOn.items()))
                         self.matchFrame.matchInstance.addPlayerToLineup(event, playerOnID, playerOffID, positionOn, subs, lineup, self, self.home, managing_team = True)
                         del self.playersOn[positionOn]
-
-        # Reset the positions pitch
-        pitch.destroy()
-        pitch = FootballPitchMatchDay(self.teamMatchFrame, 270, 600, 0.02 if self.home else 0.98, 0.02, "nw" if self.home else "ne", TKINTER_BACKGROUND, GREY_BACKGROUND)
-
-        for position, playerID in lineup.items():
-            pitch.addPlayer(position, Players.get_player_by_id(playerID).last_name)
 
         self.substitutionFrame.place_forget()
 

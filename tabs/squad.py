@@ -135,6 +135,7 @@ class Squad(ctk.CTkFrame):
                     continue
                 elif event.event_type == "injury":
                     self.playerInjured = True
+                    eventType = "Injury"
                 elif event.event_type == "penalty_goal" or event.event_type == "goal":
                     eventType = "Goal(s)"
                 elif event.event_type == "assist":
@@ -184,7 +185,8 @@ class Squad(ctk.CTkFrame):
             ctk.CTkLabel(lastMatchData, text = f"Rating: {self.rating}", font = (APP_FONT, 13), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.28, anchor = "center")
 
             for event in events:
-                ctk.CTkLabel(lastMatchData, text = f"{event}: {events[event]}", font = (APP_FONT, 13), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.3 + (list(events.keys()).index(event) + 1) * 0.1, anchor = "w")
+                if event != "Injury":
+                    ctk.CTkLabel(lastMatchData, text = f"{event}: {events[event]}", font = (APP_FONT, 13), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.3 + (list(events.keys()).index(event) + 1) * 0.1, anchor = "w")
 
     def addPrompts(self, player):
         

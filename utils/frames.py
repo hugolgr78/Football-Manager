@@ -1204,12 +1204,11 @@ class SubstitutePlayer(ctk.CTkFrame):
         self.playerBanned = PlayerBans.check_bans_for_player(self.player.id, comp_id) # For greying out a name when choosing a lineup
         self.unavailable = unavailable # For greying out a name when making in-game substitutions (injury/red card)
 
-        if not self.playerBanned:
-            textColor = "white"
-        elif self.unavailable:
-            textColor = PIE_RED
-        else:
+        textColor = "white"
+        if self.playerBanned:
             textColor = GREY
+        if self.unavailable:
+            textColor = PIE_RED
 
         positions = self.player.specific_positions.replace(",", " ")
         self.positionLabel = ctk.CTkLabel(self, text = positions, font = (APP_FONT, 11), height = 10, fg_color = fgColor)

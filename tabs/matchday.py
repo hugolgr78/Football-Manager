@@ -499,7 +499,7 @@ class MatchDay(ctk.CTkFrame):
                             if self.home and event_details["type"] == "injury":
                                 self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
                             if self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer = newEvent["player"])
+                                self.substitution(redCardPlayer = newEvent["player"], redCardPosition = newEvent["position"])
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, True)
                     else:
@@ -510,9 +510,9 @@ class MatchDay(ctk.CTkFrame):
                             self.matchFrame.matchInstance.homeProcessedEvents[event_time] = event_details
 
                             if self.home and event_details["type"] == "injury":
-                                self.substitution(forceSub = True, injuredPlayer=newEvent["player"])
+                                self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
                             if self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer = newEvent["player"])
+                                self.substitution(redCardPlayer = newEvent["player"], redCardPosition = newEvent["position"])
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, True)
 
@@ -528,7 +528,7 @@ class MatchDay(ctk.CTkFrame):
                             if not self.home and event_details["type"] == "injury":
                                 self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
                             if not self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer = newEvent["player"])
+                                self.substitution(redCardPlayer = newEvent["player"], redCardPosition = newEvent["position"])
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
                     else:
@@ -541,7 +541,7 @@ class MatchDay(ctk.CTkFrame):
                             if not self.home and event_details["type"] == "injury":
                                 self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
                             if not self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer = newEvent["player"])
+                                self.substitution(redCardPlayer = newEvent["player"], redCardPosition = newEvent["position"])
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
 
@@ -594,7 +594,7 @@ class MatchDay(ctk.CTkFrame):
         self.substitutionButton.configure(state = "normal")
         self.resumeMatch()
 
-    def substitution(self, forceSub = False, injuredPlayer = None, redCardPlayer = None):
+    def substitution(self, forceSub = False, injuredPlayer = None, redCardPlayer = None, redCardPosition = None):
         
         self.startTeamLineup = self.matchFrame.matchInstance.homeCurrentLineup.copy() if self.home else self.matchFrame.matchInstance.awayCurrentLineup.copy()
         self.startTeamSubstitutes = self.matchFrame.matchInstance.homeCurrentSubs.copy() if self.home else self.matchFrame.matchInstance.awayCurrentSubs.copy()
@@ -607,6 +607,10 @@ class MatchDay(ctk.CTkFrame):
 
         self.forceSub = forceSub
         self.injuredPlayer = Players.get_player_by_id(injuredPlayer) if injuredPlayer else None
+        self.redCardPlayer = Players.get_player_by_id(redCardPlayer) if redCardPlayer else None
+        self.redCardPosition = redCardPosition if redCardPosition else None
+
+        self.redCardPlayers.append(self.redCardPlayer.id) if self.redCardPlayer else None
 
         self.currentSubs = 0
 
@@ -644,13 +648,12 @@ class MatchDay(ctk.CTkFrame):
         for position, playerID in self.startTeamLineup.items():
             player = Players.get_player_by_id(playerID)
             positionCode = POSITION_CODES[position]
-            name = player.first_name + " " + player.last_name
 
             subbed_on = False
             if player.id in self.startSubs and player.id in self.teamLineup.values():
                 subbed_on = True
 
-            if self.injuredPlayer and self.injuredPlayer.first_name + " " + self.injuredPlayer.last_name == name:
+            if self.injuredPlayer and self.injuredPlayer.id == player.id:
                 self.injuredPosition = position
                 if self.completedSubs != MAX_SUBS:
                     playerFrame = LineupPlayerFrame(self.lineupPitch,
@@ -683,7 +686,6 @@ class MatchDay(ctk.CTkFrame):
 
                 else:
                     self.freePositions.append(self.injuredPosition)
-
             else:
                 playerFrame = LineupPlayerFrame(self.lineupPitch,
                                 POSITIONS_PITCH_POSITIONS[position][0],
@@ -708,6 +710,10 @@ class MatchDay(ctk.CTkFrame):
                 self.values.remove(position)
             elif not self.injuredPlayer and position in self.values:
                 self.values.remove(position)
+
+        if self.redCardPlayer:
+            self.teamSubstitutes.append(self.redCardPlayer.id)
+            self.freePositions.append(self.redCardPosition)
 
         for playerFrame in self.lineupPitch.winfo_children():
             if isinstance(playerFrame, LineupPlayerFrame):
@@ -736,10 +742,6 @@ class MatchDay(ctk.CTkFrame):
                 finalLineup[self.injuredPosition] = self.injuredPlayer.id
             else:
                 self.confirmButton.configure(state = "disabled")
-
-        if redCardPlayer:
-            player = Players.get_player_by_id(redCardPlayer)
-            self.addSubstitute(player.first_name + " " + player.last_name, player.specific_positions, unavailablePlayer = True)
 
         self.addSubstitutePlayers()
     
@@ -782,12 +784,12 @@ class MatchDay(ctk.CTkFrame):
                 row = 1 + count // players_per_row
                 col = count % players_per_row
 
-                if self.injuredPlayer:
-                    if player.id in self.redCardPlayers or player.id == self.injuredPlayer.id:
-                        subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
-                        subFrame.showBorder()
-                    else:
-                        subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, ingame = True, ingameFunction = self.showPlayerStats)
+                if self.injuredPlayer and player.id == self.injuredPlayer.id:
+                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
+                    subFrame.showBorder()
+                elif self.redCardPlayer and player.id in self.redCardPlayers:
+                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
+                    subFrame.showBorder()
                 else:
                     subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, ingame = True, ingameFunction = self.showPlayerStats)
 
@@ -996,6 +998,8 @@ class MatchDay(ctk.CTkFrame):
         self.choosePlayerFrame.place(relx = 0.225, rely = 0.5, anchor = "center")
 
         values = []
+        original_positions = {v: k for k, v in self.startTeamLineup.items()}
+
         for frame in self.substitutesFrame.winfo_children():
             for widget in frame.winfo_children():
                 if isinstance(widget, SubstitutePlayer):
@@ -1010,17 +1014,32 @@ class MatchDay(ctk.CTkFrame):
                     player_available = not widget.unavailable
                     can_play_selected_position = POSITION_CODES[selected_position] in positions.split(",")
 
-                    # Determine eligibility based on substitution limits and injury rule
+                    started_in_selected_position = (
+                        player_in_starting_lineup and
+                        original_positions.get(player.id) == selected_position
+                    )
+
+                    eligible = False
                     if not can_substitute:
-                        # Only allow players from starting lineup if substitution limit reached
                         if player_in_starting_lineup and not player_on_pitch and player_available:
-                            if (self.freePositions and selected_position in self.freePositions) or can_play_selected_position:
-                                values.append(playerName)
+                            if (
+                                (self.freePositions and selected_position in self.freePositions)
+                                or can_play_selected_position
+                                or started_in_selected_position
+                            ):
+                                eligible = True
                     else:
                         if not player_on_pitch and player_available:
-                            if (self.freePositions and selected_position in self.freePositions) or can_play_selected_position:
-                                values.append(playerName)
-        
+                            if (
+                                (self.freePositions and selected_position in self.freePositions)
+                                or can_play_selected_position
+                                or started_in_selected_position
+                            ):
+                                eligible = True
+
+                    if eligible:
+                        values.append(playerName)
+
         if len(values) == 0:
             self.playerDropDown.set("No available players")
             self.playerDropDown.configure(state = "disabled")

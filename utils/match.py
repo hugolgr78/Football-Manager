@@ -269,6 +269,11 @@ class Match():
             else:
                 self.add_events(self.awayEvents, self.awaySubs, "substitution", self.awayInjury)
 
+        self.homeEvents["2:2"] = {
+            "type": "red_card",
+            "extra": False
+        }
+
         if teamMatch:
             print("Home Events: ", self.homeEvents)
             print("Away Events: ", self.awayEvents)
@@ -501,6 +506,7 @@ class Match():
             playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
             lineup.pop(playerPosition)
             finalLineup[playerPosition] = playerID
+            event["position"] = playerPosition
 
             if teamMatch:
                 if home:

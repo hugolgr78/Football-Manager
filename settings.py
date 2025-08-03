@@ -329,7 +329,7 @@ REACTION_TEXTS = [
     (lambda x: x == 2, "Very Happy"),
     (lambda x: x == 1, "Happy"),
     (lambda x: x == 0, "Content"),
-    (lambda x: x == -1, "Disappointed"),
+    (lambda x: x == -1, "Upset"),
     (lambda x: x <= -2, "Angry"),
 ]
 

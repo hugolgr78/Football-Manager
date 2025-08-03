@@ -90,6 +90,10 @@ class Tactics(ctk.CTkFrame):
             if player.player_role == "Youth Team" and player not in self.players:
                 continue
 
+            # If the player finished the match out of position, skip them
+            if positionCode not in player.specific_positions.split(","):
+                continue
+
             events = MatchEvents.get_events_by_match_and_player(self.lastTeamMatch.id, player.id)
             
             # Remove any players that were subbed on
@@ -190,7 +194,8 @@ class Tactics(ctk.CTkFrame):
             ("forward", "Forwards"),
         ]
 
-        playersList = self.players.copy()
+        playersIDs = self.players.copy()
+        playersList = [Players.get_player_by_id(player.id) for player in playersIDs]
         playersList.sort(key = lambda x: (POSITION_ORDER.get(x.position, 99), x.last_name))
 
         for pos_key, heading in position_groups:

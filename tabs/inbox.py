@@ -12,6 +12,8 @@ class Inbox(ctk.CTkFrame):
         self.parent = parent
         self.manager_id = manager_id
 
+        self.emailsToAdd = {}
+
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
         self.league = League.get_league_by_id(self.leagueTeams.league_id)
@@ -33,14 +35,12 @@ class Inbox(ctk.CTkFrame):
         canvas = ctk.CTkCanvas(self, width = 370, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(x = 0, y = 65, anchor = "w")
 
-        self.importEmails()
+        self.saveEmails()
 
-    def importEmails(self):
+    def saveEmails(self):
         emails = Emails.get_all_emails()
 
         if not emails:
-            self.addEmail("matchday_preview", matchday = 1)
-            self.addEmail("welcome")
             self.saveEmail("welcome")
             self.saveEmail("matchday_preview", matchday = 1)
 
@@ -53,17 +53,18 @@ class Inbox(ctk.CTkFrame):
         for matchday in range(current_matchday, 0, -1):
             if matchday <= 38:
                 if not Emails.get_email_by_matchday_and_type(matchday, "matchday_preview"):
-                    self.addEmail("matchday_preview", matchday = matchday)
                     addedEmails.append(["matchday_preview", matchday])
             if matchday > 1:
                 if not Emails.get_email_by_matchday_and_type(matchday - 1, "matchday_review"):
-                    self.addEmail("matchday_review", matchday = matchday - 1)
                     addedEmails.append(["matchday_review", matchday - 1])
 
         for email in reversed(addedEmails):
             self.saveEmail(email[0], matchday = email[1])
 
-        for email in reversed(emails):
+    def addEmails(self):
+        emails = reversed(Emails.get_all_emails())
+
+        for email in emails:
             self.addEmail(email.email_type, email.matchday, email.player_id, email.ban_length, email.comp_id)
 
     def addEmail(self, email_type, matchday = None, player_id = None, ban_length = None, comp_id = None):

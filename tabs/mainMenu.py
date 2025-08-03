@@ -30,7 +30,7 @@ class MainMenu(ctk.CTkFrame):
         self.hub = Hub(self, self.manager_id)
         self.hub.place(x = 200, y = 0, anchor = "nw")
         
-        self.inbox = None
+        self.inbox = Inbox(self, self.manager_id)
         self.squad = None
         self.schedule = None
         self.tactics = None
@@ -98,6 +98,10 @@ class MainMenu(ctk.CTkFrame):
             self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.manager_id)
 
         self.tabs[self.activeButton].place(x = 200, y = 0, anchor = "nw")
+        
+        # Call addEmails if switching to Inbox tab
+        if index == 1 and self.tabs[self.activeButton]:  # Index 1 is Inbox
+            self.tabs[self.activeButton].addEmails()
 
     def resetMenu(self):
         

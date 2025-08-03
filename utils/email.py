@@ -397,7 +397,7 @@ class MatchdayReview():
             playerOTM,
             f"{playerOTM.first_name} {playerOTM.last_name}",
             "The player of the match was ",
-            f" with a rating",
+            f" with a",
             240,
             30,
             self.parent.parentTab,
@@ -405,7 +405,7 @@ class MatchdayReview():
         )
 
         self.emailText_4 = (
-            f"of {rating}."
+            f"rating of {rating}."
         )
 
         self.emailText_5 = (
@@ -444,22 +444,30 @@ class MatchdayReview():
         else:
             lastPosition = lastMatchdayTable.position
             if currPosition == 1 and lastPosition != 1:
-                text = f"As a result of this matchday, we have now taken the lead\nof the league!"
-            elif currPosition < 20 - league.relegation and lastPosition > 21 - league.relegation:
-                text = f"As a result of this matchday, we have unfortunately moved\ndown into the relegation zone." 
-            elif league.promotion != 0 and currPosition <= league.promotion:
+                text = "As a result of this matchday, we have now taken the lead\nof the league!"
+
+            # Promotion zone changes
+            elif league.promotion != 0:
                 if currPosition <= league.promotion and lastPosition > league.promotion:
-                    text = f"As a result of this matchday, we have moved up into the\npromotion spots"
+                    text = "As a result of this matchday, we have moved up into the\npromotion spots."
                 elif currPosition > league.promotion and lastPosition <= league.promotion:
-                    text = f"As a result of this matchday, we have moved down from the\npromotion spots."
-                else:
-                    text = f"As a result of this matchday, we have stayed in\nthe promotion spots."
-            elif lastPosition == currPosition:
-                text = f"As a result of this matchday, we have stayed in\n{currPosition}{suffix} position."
-            elif lastPosition > currPosition:
+                    text = "As a result of this matchday, we have moved down from the\npromotion spots."
+
+            # Relegation zone changes
+            elif currPosition > 20 - league.relegation and lastPosition <= 20 - league.relegation:
+                text = "As a result of this matchday, we have moved down into the\nrelegation zone."
+            elif currPosition <= 20 - league.relegation and lastPosition > 20 - league.relegation:
+                text = "As a result of this matchday, we have climbed out of the\nrelegation zone."
+
+            # Position changes
+            elif currPosition < lastPosition:
                 text = f"As a result of this matchday, we have moved up into\n{currPosition}{suffix} position."
-            else:
+            elif currPosition > lastPosition:
                 text = f"As a result of this matchday, we have moved down into\n{currPosition}{suffix} position."
+
+            # No change
+            else:
+                text = f"As a result of this matchday, we have stayed in\n{currPosition}{suffix} position."
 
         self.emailText_6 = (text)
 

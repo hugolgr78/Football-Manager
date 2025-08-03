@@ -7,6 +7,7 @@ import io
 
 from utils.frames import MatchFrame, PlayerFrame, next5Matches, TrophiesFrame
 from utils.managerProfileLink import ManagerProfileLink
+from utils.util_functions import *
 
 class TeamProfile(ctk.CTkFrame):
     def __init__(self, parent, manager_id, parentTab = None, changeBackFunction = None):

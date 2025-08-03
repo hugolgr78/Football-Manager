@@ -2,6 +2,7 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
+from utils.util_functions import *
 
 from tabs.hub import Hub
 from tabs.inbox import Inbox

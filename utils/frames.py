@@ -10,6 +10,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from utils.playerProfileLink import PlayerProfileLink
 from utils.match import Match
 from utils.refereeProfileLink import RefereeProfileLabel
+from utils.util_functions import *
 
 class MatchFrame(ctk.CTkFrame):
     def __init__(self, parent, manager_id, match, parentFrame, matchInfoFrame, parentTab):
@@ -295,7 +296,8 @@ class MatchFrame(ctk.CTkFrame):
             playerOTM = TeamLineup.get_player_OTM(self.match.id)
             player = Players.get_player_by_id(playerOTM.player_id)
 
-            ctk.CTkLabel(self.otherInfoFrame, text = f"PoTM: {player.first_name} {player.last_name}", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
+            ctk.CTkLabel(self.otherInfoFrame, text = f"PoTM:", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
+            PlayerProfileLink(self.otherInfoFrame, player, f"{player.first_name} {player.last_name}", "white", 0.225, 0.88, "w", DARK_GREY, self.parentTab, fontSize = 15)
         else:
             ctk.CTkLabel(self.otherInfoFrame, text = "PoTM: N/A", fg_color = DARK_GREY, text_color = "white", font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
 
@@ -863,7 +865,7 @@ class FootballPitchPlayerPos(FootballPitchVertical):
                 outline_color = APP_BLUE
             else:
                 fill_color = TKINTER_BACKGROUND
-                outline_color = GREY_BACKGROUND
+                outline_color = GREY
             self.canvas.create_oval(x - player_radius, y - player_radius, x + player_radius, y + player_radius, fill = fill_color, outline = outline_color) 
 
 class FootballPitchLineup(FootballPitchHorizontal):
@@ -871,7 +873,22 @@ class FootballPitchLineup(FootballPitchHorizontal):
         super().__init__(parent, width, height, relx, rely, anchor, fgColor, pitchColor)
         super().draw_pitch()
 
+        self.pitchColor = pitchColor
+
         self.counter = 0
+        self.drop_zones = []
+        self.zone_occupancies = {}
+
+        self.create_drop_zones()
+
+    def create_drop_zones(self):
+        for pos, pitch_pos in POSITIONS_PITCH_POSITIONS.items():
+            zone = ctk.CTkFrame(self, width = 65, height = 65, fg_color = self.pitchColor, bg_color = self.pitchColor, border_color = "red", border_width = 2, background_corner_colors = [self.pitchColor, self.pitchColor, self.pitchColor, self.pitchColor], corner_radius = 10)
+            zone.pos = pos
+            zone.pitch_pos = pitch_pos
+
+            self.drop_zones.append(zone)
+            self.zone_occupancies[pos] = 0  # Initialize occupancy status
 
     def increment_counter(self):
         self.counter += 1
@@ -953,50 +970,266 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         self.canvas.delete(text_tag)
 
 class LineupPlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerName, positionCode, position, removePlayer):
-        super().__init__(parent, fg_color = fgColor, width = width, height = height, background_corner_colors = [fgColor, fgColor, fgColor, fgColor])
+    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions):
+        super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
         self.position = position
+        self.parent = parent
+        self.player = Players.get_player_by_id(playerID)
+        self.removePlayer = removePlayer
+        self.updateLineup = updateLineup
+        self.substitutesFrame = substitutesFrame
+        self.swapLineupPositions = swapLineupPositions
+        self.additionalPositions = []
 
-        ctk.CTkLabel(self, text = positionCode, font = (APP_FONT, 15), height = 10, fg_color = fgColor).place(relx = 0.05, rely = 0.05, anchor = "nw")
+        self.parent.zone_occupancies[self.position] = 1  # Set the initial occupancy status
+        self.current_zone = self.position
 
-        self.firstName = ctk.CTkLabel(self, text = playerName.split(" ")[0], font = (APP_FONT, 10), height = 10, fg_color = fgColor)
+        self.origin = [relx, rely]
+        self.drag_start_x = 0
+        self.drag_start_y = 0
+
+        playerPositions = self.player.specific_positions.split(",")
+        self.positionsTitles = []
+        for pos in playerPositions:
+            matching_titles = [position for position, code in POSITION_CODES.items() if code == pos]
+            self.positionsTitles.extend(matching_titles)
+
+        self.positionLabel = ctk.CTkLabel(self, text = positionCode, font = (APP_FONT, 15), height = 10, fg_color = fgColor)
+        self.positionLabel.place(relx = 0.05, rely = 0.05, anchor = "nw")
+
+        self.firstName = ctk.CTkLabel(self, text = self.player.first_name, font = (APP_FONT, 10), height = 10, fg_color = fgColor)
         self.firstName.place(relx = 0.5, rely = 0.45, anchor = "center")
-        self.lastName = ctk.CTkLabel(self, text = playerName.split(" ")[1], font = (APP_FONT_BOLD, 13), fg_color = fgColor)
+        self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 13), fg_color = fgColor, height = 1)
         self.lastName.place(relx = 0.5, rely = 0.75, anchor = "center")
 
-        self.removeButton = ctk.CTkButton(self, text = "X", width = 10, height = 10, fg_color = fgColor, hover_color = CLOSE_RED, corner_radius = 0, command = lambda f = self, p = playerName: removePlayer(f, p, self.position))
+        self.removeButton = ctk.CTkButton(self, text = "X", width = 10, height = 10, fg_color = fgColor, hover_color = CLOSE_RED, corner_radius = 0, command = self.remove)
         self.removeButton.place(relx = 0.95, rely = 0.05, anchor = "ne")
 
+        self.bind("<Button-1>", self.start_drag)
+        self.bind("<B1-Motion>", self.do_drag)
+        self.bind("<ButtonRelease-1>", self.stop_drag)
+
+        for child in self.winfo_children():
+            if not isinstance(child, ctk.CTkButton) :
+                child.bind("<Button-1>", self.start_drag)
+                child.bind("<B1-Motion>", self.do_drag)
+                child.bind("<ButtonRelease-1>", self.stop_drag)
+
+    def showBorder(self):
+        self.configure(border_color = PIE_GREEN, border_width = 2)
+
+    def updateFrame(self):
+        self.firstName.configure(text = self.player.first_name)
+        self.lastName.configure(text = self.player.last_name)
+        self.positionLabel.configure(text = POSITION_CODES[self.position])
+
+        playerPositions = self.player.specific_positions.split(",")
+        self.positionsTitles = []
+        for pos in playerPositions:
+            matching_titles = [position for position, code in POSITION_CODES.items() if code == pos]
+            self.positionsTitles.extend(matching_titles)
+
+    def start_drag(self, event):
+        self.drag_start_x = event.x_root - self.winfo_rootx()
+        self.drag_start_y = event.y_root - self.winfo_rooty()
+        self.lift()
+
+        for drop_zone in self.parent.drop_zones:
+            pos = drop_zone.pos
+
+            if pos not in self.positionsTitles and pos not in self.additionalPositions:
+                continue
+
+            # Check related positions: allow if all are empty or occupied by self
+            related_positions = RELATED_POSITIONS.get(pos, [])
+            if any(
+                self.parent.zone_occupancies.get(rel_pos) == 1 and rel_pos != self.position
+                for rel_pos in related_positions
+            ):
+                continue
+
+            # If all checks pass, show the drop zone
+            drop_zone.place(relx = drop_zone.pitch_pos[0], rely = drop_zone.pitch_pos[1], anchor = "center")
+
+        self.parent.update_idletasks()
+
+    def do_drag(self, event):
+
+        # Calculate new position relative to the parent
+        parent_x = self.parent.winfo_rootx()
+        parent_y = self.parent.winfo_rooty()
+        parent_w = self.parent.winfo_width()
+        parent_h = self.parent.winfo_height()
+
+        # Substitutes frame position
+        subs_x = self.substitutesFrame.winfo_rootx() - parent_x
+        subs_w = self.substitutesFrame.winfo_width()
+        subs_right = subs_x + subs_w
+
+        # Mouse position relative to parent
+        rel_mouse_x = event.x_root - parent_x - self.drag_start_x + self.winfo_width() // 2
+        rel_mouse_y = event.y_root - parent_y - self.drag_start_y + self.winfo_height() // 2
+
+        # Clamping bounds
+        min_x = self.winfo_width() // 2  # left bound = left of main frame
+        max_x = subs_right - self.winfo_width() // 2  # right bound = right of subs frame
+
+        min_y = self.winfo_height() // 2
+        max_y = parent_h - self.winfo_height() // 2
+
+        # Clamp values
+        clamped_x = max(min_x, min(rel_mouse_x, max_x))
+        clamped_y = max(min_y, min(rel_mouse_y, max_y))
+
+        # Apply new position
+        relx = clamped_x / parent_w
+        rely = clamped_y / parent_h
+
+        self.place(relx = relx, rely = rely, anchor = "center")
+
+    def check_overlap(self, target_widget):
+        # Get absolute positions of the dragged frame
+        drag_x = self.winfo_rootx()
+        drag_y = self.winfo_rooty()
+        drag_w = self.winfo_width()
+        drag_h = self.winfo_height()
+
+        # Get center of the target widget
+        target_x = target_widget.winfo_rootx()
+        target_y = target_widget.winfo_rooty()
+        target_w = target_widget.winfo_width()
+        target_h = target_widget.winfo_height()
+        center_x = target_x + target_w // 2
+        center_y = target_y + target_h // 2
+
+        # Define the square region centered at the target's center
+        half = 20 // 2
+        square_left = center_x - half
+        square_top = center_y - half
+        square_right = center_x + half
+        square_bottom = center_y + half
+
+        # Check for rectangle overlap with the square region
+        overlap_x = (drag_x < square_right) and (drag_x + drag_w > square_left)
+        overlap_y = (drag_y < square_bottom) and (drag_y + drag_h > square_top)
+        return overlap_x and overlap_y
+
+    def stop_drag(self, event):
+
+        # Get absolute mouse position
+        mouse_x = event.x_root
+        mouse_y = event.y_root
+
+        # Get substitutes frame absolute position and size
+        subs_abs_x = self.substitutesFrame.winfo_rootx()
+        subs_abs_y = self.substitutesFrame.winfo_rooty()
+        subs_w = self.substitutesFrame.winfo_width()
+        subs_h = self.substitutesFrame.winfo_height()
+
+        # If mouse is inside the substitutes frame, remove the player
+        if (subs_abs_x <= mouse_x <= subs_abs_x + subs_w) and (subs_abs_y <= mouse_y <= subs_abs_y + subs_h):
+            self.remove()
+            return
+        
+        dropped = False
+
+        for drop_zone in self.parent.drop_zones:
+            if drop_zone.winfo_manager() == "place":
+                if self.parent.zone_occupancies[drop_zone.pos] == 0:
+                    if self.check_overlap(drop_zone):
+                        self.place(relx = drop_zone.pitch_pos[0], rely = drop_zone.pitch_pos[1], anchor = "center")
+                        self.origin = [drop_zone.pitch_pos[0], drop_zone.pitch_pos[1]]
+
+                        if self.current_zone:
+                            self.parent.zone_occupancies[self.current_zone] = 0
+
+                        self.parent.zone_occupancies[drop_zone.pos] = 1  # Update occupancy status
+                        self.updateLineup(self.player, self.position, drop_zone.pos)
+                        self.position = drop_zone.pos
+                        self.positionLabel.configure(text = POSITION_CODES[self.position])
+                        self.current_zone = drop_zone.pos
+
+                        dropped = True
+                        break
+
+                else:
+                    if self.check_overlap(drop_zone) and drop_zone.pos != self.position:
+                        # We already know that the draged frame can be placed in the new positin. Only remains to check that the one being replaced can be placed in the dragged position.
+                        for frame in self.parent.winfo_children():
+                            # Find the frame that we are dropping onto
+                            if isinstance(frame, LineupPlayerFrame) and frame.origin == list(drop_zone.pitch_pos) and POSITION_CODES[self.position] in frame.player.specific_positions:
+                                self.place(relx = self.origin[0], rely = self.origin[1], anchor = "center")
+
+                                temp = frame.player
+                                frame.player = self.player
+                                self.player = temp
+
+                                self.updateFrame()
+                                frame.updateFrame()
+
+                                self.swapLineupPositions(self.position, drop_zone.pos)
+
+                                dropped = True
+                                break
+                        
+                        if dropped:
+                            break
+
+        for drop_zone in self.parent.drop_zones:
+            if drop_zone.winfo_manager() == "place":
+                drop_zone.place_forget()
+
+        if not dropped:
+            self.place(relx = self.origin[0], rely = self.origin[1], anchor = "center")
+
+    def remove(self):
+
+        player_name = f"{self.player.first_name} {self.player.last_name}"
+        self.parent.zone_occupancies[self.current_zone] = 0  # Clear the occupancy status for the current zone
+
+        for drop_zone in self.parent.drop_zones:
+            if drop_zone.winfo_manager() == "place":
+                drop_zone.place_forget()
+
+        self.removePlayer(self, player_name, self.position)
+
 class SubstitutePlayer(ctk.CTkFrame):
-    def __init__(self, parent, fgColor, height, width, player, checkBoxFunction, parentTab, comp_id):
-        super().__init__(parent, fg_color = fgColor, width = width, height = height)
-        self.pack(pady = 5)
+    def __init__(self, parent, fgColor, height, width, player, parentTab, comp_id, row, column, checkBoxFunction = None, unavailable = False, ingame = False, ingameFunction = None):
+        super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
+        self.grid(row = row, column = column, padx = 5, pady = 5)
+        self.fgColor = fgColor
 
         self.player = player
-        self.playerBanned = PlayerBans.check_bans_for_player(self.player.id, comp_id)
+        self.playerBanned = PlayerBans.check_bans_for_player(self.player.id, comp_id) # For greying out a name when choosing a lineup
+        self.unavailable = unavailable # For greying out a name when making in-game substitutions (injury/red card)
 
-        if not self.playerBanned:
-            textColor = "white"
-        else:
+        textColor = "white"
+        if self.playerBanned:
             textColor = GREY
+        if self.unavailable:
+            textColor = PIE_RED
 
-        ctk.CTkLabel(self, text = "SUB", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
-        
-        self.playerName = PlayerProfileLink(self, player, player.first_name + " " + player.last_name, textColor, 0.15, 0.5, "w", GREY_BACKGROUND, parentTab, 15)
+        positions = self.player.specific_positions.replace(",", " ")
+        self.positionLabel = ctk.CTkLabel(self, text = positions, font = (APP_FONT, 11), height = 10, fg_color = fgColor)
+        self.positionLabel.place(relx = 0.05, rely = 0.05, anchor = "nw")
 
-        ctk.CTkLabel(self, text = player.specific_positions.split(","), font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.85, rely = 0.5, anchor = "e")
+        self.firstName = ctk.CTkLabel(self, text = self.player.first_name, font = (APP_FONT, 13), height = 10, fg_color = fgColor)
+        self.firstName.place(relx = 0.5, rely = 0.35, anchor = "center")
 
-        self.checkBox = ctk.CTkCheckBox(self, text = "", fg_color = DARK_GREY, checkbox_height = 20, width = 20)
-        self.checkBox.configure(command = lambda: checkBoxFunction(self.checkBox, player))
+        PlayerProfileLink(self, player, self.player.last_name, textColor, 0.5, 0.59, "center", fgColor, parentTab, 15, APP_FONT_BOLD, ingame = ingame, ingameFunction = ingameFunction)
+
+        if checkBoxFunction is not None:
+            self.checkBox = ctk.CTkCheckBox(self, text = "", fg_color = GREY, checkbox_height = 10, checkbox_width = 60, border_width = 1, border_color = GREY)
+            self.checkBox.configure(command = lambda: checkBoxFunction(self.checkBox, player))
 
     def showCheckBox(self):
 
         if self.playerBanned:
             return
 
-        self.checkBox.place(relx = 0.95, rely = 0.5, anchor = "e")
+        self.checkBox.place(relx = 0.73, rely = 1, anchor = "s")
         self.checkBox.configure(state = "normal")
 
     def hideCheckBox(self):
@@ -1010,6 +1243,9 @@ class SubstitutePlayer(ctk.CTkFrame):
 
     def uncheckCheckBox(self):
         self.checkBox.deselect()
+
+    def showBorder(self):
+        self.configure(border_color = PIE_RED, border_width = 2)
 
 class MatchDayMatchFrame(ctk.CTkFrame):
     def __init__(self, parent, match, fgColor, height, width, imageSize = 40, relx = 0, rely = 0, anchor = "nw", border_width = None, border_color = None, pack = True):
@@ -1122,3 +1358,121 @@ class MatchEventFrame(ctk.CTkFrame):
     def __init__(self, parent, width, height, corner_radius, fgColor, event, time):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = corner_radius)
         self.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
+
+class FormGraph(ctk.CTkCanvas):
+    def __init__(self, frame, player, width, height, relx, rely, anchor, fgColor):
+        super().__init__(frame, width = width, height = height, bg = fgColor, bd = 0, highlightthickness = 0)
+        self.place(relx = relx, rely = rely, anchor = anchor)
+
+        self.player = player
+        self.fgColor = fgColor
+        self.width = width
+        self.height = height
+
+        self.last5Events = []
+
+        self.draw_axes()
+
+        self.leagueTeams = LeagueTeams.get_league_by_team(self.player.team_id)
+        self.last5 = Matches.get_team_last_5_matches(self.player.team_id, self.leagueTeams.league_id)
+        
+        self.draw_bars()
+
+    def draw_axes(self):
+        # Vertical axis line (left border of canvas)
+        self.create_line(0, 0, 0, self.height - 30, fill = "black", width = 8)
+        
+        # Horizontal axis line (moved up to leave space for text below)
+        self.create_line(0, self.height - 30, self.width, self.height - 30, fill = "black", width = 4)
+
+    def draw_bars(self):
+        bar_width = self.width / 5  # Canvas width divided by 5 bars
+        max_bar_height = self.height - 50  # Leave space for axes and text
+        
+        # Check if player played in any of the 5 matches and collect ratings
+        played_any = False
+        self.ratings = []
+        for match in self.last5:
+            lineup = TeamLineup.get_lineup_by_match(match.id)
+            playerIDs = [player.player_id for player in lineup]
+            if self.player.id in playerIDs:
+                played_any = True
+                playerLineupData = [player for player in lineup if player.player_id == self.player.id][0]
+                self.ratings.append(playerLineupData.rating)
+        
+        # If player didn't play in any match, show "No data" message
+        if not played_any:
+            self.create_text(self.width / 2, self.height / 2 - 20, text = "No data", fill = "white", font = ("Arial Bold", 25))
+            return
+        
+        # Find maximum rating to scale the chart
+        max_rating = max(self.ratings)
+        # Ensure minimum scale of 5 for better visibility
+        scale_max = max(max_rating + 1, 5)
+        
+        for i, match in enumerate(self.last5):
+            lineup = TeamLineup.get_lineup_by_match(match.id)
+            playerIDs = [player.player_id for player in lineup]
+            
+            # Calculate bar position
+            bar_x = i * bar_width + bar_width / 2
+            
+            if self.player.id not in playerIDs:
+                self.create_text(bar_x, self.height - 15, text = f"0'", fill = "white", font = ("Arial", 10))
+                continue
+
+            # Get player data
+            playerLineupData = [player for player in lineup if player.player_id == self.player.id][0]
+            rating = playerLineupData.rating
+
+            # Calculate minutes played
+            matchEvents = MatchEvents.get_events_by_match_and_player(match.id, self.player.id)
+            self.last5Events.append(matchEvents)
+            timePlayed = 90
+            subbedOn = None
+            subbedOff = None
+
+            if matchEvents:
+                for event in matchEvents:
+                    if event.event_type == "sub_on":
+                        subbedOn = int(event.time)
+                    elif event.event_type == "sub_off":
+                        subbedOff = int(event.time)
+            
+            if subbedOn is not None and subbedOff is not None:
+                timePlayed = subbedOff - subbedOn
+            elif subbedOn is not None:
+                timePlayed = 90 - subbedOn
+            elif subbedOff is not None:
+                timePlayed = subbedOff
+
+            # Determine bar color based on rating
+            if rating >= 7:
+                bar_color = PIE_GREEN
+            elif rating >= 5:
+                bar_color = NEUTRAL_COLOR
+            else:
+                bar_color = PIE_RED
+
+            # Calculate bar height using dynamic scale
+            bar_height = (rating / scale_max) * max_bar_height
+            
+            # Draw the bar without outline
+            bar_left = bar_x - bar_width / 4  # Make bars a bit thinner than full width
+            bar_right = bar_x + bar_width / 4
+            bar_top = self.height - 32 - bar_height
+            bar_bottom = self.height - 32
+            
+            bar_rect = self.create_rectangle(bar_left, bar_top, bar_right, bar_bottom, fill = bar_color, outline = "")
+            
+            # Create rating text but don't show it initially
+            rating_text = self.create_text(bar_x, bar_top - 10, text = f"{rating:.2f}", fill = "white", font = ("Arial", 10), state = "hidden")
+            
+            # Bind mouse events to show/hide rating on hover
+            self.tag_bind(bar_rect, "<Enter>", lambda event, text_id = rating_text: self.itemconfig(text_id, state = "normal"))
+            self.tag_bind(bar_rect, "<Leave>", lambda event, text_id = rating_text: self.itemconfig(text_id, state = "hidden"))
+            
+            # Add minutes played text below the axis
+            self.create_text(bar_x, self.height - 15, text = f"{timePlayed}'", fill = "white", font = ("Arial", 10))
+
+        

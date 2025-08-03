@@ -2,6 +2,7 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
+from utils.util_functions import *
 
 class ShoutFrame(ctk.CTkFrame):
     def __init__(self, parent, width, height, corner_radius, fgColor, shout, matchFrame, home, time, shoutMadeFunction, closeFunction):
@@ -192,7 +193,7 @@ class Focus():
             if random.random() < 0.2:
                 self.parent.addGoal(not self.home)
         
-        elif result == "win" and self.parent.oppScoredLast5(): # if the team isnt winning by more than two goals (2-1, 3-2), and the opponenet scored in the last 5 minutes, chance to remove opponent goal
+        elif result == "win" and self.parent.opponentScoredLast5(): # if the team isnt winning by more than two goals (2-1, 3-2), and the opponenet scored in the last 5 minutes, chance to remove opponent goal
             if random.random() < 0.2:
                 self.parent.removeGoal(not self.home)
             

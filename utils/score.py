@@ -1,6 +1,7 @@
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
+from utils.util_functions import *
 
 class Score():
     def __init__(self, homeTeam, awayTeam, homeLineup, awayLineup):

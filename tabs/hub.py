@@ -7,6 +7,7 @@ import io
 from tabs.teamProfile import TeamProfile
 from utils.frames import LeagueTableScrollable, next5Matches
 from utils.teamLogo import TeamLogo
+from utils.util_functions import *
 
 class Hub(ctk.CTkFrame):
     def __init__(self, parent, manager_id):

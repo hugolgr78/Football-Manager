@@ -2,11 +2,14 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
-from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame
+from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame, SubstitutePlayer, FormGraph
 from utils.shouts import ShoutFrame
+from utils.util_functions import *
 import threading, time
 import concurrent.futures
 from PIL import Image
+import math
+
 class MatchDay(ctk.CTkFrame):
     def __init__(self, parent, teamLineup, teamSubstitutes, team, players):
         super().__init__(parent, width = APP_SIZE[0], height = APP_SIZE[1], fg_color = TKINTER_BACKGROUND)
@@ -15,6 +18,7 @@ class MatchDay(ctk.CTkFrame):
         self.parent = parent
         self.teamLineup = teamLineup
         self.teamSubstitutes = teamSubstitutes
+        self.startSubs = teamSubstitutes.copy()
         self.team = team
         self.players = players
         self.teamMatch = None
@@ -30,6 +34,7 @@ class MatchDay(ctk.CTkFrame):
         self.speed = 1 / 120
 
         self.completedSubs = 0
+        self.redCardPlayers = []
 
         self.lastShout = 0
 
@@ -293,13 +298,19 @@ class MatchDay(ctk.CTkFrame):
 
                 self.matchFrame.matchInstance.extraTimeHalf = extraTime
 
+                frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
+                frame.pack(expand = True, fill = "both")
+                ctk.CTkLabel(frame, text = f"+{self.matchFrame.matchInstance.extraTimeHalf} minute(s) added", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+                self.matchDataFrame.update_idletasks()
+                self.matchDataFrame._parent_canvas.yview_moveto(1)
+
             ## Half time for every time now
             if self.halfTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
                 if minutes == 45 + self.maxExtraTimeHalf and seconds == 0:
                     self.timerThread_running = False
                     self.halfTimeTalks()
-                    # self.pauseButton.configure(text = "Resume", command = self.resumeMatch)
 
                     ## Add HT labels if they are not already there
                     for frame in self.otherMatchesFrame.winfo_children():
@@ -373,6 +384,13 @@ class MatchDay(ctk.CTkFrame):
 
                 self.matchFrame.matchInstance.extraTimeFull = extraTime
 
+                frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
+                frame.pack(expand = True, fill = "both")
+                ctk.CTkLabel(frame, text = f"+{self.matchFrame.matchInstance.extraTimeFull} minute(s) added", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+                self.matchDataFrame.update_idletasks()
+                self.matchDataFrame._parent_canvas.yview_moveto(1)
+
             if self.fullTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
                 if minutes == 90 + self.maxExtraTimeFull and seconds == 0:
@@ -389,6 +407,15 @@ class MatchDay(ctk.CTkFrame):
                         self.matchFrame.FTLabel()
                     
                     self.extraTimeLabel.place_forget()
+                
+                    if self.matchFrame.matchInstance.extraTimeFull == 5:
+                        self.shoutsButton.configure(state = "disabled")
+                        frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
+                        frame.pack(expand = True, fill = "both")
+                        ctk.CTkLabel(frame, text = "------------------ Full Time ------------------", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+                        self.matchDataFrame.update_idletasks()
+                        self.matchDataFrame._parent_canvas.yview_moveto(1)
 
             ## ----------- substitution end ------------
             if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
@@ -438,11 +465,25 @@ class MatchDay(ctk.CTkFrame):
                 self.shoutsButton.configure(state = "disabled")
                 self.substitutionButton.configure(state = "disabled")
                 self.matchFrame.HTLabel()
+
+                frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
+                ctk.CTkLabel(frame, text = "------------------ Half Time ------------------", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+                frame.pack(expand = True, fill = "both")
+
+                self.matchDataFrame.update_idletasks()
+                self.matchDataFrame._parent_canvas.yview_moveto(1)
             
             if minutes == 90 + self.matchFrame.matchInstance.extraTimeFull and self.fullTime and seconds == 0:
                 self.shoutsButton.configure(state = "disabled")
                 self.substitutionButton.configure(state = "disabled")
                 self.matchFrame.FTLabel()
+
+                frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 30, fg_color = TKINTER_BACKGROUND)
+                ctk.CTkLabel(frame, text = "------------------ Full Time ------------------", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+                frame.pack(expand = True, fill = "both")
+
+                self.matchDataFrame.update_idletasks()
+                self.matchDataFrame._parent_canvas.yview_moveto(1)
 
             ## ----------- managing team match ------------
             for event_time, event_details in list(self.matchFrame.matchInstance.homeEvents.items()):
@@ -458,7 +499,7 @@ class MatchDay(ctk.CTkFrame):
                             if self.home and event_details["type"] == "injury":
                                 self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
                             if self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer = newEvent["player"])
+                                self.substitution(redCardPlayer = newEvent["player"], redCardPosition = newEvent["position"])
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, True)
                     else:
@@ -469,9 +510,9 @@ class MatchDay(ctk.CTkFrame):
                             self.matchFrame.matchInstance.homeProcessedEvents[event_time] = event_details
 
                             if self.home and event_details["type"] == "injury":
-                                self.substitution(forceSub = True, injuredPlayer=newEvent["player"])
+                                self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
                             if self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer = newEvent["player"])
+                                self.substitution(redCardPlayer = newEvent["player"], redCardPosition = newEvent["position"])
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, True)
 
@@ -487,7 +528,7 @@ class MatchDay(ctk.CTkFrame):
                             if not self.home and event_details["type"] == "injury":
                                 self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
                             if not self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer = newEvent["player"])
+                                self.substitution(redCardPlayer = newEvent["player"], redCardPosition = newEvent["position"])
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
                     else:
@@ -500,7 +541,7 @@ class MatchDay(ctk.CTkFrame):
                             if not self.home and event_details["type"] == "injury":
                                 self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
                             if not self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer = newEvent["player"])
+                                self.substitution(redCardPlayer = newEvent["player"], redCardPosition = newEvent["position"])
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
 
@@ -553,7 +594,7 @@ class MatchDay(ctk.CTkFrame):
         self.substitutionButton.configure(state = "normal")
         self.resumeMatch()
 
-    def substitution(self, forceSub = False, injuredPlayer = None, redCardPlayer = None):
+    def substitution(self, forceSub = False, injuredPlayer = None, redCardPlayer = None, redCardPosition = None):
         
         self.startTeamLineup = self.matchFrame.matchInstance.homeCurrentLineup.copy() if self.home else self.matchFrame.matchInstance.awayCurrentLineup.copy()
         self.startTeamSubstitutes = self.matchFrame.matchInstance.homeCurrentSubs.copy() if self.home else self.matchFrame.matchInstance.awayCurrentSubs.copy()
@@ -562,9 +603,14 @@ class MatchDay(ctk.CTkFrame):
 
         self.playersOn = {}
         self.playersOff = {}
+        self.freePositions = []
 
         self.forceSub = forceSub
         self.injuredPlayer = Players.get_player_by_id(injuredPlayer) if injuredPlayer else None
+        self.redCardPlayer = Players.get_player_by_id(redCardPlayer) if redCardPlayer else None
+        self.redCardPosition = redCardPosition if redCardPosition else None
+
+        self.redCardPlayers.append(self.redCardPlayer.id) if self.redCardPlayer else None
 
         self.currentSubs = 0
 
@@ -586,57 +632,96 @@ class MatchDay(ctk.CTkFrame):
         self.dropDown.place(relx = 0.4, rely = 0.5, anchor = "w")
         self.dropDown.set("Choose Position")
 
-        self.substitutesFrame = ctk.CTkFrame(self.substitutionFrame, width = 520, height = 615, fg_color = GREY_BACKGROUND, corner_radius = 10)
+        self.substitutesFrame = ctk.CTkFrame(self.substitutionFrame, width = 520, height = 615, fg_color = DARK_GREY, corner_radius = 10)
         self.substitutesFrame.place(relx = 0.33, rely = 0.02, anchor = "nw")
         self.substitutesFrame.pack_propagate(False)
 
-        self.confirmButton = ctk.CTkButton(self.substitutionFrame, text = "Confirm", width = 520, height = 50, font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, corner_radius = 10, command = self.finishSubstitution)
+        self.confirmButton = ctk.CTkButton(self.substitutionFrame, text = "Confirm", width = 255, height = 50, font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, corner_radius = 10, command = self.finishSubstitution)
         self.confirmButton.place(relx = 0.33, rely = 0.98, anchor = "sw")
 
-        ctk.CTkLabel(self.substitutesFrame, text = "Substitutes", font = (APP_FONT, 30), fg_color = GREY_BACKGROUND).pack(pady = 10)
+        self.cancelButton = ctk.CTkButton(self.substitutionFrame, text = "Cancel", width = 255, height = 50, font = (APP_FONT, 20), fg_color = CLOSE_RED, bg_color = TKINTER_BACKGROUND, corner_radius = 10, command = self.stopSubstitution)
+        self.cancelButton.place(relx = 0.763, rely = 0.98, anchor = "se")
+
+        self.playerStatsFrame = ctk.CTkFrame(self.substitutionFrame, width = 260, height = 670, fg_color = DARK_GREY, corner_radius = 10)
+        self.playerStatsFrame.place(relx = 0.99, rely = 0.02, anchor = "ne")
 
         for position, playerID in self.startTeamLineup.items():
             player = Players.get_player_by_id(playerID)
             positionCode = POSITION_CODES[position]
-            name = player.first_name + " " + player.last_name
 
-            if self.injuredPlayer and self.injuredPlayer.first_name + " " + self.injuredPlayer.last_name == name:
+            subbed_on = False
+            if player.id in self.startSubs and player.id in self.teamLineup.values():
+                subbed_on = True
+
+            if self.injuredPlayer and self.injuredPlayer.id == player.id:
                 self.injuredPosition = position
                 if self.completedSubs != MAX_SUBS:
-                    LineupPlayerFrame(self.lineupPitch,
+                    playerFrame = LineupPlayerFrame(self.lineupPitch,
                                     POSITIONS_PITCH_POSITIONS[position][0],
                                     POSITIONS_PITCH_POSITIONS[position][1],
                                     "center",
                                     INJURY_RED,
                                     65,
                                     65,
-                                    name,
+                                    playerID,
                                     positionCode,
                                     position,
-                                    self.removePlayer)
+                                    self.removePlayer,
+                                    self.updateLineup,
+                                    self.substitutesFrame,
+                                    self.swapLineupPositions
+                                )
+                
+                    # Check if there are any players available who can play in the injured player's position
+                    injured_position_code = POSITION_CODES[self.injuredPosition]
+
+                    # If no subs can play the injured player's position, then the position is free to everyone
+                    hasPosssibleSubs = any(
+                        injured_position_code in Players.get_player_by_id(player_id).specific_positions.split(", ")
+                        for player_id in self.teamSubstitutes
+                    )
+
+                    if not hasPosssibleSubs:
+                        self.freePositions.append(self.injuredPosition) 
+
+                else:
+                    self.freePositions.append(self.injuredPosition)
             else:
-                LineupPlayerFrame(self.lineupPitch,
+                playerFrame = LineupPlayerFrame(self.lineupPitch,
                                 POSITIONS_PITCH_POSITIONS[position][0],
                                 POSITIONS_PITCH_POSITIONS[position][1],
                                 "center",
                                 GREY_BACKGROUND,
                                 65,
                                 65,
-                                name,
+                                playerID,
                                 positionCode,
                                 position,
-                                self.removePlayer)
+                                self.removePlayer,
+                                self.updateLineup,
+                                self.substitutesFrame,
+                                self.swapLineupPositions
+                            )
+                
+                if subbed_on:
+                    playerFrame.showBorder()
             
-            if position in self.values:
+            if self.injuredPlayer and self.completedSubs != MAX_SUBS:
+                self.values.remove(position)
+            elif not self.injuredPlayer and position in self.values:
                 self.values.remove(position)
 
-        for playerID in self.startTeamSubstitutes:
-            player = Players.get_player_by_id(playerID)
-            self.addSubstitute(player.first_name + " " + player.last_name, player.specific_positions)
+        if self.redCardPlayer:
+            self.teamSubstitutes.append(self.redCardPlayer.id)
+            self.freePositions.append(self.redCardPosition)
+
+        for playerFrame in self.lineupPitch.winfo_children():
+            if isinstance(playerFrame, LineupPlayerFrame):
+                playerFrame.additionalPositions = self.freePositions.copy()
 
         self.choosePlayerFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 50, corner_radius = 0, border_color = APP_BLUE, border_width = 2)
 
-        self.backButton = ctk.CTkButton(self.choosePlayerFrame, text = "Back", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 100, hover_color = CLOSE_RED, command = self.stop_choosePlayer)
+        self.backButton = ctk.CTkButton(self.choosePlayerFrame, text = "Back", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 100, hover_color = CLOSE_RED, command = self.stopChoosePlayer)
         self.backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
 
         self.playerDropDown = ctk.CTkComboBox(self.choosePlayerFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY, width = 220, height = 30, state = "readonly", command = self.choosePosition)
@@ -645,14 +730,7 @@ class MatchDay(ctk.CTkFrame):
 
         if self.forceSub: 
             if self.completedSubs == MAX_SUBS: # if injury occurs after making all 5 substitutions
-                self.confirmButton.configure(state = "normal")
-                self.dropDown.configure(state = "disabled")
-
-                for frame in self.lineupPitch.winfo_children():
-                    if isinstance(frame, LineupPlayerFrame):
-                        frame.removeButton.configure(state = "disabled")
-
-                self.addSubstitute(self.injuredPlayer.first_name + " " + self.injuredPlayer.last_name, self.injuredPlayer.specific_positions, unavailablePlayer = True)
+                self.forceSub = False
 
                 lineup = self.matchFrame.matchInstance.homeCurrentLineup if self.home else self.matchFrame.matchInstance.awayCurrentLineup
                 finalLineup = self.matchFrame.matchInstance.homeFinalLineup if self.home else self.matchFrame.matchInstance.awayFinalLineup
@@ -660,57 +738,257 @@ class MatchDay(ctk.CTkFrame):
 
                 pitch.removePlayer(self.injuredPosition)
                 lineup.pop(self.injuredPosition)
-                finalLineup[self.injuredPosition] = self.injuredPlayer
+                self.teamSubstitutes.append(self.injuredPlayer.id)
+                finalLineup[self.injuredPosition] = self.injuredPlayer.id
             else:
                 self.confirmButton.configure(state = "disabled")
 
-        if redCardPlayer:
-            player = Players.get_player_by_id(redCardPlayer)
-            self.addSubstitute(player.first_name + " " + player.last_name, player.specific_positions, unavailablePlayer = True)
+        self.addSubstitutePlayers()
+    
+    def addSubstitutePlayers(self):
+        for widget in self.substitutesFrame.winfo_children():
+            widget.destroy()
 
-    def addSubstitute(self, playerName, positions, unavailablePlayer = False):
-        frame = ctk.CTkFrame(self.substitutesFrame, width = 520, height = 30, fg_color = GREY_BACKGROUND)
-        frame.pack()
+        ctk.CTkLabel(self.substitutesFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)
+        ctk.CTkLabel(self.substitutesFrame, text = f"{MAX_SUBS - self.completedSubs} changes left", font = (APP_FONT, 17), fg_color = DARK_GREY).place(relx = 0.01, rely = 0.005, anchor = "nw")
         
-        frame.unavailable = unavailablePlayer
-        ctk.CTkLabel(frame, text = positions, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.95, rely = 0.5, anchor = "e")
-        
-        if not unavailablePlayer:
-            ctk.CTkLabel(frame, text = playerName, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
-        else:
-            ctk.CTkLabel(frame, text = playerName, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, text_color = INJURY_RED).place(relx = 0.05, rely = 0.5, anchor = "w")
+        players_per_row = 5
+
+        # Define position groups and their display names
+        position_groups = [
+            ("goalkeeper", "Goalkeepers"),
+            ("defender", "Defenders"),
+            ("midfielder", "Midfielders"),
+            ("forward", "Forwards"),
+        ]
+
+        playerIDs = self.teamSubstitutes.copy()
+        playersList = [Players.get_player_by_id(pid) for pid in playerIDs]
+        playersList.sort(key = lambda x: (POSITION_ORDER.get(x.position, 99), x.last_name))
+
+        for pos_key, heading in position_groups:
+            group_players = [p for p in playersList if p.position == pos_key]
+            num_players = len(group_players)
+
+            if num_players == 0:
+                continue
+
+            frame = ctk.CTkFrame(self.substitutesFrame, fg_color = DARK_GREY, width = 500, height = 100 * max(1, math.ceil(num_players / players_per_row)))
+            frame.grid_columnconfigure(players_per_row, weight = 1)
+            frame.grid_rowconfigure(1 + math.ceil(num_players / 4), weight = 1)
+            ctk.CTkLabel(frame, text = heading, font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).grid(row = 0, column = 0, padx = 5, pady = 5, sticky = "w", columnspan = 4)
+
+            count = 0
+            for player in group_players:
+
+                row = 1 + count // players_per_row
+                col = count % players_per_row
+
+                if self.injuredPlayer and player.id == self.injuredPlayer.id:
+                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
+                    subFrame.showBorder()
+                elif self.redCardPlayer and player.id in self.redCardPlayers:
+                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
+                    subFrame.showBorder()
+                else:
+                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, ingame = True, ingameFunction = self.showPlayerStats)
+
+                if player.id in self.playersOff.values():
+                    subFrame.showBorder()
+
+                count += 1
+
+            frame.pack(fill = "x", padx = 10, pady = 5)
+
+    def showPlayerStats(self, player):
+
+        for widget in self.playerStatsFrame.winfo_children():
+            widget.destroy()
+
+        ctk.CTkLabel(self.playerStatsFrame, text = f"{player.first_name} {player.last_name}", font = (APP_FONT_BOLD, 23), fg_color = DARK_GREY).place(relx = 0.5, rely = 0.05, anchor = "n")
+        ctk.CTkLabel(self.playerStatsFrame, text = f"Last 5 games", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = 0.5, rely = 0.1, anchor = "n")
+
+        ctk.CTkLabel(self.playerStatsFrame, text = "Form", font = (APP_FONT_BOLD, 18), fg_color = DARK_GREY).place(relx = 0.05, rely = 0.2, anchor = "w")
+        ctk.CTkLabel(self.playerStatsFrame, text = f"Stats", font = (APP_FONT_BOLD, 18), fg_color = DARK_GREY).place(relx = 0.05, rely = 0.48, anchor = "w")
+
+        formFrame = ctk.CTkFrame(self.playerStatsFrame, width = 248, height = 130, fg_color = GREY, corner_radius = 5)
+        formFrame.place(relx = 0.02, rely = 0.23, anchor = "nw")
+
+        graph = FormGraph(formFrame, player, 290, 160, 0.02, 0.05, "nw", GREY)
+        playerEvents = graph.last5Events
+        playerRatings = graph.ratings
+
+        averageRating = round(sum(playerRatings) / len(playerRatings), 2) if playerRatings else 0
+
+        # Mids and Fwds stats
+        goals = 0
+        assists = 0
+        yellowCards = 0
+        redCards = 0
+
+        # Gks stats
+        cleanSheets = 0
+        ownGoals = 0
+
+        # All for a defender
+
+        if len(playerEvents) > 0:
+            for match in playerEvents:
+                for event in match:
+                    if event.event_type == "goal" or event.event_type == "penalty_goal":
+                        goals += 1
+                    elif event.event_type == "assist":
+                        assists += 1
+                    elif event.event_type == "yellow_card":
+                        yellowCards += 1
+                    elif event.event_type == "red_card":
+                        redCards += 1
+                    elif event.event_type == "own_goal":
+                        ownGoals += 1
+                    elif event.event_type == "clean_sheet":
+                        cleanSheets += 1
+
+            img_relx = 0.05
+            relx = 0.15
+            rely = 0.53
+
+            if player.position in ["goalkeeper"]:
+                src = Image.open("Images/cleanSheet.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Clean Sheets: {cleanSheets}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely, anchor = "w")
+
+                src = Image.open("Images/ownGoal.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.05, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Own Goals: {ownGoals}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.05, anchor = "w")
+
+                src = Image.open("Images/averageRating.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.1, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Average Rating: {averageRating}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.1, anchor = "w")
+            elif player.position in ["midfielder", "forward"]:
+                src = Image.open("Images/goal.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Goals: {goals}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely, anchor = "w")
+
+                src = Image.open("Images/assist.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.05, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Assists: {assists}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.05, anchor = "w")
+
+                src = Image.open("Images/yellowCard.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.1, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Yellow Cards: {yellowCards}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.1, anchor = "w")
+
+                src = Image.open("Images/redCard.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.15, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Red Cards: {redCards}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.15, anchor = "w")
+
+                src = Image.open("Images/averageRating.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.2, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Average Rating: {averageRating}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.2, anchor = "w")
+            else:
+                src = Image.open("Images/cleanSheet.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Clean Sheets: {cleanSheets}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely, anchor = "w")
+
+                src = Image.open("Images/ownGoal.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.05, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Own Goals: {ownGoals}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.05, anchor = "w")
+
+                src = Image.open("Images/yellowCard.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.1, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Yellow Cards: {yellowCards}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.1, anchor = "w")
+
+                src = Image.open("Images/redCard.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.15, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Red Cards: {redCards}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.15, anchor = "w")
+
+                src = Image.open("Images/goal.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.2, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Goals: {goals}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.2, anchor = "w")
+
+                src = Image.open("Images/assist.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.25, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Assists: {assists}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.25, anchor = "w")
+
+                src = Image.open("Images/averageRating.png")
+                src.thumbnail((20, 20))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self.playerStatsFrame, image = img, text = "", fg_color = DARK_GREY).place(relx = img_relx, rely = rely + 0.3, anchor = "w")
+                ctk.CTkLabel(self.playerStatsFrame, text = f"Average Rating: {averageRating}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.3, anchor = "w")
+
+    def swapLineupPositions(self, position_1, position_2):
+
+        temp = self.teamLineup[position_1]
+        self.teamLineup[position_1] = self.teamLineup[position_2]
+        self.teamLineup[position_2] = temp
 
     def removePlayer(self, frame, playerName, playerPosition): 
-        
-        for position in POSITION_CODES.keys():
-            if position == playerPosition:
-                self.values.append(position)
-
-                if position in RELATED_POSITIONS:
-                    for related_position in RELATED_POSITIONS[position]:
-                        self.values.append(related_position)
-                break
-
+    
         frame.place_forget()
-
-        self.dropDown.configure(state = "readonly")
-        self.dropDown.configure(values = self.values)
 
         playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1], self.team.id)
         if playerData.id in self.startTeamLineup.values():
+            # If the player was in the lineup, add them to the playersOff
             self.playersOff[playerPosition] = playerData.id
-            self.currentSubs += 1
         else:
+            # Otherwise, remove from the playersOn
             del self.playersOn[playerPosition]
-
-        self.addSubstitute(playerName, playerData.specific_positions)
+            self.currentSubs -= 1
         
+        # Changes to lists
         self.teamSubstitutes.append(playerData.id)
         self.teamLineup.pop(playerPosition)
+
+        # Reset the substitutes frame
+        self.addSubstitutePlayers()
+
+        self.dropDown.configure(state = "readonly")
+        new_values = reset_available_positions(self.teamLineup)
+        self.dropDown.configure(values = new_values)
 
         for frame in self.lineupPitch.winfo_children():
             if isinstance(frame, LineupPlayerFrame):
                 frame.removeButton.configure(state = "disabled")
+
+        self.confirmButton.configure(state = "disabled")
+
+    def updateLineup(self, player, old_position, new_position):
+        # update the lineup with the change of position and upodate the drop down values
+
+        if old_position in self.teamLineup:
+            del self.teamLineup[old_position]
+
+        self.teamLineup[new_position] = player.id
+
+        new_values = reset_available_positions(self.teamLineup)
+        self.dropDown.configure(values = new_values)
 
     def choosePlayer(self, selected_position):
         self.selected_position = selected_position
@@ -720,22 +998,48 @@ class MatchDay(ctk.CTkFrame):
         self.choosePlayerFrame.place(relx = 0.225, rely = 0.5, anchor = "center")
 
         values = []
-        for frame in self.substitutesFrame.winfo_children():
-            if isinstance(frame, ctk.CTkFrame):
-                labels = frame.winfo_children()
-                if len(labels) >= 2:
-                    playerName = labels[1].cget("text")
-                    positions = labels[0].cget("text")
-                    unavailable = frame.unavailable
+        original_positions = {v: k for k, v in self.startTeamLineup.items()}
 
-                    player = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1], self.team.id)
-                    if self.currentSubs > MAX_SUBS - self.completedSubs:
-                        if POSITION_CODES[selected_position] in positions.split(",") and player.id in self.startTeamLineup.values() and player.id not in self.teamLineup.values() and not unavailable:
-                            values.append(playerName)
+        for frame in self.substitutesFrame.winfo_children():
+            for widget in frame.winfo_children():
+                if isinstance(widget, SubstitutePlayer):
+                    player = widget.player
+                    playerName = player.first_name + " " + player.last_name
+                    positions = player.specific_positions
+                    
+                    # Determine if player is a valid substitution candidate
+                    can_substitute = self.currentSubs < MAX_SUBS - self.completedSubs
+                    player_in_starting_lineup = player.id in self.startTeamLineup.values()
+                    player_on_pitch = player.id in self.teamLineup.values()
+                    player_available = not widget.unavailable
+                    can_play_selected_position = POSITION_CODES[selected_position] in positions.split(",")
+
+                    started_in_selected_position = (
+                        player_in_starting_lineup and
+                        original_positions.get(player.id) == selected_position
+                    )
+
+                    eligible = False
+                    if not can_substitute:
+                        if player_in_starting_lineup and not player_on_pitch and player_available:
+                            if (
+                                (self.freePositions and selected_position in self.freePositions)
+                                or can_play_selected_position
+                                or started_in_selected_position
+                            ):
+                                eligible = True
                     else:
-                        if POSITION_CODES[selected_position] in positions.split(",") and player.id not in self.teamLineup.values() and not unavailable:
-                            values.append(playerName)
-        
+                        if not player_on_pitch and player_available:
+                            if (
+                                (self.freePositions and selected_position in self.freePositions)
+                                or can_play_selected_position
+                                or started_in_selected_position
+                            ):
+                                eligible = True
+
+                    if eligible:
+                        values.append(playerName)
+
         if len(values) == 0:
             self.playerDropDown.set("No available players")
             self.playerDropDown.configure(state = "disabled")
@@ -744,42 +1048,38 @@ class MatchDay(ctk.CTkFrame):
             self.playerDropDown.configure(values = values)
             self.playerDropDown.configure(state = "normal")
 
-    def stop_choosePlayer(self):
+    def stopChoosePlayer(self):
         self.choosePlayerFrame.place_forget()
         self.dropDown.configure(state = "normal")
         self.playerDropDown.set("Choose Player")
         self.confirmButton.configure(state = "normal")
 
     def choosePosition(self, selected_player):
-        self.stop_choosePlayer()
-        self.dropDown.configure(state = "disabled")
-
-        if self.selected_position in self.values:
-            self.values.remove(self.selected_position)
-
-            if self.selected_position in RELATED_POSITIONS:
-                for related_position in RELATED_POSITIONS[self.selected_position]:
-                    if related_position in self.values:
-                        self.values.remove(related_position)
-
-        self.dropDown.configure(values = self.values)
+        self.stopChoosePlayer()
 
         playerData = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1], self.team.id)
         if playerData.id in self.startTeamLineup.values():
+            # If adding a player that was already in the lineup (before any subs were made), remove from the playersOff
             for position, playerID in list(self.playersOff.items()):
                 if playerID == playerData.id:
                     del self.playersOff[position]
                     break
 
-            self.currentSubs -= 1
         else:
+            # Otherwise, add to the playersOn
             self.playersOn[self.selected_position] = playerData.id
+            self.currentSubs += 1
 
+        # Add the player to the lineup
         self.teamLineup[self.selected_position] = playerData.id
 
+        # Remove the player from the substitutes
         for playerID in self.teamSubstitutes:
             if playerID == playerData.id:
                 self.teamSubstitutes.remove(playerID)
+
+        # Reset the substitutes frame
+        self.addSubstitutePlayers()
 
         color = GREY_BACKGROUND
         if self.injuredPlayer:
@@ -787,53 +1087,85 @@ class MatchDay(ctk.CTkFrame):
             if selected_player == injured_player_name:
                 color = INJURY_RED
 
-        LineupPlayerFrame(self.lineupPitch, 
+        # Create a frame for the player in the lineup pitch
+        playerFrame = LineupPlayerFrame(self.lineupPitch, 
                             POSITIONS_PITCH_POSITIONS[self.selected_position][0], 
                             POSITIONS_PITCH_POSITIONS[self.selected_position][1], 
                             "center", 
                             color,
                             65, 
                             65, 
-                            selected_player,
+                            playerData.id,
                             POSITION_CODES[self.selected_position],
                             self.selected_position,
-                            self.removePlayer
+                            self.removePlayer,
+                            self.updateLineup,
+                            self.substitutesFrame,
+                            self.swapLineupPositions
                         )
-        
-        for frame in self.substitutesFrame.winfo_children():
-            if frame.winfo_children()[1].cget("text") == selected_player:
-                frame.destroy()
 
+        if playerData.id in self.playersOn.values():
+            playerFrame.showBorder()
+        
+        # Reset the dropdown
+        self.dropDown.configure(state = "disabled")
+        new_values = reset_available_positions(self.teamLineup)
+        self.dropDown.configure(values = new_values)
+
+        # Reset all the remove buttons in the lineup pitch
         for frame in self.lineupPitch.winfo_children():
             if isinstance(frame, LineupPlayerFrame):
                 frame.removeButton.configure(state = "normal")
 
         if self.forceSub:
-            if self.injuredPlayer in self.playersOff.values():
+            if self.injuredPlayer.id in self.playersOff.values():
                 self.confirmButton.configure(state = "normal")
-            elif self.injuredPlayer not in self.playersOn.values():
+            elif self.injuredPlayer.id not in self.playersOn.values():
                 self.confirmButton.configure(state = "disabled")
+        else:
+            self.confirmButton.configure(state = "normal")
 
     def finishSubstitution(self):
-        if self.currentSubs != 0:
-            lineup = self.matchFrame.matchInstance.homeCurrentLineup if self.home else self.matchFrame.matchInstance.awayCurrentLineup
-            finalLineup = self.matchFrame.matchInstance.homeFinalLineup if self.home else self.matchFrame.matchInstance.awayFinalLineup
-            subs = self.matchFrame.matchInstance.homeCurrentSubs if self.home else self.matchFrame.matchInstance.awayCurrentSubs
-            events = self.matchFrame.matchInstance.homeEvents if self.home else self.matchFrame.matchInstance.awayEvents
+        lineup = self.matchFrame.matchInstance.homeCurrentLineup if self.home else self.matchFrame.matchInstance.awayCurrentLineup
+        finalLineup = self.matchFrame.matchInstance.homeFinalLineup if self.home else self.matchFrame.matchInstance.awayFinalLineup
+        subs = self.matchFrame.matchInstance.homeCurrentSubs if self.home else self.matchFrame.matchInstance.awayCurrentSubs
+        events = self.matchFrame.matchInstance.homeEvents if self.home else self.matchFrame.matchInstance.awayEvents
+        pitch = self.homeLineupPitch if self.home else self.awayLineupPitch
 
+        ## Adding / removing players from the lineup and lineup pitch (checking differences between startTeamLineup and teamLineup)
+        for position, playerID in self.startTeamLineup.items(): # changing a player's position 
+            if position in self.teamLineup and playerID != self.teamLineup[position]:
+                lineupPlayer = Players.get_player_by_id(self.teamLineup[position])
+                pitch.removePlayer(position)
+                pitch.addPlayer(position, lineupPlayer.last_name)
+                
+                lineup[position] = self.teamLineup[position]
+            elif position not in self.teamLineup: # removing a player from the lineup
+                pitch.removePlayer(position)
+                lineup.pop(position)
+
+        for position, playerID in list(self.teamLineup.items()):
+            if position not in self.startTeamLineup: # adding a player to the lineup
+                player = Players.get_player_by_id(playerID)
+                pitch.addPlayer(position, player.last_name)
+                lineup[position] = playerID
+
+        if self.currentSubs != 0:
             times = []
             for i in range(1, self.currentSubs + 1):
-                currMinute = int(self.timeLabel.cget("text").split(":")[0])
-                currSeconds = int(self.timeLabel.cget("text").split(":")[1])
-                
-                if currSeconds + (i * 10) > 60:
-                    eventSeconds = (currSeconds + (i * 10)) - 60
+                currMinute = int(self.timeLabel.cget("text").split(":")[0]) if self.timeLabel.cget("text") != "HT" else 45
+                currSeconds = int(self.timeLabel.cget("text").split(":")[1]) if self.timeLabel.cget("text") != "HT" else 0
+
+                if currSeconds + (i * 2) > 60:
+                    eventSeconds = (currSeconds + (i * 2)) - 60
                     eventMinute = currMinute + 1
                 else:
-                    eventSeconds = currSeconds + (i * 10)
+                    eventSeconds = currSeconds + (i * 2)
                     eventMinute = currMinute
 
                 eventTime = str(eventMinute) + ":" + str(eventSeconds)
+                eventTime = self.checkEventTime(events, eventTime)
+                eventTime = self.checkEventTime(times, eventTime)
                 times.append(eventTime)
 
                 events[eventTime] = {
@@ -844,25 +1176,6 @@ class MatchDay(ctk.CTkFrame):
                     "injury": False,
                     "extra": True if self.halfTime else False
                 }
-
-            ## Adding / removing players from the lineup and lineup pitch (checking differences between startTeamLineup and teamLineup)
-            pitch = self.homeLineupPitch if self.home else self.awayLineupPitch
-            for position, playerID in self.startTeamLineup.items(): # changing a player's position 
-                if position in self.teamLineup and playerID != self.teamLineup[position]:
-                    lineupPlayer = Players.get_player_by_id(self.teamLineup[position])
-                    pitch.removePlayer(position)
-                    pitch.addPlayer(position, lineupPlayer.last_name)
-
-                    lineup[position] = self.teamLineup[position]
-                elif position not in self.teamLineup: # removing a player from the lineup
-                    pitch.removePlayer(position)
-                    lineup.pop(position)
-
-            for position, playerID in list(self.teamLineup.items()):
-                if position not in self.startTeamLineup: # adding a player to the lineup
-                    player = Players.get_player_by_id(playerID)
-                    pitch.addPlayer(position, player.last_name)
-                    lineup[position] = playerID
 
             ## Substitution events
             for i, (positionOff, playerOffID) in enumerate(list(self.playersOff.items()), 1):
@@ -891,12 +1204,30 @@ class MatchDay(ctk.CTkFrame):
                         del self.playersOn[positionOn]
 
         self.substitutionFrame.place_forget()
-        self.resumeMatch()
+
+        if self.timeLabel.cget("text") != "HT":
+            self.resumeMatch()
+
         self.completedSubs += self.currentSubs
         self.currentSubs = 0
 
-        if self.completedSubs == MAX_SUBS:
-            self.substitutionButton.configure(state = "disabled")
+    def stopSubstitution(self):
+        self.substitutionFrame.place_forget()
+
+        if self.timeLabel.cget("text") != "HT":
+            self.resumeMatch()
+
+    def checkEventTime(self, events, time):
+        # Check if the time already exists in the events
+        while time in events:
+            # If it does, increment the seconds by 1 until a unique time is found
+            minute, second = map(int, time.split(":"))
+            second += 1
+            if second >= 60:
+                second = 0
+                minute += 1
+            time = f"{minute}:{second:02d}"
+        return time
 
     def halfTimeTalks(self):
 
@@ -910,7 +1241,7 @@ class MatchDay(ctk.CTkFrame):
         self.HTresumeButton = ctk.CTkButton(self.HTbuttonsFrame, text = "Resume Game >>", width = 400, height = 55, font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, bg_color = TKINTER_BACKGROUND, command = lambda: self.resumeMatch(halfTime = True))
         self.HTresumeButton.place(relx = 1, rely = 1, anchor = "se")
 
-        self.HTsubsButton = ctk.CTkButton(self.HTbuttonsFrame, text = "Substitutions", width = 400, height = 55, font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, bg_color = TKINTER_BACKGROUND)
+        self.HTsubsButton = ctk.CTkButton(self.HTbuttonsFrame, text = "Substitutions", width = 400, height = 55, font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, bg_color = TKINTER_BACKGROUND, command = self.substitution)
         self.HTsubsButton.place(relx = 1, rely = 0, anchor = "ne")
 
         self.HTscoreDataFrame = ctk.CTkFrame(self.HTbuttonsFrame, width = 765, height = 120, fg_color = GREY_BACKGROUND, corner_radius = 10)

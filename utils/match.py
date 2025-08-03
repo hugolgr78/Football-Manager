@@ -1,11 +1,10 @@
-import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
 from utils.score import Score
 from collections import defaultdict
-from sqlalchemy.orm import Session
-import itertools, threading, concurrent.futures
+import concurrent.futures
+from utils.util_functions import *
 
 class Match():
     def __init__(self, match):
@@ -270,6 +269,11 @@ class Match():
             else:
                 self.add_events(self.awayEvents, self.awaySubs, "substitution", self.awayInjury)
 
+        self.homeEvents["2:2"] = {
+            "type": "red_card",
+            "extra": False
+        }
+
         if teamMatch:
             print("Home Events: ", self.homeEvents)
             print("Away Events: ", self.awayEvents)
@@ -502,6 +506,7 @@ class Match():
             playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
             lineup.pop(playerPosition)
             finalLineup[playerPosition] = playerID
+            event["position"] = playerPosition
 
             if teamMatch:
                 if home:
@@ -746,9 +751,6 @@ class Match():
 
         PlayerBans.reduce_all_player_bans_for_team(self.homeTeam.id, self.match.league_id)
         PlayerBans.reduce_all_player_bans_for_team(self.awayTeam.id, self.match.league_id)
-
-        if len(self.awayProcessedEvents) == 0:
-            print(self.awayTeam.name)
 
         self.getPlayerRatings(self.homeTeam, self.homeFinalLineup, self.homeCurrentLineup, self.homeProcessedEvents)
         self.getPlayerRatings(self.awayTeam, self.awayFinalLineup, self.awayCurrentLineup, self.awayProcessedEvents)

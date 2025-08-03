@@ -3,6 +3,7 @@ from settings import *
 from data.database import *
 from data.gamesDatabase import *
 from utils.frames import MatchFrame
+from utils.util_functions import *
 
 class Schedule(ctk.CTkFrame):
     def __init__(self, parent, manager_id):

@@ -1,12 +1,13 @@
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine, func, case, or_
+from sqlalchemy import create_engine, func, or_, case
 from sqlalchemy.orm import sessionmaker, aliased, scoped_session
 from sqlalchemy.types import Enum
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import uuid, json, random
 from faker import Faker
 from settings import *
+from utils.util_functions import *
 
 Base = declarative_base()
 
@@ -629,7 +630,7 @@ class Players(Base):
                     (Players.position == 'goalkeeper', 1),
                     (Players.position == 'defender', 2),
                     (Players.position == 'midfielder', 3),
-                    (Players.position == 'forward', 4)
+                    (Players.position == 'forward', 4),
                 ],
                 else_ = 5
             )
@@ -667,9 +668,11 @@ class Players(Base):
         session = DatabaseManager().get_session()
         try:
             role_order = case(
-                [(Players.player_role == 'Star player', 1),
-                (Players.player_role == 'First Team', 2),
-                (Players.player_role == 'Rotation', 3)],
+                [ 
+                    (Players.player_role == 'Star player', 1),
+                    (Players.player_role == 'First Team', 2),
+                    (Players.player_role == 'Rotation', 3),
+                ],
                 else_ = 4
             )
 
@@ -683,9 +686,11 @@ class Players(Base):
         session = DatabaseManager().get_session()
         try:
             role_order = case(
-                [(Players.player_role == 'Star player', 1),
-                (Players.player_role == 'First Team', 2),
-                (Players.player_role == 'Rotation', 3)],
+                [
+                    (Players.player_role == 'Star player', 1),
+                    (Players.player_role == 'First Team', 2),
+                    (Players.player_role == 'Rotation', 3),
+                ],
                 else_ = 4
             )
 
@@ -699,9 +704,11 @@ class Players(Base):
         session = DatabaseManager().get_session()
         try:
             role_order = case(
-                [(Players.player_role == 'Star player', 1),
-                (Players.player_role == 'First Team', 2),
-                (Players.player_role == 'Rotation', 3)],
+                [
+                    (Players.player_role == 'Star player', 1),
+                    (Players.player_role == 'First Team', 2),
+                    (Players.player_role == 'Rotation', 3),
+                ],
                 else_ = 4
             )
 
@@ -715,8 +722,10 @@ class Players(Base):
         session = DatabaseManager().get_session()
         try:
             role_order = case(
-                [(Players.player_role == 'First Team', 1),
-                (Players.player_role == 'Backup', 2)],
+                [
+                    (Players.player_role == 'First Team', 1),
+                    (Players.player_role == 'Backup', 2),
+                ],
                 else_ = 3
             )
 
@@ -1115,10 +1124,12 @@ class TeamLineup(Base):
                 Players.team_id == team_id
             ).order_by(
                 case(
-                    [(Players.position == "goalkeeper", 1),
-                    (Players.position == "defender", 2),
-                    (Players.position == "midfielder", 3),
-                    (Players.position == "forward", 4)],
+                    [
+                        (Players.position == "goalkeeper", 1),
+                        (Players.position == "defender", 2),
+                        (Players.position == "midfielder", 3),
+                        (Players.position == "forward", 4),
+                    ],
                     else_ = 5
                 )
             ).all()
@@ -2446,416 +2457,613 @@ class PlayerBans(Base):
 class StatsManager:
     @staticmethod
     def get_goals_scored(leagueTeams, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            # Get all team IDs in this league
+            team_ids = [team.team_id for team in leagueTeams]
+            # Query LeagueTeams table for goals_scored
+            results = session.query(
+                LeagueTeams.team_id,
+                LeagueTeams.goals_scored
+            ).filter(
+                LeagueTeams.league_id == league_id,
+                LeagueTeams.team_id.in_(team_ids)
+            ).all()
+            # Sort by goals scored descending
+            results = sorted(results, key=lambda x: x[1], reverse=True)
+            return results
+        finally:
+            session.close()
 
-        def fetch_team_goals(team):
-            return team.team_id, team.goals_scored
-
-        results = []
-        with ThreadPoolExecutor(max_workers = len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_goals, team): team for team in leagueTeams}
-            for future in futures:
-                team_id, goals = future.result()
-                results.append((team_id, goals))
-
-        # Sort the results by goals scored in descending order
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results
-    
     @staticmethod
     def get_penalties_scored(leagueTeams, league_id):
-        
-        def fetch_team_penalties(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            # Get all matches in league
+            matches = session.query(Matches.id, Matches.home_id, Matches.away_id).filter(
+                Matches.league_id == league_id
+            ).all()
+            match_ids = [m.id for m in matches]
+            # Map match_id to home/away
+            match_team_map = {m.id: (m.home_id, m.away_id) for m in matches}
 
-            penalties_scored = 0
-            penalties_taken = 0
-            for match in matches:
-                events = MatchEvents.get_events_by_match_and_team(team.team_id, match.id)
-                scored = [event for event in events if event.event_type == "penalty_goal"]
-                missed = [event for event in events if event.event_type == "penalty_miss"]
+            # Get all penalty_goal and penalty_miss events in league
+            events = session.query(
+                MatchEvents.match_id,
+                MatchEvents.event_type,
+                Players.team_id
+            ).join(Players, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type.in_(["penalty_goal", "penalty_miss"])
+            ).all()
 
-                penalties_scored += len(scored)
-                penalties_taken += len(scored) + len(missed)
-            
-            percentage = penalties_scored / penalties_taken if penalties_taken > 0 else 0
-            return team.team_id, f"{penalties_scored}/{penalties_taken}", percentage, penalties_taken
+            # Count per team
+            team_stats = {tid: {"scored": 0, "taken": 0} for tid in team_ids}
+            for match_id, event_type, team_id in events:
+                if team_id in team_stats:
+                    team_stats[team_id]["taken"] += 1
+                    if event_type == "penalty_goal":
+                        team_stats[team_id]["scored"] += 1
 
-        penalties = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_penalties, team): team for team in leagueTeams}
-            for future in futures:
-                penalties.append(future.result())
-
-        penalties.sort(key=lambda x: (x[2], -x[3] if x[2] == 0 else x[3]), reverse=True)
-        return penalties
+            results = []
+            for tid in team_ids:
+                scored = team_stats[tid]["scored"]
+                taken = team_stats[tid]["taken"]
+                pct = scored / taken if taken > 0 else 0
+                results.append((tid, f"{scored}/{taken}", pct, taken))
+            results.sort(key=lambda x: (x[2], -x[3] if x[2] == 0 else x[3]), reverse=True)
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_goals_scored_in_first_15(leagueTeams, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            match_ids = [m.id for m in matches]
 
-        def fetch_team_goals(team):
+            # Get all goals in first 15 minutes
+            events = session.query(
+                MatchEvents.match_id,
+                MatchEvents.event_type,
+                MatchEvents.time,
+                Players.team_id
+            ).join(Players, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type.in_(["goal", "penalty_goal"])
+            ).all()
 
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+            team_goals = {tid: 0 for tid in team_ids}
+            for match_id, event_type, time, team_id in events:
+                try:
+                    minute = int(time.split("+")[0])
+                except Exception:
+                    continue
+                if minute <= 15 and team_id in team_goals:
+                    team_goals[team_id] += 1
 
-            goals = 0
-            for match in matches:
-                events = MatchEvents.get_events_by_match_and_team(team.team_id, match.id)
-                early_goals = [event for event in events if event.event_type in ["goal", "penalty_goal"] and int(event.time.split("+")[0]) <= 15]
-                goals += len(early_goals)
-
-            return team.team_id, goals
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_goals, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results
+            results = [(tid, team_goals[tid]) for tid in team_ids]
+            results.sort(key=lambda x: x[1], reverse=True)
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_goals_scored_in_last_15(leagueTeams, league_id):
-        """Fetch goals scored in the last 15 minutes for each team using matches."""
-        
-        def fetch_team_goals(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            match_ids = [m.id for m in matches]
 
-            goals = 0
-            for match in matches:
-                events = MatchEvents.get_events_by_match_and_team(team.team_id, match.id)
-                late_goals = [event for event in events if event.event_type in ["goal", "penalty_goal"] and int(event.time.split("+")[0]) >= 75]
-                goals += len(late_goals)
+            # Get all goals in last 15 minutes
+            events = session.query(
+                MatchEvents.match_id,
+                MatchEvents.event_type,
+                MatchEvents.time,
+                Players.team_id
+            ).join(Players, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type.in_(["goal", "penalty_goal"])
+            ).all()
 
-            return team.team_id, goals
+            team_goals = {tid: 0 for tid in team_ids}
+            for match_id, event_type, time, team_id in events:
+                try:
+                    minute = int(time.split("+")[0])
+                except Exception:
+                    continue
+                if minute >= 75 and team_id in team_goals:
+                    team_goals[team_id] += 1
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_goals, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results
+            results = [(tid, team_goals[tid]) for tid in team_ids]
+            results.sort(key=lambda x: x[1], reverse=True)
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_goals_by_substitutes(leagueTeams, league_id):
-        """Fetch goals scored by substitutes for each team using matches."""
-        
-        def fetch_team_goals(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            match_ids = [m.id for m in matches]
 
-            goals = 0
-            for match in matches:
-                events = MatchEvents.get_events_by_match_and_team(team.team_id, match.id)
+            # Find all sub_on events (subs) in league
+            sub_on = session.query(
+                MatchEvents.player_id,
+                MatchEvents.match_id
+            ).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type == "sub_on"
+            ).all()
+            sub_players = set((player_id, match_id) for player_id, match_id in sub_on)
 
-                goal_events = [event for event in events if event.event_type in ["goal", "penalty_goal"]]
-                substitutes = [event.player_id for event in events if event.event_type == "sub_on"]
-                goals += sum(1 for event in goal_events if event.player_id in substitutes)
+            # Find all goals in league
+            goals = session.query(
+                MatchEvents.player_id,
+                MatchEvents.match_id,
+                Players.team_id
+            ).join(Players, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type.in_(["goal", "penalty_goal"])
+            ).all()
 
-            return team.team_id, goals
+            team_sub_goals = {tid: 0 for tid in team_ids}
+            for player_id, match_id, team_id in goals:
+                if (player_id, match_id) in sub_players and team_id in team_sub_goals:
+                    team_sub_goals[team_id] += 1
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_goals, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results
+            results = [(tid, team_sub_goals[tid]) for tid in team_ids]
+            results.sort(key=lambda x: x[1], reverse=True)
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_fastest_goal_scored(leagueTeams, league_id):
-        """Fetch the fastest goal scored for each team using matches."""
-        
-        def fetch_team_fastest_goal(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-            
-            goals = []
-            for match in matches:
-                events = MatchEvents.get_events_by_match_and_team(team.team_id, match.id)
-                goals += [event for event in events if event.event_type in ["goal", "penalty_goal"]]
-            if not goals:
-                return team.team_id, "N/A"
-            
-            fastest = min(goals, key=lambda x: parse_time(x.time))
-            return team.team_id, fastest.time + "'"
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            match_ids = [m.id for m in matches]
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_fastest_goal, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+            # Get all goals in league
+            events = session.query(
+                MatchEvents.time,
+                Players.team_id
+            ).join(Players, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type.in_(["goal", "penalty_goal"])
+            ).all()
 
-        results.sort(key=lambda x: parse_time(x[1]))
-        return results
+            # Find the fastest goal for each team
+            team_fastest = {tid: None for tid in team_ids}
+            for time, team_id in events:
+                try:
+                    minute = int(time.split("+")[0])
+                except Exception:
+                    continue
+                if team_id in team_fastest:
+                    if team_fastest[team_id] is None or minute < team_fastest[team_id]:
+                        team_fastest[team_id] = minute
+
+            results = []
+            for tid in team_ids:
+                val = f"{team_fastest[tid]}'" if team_fastest[tid] is not None else "N/A"
+                results.append((tid, val))
+            # Sort by fastest (lowest minute)
+            results.sort(key=lambda x: (999 if x[1] == "N/A" else int(x[1].replace("'", ""))))
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_latest_goal_scored(leagueTeams, league_id):
-        """Fetch the latest goal scored for each team using matches."""
-        
-        def fetch_team_latest_goal(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-            
-            goals = []
-            for match in matches:
-                events = MatchEvents.get_events_by_match_and_team(team.team_id, match.id)
-                goals += [event for event in events if event.event_type in ["goal", "penalty_goal"]]
-            if not goals:
-                return team.team_id, "N/A"
-            
-            latest = max(goals, key=lambda x: parse_time(x.time, reverse=True))
-            return team.team_id, latest.time + "'"
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            match_ids = [m.id for m in matches]
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_latest_goal, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+            # Get all goals in league
+            events = session.query(
+                MatchEvents.time,
+                Players.team_id
+            ).join(Players, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type.in_(["goal", "penalty_goal"])
+            ).all()
 
-        results.sort(key=lambda x: parse_time(x[1], reverse=True), reverse=True)
-        return results
+            # Find the latest goal for each team
+            team_latest = {tid: None for tid in team_ids}
+            for time, team_id in events:
+                try:
+                    minute = int(time.split("+")[0])
+                except Exception:
+                    continue
+                if team_id in team_latest:
+                    if team_latest[team_id] is None or minute > team_latest[team_id]:
+                        team_latest[team_id] = minute
+
+            results = []
+            for tid in team_ids:
+                val = f"{team_latest[tid]}'" if team_latest[tid] is not None else "N/A"
+                results.append((tid, val))
+            # Sort by latest (highest minute)
+            results.sort(key=lambda x: (0 if x[1] == "N/A" else -int(x[1].replace("'", ""))))
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_goals_conceded(leagueTeams, league_id):
-        """Fetch goals conceded for each team using multithreading."""
-        
-        def fetch_team_goals_conceded(team):
-            return team.team_id, team.goals_conceded
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_goals_conceded, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
-        results.sort(key=lambda x: x[1])
-        return results
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            # Query LeagueTeams table for goals_conceded
+            results = session.query(
+                LeagueTeams.team_id,
+                LeagueTeams.goals_conceded
+            ).filter(
+                LeagueTeams.league_id == league_id,
+                LeagueTeams.team_id.in_(team_ids)
+            ).all()
+            # Sort by goals conceded ascending (fewest is best)
+            results = sorted(results, key=lambda x: x[1])
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_clean_sheets(leagueTeams, league_id):
-        """Fetch clean sheets for each team using multithreading."""
-        
-        def fetch_team_clean_sheets(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-            clean_sheets_count = 0
-            for match in matches:
-                events = MatchEvents.get_events_by_match_and_team(team.team_id, match.id)
-                clean_sheets_count += sum(1 for event in events if event.event_type == "clean_sheet")
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            match_ids = [m.id for m in matches]
 
-            return team.team_id, clean_sheets_count
+            # Get all clean_sheet events in league
+            events = session.query(
+                MatchEvents.match_id,
+                Players.team_id
+            ).join(Players, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type == "clean_sheet"
+            ).all()
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_clean_sheets, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+            team_clean_sheets = {tid: 0 for tid in team_ids}
+            for match_id, team_id in events:
+                if team_id in team_clean_sheets:
+                    team_clean_sheets[team_id] += 1
 
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results
+            results = [(tid, team_clean_sheets[tid]) for tid in team_ids]
+            results.sort(key=lambda x: x[1], reverse=True)
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_yellow_cards(leagueTeams, league_id):
-        """Fetch yellow cards for each team using multithreading."""
-        
-        def fetch_team_yellow_cards(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-            yellow_cards_count = 0
-            for match in matches:
-                events = MatchEvents.get_events_by_match_and_team(team.team_id, match.id)
-                yellow_cards_count += sum(1 for event in events if event.event_type == "yellow_card")
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            match_ids = [m.id for m in matches]
 
-            return team.team_id, yellow_cards_count
+            # Get all yellow card events in league
+            events = session.query(
+                Players.team_id
+            ).join(MatchEvents, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type == "yellow_card"
+            ).all()
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_yellow_cards, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+            team_yellow_cards = {tid: 0 for tid in team_ids}
+            for (team_id,) in events:
+                if team_id in team_yellow_cards:
+                    team_yellow_cards[team_id] += 1
 
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results
+            results = [(tid, team_yellow_cards[tid]) for tid in team_ids]
+            results.sort(key=lambda x: x[1], reverse=True)
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_red_cards(leagueTeams, league_id):
-        """Fetch red cards for each team using multithreading."""
-        
-        def fetch_team_red_cards(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-            red_cards_count = 0
-            for match in matches:
-                events = MatchEvents.get_events_by_match_and_team(team.team_id, match.id)
-                red_cards_count += sum(1 for event in events if event.event_type == "red_card")
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            match_ids = [m.id for m in matches]
 
-            return team.team_id, red_cards_count
+            # Get all red card events in league
+            events = session.query(
+                Players.team_id
+            ).join(MatchEvents, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type == "red_card"
+            ).all()
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_red_cards, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+            team_red_cards = {tid: 0 for tid in team_ids}
+            for (team_id,) in events:
+                if team_id in team_red_cards:
+                    team_red_cards[team_id] += 1
 
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results
+            results = [(tid, team_red_cards[tid]) for tid in team_ids]
+            results.sort(key=lambda x: x[1], reverse=True)
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_own_goals(leagueTeams, league_id):
-        """Fetch own goals for each team using multithreading."""
-        
-        def fetch_team_own_goals(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-            own_goal_count = 0
-            for match in matches:
-                events = MatchEvents.get_events_by_match_and_team(team.team_id, match.id)
-                own_goal_count += sum(1 for event in events if event.event_type == "own_goal")
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            match_ids = [m.id for m in matches]
 
-            return team.team_id, own_goal_count
+            # Get all own goal events in league
+            events = session.query(
+                Players.team_id
+            ).join(MatchEvents, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type == "own_goal"
+            ).all()
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_own_goals, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+            team_own_goals = {tid: 0 for tid in team_ids}
+            for (team_id,) in events:
+                if team_id in team_own_goals:
+                    team_own_goals[team_id] += 1
 
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results
+            results = [(tid, team_own_goals[tid]) for tid in team_ids]
+            results.sort(key=lambda x: x[1], reverse=True)
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_penalties_saved(leagueTeams, league_id):
-        """Fetch penalties saved for each team using multithreading."""
-        
-        def fetch_team_penalties_saved(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-            penalties_saved_count = 0
-            for match in matches:
-                events = MatchEvents.get_events_by_match_and_team(team.team_id, match.id)
-                penalties_saved_count += sum(1 for event in events if event.event_type == "penalty_saved")
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            match_ids = [m.id for m in matches]
 
-            return team.team_id, penalties_saved_count
+            # Get all penalty_saved events in league
+            events = session.query(
+                Players.team_id
+            ).join(MatchEvents, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type == "penalty_saved"
+            ).all()
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_penalties_saved, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+            team_pen_saves = {tid: 0 for tid in team_ids}
+            for (team_id,) in events:
+                if team_id in team_pen_saves:
+                    team_pen_saves[team_id] += 1
 
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results
+            results = [(tid, team_pen_saves[tid]) for tid in team_ids]
+            results.sort(key=lambda x: x[1], reverse=True)
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_goals_conceded_in_first_15(leagueTeams, league_id):
-        """Fetch goals conceded in the first 15 minutes for each team using multithreading."""
-        
-        def fetch_team_goals_conceded(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-            goals = 0
-            for match in matches:
-                oppID = match.home_id if match.away_id == team.team_id else match.away_id
-                events = MatchEvents.get_events_by_match_and_team(oppID, match.id)
-                for event in events:
-                    time = event.time.split("+")[0] if "+" in event.time else event.time
-                    if event.event_type in ["goal", "penalty_goal", "own_goal"] and int(time) <= 15:
-                        goals += 1
-            return team.team_id, goals
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            match_ids = [m.id for m in matches]
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_goals_conceded, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+            # Get all goals in first 15 minutes (including own goals)
+            events = session.query(
+                MatchEvents.match_id,
+                MatchEvents.event_type,
+                MatchEvents.time,
+                Players.team_id
+            ).join(Players, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type.in_(["goal", "penalty_goal", "own_goal"])
+            ).all()
 
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results
+            team_conceded = {tid: 0 for tid in team_ids}
+            for match_id, event_type, time, team_id in events:
+                try:
+                    minute = int(time.split("+")[0])
+                except Exception:
+                    continue
+                if minute <= 15:
+                    # Find opponent team for this match
+                    match = session.query(Matches).filter(Matches.id == match_id).first()
+                    if not match:
+                        continue
+                    # If own goal, the team that scored is the conceding team
+                    if event_type == "own_goal":
+                        if team_id in team_conceded:
+                            team_conceded[team_id] += 1
+                    else:
+                        # Normal goal: increment for the opponent
+                        if match.home_id == team_id and match.away_id in team_conceded:
+                            team_conceded[match.away_id] += 1
+                        elif match.away_id == team_id and match.home_id in team_conceded:
+                            team_conceded[match.home_id] += 1
+
+            results = [(tid, team_conceded[tid]) for tid in team_ids]
+            results.sort(key=lambda x: x[1], reverse=True)
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_goals_conceded_in_last_15(leagueTeams, league_id):
-        """Fetch goals conceded in the last 15 minutes for each team using multithreading."""
-        
-        def fetch_team_goals_conceded(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-            goals = 0
-            for match in matches:
-                oppID = match.home_id if match.away_id == team.team_id else match.away_id
-                events = MatchEvents.get_events_by_match_and_team(oppID, match.id)
-                for event in events:
-                    time = event.time.split("+")[0] if "+" in event.time else event.time
-                    if event.event_type in ["goal", "penalty_goal", "own_goal"] and int(time) >= 75:
-                        goals += 1
-            return team.team_id, goals
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            match_ids = [m.id for m in matches]
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_goals_conceded, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+            # Get all goals in last 15 minutes (including own goals)
+            events = session.query(
+                MatchEvents.match_id,
+                MatchEvents.event_type,
+                MatchEvents.time,
+                Players.team_id
+            ).join(Players, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type.in_(["goal", "penalty_goal", "own_goal"])
+            ).all()
 
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results
+            team_conceded = {tid: 0 for tid in team_ids}
+            for match_id, event_type, time, team_id in events:
+                try:
+                    minute = int(time.split("+")[0])
+                except Exception:
+                    continue
+                if minute >= 75:
+                    match = session.query(Matches).filter(Matches.id == match_id).first()
+                    if not match:
+                        continue
+                    if event_type == "own_goal":
+                        if team_id in team_conceded:
+                            team_conceded[team_id] += 1
+                    else:
+                        if match.home_id == team_id and match.away_id in team_conceded:
+                            team_conceded[match.away_id] += 1
+                        elif match.away_id == team_id and match.home_id in team_conceded:
+                            team_conceded[match.home_id] += 1
+
+            results = [(tid, team_conceded[tid]) for tid in team_ids]
+            results.sort(key=lambda x: x[1], reverse=True)
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_fastest_goal_conceded(leagueTeams, league_id):
-        """Fetch the fastest goal conceded for each team using multithreading."""
-        
-        def fetch_team_fastest_goal_conceded(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-            goals = []
-            for match in matches:
-                oppID = match.home_id if match.away_id == team.team_id else match.away_id
-                events = MatchEvents.get_events_by_match_and_team(oppID, match.id)
-                goals += [event for event in events if event.event_type in ["goal", "penalty_goal"]]
-            if not goals:
-                return team.team_id, "N/A"
-            fastest = min(goals, key=lambda x: parse_time(x.time))
-            return team.team_id, fastest.time + "'"
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id, Matches.home_id, Matches.away_id).filter(Matches.league_id == league_id).all()
+            match_map = {m.id: (m.home_id, m.away_id) for m in matches}
+            match_ids = list(match_map.keys())
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_fastest_goal_conceded, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+            events = session.query(
+                MatchEvents.match_id,
+                MatchEvents.event_type,
+                MatchEvents.time,
+                Players.team_id
+            ).join(Players, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type.in_(["goal", "penalty_goal", "own_goal"])
+            ).all()
 
-        results.sort(key=lambda x: parse_time(x[1]))
-        return results
+            team_fastest = {tid: None for tid in team_ids}
+            for match_id, event_type, time, team_id in events:
+                try:
+                    minute = int(time.split("+")[0])
+                except Exception:
+                    continue
+                match = match_map.get(match_id)
+                if not match:
+                    continue
+                # Own goal: conceding team is the scorer's team
+                if event_type == "own_goal":
+                    if team_id in team_fastest:
+                        if team_fastest[team_id] is None or minute < team_fastest[team_id]:
+                            team_fastest[team_id] = minute
+                else:
+                    # Normal goal: conceding team is the opponent
+                    if match[0] == team_id and (match[1] in team_fastest):
+                        if team_fastest[match[1]] is None or minute < team_fastest[match[1]]:
+                            team_fastest[match[1]] = minute
+                    elif match[1] == team_id and (match[0] in team_fastest):
+                        if team_fastest[match[0]] is None or minute < team_fastest[match[0]]:
+                            team_fastest[match[0]] = minute
+
+            results = []
+            for tid in team_ids:
+                val = f"{team_fastest[tid]}'" if team_fastest[tid] is not None else "N/A"
+                results.append((tid, val))
+            results.sort(key=lambda x: (999 if x[1] == "N/A" else int(x[1].replace("'", ""))))
+            return results
+        finally:
+            session.close()
         
     @staticmethod
     def get_latest_goal_conceded(leagueTeams, league_id):
-        """Fetch the latest goal conceded for each team using multithreading."""
-        
-        def fetch_team_latest_goal_conceded(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-            goals = []
-            for match in matches:
-                oppID = match.home_id if match.away_id == team.team_id else match.away_id
-                events = MatchEvents.get_events_by_match_and_team(oppID, match.id)
-                goals += [event for event in events if event.event_type in ["goal", "penalty_goal"]]
-            if not goals:
-                return team.team_id, "N/A"
-            latest = max(goals, key=lambda x: parse_time(x.time, reverse = True))
-            return team.team_id, latest.time + "'"
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            matches = session.query(Matches.id, Matches.home_id, Matches.away_id).filter(Matches.league_id == league_id).all()
+            match_map = {m.id: (m.home_id, m.away_id) for m in matches}
+            match_ids = list(match_map.keys())
 
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_latest_goal_conceded, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+            events = session.query(
+                MatchEvents.match_id,
+                MatchEvents.event_type,
+                MatchEvents.time,
+                Players.team_id
+            ).join(Players, MatchEvents.player_id == Players.id).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.event_type.in_(["goal", "penalty_goal", "own_goal"])
+            ).all()
 
-        results.sort(key=lambda x: (parse_time(x[1], reverse = True)), reverse=True)
-        return results
+            team_latest = {tid: None for tid in team_ids}
+            for match_id, event_type, time, team_id in events:
+                try:
+                    minute = int(time.split("+")[0])
+                except Exception:
+                    continue
+                match = match_map.get(match_id)
+                if not match:
+                    continue
+                if event_type == "own_goal":
+                    if team_id in team_latest:
+                        if team_latest[team_id] is None or minute > team_latest[team_id]:
+                            team_latest[team_id] = minute
+                else:
+                    if match[0] == team_id and (match[1] in team_latest):
+                        if team_latest[match[1]] is None or minute > team_latest[match[1]]:
+                            team_latest[match[1]] = minute
+                    elif match[1] == team_id and (match[0] in team_latest):
+                        if team_latest[match[0]] is None or minute > team_latest[match[0]]:
+                            team_latest[match[0]] = minute
+
+            results = []
+            for tid in team_ids:
+                val = f"{team_latest[tid]}'" if team_latest[tid] is not None else "N/A"
+                results.append((tid, val))
+            results.sort(key=lambda x: (0 if x[1] == "N/A" else -int(x[1].replace("'", ""))))
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_goal_difference(leagueTeams, league_id):
-        """Fetch goal difference for each team using multithreading."""
-        
-        def fetch_team_goal_difference(team):
-            return team.team_id, team.goals_scored - team.goals_conceded
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_goal_difference, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
-        results.sort(key=lambda x: x[1], reverse=True)
-        return results
+        session = DatabaseManager().get_session()
+        try:
+            team_ids = [team.team_id for team in leagueTeams]
+            # Query LeagueTeams table for goals_scored and goals_conceded, and compute difference in SQL
+            results = session.query(
+                LeagueTeams.team_id,
+                (LeagueTeams.goals_scored - LeagueTeams.goals_conceded).label("goal_difference")
+            ).filter(
+                LeagueTeams.league_id == league_id,
+                LeagueTeams.team_id.in_(team_ids)
+            ).order_by(
+                (LeagueTeams.goals_scored - LeagueTeams.goals_conceded).desc()
+            ).all()
+            return results
+        finally:
+            session.close()
 
     @staticmethod
     def get_winning_from_losing_position(leagueTeams, league_id):
@@ -2972,14 +3180,12 @@ class StatsManager:
                 was_winning = True
 
         return was_winning and team_score < opp_score
-
+        
     @staticmethod
     def get_biggest_win(leagueTeams, league_id):
-        """Fetch the biggest win for each team using multithreading."""
-        
-        def fetch_team_biggest_win(team):
+        results = []
+        for team in leagueTeams:
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-
             biggest_win = 0
             match_result = "N/A"
             goals_scored = 0
@@ -2998,25 +3204,18 @@ class StatsManager:
                     goals_scored = goals
 
             if biggest_win == 0:
-                return team.team_id, "N/A", 0, 0
-            return team.team_id, match_result, biggest_win, goals_scored
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_biggest_win, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+                results.append((team.team_id, "N/A", 0, 0))
+            else:
+                results.append((team.team_id, match_result, biggest_win, goals_scored))
 
         results.sort(key=lambda x: (x[2], x[3]), reverse=True)
         return results
 
     @staticmethod
     def get_biggest_loss(leagueTeams, league_id):
-        """Fetch the biggest loss for each team using multithreading."""
-        
-        def fetch_team_biggest_loss(team):
+        results = []
+        for team in leagueTeams:
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-
             biggest_loss = 0
             match_result = "N/A"
             goals_conceded = 0
@@ -3035,89 +3234,58 @@ class StatsManager:
                     goals_conceded = opp_goals
 
             if biggest_loss == 0:
-                return team.team_id, "N/A", 0, 0
-            return team.team_id, match_result, biggest_loss, goals_conceded
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_biggest_loss, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
+                results.append((team.team_id, "N/A", 0, 0))
+            else:
+                results.append((team.team_id, match_result, biggest_loss, goals_conceded))
 
         results.sort(key=lambda x: (x[2], x[3]), reverse=True)
         return results
 
     @staticmethod
     def get_home_performance(leagueTeams, league_id):
-        """Fetch home performance for each team using multithreading."""
-        
-        def fetch_team_home_performance(team):
+        results = []
+        for team in leagueTeams:
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-
             points = 0
             available_points = 0
             for match in matches:
                 if match.home_id != team.team_id:
                     continue
-
                 if match.score_home > match.score_away:
                     points += 3
                 elif match.score_home == match.score_away:
                     points += 1
-
                 available_points += 3
-
             percentage = 0 if available_points == 0 else points / available_points
-            return team.team_id, f"{points}/{available_points}", percentage, available_points
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_home_performance, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
+            results.append((team.team_id, f"{points}/{available_points}", percentage, available_points))
         results.sort(key=lambda x: (x[2], -x[3] if x[2] == 0 else x[3]), reverse=True)
         return results
 
     @staticmethod
     def get_away_performance(leagueTeams, league_id):
-        """Fetch away performance for each team using multithreading."""
-        
-        def fetch_team_away_performance(team):
+        results = []
+        for team in leagueTeams:
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-
             points = 0
             available_points = 0
             for match in matches:
                 if match.home_id == team.team_id:
                     continue
-
                 if match.score_home < match.score_away:
                     points += 3
                 elif match.score_home == match.score_away:
                     points += 1
-
                 available_points += 3
-
             percentage = 0 if available_points == 0 else points / available_points
-            return team.team_id, f"{points}/{available_points}", percentage, available_points
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_away_performance, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
+            results.append((team.team_id, f"{points}/{available_points}", percentage, available_points))
         results.sort(key=lambda x: (x[2], -x[3] if x[2] == 0 else x[3]), reverse=True)
         return results
 
     @staticmethod
     def get_longest_unbeaten_run(leagueTeams, league_id):
-        """Fetch the longest unbeaten run for each team using multithreading."""
-        
-        def fetch_team_unbeaten_run(team):
+        results = []
+        for team in leagueTeams:
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-
             unbeaten_run = 0
             current_run = 0
             for match in matches:
@@ -3125,34 +3293,23 @@ class StatsManager:
                     current_run += 1
                 elif match.home_id == team.team_id and match.score_home > match.score_away:
                     current_run += 1
-                elif match.home_id != team.team_id and match.score_away > match.score_home:
+                elif match.away_id == team.team_id and match.score_away > match.score_home:
                     current_run += 1
                 else:
                     if current_run > unbeaten_run:
                         unbeaten_run = current_run
                     current_run = 0
-
             if current_run > unbeaten_run:
                 unbeaten_run = current_run
-
-            return team.team_id, unbeaten_run
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_unbeaten_run, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
+            results.append((team.team_id, unbeaten_run))
         results.sort(key=lambda x: x[1], reverse=True)
         return results
 
     @staticmethod
     def get_longest_winning_streak(leagueTeams, league_id):
-        """Fetch the longest winning streak for each team using multithreading."""
-        
-        def fetch_team_winning_streak(team):
+        results = []
+        for team in leagueTeams:
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-
             winning_streak = 0
             current_streak = 0
             for match in matches:
@@ -3164,28 +3321,17 @@ class StatsManager:
                     if current_streak > winning_streak:
                         winning_streak = current_streak
                     current_streak = 0
-                    
             if current_streak > winning_streak:
                 winning_streak = current_streak
-
-            return team.team_id, winning_streak
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_winning_streak, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
+            results.append((team.team_id, winning_streak))
         results.sort(key=lambda x: x[1], reverse=True)
         return results
 
     @staticmethod
     def get_longest_losing_streak(leagueTeams, league_id):
-        """Fetch the longest losing streak for each team using multithreading."""
-        
-        def fetch_team_losing_streak(team):
+        results = []
+        for team in leagueTeams:
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-
             losing_streak = 0
             current_streak = 0
             for match in matches:
@@ -3197,28 +3343,17 @@ class StatsManager:
                     if current_streak > losing_streak:
                         losing_streak = current_streak
                     current_streak = 0
-
             if current_streak > losing_streak:
                 losing_streak = current_streak
-
-            return team.team_id, losing_streak
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_losing_streak, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
+            results.append((team.team_id, losing_streak))
         results.sort(key=lambda x: x[1], reverse=True)
         return results
 
     @staticmethod
     def get_longest_winless_streak(leagueTeams, league_id):
-        """Fetch the longest winless streak for each team using multithreading."""
-        
-        def fetch_team_winless_streak(team):
+        results = []
+        for team in leagueTeams:
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-
             winless_streak = 0
             current_streak = 0
             for match in matches:
@@ -3232,28 +3367,17 @@ class StatsManager:
                     if current_streak > winless_streak:
                         winless_streak = current_streak
                     current_streak = 0
-
             if current_streak > winless_streak:
                 winless_streak = current_streak
-
-            return team.team_id, winless_streak
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_winless_streak, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
+            results.append((team.team_id, winless_streak))
         results.sort(key=lambda x: x[1], reverse=True)
         return results
 
     @staticmethod
     def get_longest_scoring_streak(leagueTeams, league_id):
-        """Fetch the longest scoring streak for each team using multithreading."""
-        
-        def fetch_team_scoring_streak(team):
+        results = []
+        for team in leagueTeams:
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-
             scoring_streak = 0
             current_streak = 0
             for match in matches:
@@ -3265,28 +3389,17 @@ class StatsManager:
                     if current_streak > scoring_streak:
                         scoring_streak = current_streak
                     current_streak = 0
-
             if current_streak > scoring_streak:
                 scoring_streak = current_streak
-
-            return team.team_id, scoring_streak
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_scoring_streak, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
+            results.append((team.team_id, scoring_streak))
         results.sort(key=lambda x: x[1], reverse=True)
         return results
 
     @staticmethod
     def get_longest_scoreless_streak(leagueTeams, league_id):
-        """Fetch the longest scoreless streak for each team using multithreading."""
-        
-        def fetch_team_scoreless_streak(team):
+        results = []
+        for team in leagueTeams:
             matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
-
             scoreless_streak = 0
             current_streak = 0
             for match in matches:
@@ -3298,20 +3411,74 @@ class StatsManager:
                     if current_streak > scoreless_streak:
                         scoreless_streak = current_streak
                     current_streak = 0
-
             if current_streak > scoreless_streak:
                 scoreless_streak = current_streak
-
-            return team.team_id, scoreless_streak
-
-        results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_scoreless_streak, team): team for team in leagueTeams}
-            for future in futures:
-                results.append(future.result())
-
+            results.append((team.team_id, scoreless_streak))
         results.sort(key=lambda x: x[1], reverse=True)
         return results
+
+    @staticmethod
+    def get_team_stats(teamID, league_id, leagueTeams, functions):
+
+        def get_prefix(rank):
+            if rank % 10 == 1 and rank % 100 != 11:
+                return "st"
+            elif rank % 10 == 2 and rank % 100 != 12:
+                return "nd"
+            elif rank % 10 == 3 and rank % 100 != 13:
+                return "rd"
+            else:
+                return "th"
+
+
+        stats_result = []
+        # Separate slow stats
+        slow_stats = ["Winning from losing position", "Losing from winning position"]
+        fast_items = [(k, v) for k, v in functions.items() if k not in slow_stats]
+        # slow_items = [(k, v) for k, v in functions.items() if k in slow_stats]
+
+        # Run fast stats in parallel
+        with ThreadPoolExecutor() as executor:
+            future_to_stat = {
+                executor.submit(stat_func, leagueTeams, league_id): stat_name
+                for stat_name, stat_func in fast_items
+            }
+            stat_results = {}
+            for future in as_completed(future_to_stat):
+                stat_name = future_to_stat[future]
+                try:
+                    results = future.result()
+                    stat_results[stat_name] = results
+                except Exception:
+                    stat_results[stat_name] = None
+
+        # # Run slow stats (each in its own thread, but sequentially after fast stats)
+        # for stat_name, stat_func in slow_items:
+        #     with ThreadPoolExecutor(max_workers=1) as executor:
+        #         future = executor.submit(stat_func, leagueTeams, league_id)
+        #         try:
+        #             results = future.result()
+        #             stat_results[stat_name] = results
+        #         except Exception:
+        #             stat_results[stat_name] = None
+
+        # Combine results in original order
+        for stat_name in functions.keys():
+            results = stat_results.get(stat_name)
+            if results is None:
+                # stats_result.append([stat_name, "N/A", "N/A"])
+                continue
+            for idx, entry in enumerate(results):
+                if entry[0] == teamID:
+                    value = entry[1]
+                    rank = idx + 1
+                    prefix = get_prefix(rank)
+                    stats_result.append([stat_name, value, f"{rank}{prefix}"])
+                    break
+            else:
+                stats_result.append([stat_name, "N/A", "N/A"])
+
+        return stats_result
 
 def updateProgress(textIndex):
     global progressBar, progressLabel, progressFrame, percentageLabel, PROGRESS

@@ -42,7 +42,9 @@ class LeagueProfileLink(ctk.CTkLabel):
         super().__init__(parent, text = text, font = (APP_FONT, fontSize), fg_color = fg_color, text_color = textColor)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
+        self.league_name = text
         self.manager_id = manager_id
+        self.league = League.get_league_by_name(text)
         self.textColor = textColor
         self.tab = tab
         self.fontSize = fontSize
@@ -59,7 +61,19 @@ class LeagueProfileLink(ctk.CTkLabel):
         self.configure(font = (APP_FONT, self.fontSize), text_color = self.textColor, cursor = "")
 
     def openLeagueProfile(self, event):
-        self.tab.parent.changeTab(6)
+        from tabs.leagueProfile import LeagueProfile
+        
+        managerTeam = Teams.get_teams_by_manager(self.manager_id)[0]
+        leagueTeams = LeagueTeams.get_league_by_team(managerTeam.id)
+        managerLeagueID = League.get_league_by_id(leagueTeams.league_id).id
+
+        if self.league.id != managerLeagueID:
+            self.profile = LeagueProfile(self.tab, league_id = self.league.id, changeBackFunction = self.changeBack)
+            self.profile.place(x = 0, y = 0, anchor = "nw")
+
+            self.tab.parent.parent.overlappingProfiles.append(self.profile)
+        else:
+            self.tab.parent.changeTab(6)
 
     def changeBack(self):
         self.profile.place_forget()

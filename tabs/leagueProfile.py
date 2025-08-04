@@ -10,16 +10,20 @@ from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 
 class LeagueProfile(ctk.CTkFrame):
-    def __init__(self, parent, manager_id, changeBackFunction = None):
+    def __init__(self, parent, league_id = None, manager_id = None, changeBackFunction = None):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
         self.manager_id = manager_id
+        self.league_id = league_id
         self.changeBackFunction = changeBackFunction
 
-        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
-        self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
-        self.league = League.get_league_by_id(self.leagueTeams.league_id)
+        if not self.league_id:
+            self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+            self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
+            self.league = League.get_league_by_id(self.leagueTeams.league_id)
+        else:
+            self.league = League.get_league_by_id(self.league_id)
 
         self.profile = Profile(self, self.league)
         self.matchdays = None
@@ -96,7 +100,15 @@ class Profile(ctk.CTkFrame):
         ctk.CTkLabel(self, text = f"{self.league.name} - {self.league.year}", font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.15, rely = 0.1, anchor = "w")
 
         self.tableFrame = LeagueTable(self, 480, 600, 0.03, 0.2, GREY_BACKGROUND, "nw", corner_radius = 15, highlightManaged = True)
-        self.tableFrame.defineManager(self.parent.manager_id)
+
+        if self.parent.manager_id:
+            self.tableFrame.defineManager(self.parent.manager_id)
+        else:
+            # Use any manager from the league
+            leagueTeam = LeagueTeams.get_teams_by_league(self.league.id)[0]
+            leagueManager = Managers.get_manager_by_team(leagueTeam.id)
+            self.tableFrame.defineManager(leagueManager.id)
+
         self.tableFrame.addLeagueTable()
 
         self.statsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 310, height = 480, corner_radius = 15)
@@ -569,7 +581,7 @@ class Stats(ctk.CTkFrame):
 
         self.parent = parent
         self.league = league
-        self.managedTeam = Teams.get_teams_by_manager(self.parent.manager_id)[0]
+        self.managedTeam = Teams.get_teams_by_manager(self.parent.manager_id)[0] if self.parent.manager_id else None
         self.leagueTeams = LeagueTeams.get_teams_by_league(self.league.id)
 
         self.statsFrames = [None] * (len(STAT_FUNCTIONS) + len(self.leagueTeams))
@@ -724,7 +736,7 @@ class Stats(ctk.CTkFrame):
                 src.thumbnail((30, 30))
                 TeamLogo(frame, src, team, GREY_BACKGROUND, 0.15, 0.5, "center", self.parent)
 
-                if self.managedTeam.name == team.name:
+                if self.managedTeam and self.managedTeam.name == team.name:
                     font = (APP_FONT_BOLD, 20)
                 else:
                     font = (APP_FONT, 20)

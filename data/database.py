@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert
+from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
 from sqlalchemy.orm import sessionmaker, aliased, scoped_session
@@ -1922,7 +1922,7 @@ class LeagueTeams(Base):
     def get_team_by_id(cls, id):
         session = DatabaseManager().get_session()
         try:
-            team = session.query(LeagueTeams).filter(LeagueTeams.id == id).first()
+            team = session.query(LeagueTeams).filter(LeagueTeams.team_id == id).first()
             return team
         finally:
             session.close()
@@ -3509,4 +3509,118 @@ def setUpProgressBar(progressB, progressL, progressF, percentageL):
     progressLabel = progressL
     progressFrame = progressF
     percentageLabel = percentageL
+
+def searchResults(search, limit=SEARCH_LIMIT):
+    session = DatabaseManager().get_session()
+
+    try:
+        terms = [term.strip().lower() for term in search.split() if term.strip()]
+        if not terms:
+            return []
+
+        def build_name_filter(cls):
+
+            if hasattr(cls, 'first_name') and hasattr(cls, 'last_name'):
+                # If the table is Players, Managers, or Referees, we can use first_name and last_name
+                if len(terms) == 1:
+                    # If only one term in the search, match either first or last name
+                    term = terms[0]
+                    return or_(
+                        cls.first_name.ilike(f"{term}%"),
+                        cls.last_name.ilike(f"{term}%")
+                    )
+                elif len(terms) >= 2:
+                    # Otherwise, match both first and last names
+                    t1, t2 = terms[0], terms[1]
+                    return or_(
+                        and_(cls.first_name.ilike(f"{t1}%"), cls.last_name.ilike(f"{t2}%")),
+                    )
+            elif hasattr(cls, 'name'):
+                # For the Leagues and Teams, we can use the name field, and match all terms
+                return and_(*[cls.name.ilike(f"%{term}%") for term in terms])
+            
+            return None
+
+        def query_players():
+            return session.query(Players).filter(
+                build_name_filter(Players)
+            ).limit(limit).all()
+
+        def query_managers():
+            return session.query(Managers).filter(
+                build_name_filter(Managers)
+            ).limit(limit).all()
+
+        def query_teams():
+            return session.query(Teams).filter(
+                build_name_filter(Teams)
+            ).limit(limit).all()
+
+        def query_leagues():
+            return session.query(League).filter(
+                build_name_filter(League)
+            ).limit(limit).all()
+
+        def query_referees():
+            return session.query(Referees).filter(
+                build_name_filter(Referees)
+            ).limit(limit).all()
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            future_to_type = {
+                executor.submit(query_players): 'players',
+                executor.submit(query_managers): 'managers',
+                executor.submit(query_teams): 'teams',
+                executor.submit(query_leagues): 'leagues',
+                executor.submit(query_referees): 'referees'
+            }
+
+            query_results = {}
+            for future in as_completed(future_to_type):
+                query_type = future_to_type[future]
+                try:
+                    query_results[query_type] = future.result()
+                except Exception:
+                    query_results[query_type] = []
+
+        # Process results
+        player_results = [{
+            "type": "player",
+            "data": p,
+            "sort_key": f"{p.first_name or ''} {p.last_name or ''}".strip()
+        } for p in query_results['players']]
+
+        manager_results = [{
+            "type": "manager",
+            "data": m,
+            "sort_key": f"{m.first_name or ''} {m.last_name or ''}".strip()
+        } for m in query_results['managers']]
+
+        team_results = [{
+            "type": "team",
+            "data": t,
+            "sort_key": t.name or ""
+        } for t in query_results['teams']]
+
+        league_results = [{
+            "type": "league",
+            "data": l,
+            "sort_key": l.name or ""
+        } for l in query_results['leagues']]
+
+        referee_results = [{
+            "type": "referee",
+            "data": r,
+            "sort_key": f"{r.first_name or ''} {r.last_name or ''}".strip()
+        } for r in query_results['referees']]
+
+        combined = (
+            player_results + manager_results + team_results +
+            league_results + referee_results
+        )
+        combined.sort(key = lambda x: x["sort_key"].lower())
+        return combined[:limit]
+
+    finally:
+        session.close()
 

@@ -90,12 +90,6 @@ class EmailFrame(ctk.CTkFrame):
         self.senderLabel.bind("<Enter>", lambda event: self.onFrameHover())
         self.senderLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
 
-    def getSuffix(self, number):
-        if 10 <= number % 100 <= 20:
-            return "th"
-        else:
-            return {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
-
 class Welcome():
     def __init__(self, parent):
 
@@ -191,7 +185,7 @@ class Welcome():
         )
 
         expected_finish = (200 - self.parent.team.level) // 2 + 1
-        suffix = self.parent.getSuffix(expected_finish)
+        suffix = getSuffix(expected_finish)
         self.firstMatch = Matches.get_team_first_match(self.parent.team.id)
         homeTeam = Teams.get_team_by_id(self.firstMatch.home_id)
         awayTeam = Teams.get_team_by_id(self.firstMatch.away_id)
@@ -397,7 +391,7 @@ class MatchdayReview():
             playerOTM,
             f"{playerOTM.first_name} {playerOTM.last_name}",
             "The player of the match was ",
-            f" with a rating",
+            f" with a",
             240,
             30,
             self.parent.parentTab,
@@ -405,7 +399,7 @@ class MatchdayReview():
         )
 
         self.emailText_4 = (
-            f"of {rating}."
+            f"rating of {rating}."
         )
 
         self.emailText_5 = (
@@ -438,28 +432,36 @@ class MatchdayReview():
 
         currPosition = matchdayTable.position
 
-        suffix = self.parent.getSuffix(currPosition)
+        suffix = getSuffix(currPosition)
         if not lastMatchdayTable:
             text = f"As a result of this matchday, we are now in {currPosition}{suffix}\nposition."
         else:
             lastPosition = lastMatchdayTable.position
             if currPosition == 1 and lastPosition != 1:
-                text = f"As a result of this matchday, we have now taken the lead\nof the league!"
-            elif currPosition < 20 - league.relegation and lastPosition > 21 - league.relegation:
-                text = f"As a result of this matchday, we have unfortunately moved\ndown into the relegation zone." 
-            elif league.promotion != 0 and currPosition <= league.promotion:
+                text = "As a result of this matchday, we have now taken the lead\nof the league!"
+
+            # Promotion zone changes
+            elif league.promotion != 0:
                 if currPosition <= league.promotion and lastPosition > league.promotion:
-                    text = f"As a result of this matchday, we have moved up into the\npromotion spots"
+                    text = "As a result of this matchday, we have moved up into the\npromotion spots."
                 elif currPosition > league.promotion and lastPosition <= league.promotion:
-                    text = f"As a result of this matchday, we have moved down from the\npromotion spots."
-                else:
-                    text = f"As a result of this matchday, we have stayed in\nthe promotion spots."
-            elif lastPosition == currPosition:
-                text = f"As a result of this matchday, we have stayed in\n{currPosition}{suffix} position."
-            elif lastPosition > currPosition:
+                    text = "As a result of this matchday, we have moved down from the\npromotion spots."
+
+            # Relegation zone changes
+            elif currPosition > 20 - league.relegation and lastPosition <= 20 - league.relegation:
+                text = "As a result of this matchday, we have moved down into the\nrelegation zone."
+            elif currPosition <= 20 - league.relegation and lastPosition > 20 - league.relegation:
+                text = "As a result of this matchday, we have climbed out of the\nrelegation zone."
+
+            # Position changes
+            elif currPosition < lastPosition:
                 text = f"As a result of this matchday, we have moved up into\n{currPosition}{suffix} position."
-            else:
+            elif currPosition > lastPosition:
                 text = f"As a result of this matchday, we have moved down into\n{currPosition}{suffix} position."
+
+            # No change
+            else:
+                text = f"As a result of this matchday, we have stayed in\n{currPosition}{suffix} position."
 
         self.emailText_6 = (text)
 
@@ -816,7 +818,7 @@ class MatchdayPreview():
         else:
             last5 = Matches.get_team_last_5_matches_from_matchday(self.opponent.id, self.matchday)
             opponentPosition = self.opponentData.position
-            suffix = self.parent.getSuffix(opponentPosition)
+            suffix = getSuffix(opponentPosition)
 
             wins = len([match for match in last5 if match.home_id == self.opponent.id and match.score_home > match.score_away or match.away_id == self.opponent.id and match.score_away > match.score_home])
             draws = len([match for match in last5 if match.score_home == match.score_away])

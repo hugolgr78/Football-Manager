@@ -20,8 +20,8 @@ class Match():
         # As soon as a player is subbed in, the player is added to the current lineup and the subbed off player is removed
         # As soon as a player is subbed off, the player is added to the final lineup
         # At end of game, add all players in the current lineup to the final lineup and save the final lineup
-        self.homeFinalLineup = {}
-        self.awayFinalLineup = {}
+        self.homeFinalLineup = []
+        self.awayFinalLineup = []
         self.homeCurrentLineup = None
         self.awayCurrentLineup = None
 
@@ -255,8 +255,16 @@ class Match():
 
         if self.homeInjury:
             self.add_events(self.homeEvents, 1, "injury")
+
+            # Ensure there is a sub event for the injury
+            if self.homeSubs == 0:
+                self.homeSubs = 1
+
         if self.awayInjury:
             self.add_events(self.awayEvents, 1, "injury")
+            
+            if self.awaySubs == 0:
+                self.awaySubs = 1
 
         if self.homeSubs:
             if home and teamMatch:
@@ -268,11 +276,6 @@ class Match():
                 self.add_events(self.awayEvents, self.awaySubs, "substitution", self.awayInjury, managing_team = True)
             else:
                 self.add_events(self.awayEvents, self.awaySubs, "substitution", self.awayInjury)
-
-        self.homeEvents["2:2"] = {
-            "type": "red_card",
-            "extra": False
-        }
 
         if teamMatch:
             print("Home Events: ", self.homeEvents)
@@ -484,7 +487,7 @@ class Match():
                     event["type"] = "red_card"
                     playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
                     lineup.pop(playerPosition)
-                    finalLineup[playerPosition] = playerID
+                    finalLineup.append((playerPosition, playerID))
 
                     if teamMatch:
                         if home:
@@ -505,7 +508,7 @@ class Match():
 
             playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
             lineup.pop(playerPosition)
-            finalLineup[playerPosition] = playerID
+            finalLineup.append((playerPosition, playerID))
             event["position"] = playerPosition
 
             if teamMatch:
@@ -556,7 +559,7 @@ class Match():
 
                 playerPositionOff = list(lineup.keys())[list(lineup.values()).index(playerOffID)]
                 lineup.pop(playerPositionOff)
-                finalLineup[playerPositionOff] = playerOffID
+                finalLineup.append((playerPositionOff, playerOffID))
 
                 self.findSubstitute(events[eventTime], playerOffID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
 
@@ -567,7 +570,7 @@ class Match():
             playerPosition = list(lineup.keys())[list(lineup.values()).index(injuredPlayerID)]
             if not managing_team:
                 lineup.pop(playerPosition)
-                finalLineup[playerPosition] = injuredPlayerID
+                finalLineup.append((playerPosition, injuredPlayerID))
 
             if teamMatch:
                 if home:
@@ -590,7 +593,7 @@ class Match():
             playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
             playerPosition = list(lineup.keys())[list(lineup.values()).index(playerOffID)]
             lineup.pop(playerPosition)
-            finalLineup[playerPosition] = playerOffID
+            finalLineup.append((playerPosition, playerOffID))
 
             if teamMatch:
                 if home:
@@ -694,7 +697,7 @@ class Match():
             else:
                 self.awayCleanSheet = True
 
-        for i, (position, playerID) in enumerate(finalLineup.items()):
+        for i, (position, playerID) in enumerate(finalLineup):
             self.getRating(venue, rating, ratingsDict, events, playerID, position, oppositionEvents, oppositionGoals, i)
 
         for i, (position, playerID) in enumerate(currentLineup.items()):
@@ -892,7 +895,7 @@ class Match():
             lineups_to_add = []
             morales_to_update = []
 
-            for position, playerID in self.homeFinalLineup.items():
+            for (position, playerID) in self.homeFinalLineup:
                 lineups_to_add.append((self.match.id, playerID, position, self.homeRatings[playerID]))
                 
                 if not self.getGameTime(playerID, self.homeProcessedEvents):
@@ -916,7 +919,7 @@ class Match():
 
                 morales_to_update.append((playerID, moraleChange))
             
-            for position, playerID in self.awayFinalLineup.items():
+            for (position, playerID) in self.awayFinalLineup:
                 lineups_to_add.append((self.match.id, playerID, position, self.awayRatings[playerID]))
                 
                 if not self.getGameTime(playerID, self.awayProcessedEvents):
@@ -943,12 +946,14 @@ class Match():
             homePlayers = Players.get_all_players_by_team(self.homeTeam.id, youths = False)
             awayPlayers = Players.get_all_players_by_team(self.awayTeam.id, youths = False)
 
+            final_lineup_players = [p for _, p in self.homeFinalLineup]
             for player in homePlayers:
-                if player.id not in self.homeCurrentLineup.values() and player not in self.homeFinalLineup.values():
+                if player.id not in self.homeCurrentLineup.values() and player.id not in final_lineup_players:
                     morales_to_update.append((player.id, get_morale_decrease_role(player)))
 
+            final_lineup_players = [p for _, p in self.awayFinalLineup]
             for player in awayPlayers:
-                if player.id not in self.awayCurrentLineup.values() and player not in self.awayFinalLineup.values():
+                if player.id not in self.awayCurrentLineup.values() and player.id not in final_lineup_players:
                     morales_to_update.append((player.id, get_morale_decrease_role(player)))
 
             futures.append(executor.submit(Players.batch_update_morales, morales_to_update))

@@ -94,8 +94,6 @@ class Profile(ctk.CTkFrame):
         self.photo = ctk.CTkImage(src, None, (src.width, src.height))
         ctk.CTkLabel(self, image = self.photo, text = "").place(relx = 0.05, rely = 0.05, anchor = "nw")
 
-        ctk.CTkLabel(self, text = f"{self.player.first_name} {self.player.last_name}", font = (APP_FONT_BOLD, 40), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.12, anchor = "w")
-
         flag = Image.open(io.BytesIO(self.player.flag))
         flag.thumbnail((50, 50))
         self.flag = ctk.CTkImage(flag, None, (flag.width, flag.height))
@@ -107,23 +105,23 @@ class Profile(ctk.CTkFrame):
 
         playerBans = PlayerBans.get_bans_for_player(self.player.id)
 
+        if not playerBans:
+            ctk.CTkLabel(self, text = f"{self.player.first_name} {self.player.last_name}", font = (APP_FONT_BOLD, 40), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.12, anchor = "w")
+
         for ban in playerBans:
             if ban.ban_type == "injury":
                 injuryLabel = ctk.CTkLabel(self, text = f"Expected return in {ban.ban_length} matchday(s)", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND)
-
-                font = tkFont.Font(family = APP_FONT_BOLD, size = 40)
-                name_width_px = font.measure(f"{self.player.first_name} {self.player.last_name}")
-                frame_width_px = 1000
-                relx = 0.23 + (name_width_px / frame_width_px)
 
                 src = Image.open("Images/hospital.png")
                 src.thumbnail((35, 35))
                 img = ctk.CTkImage(src, None, (src.width, src.height))
                 injuryImage = ctk.CTkLabel(self, image = img, text = "")
-                injuryImage.place(relx = relx, rely = 0.12, anchor = "center")
+                injuryImage.place(relx = 0.3, rely = 0.12, anchor = "w")
 
-                injuryImage.bind("<Enter>", lambda e: injuryLabel.place(relx = relx, rely = 0.07, anchor = "center"))
+                injuryImage.bind("<Enter>", lambda e: injuryLabel.place(relx = 0.32, rely = 0.07, anchor = "center"))
                 injuryImage.bind("<Leave>", lambda e: injuryLabel.place_forget())
+
+                ctk.CTkLabel(self, text = f"{self.player.first_name} {self.player.last_name}", font = (APP_FONT_BOLD, 40), fg_color = TKINTER_BACKGROUND).place(relx = 0.35, rely = 0.12, anchor = "w")
             else:
                 self.suspended = True
                 self.susBan = ban

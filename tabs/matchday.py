@@ -739,7 +739,7 @@ class MatchDay(ctk.CTkFrame):
                 pitch.removePlayer(self.injuredPosition)
                 lineup.pop(self.injuredPosition)
                 self.teamSubstitutes.append(self.injuredPlayer.id)
-                finalLineup[self.injuredPosition] = self.injuredPlayer.id
+                finalLineup.append((self.injuredPosition, self.injuredPlayer.id))
             else:
                 self.confirmButton.configure(state = "disabled")
 
@@ -750,8 +750,9 @@ class MatchDay(ctk.CTkFrame):
             widget.destroy()
 
         ctk.CTkLabel(self.substitutesFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)
-        ctk.CTkLabel(self.substitutesFrame, text = f"{MAX_SUBS - self.completedSubs} changes left", font = (APP_FONT, 17), fg_color = DARK_GREY).place(relx = 0.01, rely = 0.005, anchor = "nw")
-        
+        self.changesCompletedLabel = ctk.CTkLabel(self.substitutesFrame, text = f"{MAX_SUBS - self.completedSubs - self.currentSubs} changes left", font = (APP_FONT, 17), fg_color = DARK_GREY)
+        self.changesCompletedLabel.place(relx = 0.01, rely = 0.005, anchor = "nw")
+
         players_per_row = 5
 
         # Define position groups and their display names
@@ -1180,7 +1181,7 @@ class MatchDay(ctk.CTkFrame):
             ## Substitution events
             for i, (positionOff, playerOffID) in enumerate(list(self.playersOff.items()), 1):
                 event = events[times[i - 1]]
-                finalLineup[positionOff] = playerOffID
+                finalLineup.append((positionOff, playerOffID))
                 
                 # Find the player in playersOn that suits the position of playerOff the most
                 for positionOn, playerOnID in list(self.playersOn.items()):
@@ -1484,4 +1485,5 @@ class MatchDay(ctk.CTkFrame):
         League.update_current_matchday(self.league.id)
 
         self.pack_forget()
+        self.update_idletasks()
         self.parent.resetMenu()

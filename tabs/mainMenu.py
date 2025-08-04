@@ -97,7 +97,7 @@ class MainMenu(ctk.CTkFrame):
         self.buttons[self.activeButton].configure(state = "disabled")
 
         if not self.tabs[self.activeButton]:
-            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.manager_id)
+            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, manager_id = self.manager_id)
 
         self.tabs[self.activeButton].place(x = 200, y = 0, anchor = "nw")
         

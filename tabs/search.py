@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from settings import *
-from data.database import searchResults, Teams, LeagueTeams, League
+from data.database import searchResults, Teams, LeagueTeams, League, Players, Managers, Referees
 from utils.util_functions import getSuffix
 
 class Search(ctk.CTkFrame):
@@ -9,6 +9,9 @@ class Search(ctk.CTkFrame):
 
         self.parent = parent
         self.manager_id = manager_id
+        self.manager_Team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.team_league_id = LeagueTeams.get_team_by_id(self.manager_Team.id).league_id
+
         self.search_timer = None  # Add timer variable
 
         self.searchFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 50)
@@ -67,9 +70,6 @@ class Search(ctk.CTkFrame):
             resultFrame = ctk.CTkFrame(self.resultsFrame, fg_color = TKINTER_BACKGROUND, width = 1000, height = 50, corner_radius = 0)
             resultFrame.place(relx = 0, rely = startY + gap * i, anchor = "nw")
 
-            resultFrame.bind("<Enter>", lambda e, f = resultFrame: self.onFrameHover(f))
-            resultFrame.bind("<Leave>", lambda e, f = resultFrame: self.onFrameLeave(f))
-
             resultData = result["data"]
 
             match result["type"]:
@@ -79,28 +79,43 @@ class Search(ctk.CTkFrame):
                     teamData = LeagueTeams.get_team_by_id(resultData.id)
                     league = League.get_league_by_id(teamData.league_id)
                     ctk.CTkLabel(resultFrame, text = f"{teamData.position}{getSuffix(teamData.position)} in {league.name}", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
+
+                    onClickCommand = self.openTeamProfile
                 case "player":
                     ctk.CTkLabel(resultFrame, text = f"{resultData.first_name} {resultData.last_name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = firstDataX, rely = 0.5, anchor = "w")
                     ctk.CTkLabel(resultFrame, text = f"{resultData.position.capitalize()} ", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
 
                     team = Teams.get_team_by_id(resultData.team_id)
                     ctk.CTkLabel(resultFrame, text = f"{team.name}", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = thirdDataX, rely = 0.5, anchor = "w")
+
+                    onClickCommand = self.openPlayerProfile
                 case "manager":
                     ctk.CTkLabel(resultFrame, text = f"{resultData.first_name} {resultData.last_name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = firstDataX, rely = 0.5, anchor = "w")
                     ctk.CTkLabel(resultFrame, text = "Manager", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
 
                     team = Teams.get_teams_by_manager(resultData.id)[0]
                     ctk.CTkLabel(resultFrame, text = f"{team.name}", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = thirdDataX, rely = 0.5, anchor = "w")
+
+                    onClickCommand = self.openManagerProfile
                 case "league":
                     ctk.CTkLabel(resultFrame, text = f"{resultData.name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = firstDataX, rely = 0.5, anchor = "w")
+                    ctk.CTkLabel(resultFrame, text = "Country", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
+
+                    onClickCommand = self.openLeagueProfile
                 case "referee":
                     ctk.CTkLabel(resultFrame, text = f"{resultData.first_name} {resultData.last_name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = firstDataX, rely = 0.5, anchor = "w")
                     ctk.CTkLabel(resultFrame, text = "Referee", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
 
+                    onClickCommand = self.openRefereeProfile
+
+            resultFrame.bind("<Enter>", lambda e, f = resultFrame: self.onFrameHover(f))
+            resultFrame.bind("<Leave>", lambda e, f = resultFrame: self.onFrameLeave(f))
+            resultFrame.bind("<Button-1>", lambda e, cmd = onClickCommand, r = result: cmd(r["data"].id))
+
             for child in resultFrame.winfo_children():
                 child.bind("<Enter>", lambda e, f = resultFrame: self.onFrameHover(f))
-                # child.bind("<Button-1>", lambda e, r = result: self.parent.changeTab(r["index"]))
-
+                child.bind("<Button-1>", lambda e, cmd = onClickCommand, r = result: cmd(r["data"].id))
+            
     def onFrameHover(self, frame):
         frame.configure(fg_color = GREY_BACKGROUND)
 
@@ -123,3 +138,54 @@ class Search(ctk.CTkFrame):
 
         for widget in self.resultsFrame.winfo_children():
             widget.destroy()
+
+    def openTeamProfile(self, team_id):
+        team = Teams.get_team_by_id(team_id)
+        if team.id == self.manager_Team.id:
+            self.parent.changeTab(5)
+        else:
+            from tabs.teamProfile import TeamProfile
+
+            self.profile = TeamProfile(self, team.manager_id, parentTab = self, changeBackFunction = self.changeBack)
+            self.profile.place(x = 0, y = 0, anchor = "nw")
+            self.parent.overlappingProfiles.append(self.profile)
+
+    def openPlayerProfile(self, player_id):
+        from tabs.playerProfile import PlayerProfile
+
+        player = Players.get_player_by_id(player_id)
+        self.profile = PlayerProfile(self, player, changeBackFunction = self.changeBack)
+        self.profile.place(x = 0, y = 0, anchor = "nw")
+        self.parent.overlappingProfiles.append(self.profile)
+
+    def openManagerProfile(self, manager_id):
+        from tabs.managerProfile import ManagerProfile
+
+        manager = Managers.get_manager_by_id(manager_id)
+        if manager.user != 1:
+            self.profile = ManagerProfile(self, manager_id, changeBackFunction = self.changeBack)
+            self.profile.place(x = 0, y = 0, anchor = "nw")
+            self.parent.overlappingProfiles.append(self.profile)
+        else:
+            self.parent.changeTab(7)
+
+    def openLeagueProfile(self, league_id):
+        from tabs.leagueProfile import LeagueProfile
+
+        if league_id != self.team_league_id:
+            self.profile = LeagueProfile(self, league_id, changeBackFunction = self.changeBack)
+            self.profile.place(x = 0, y = 0, anchor = "nw")
+            self.parent.overlappingProfiles.append(self.profile)
+        else:
+            self.parent.changeTab(6)
+
+    def openRefereeProfile(self, referee_id):
+        from tabs.refereeProfile import RefereeProfile
+
+        referee = Referees.get_referee_by_id(referee_id)
+        self.profile = RefereeProfile(self, referee, changeBackFunction = self.changeBack)
+        self.profile.place(x = 0, y = 0, anchor = "nw")
+        self.parent.overlappingProfiles.append(self.profile)
+
+    def changeBack(self):
+        self.profile.place_forget()

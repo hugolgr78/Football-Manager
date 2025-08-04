@@ -329,7 +329,7 @@ REACTION_TEXTS = [
     (lambda x: x == 2, "Very Happy"),
     (lambda x: x == 1, "Happy"),
     (lambda x: x == 0, "Content"),
-    (lambda x: x == -1, "Disappointed"),
+    (lambda x: x == -1, "Upset"),
     (lambda x: x <= -2, "Angry"),
 ]
 
@@ -368,6 +368,8 @@ PROMPT_REACTIONS = {
     "Happy": {"win": 1, "draw": 0, "lose": -1},
     "Dissapointed": {"win": -1, "draw": 0, "lose": 1}
 }
+
+SEARCH_LIMIT = 12
 
 from data.database import StatsManager
 

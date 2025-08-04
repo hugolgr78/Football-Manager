@@ -98,11 +98,11 @@ def get_player_response(prompt, rating, is_injured):
         "Injury": {
             "thankful": [
                 "Thanks, Boss. I really needed that.",
-                "Appreciate it, Coach. I'll do everything to come back stronger."
+                "Appreciate it, Coach. I'll come back stronger."
             ],
             "confused": [
-                "Wait, am I injured? Did I miss something?",
-                "Uh... I’m not injured, Boss. Is there something wrong?"
+                "Are you alright Boss? I feel fine.",
+                "I’m not injured, Boss. Is there something wrong?"
             ]
         },
         "Criticize": {
@@ -121,7 +121,7 @@ def get_player_response(prompt, rating, is_injured):
                 "Got it, Coach! I’ll prove myself."
             ],
             "challenge": [
-                "I’m already giving my all, Boss. What more do you want?",
+                "I’m already giving my all. What more do you want?",
                 "I thought I played well, but I guess I’ll try harder."
             ]
         }
@@ -228,3 +228,9 @@ def reset_available_positions(lineup):
                     new_values.remove(related_position)
     
     return new_values
+
+def getSuffix(number):
+    if 10 <= number % 100 <= 20:
+        return "th"
+    else:
+        return {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")

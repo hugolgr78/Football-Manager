@@ -90,12 +90,6 @@ class EmailFrame(ctk.CTkFrame):
         self.senderLabel.bind("<Enter>", lambda event: self.onFrameHover())
         self.senderLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
 
-    def getSuffix(self, number):
-        if 10 <= number % 100 <= 20:
-            return "th"
-        else:
-            return {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
-
 class Welcome():
     def __init__(self, parent):
 
@@ -191,7 +185,7 @@ class Welcome():
         )
 
         expected_finish = (200 - self.parent.team.level) // 2 + 1
-        suffix = self.parent.getSuffix(expected_finish)
+        suffix = getSuffix(expected_finish)
         self.firstMatch = Matches.get_team_first_match(self.parent.team.id)
         homeTeam = Teams.get_team_by_id(self.firstMatch.home_id)
         awayTeam = Teams.get_team_by_id(self.firstMatch.away_id)
@@ -438,7 +432,7 @@ class MatchdayReview():
 
         currPosition = matchdayTable.position
 
-        suffix = self.parent.getSuffix(currPosition)
+        suffix = getSuffix(currPosition)
         if not lastMatchdayTable:
             text = f"As a result of this matchday, we are now in {currPosition}{suffix}\nposition."
         else:
@@ -824,7 +818,7 @@ class MatchdayPreview():
         else:
             last5 = Matches.get_team_last_5_matches_from_matchday(self.opponent.id, self.matchday)
             opponentPosition = self.opponentData.position
-            suffix = self.parent.getSuffix(opponentPosition)
+            suffix = getSuffix(opponentPosition)
 
             wins = len([match for match in last5 if match.home_id == self.opponent.id and match.score_home > match.score_away or match.away_id == self.opponent.id and match.score_away > match.score_home])
             draws = len([match for match in last5 if match.score_home == match.score_away])

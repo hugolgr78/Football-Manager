@@ -228,3 +228,9 @@ def reset_available_positions(lineup):
                     new_values.remove(related_position)
     
     return new_values
+
+def getSuffix(number):
+    if 10 <= number % 100 <= 20:
+        return "th"
+    else:
+        return {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")

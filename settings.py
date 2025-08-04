@@ -369,6 +369,8 @@ PROMPT_REACTIONS = {
     "Dissapointed": {"win": -1, "draw": 0, "lose": 1}
 }
 
+SEARCH_LIMIT = 12
+
 from data.database import StatsManager
 
 STAT_FUNCTIONS = {

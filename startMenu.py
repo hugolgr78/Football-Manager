@@ -7,6 +7,7 @@ import os, datetime, io
 from CTkMessagebox import CTkMessagebox
 from tabs.mainMenu import MainMenu
 from utils.frames import LeagueTable, WinRatePieChart
+from utils.util_functions import getSuffix
 
 TOTAL_STEPS = 1003
 
@@ -327,17 +328,11 @@ class StartMenu(ctk.CTkFrame):
         # Calculate the expected finish
         level = team["level"]
         expected_finish = (200 - level) // 2 + 1
-        suffix = self.getSuffix(expected_finish)
+        suffix = getSuffix(expected_finish)
 
         self.teamNameLabel.configure(text = team["name"])
         self.createdLabel.configure(text = "Created: " + str(team["year_created"]))
         self.expectedFinish.configure(text = f"Expected finish: {expected_finish}{suffix}")
-
-    def getSuffix(self, number):
-        if 10 <= number % 100 <= 20:
-            return "th"
-        else:
-            return {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
 
     def finishCreateManager(self):
         

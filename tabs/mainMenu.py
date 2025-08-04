@@ -12,6 +12,7 @@ from tabs.tactics import Tactics
 from tabs.teamProfile import TeamProfile
 from tabs.leagueProfile import LeagueProfile
 from tabs.managerProfile import ManagerProfile
+from tabs.search import Search
 
 class MainMenu(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
@@ -37,12 +38,13 @@ class MainMenu(ctk.CTkFrame):
         self.teamProfile = None
         self.leagueProfile = None
         self.managerProfile = None
+        self.search = None
 
         self.activeButton = 0
         self.buttons = []
-        self.titles = ["  Main Hub", "  Inbox", "  Squad", "  Schedule", "  Tactics", "  Club", "  League", "  Profile"]
-        self.tabs = [self.hub, self.inbox, self.squad, self.schedule, self.tactics, self.teamProfile, self.leagueProfile, self.managerProfile]
-        self.classNames = [Hub, Inbox, Squad, Schedule, Tactics, TeamProfile, LeagueProfile, ManagerProfile]
+        self.titles = ["  Main Hub", "  Inbox", "  Squad", "  Schedule", "  Tactics", "  Club", "  League", "  Profile", "  Search"]
+        self.tabs = [self.hub, self.inbox, self.squad, self.schedule, self.tactics, self.teamProfile, self.leagueProfile, self.managerProfile, self.search]
+        self.classNames = [Hub, Inbox, Squad, Schedule, Tactics, TeamProfile, LeagueProfile, ManagerProfile, Search]
 
         self.tabsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 200, height = 700)
         self.tabsFrame.place(x = 0, y = 0, anchor = "nw")
@@ -68,7 +70,7 @@ class MainMenu(ctk.CTkFrame):
         self.gap = 0.03
 
         gapCount = 0
-        for i in range(8):
+        for i in range(len(self.titles)):
             button = ctk.CTkButton(self.tabsFrame, text = self.titles[i], font = (APP_FONT, 20), fg_color = self.button_background, corner_radius = 0, height = self.buttonHeight, width = self.buttonWidth, hover_color = self.hover_background, anchor = "w")
             button.place(relx = 0.5, rely = self.startHeight + self.gap * gapCount, anchor = "center")
             button.configure(command = lambda i = i: self.changeTab(i))

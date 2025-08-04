@@ -112,7 +112,7 @@ class Profile(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = self.parent.team.name, font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.18, anchor = "w")
         position = self.parent.leagueData.position
-        ctk.CTkLabel(self, text = f"{position}{self.getSuffix(position)} in {self.league.name}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.23, anchor = "w")
+        ctk.CTkLabel(self, text = f"{position}{getSuffix(position)} in {self.league.name}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.23, anchor = "w")
 
         canvas = ctk.CTkCanvas(self, width = 5, height = 300, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = 0.55, rely = 0.2, anchor = "center")
@@ -123,7 +123,7 @@ class Profile(ctk.CTkFrame):
         self.managerLink = ManagerProfileLink(self, self.parent.manager_id, f"{self.parent.manager.first_name} {self.parent.manager.last_name}", "white", 0.69, 0.2, "w", TKINTER_BACKGROUND, self.parent)
 
         self.players = Players.get_all_players_by_team(self.parent.team.id)
-        ctk.CTkLabel(self, text = f"Average Age: {self.averageAge(self.players)}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.25, anchor = "w")
+        ctk.CTkLabel(self, text = f"Average Age: {round(sum(player.age for player in self.players) / len(self.players))}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.25, anchor = "w")
 
         self.trophiesFrame = TrophiesFrame(self, self.parent.team.id, GREY_BACKGROUND, 460, 360, 15, 0.02, 0.4, "nw")
 
@@ -131,20 +131,6 @@ class Profile(ctk.CTkFrame):
 
         self.next5 = next5Matches(self, self.manager_id, GREY_BACKGROUND, 460, 360, 60, 0.51, 0.4, "nw", 0.3, parentTab, corner_radius = 15)
         self.next5.showNext5Matches()
-
-    def averageAge(self, players):
-        
-        totalAge = 0
-        for player in players:
-            totalAge += player.age
-
-        return round(totalAge // len(players))
-
-    def getSuffix(self, number):
-        if 10 <= number % 100 <= 20:
-            return "th"
-        else:
-            return {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
 
 class Squad(ctk.CTkFrame):
     def __init__(self, parent, manager_id):

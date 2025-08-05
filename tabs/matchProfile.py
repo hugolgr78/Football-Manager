@@ -42,7 +42,6 @@ class MatchProfile(ctk.CTkFrame):
         self.additionalInfo()
 
     def matchResults(self):
-        ctk.CTkCanvas(self.matchResultsFrame, width = 350, height = 5, bg = APP_BLUE, bd = 0, highlightthickness = 0).place(relx = 0.5, rely = 0.38, anchor = "center")
 
         logosFrame = ctk.CTkFrame(self.matchResultsFrame, fg_color = GREY_BACKGROUND, width = 390, height = 70)
         logosFrame.place(relx = 0.5, rely = 0.02, anchor = "n")
@@ -117,10 +116,6 @@ class MatchProfile(ctk.CTkFrame):
         # Combine regular goals and own goals for display
         allHomeGoalPlayers = list(homeGoals.keys()) + list(homeOwnGoals.keys())
         allAwayGoalPlayers = list(awayGoals.keys()) + list(awayOwnGoals.keys())
-
-        # Return if there were no goals or red cards
-        if not allHomeGoalPlayers and not allAwayGoalPlayers and not homeRedCards and not awayRedCards:
-            return
     
         # Calculate events considering multi-line players count as multiple events
         homeEventCount = 0
@@ -128,48 +123,40 @@ class MatchProfile(ctk.CTkFrame):
             if player in homeGoals:
                 goalCount = len(homeGoals[player])
                 # Regular goals - use normal limits
-                maxFirstLine = maxTimesFirstLine
-                maxSubsequentLines = maxTimesSubsequentLines
             else:
                 # Own goals have times + separate (OG) line
                 goalCount = len(homeOwnGoals[player]) + 1  # +1 for the (OG) line
-                # Own goals with separate (OG) line - use normal limits
-                maxFirstLine = maxTimesFirstLine
-                maxSubsequentLines = maxTimesSubsequentLines
             
             # Calculate how many lines this player needs
-            if goalCount <= maxFirstLine:
+            if goalCount <= maxTimesFirstLine:
                 linesNeeded = 1
             else:
-                remainingGoals = goalCount - maxFirstLine
-                additionalLines = (remainingGoals + maxSubsequentLines - 1) // maxSubsequentLines
+                remainingGoals = goalCount - maxTimesFirstLine
+                additionalLines = (remainingGoals + maxTimesSubsequentLines - 1) // maxTimesSubsequentLines
                 linesNeeded = 1 + additionalLines
             homeEventCount += linesNeeded
-        
+
         awayEventCount = 0
         for player in allAwayGoalPlayers:
             if player in awayGoals:
                 goalCount = len(awayGoals[player])
                 # Regular goals - use normal limits
-                maxFirstLine = maxTimesFirstLine
-                maxSubsequentLines = maxTimesSubsequentLines
             else:
                 # Own goals have times + separate (OG) line
                 goalCount = len(awayOwnGoals[player]) + 1  # +1 for the (OG) line
-                # Own goals with separate (OG) line - use normal limits
-                maxFirstLine = maxTimesFirstLine
-                maxSubsequentLines = maxTimesSubsequentLines
             
             # Calculate how many lines this player needs
-            if goalCount <= maxFirstLine:
+            if goalCount <= maxTimesFirstLine:
                 linesNeeded = 1
             else:
-                remainingGoals = goalCount - maxFirstLine
-                additionalLines = (remainingGoals + maxSubsequentLines - 1) // maxSubsequentLines
+                remainingGoals = goalCount - maxTimesFirstLine
+                additionalLines = (remainingGoals + maxTimesSubsequentLines - 1) // maxTimesSubsequentLines
                 linesNeeded = 1 + additionalLines
             awayEventCount += linesNeeded
         
-        maxEvents = max(homeEventCount, awayEventCount, len(homeRedCards) + len(awayRedCards))
+        maxGoalEvents = max(homeEventCount, awayEventCount)
+        maxRedCards = max(len(homeRedCards), len(awayRedCards))
+        maxEvents = maxGoalEvents + maxRedCards
 
         # Use a scrollable frame if there are many events
         if maxEvents > 6:
@@ -182,65 +169,55 @@ class MatchProfile(ctk.CTkFrame):
             # Put the scrollable frame inside the container
             goalsFrame = ctk.CTkScrollableFrame(containerFrame, fg_color = GREY_BACKGROUND, width = 340, height = 100)
             goalsFrame.pack(fill = "both", expand = True, padx = 5, pady = 5)
-        else:
+
+            # Fixed position for scrollable frame
+            self.goalsFrameEnd = 0.38
+        elif maxEvents > 0:
             scrollableFrame = False
-            goalsFrame = ctk.CTkFrame(self.matchResultsFrame, fg_color = GREY_BACKGROUND, width = 390, height = 145)
-            goalsFrame.place(relx = 0.5, rely = 0.26, anchor = "center")
+            goalsFrame = ctk.CTkFrame(self.matchResultsFrame, fg_color = GREY_BACKGROUND, width = 390, height = 24.2 * maxEvents)
+            goalsFrame.place(relx = 0.5, rely = 0.15, anchor = "n")
             goalsFrame.pack_propagate(False)
 
-        firstFrameCreated = False
-        
-        for i, (homePlayer, awayPlayer) in enumerate(itertools.zip_longest(allHomeGoalPlayers, allAwayGoalPlayers)):
+            # Calculate position right after the goals frame ends
+            self.goalsFrameEnd = 0.15 + (20 * maxEvents) / 625 + 0.02  # start position + frame height + small gap
+        else: 
+            self.goalsFrameEnd = 0.15 
 
-            # Determine frame height based on number of goals for both players
-            maxLinesNeeded = 1
-            homeTimeStrings = []
-            awayTimeStrings = []
+        # Create main goals frame (packed)
+        if allHomeGoalPlayers or allAwayGoalPlayers:
+            goalsMainFrame = ctk.CTkFrame(goalsFrame, fg_color = GREY_BACKGROUND, width = 350, height = 20 * max(homeEventCount, awayEventCount))
+            goalsMainFrame.pack(fill = "x", padx = 5, pady = (5, 0))
+            goalsMainFrame.pack_propagate(False)
 
-            # Populate the time strings for each player and get the number of lines needed for the frame
-            if homePlayer is not None:
-                if homePlayer in homeGoals:
-                    homeTimeStrings = [str(time) + "'" for time in homeGoals[homePlayer]]
+            # Create home and away frames within goals frame (placed)
+            homeGoalsFrame = ctk.CTkFrame(goalsMainFrame, fg_color = GREY_BACKGROUND, width = 175 if not scrollableFrame else 160, height = 20 * homeEventCount)
+            homeGoalsFrame.place(relx = 0, rely = 0, anchor = "nw")
+            homeGoalsFrame.pack_propagate(False)
+
+            awayGoalsFrame = ctk.CTkFrame(goalsMainFrame, fg_color = GREY_BACKGROUND, width = 175 if not scrollableFrame else 160, height = 20 * awayEventCount)
+            awayGoalsFrame.place(relx = 1, rely = 0, anchor = "ne")
+            awayGoalsFrame.pack_propagate(False)
+
+            # Add goal icon (placed)
+            src = Image.open("Images/goal.png")
+            src.thumbnail((15, 15))
+            goalIcon = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(goalsMainFrame, text = "", image = goalIcon, fg_color = GREY_BACKGROUND).place(relx = 0.5, y = 7, anchor = "center")
+
+            currentHomeY = 7
+            currentAwayY = 7
+
+            # Add home team goals
+            for player in allHomeGoalPlayers:
+                homePlayerObj = Players.get_player_by_id(player)
+                
+                if player in homeGoals:
+                    homeTimeStrings = [str(time) + "'" for time in homeGoals[player]]
                 else:
                     # Own goals - just add times with apostrophes, (OG) will be on a separate line
-                    homeTimeStrings = [str(time) + "'" for time in homeOwnGoals[homePlayer]]
+                    homeTimeStrings = [str(time) + "'" for time in homeOwnGoals[player]]
                     # Add (OG) as a separate "time" entry for display
                     homeTimeStrings.append("(OG)")
-                
-                # Calculate lines needed
-                if len(homeTimeStrings) <= maxTimesFirstLine:
-                    homeLinesNeeded = 1
-                else:
-                    remainingGoals = len(homeTimeStrings) - maxTimesFirstLine
-                    additionalLines = (remainingGoals + maxTimesSubsequentLines - 1) // maxTimesSubsequentLines
-                    homeLinesNeeded = 1 + additionalLines
-                maxLinesNeeded = max(maxLinesNeeded, homeLinesNeeded)
-            
-            if awayPlayer is not None:
-                if awayPlayer in awayGoals:
-                    awayTimeStrings = [str(time) + "'" for time in awayGoals[awayPlayer]]
-                else:
-                    # Own goals - just add times with apostrophes, (OG) will be on a separate line
-                    awayTimeStrings = [str(time) + "'" for time in awayOwnGoals[awayPlayer]]
-                    # Add (OG) as a separate "time" entry for display
-                    awayTimeStrings.append("(OG)")
-                
-                # Calculate lines needed
-                if len(awayTimeStrings) <= maxTimesFirstLine:
-                    awayLinesNeeded = 1
-                else:
-                    remainingGoals = len(awayTimeStrings) - maxTimesFirstLine
-                    additionalLines = (remainingGoals + maxTimesSubsequentLines - 1) // maxTimesSubsequentLines
-                    awayLinesNeeded = 1 + additionalLines
-                maxLinesNeeded = max(maxLinesNeeded, awayLinesNeeded)
-            
-            frameHeight = maxLinesNeeded * 20
-            frame = ctk.CTkFrame(goalsFrame, fg_color = GREY_BACKGROUND, width = 350, height = frameHeight)
-            frame.pack(fill = "x", padx = 5, pady = (0, 2))
-
-            # Add the strings to the frame
-            if homePlayer is not None:
-                homePlayerObj = Players.get_player_by_id(homePlayer)
                 
                 # Split goals using the normal limits
                 goalChunks = []
@@ -278,12 +255,20 @@ class MatchProfile(ctk.CTkFrame):
                         else:
                             lineText = ', '.join(chunk)
                     
-                    # Calculate vertical position for this line
-                    relY = (lineIndex + 0.5) / maxLinesNeeded
-                    ctk.CTkLabel(frame, text = lineText, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.45, rely = relY, anchor = "e")
+                    ctk.CTkLabel(homeGoalsFrame, text = lineText, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15), height = 20).place(x = 170 if not scrollableFrame else 155, y = currentHomeY, anchor = "e")
+                    currentHomeY += 20
 
-            if awayPlayer is not None:
-                awayPlayerObj = Players.get_player_by_id(awayPlayer)
+            # Add away team goals
+            for player in allAwayGoalPlayers:
+                awayPlayerObj = Players.get_player_by_id(player)
+                
+                if player in awayGoals:
+                    awayTimeStrings = [str(time) + "'" for time in awayGoals[player]]
+                else:
+                    # Own goals - just add times with apostrophes, (OG) will be on a separate line
+                    awayTimeStrings = [str(time) + "'" for time in awayOwnGoals[player]]
+                    # Add (OG) as a separate "time" entry for display
+                    awayTimeStrings.append("(OG)")
                 
                 # Split goals using the normal limits
                 goalChunks = []
@@ -321,18 +306,52 @@ class MatchProfile(ctk.CTkFrame):
                         else:
                             lineText = ', '.join(chunk)
                     
-                    # Calculate vertical position for this line
-                    relY = (lineIndex + 0.5) / maxLinesNeeded
-                    ctk.CTkLabel(frame, text = lineText, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.55, rely = relY, anchor = "w")
+                    ctk.CTkLabel(awayGoalsFrame, text = lineText, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15), height = 20).place(x = 5, y = currentAwayY, anchor = "w")
+                    currentAwayY += 20
 
-            # Add goal icon to the first frame only
-            if not firstFrameCreated:
-                firstFrameCreated = True
-                
-                src = Image.open("Images/goal.png")
-                src.thumbnail((15, 15))
-                goalIcon = ctk.CTkImage(src, None, (src.width, src.height))
-                ctk.CTkLabel(frame, text = "", image = goalIcon, fg_color = GREY_BACKGROUND).place(x = 190 if not scrollableFrame else 175, y = 10, anchor = "center")
+        # Create main red cards frame (packed)
+        if homeRedCards or awayRedCards:
+            redCardsMainFrame = ctk.CTkFrame(goalsFrame, fg_color = GREY_BACKGROUND, width = 350, height = 20 * max(len(homeRedCards), len(awayRedCards)))
+            redCardsMainFrame.pack(fill = "x", padx = 5, pady = 0)
+            redCardsMainFrame.pack_propagate(False)
+
+            # Create home and away frames within red cards frame (placed)
+            homeRedCardsFrame = ctk.CTkFrame(redCardsMainFrame, fg_color = GREY_BACKGROUND, width = 175 if not scrollableFrame else 160, height = 20 * len(homeRedCards))
+            homeRedCardsFrame.place(relx = 0, rely = 0, anchor = "nw")
+            homeRedCardsFrame.pack_propagate(False)
+
+            awayRedCardsFrame = ctk.CTkFrame(redCardsMainFrame, fg_color = GREY_BACKGROUND, width = 175 if not scrollableFrame else 160, height = 20 * len(awayRedCards))
+            awayRedCardsFrame.place(relx = 1, rely = 0, anchor = "ne")
+            awayRedCardsFrame.pack_propagate(False)
+
+            # Add red card icon (placed)
+            src = Image.open("Images/redCard.png")
+            src.thumbnail((15, 15))
+            redCardIcon = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(redCardsMainFrame, text = "", image = redCardIcon, fg_color = GREY_BACKGROUND).place(relx = 0.5, y = 7, anchor = "center")
+
+            currentHomeY = 7
+            currentAwayY = 7
+
+            for player in homeRedCards:
+                homePlayerObj = Players.get_player_by_id(player)
+                redCardTimes = [str(time) + "'" for time in homeRedCards[player]]
+                lineText = f"{homePlayerObj.last_name} {', '.join(redCardTimes)}"
+                ctk.CTkLabel(homeRedCardsFrame, text = lineText, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15), height = 20).place(x = 170 if not scrollableFrame else 155, y = currentHomeY, anchor = "e")
+                currentHomeY += 20
+
+            for player in awayRedCards:
+                awayPlayerObj = Players.get_player_by_id(player)
+                redCardTimes = [str(time) + "'" for time in awayRedCards[player]]
+                lineText = f"{awayPlayerObj.last_name} {', '.join(redCardTimes)}"
+                ctk.CTkLabel(awayRedCardsFrame, text = lineText, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15), height = 20).place(x = 5, y = currentAwayY, anchor = "w")
+                currentAwayY += 20
+
+        ctk.CTkCanvas(self.matchResultsFrame, width = 350, height = 5, bg = APP_BLUE, bd = 0, highlightthickness = 0).place(relx = 0.5, rely = self.goalsFrameEnd, anchor = "center")
+
+        height = 350 + (24.2 * (6 - min(6, maxEvents)))
+        matchEventsFrame = ctk.CTkScrollableFrame(self.matchResultsFrame, fg_color = GREY_BACKGROUND, width = 374, height = height)
+        matchEventsFrame.place(relx = 0.5, rely = self.goalsFrameEnd + 0.01, anchor = "n")
 
     def lineups(self):
         pass

@@ -10,6 +10,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from utils.playerProfileLink import PlayerProfileLink
 from utils.match import Match
 from utils.refereeProfileLink import RefereeProfileLabel
+from utils.matchProfileLink import MatchProfileLink
 from utils.util_functions import *
 
 class MatchFrame(ctk.CTkFrame):
@@ -146,12 +147,11 @@ class MatchFrame(ctk.CTkFrame):
         awayLogo = TeamLogo(self.scoreFrame, srcAway, self.awayTeam, DARK_GREY, 0.8, 0.5, "center", self.parentTab)
 
         if self.played:
-            scoreLabel = ctk.CTkLabel(self.scoreFrame, text = f"{self.match.score_home} - {self.match.score_away}", fg_color = DARK_GREY, font = (APP_FONT_BOLD, 30))
+            scoreLabel = MatchProfileLink(self.scoreFrame, self.match, f"{self.match.score_home} - {self.match.score_away}", "white", 0.5, 0.5, "center", DARK_GREY, self.parentTab, 30, APP_FONT_BOLD)
         else:
             scoreLabel = ctk.CTkLabel(self.scoreFrame, text = self.match.time, fg_color = DARK_GREY, font = (APP_FONT, 30))
+            scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
         
-        scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
-
         self.matchdayEvents = MatchEvents.get_events_by_match(self.match.id)
         self.homeEvents = []
         self.awayEvents = []

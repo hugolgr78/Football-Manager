@@ -105,17 +105,39 @@ class MatchProfile(ctk.CTkFrame):
 
                 awayRedCards[player.id].append(event.time)
 
-        # Sort the dicts based on time
-        homeGoals = {k: v for k, v in sorted(homeGoals.items(), key = lambda item: item[1])}
-        awayGoals = {k: v for k, v in sorted(awayGoals.items(), key = lambda item: item[1])}
-        homeOwnGoals = {k: v for k, v in sorted(homeOwnGoals.items(), key = lambda item: item[1])}
-        awayOwnGoals = {k: v for k, v in sorted(awayOwnGoals.items(), key = lambda item: item[1])}
-        homeRedCards = {k: v for k, v in sorted(homeRedCards.items(), key = lambda item: item[1])}
-        awayRedCards = {k: v for k, v in sorted(awayRedCards.items(), key = lambda item: item[1])}
+        homeGoals = {k: sorted(v, key = sort_time) for k, v in sorted(homeGoals.items(), key = lambda item: sort_time(item[1][0]))}
+        awayGoals = {k: sorted(v, key = sort_time) for k, v in sorted(awayGoals.items(), key = lambda item: sort_time(item[1][0]))}
+        homeOwnGoals = {k: sorted(v, key = sort_time) for k, v in sorted(homeOwnGoals.items(), key = lambda item: sort_time(item[1][0]))}
+        awayOwnGoals = {k: sorted(v, key = sort_time) for k, v in sorted(awayOwnGoals.items(), key = lambda item: sort_time(item[1][0]))}
+        homeRedCards = {k: sorted(v, key = sort_time) for k, v in sorted(homeRedCards.items(), key = lambda item: sort_time(item[1][0]))}
+        awayRedCards = {k: sorted(v, key = sort_time) for k, v in sorted(awayRedCards.items(), key = lambda item: sort_time(item[1][0]))}
 
-        # Combine regular goals and own goals for display
-        allHomeGoalPlayers = list(homeGoals.keys()) + list(homeOwnGoals.keys())
-        allAwayGoalPlayers = list(awayGoals.keys()) + list(awayOwnGoals.keys())
+        # Combine all goal players, including own goals and sort
+        allHomeGoalPlayers = {}
+        for player_id in set(list(homeGoals.keys()) + list(homeOwnGoals.keys())):
+            regular_goals = homeGoals.get(player_id, [])
+            own_goals = homeOwnGoals.get(player_id, [])
+            all_times = regular_goals + own_goals
+            if all_times:
+                earliest_time = min(all_times, key = sort_time)
+                allHomeGoalPlayers[player_id] = earliest_time
+        
+        allAwayGoalPlayers = {}
+        for player_id in set(list(awayGoals.keys()) + list(awayOwnGoals.keys())):
+            regular_goals = awayGoals.get(player_id, [])
+            own_goals = awayOwnGoals.get(player_id, [])
+            all_times = regular_goals + own_goals
+            if all_times:
+                earliest_time = min(all_times, key = sort_time)
+                allAwayGoalPlayers[player_id] = earliest_time
+        
+        # Sort players by their earliest goal time
+        allAwayGoalPlayers = dict(sorted(allAwayGoalPlayers.items(), key = lambda item: sort_time(item[1])))
+        allHomeGoalPlayers = dict(sorted(allHomeGoalPlayers.items(), key = lambda item: sort_time(item[1])))
+        
+        # Convert back to lists for compatibility with existing code
+        allHomeGoalPlayers = list(allHomeGoalPlayers.keys())
+        allAwayGoalPlayers = list(allAwayGoalPlayers.keys())
     
         # Calculate events considering multi-line players count as multiple events
         homeEventCount = 0
@@ -350,8 +372,118 @@ class MatchProfile(ctk.CTkFrame):
         ctk.CTkCanvas(self.matchResultsFrame, width = 350, height = 5, bg = APP_BLUE, bd = 0, highlightthickness = 0).place(relx = 0.5, rely = self.goalsFrameEnd, anchor = "center")
 
         height = 350 + (24.2 * (6 - min(6, maxEvents)))
-        matchEventsFrame = ctk.CTkScrollableFrame(self.matchResultsFrame, fg_color = GREY_BACKGROUND, width = 374, height = height)
-        matchEventsFrame.place(relx = 0.5, rely = self.goalsFrameEnd + 0.01, anchor = "n")
+
+        # Restore original function before calling addMatchEvents
+        Players.get_player_by_id = original_get_player
+
+        self.addMatchEvents(height)
+
+    def addMatchEvents(self, height):
+
+        maxFrames = height // 50
+        eventsCount = 2 # Start at 2 to account for the half time and full time frames
+
+        for event in self.matchEvents:
+            if event.event_type == "sub_on" or event.event_type == "assist" or event.event_type == "clean_sheet":
+                continue
+            eventsCount += 1
+
+        if eventsCount > maxFrames:
+            self.matchEventsFrame = ctk.CTkScrollableFrame(self.matchResultsFrame, fg_color = GREY_BACKGROUND, width = 374, height = height)
+            self.matchEventsFrame.place(relx = 0.5, rely = self.goalsFrameEnd + 0.01, anchor = "n")
+            frameWidth = 374
+        else:
+            self.matchEventsFrame = ctk.CTkFrame(self.matchResultsFrame, fg_color = GREY_BACKGROUND, width = 374, height = height)
+            self.matchEventsFrame.place(relx = 0.5, rely = self.goalsFrameEnd + 0.02, anchor = "n")
+            frameWidth = 400
+        
+        self.matchEvents.sort(key = lambda x: sort_time(x.time))
+
+        halfTimeAdded = False
+        for event in self.matchEvents:
+
+            if event.event_type == "sub_on" or event.event_type == "assist" or event.event_type == "clean_sheet":
+                continue
+
+            frame = ctk.CTkFrame(self.matchEventsFrame, fg_color = GREY_BACKGROUND, width = frameWidth, height = 50)
+            frame.pack(expand = True)
+
+            player = Players.get_player_by_id(event.player_id)
+
+            time = event.time
+
+            if "+" not in time and int(time) > 45 and not halfTimeAdded:
+                ctk.CTkLabel(frame, text = "------------------ Half Time ------------------", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+                halfTimeAdded = True
+
+                frame = ctk.CTkFrame(self.matchEventsFrame, fg_color = GREY_BACKGROUND, width = frameWidth, height = 50)
+                frame.pack(expand = True)
+
+            if "+" in time:
+                minuteFont = 13
+            else:
+                minuteFont = 15
+
+            if player.team_id == self.homeTeam.id:
+                homePlayer = True
+            else:
+                homePlayer = False
+
+            if event.event_type != "sub_off":
+
+                text = player.last_name
+
+                if event.event_type == "goal" or event.event_type == "penalty_goal":
+                    src = Image.open("Images/goal.png")
+                    assist_event = self.matchEvents[self.matchEvents.index(event) + 1] if self.matchEvents.index(event) + 1 < len(self.matchEvents) else None
+                    subText = Players.get_player_by_id(assist_event.player_id).last_name if assist_event else "Penalty"
+                elif event.event_type == "own_goal":
+                    src = Image.open("Images/ownGoal.png")
+                    subText = "Own Goal"
+                    homePlayer = not homePlayer  # Own goal is credited to the opposing team
+                elif event.event_type == "yellow_card":
+                    src = Image.open("Images/yellowCard.png")
+                    subText = "Yellow Card"
+                elif event.event_type == "red_card":
+                    src = Image.open("Images/redCard.png")
+                    subText = "Red Card"
+                elif event.event_type == "penalty_miss":
+                    src = Image.open("Images/missed_penalty.png")
+                    subText = "Missed Penalty"
+                elif event.event_type == "injury":
+                    src = Image.open("Images/injury.png")
+                    subText = "Injury"
+            elif event.event_type == "sub_off":
+                # Sub on event is the next event in the list
+                sub_on_event = self.matchEvents[self.matchEvents.index(event) + 1] if self.matchEvents.index(event) + 1 < len(self.matchEvents) else None
+                player_on = Players.get_player_by_id(sub_on_event.player_id) if sub_on_event else None
+
+                text = player_on.last_name if player_on else "Unknown"
+                subText = player.last_name
+
+                if homePlayer:
+                    src = Image.open("Images/substitution_home.png")
+                else:
+                    src = Image.open("Images/substitution_away.png")
+
+            src.thumbnail((40, 40))
+            image = ctk.CTkImage(src, None, (src.width, src.height))
+            
+            if homePlayer:
+                ctk.CTkLabel(frame, text = f"{event.time}'", font = (APP_FONT, minuteFont), fg_color = GREY_BACKGROUND).place(relx = 0.07, rely = 0.5, anchor = "center")
+                ctk.CTkLabel(frame, text = "", image = image, fg_color = GREY_BACKGROUND).place(relx = 0.15, rely = 0.5, anchor = "w")
+                ctk.CTkLabel(frame, text = text, font = (APP_FONT_BOLD, 18), fg_color = GREY_BACKGROUND).place(relx = 0.3, rely = 0.3, anchor = "w")
+                ctk.CTkLabel(frame, text = subText, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND, height = 10).place(relx = 0.3, rely = 0.7, anchor = "w")
+            else:
+                ctk.CTkLabel(frame, text = f"{event.time}'", font = (APP_FONT, minuteFont), fg_color = GREY_BACKGROUND).place(relx = 0.93, rely = 0.5, anchor = "center")
+                ctk.CTkLabel(frame, text = "", image = image, fg_color = GREY_BACKGROUND).place(relx = 0.85, rely = 0.5, anchor = "e")
+                ctk.CTkLabel(frame, text = text, font = (APP_FONT_BOLD, 18), fg_color = GREY_BACKGROUND).place(relx = 0.7, rely = 0.3, anchor = "e")
+                ctk.CTkLabel(frame, text = subText, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND, height = 10).place(relx = 0.7, rely = 0.7, anchor = "e")
+
+        frame = ctk.CTkFrame(self.matchEventsFrame, fg_color = GREY_BACKGROUND, width = frameWidth, height = 50)
+        frame.pack(expand = True, fill = "both")
+
+        ctk.CTkLabel(frame, text = "------------------ Full Time ------------------", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
     def lineups(self):
         pass

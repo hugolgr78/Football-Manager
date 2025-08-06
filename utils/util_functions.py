@@ -234,3 +234,12 @@ def getSuffix(number):
         return "th"
     else:
         return {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
+    
+def sort_time(time_str):
+    """Convert time string to sortable number"""
+    if "+" in time_str:
+        # Handle injury time like "90+3"
+        base_time, injury_time = time_str.split("+")
+        return int(base_time) + int(injury_time) / 100  # Add injury time as decimal
+    else:
+        return int(time_str)

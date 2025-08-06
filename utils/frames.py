@@ -911,6 +911,10 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         super().draw_pitch()
         
         self.player_radius = 12
+        self.relx = relx
+        self.rely = rely
+        self.anchor = anchor
+        self.icon_images = {}
 
         self.positions = {
             "Goalkeeper": (0.5, 0.9),  # Goalkeeper
@@ -934,6 +938,53 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
             "Striker Right": (0.7, 0.15),  # Striker Right
             "Center Forward": (0.5, 0.1),  # Center Forward
         }
+
+        self.iconPositions = {
+            "Sub": [(0.15, 0.1), None],
+            "Goals": [(0.85, 0.8), True],
+            "Cards": [(0.1, 0.5), False],
+            "Assists": [(0.15, 0.8), False],
+            "Missed Pens": [(0.9, 0.5), True],
+            "Rating": [(0.85, 0.1), None],
+        }
+
+    def addIcon(self, icon_type, image, position, num):
+        # Add the icon relative the the position oval (so 0.1, 0.1 is the top left of the oval)
+
+        positions, offsetDirection = self.iconPositions[icon_type]
+        key = f"{position}_{icon_type}_{num}"
+        self.icon_images[key] = image
+        
+        # Apply offset if num > 1
+        if num > 1:
+            if offsetDirection is not None:  # Only apply offset if direction is specified
+                offset = 0.25 * (num - 1)  # Calculate offset based on num
+                if offsetDirection:  # True means positive offset
+                    positions = positions[0] + offset, positions[1]
+                else:  # False means negative offset
+                    positions = positions[0] - offset, positions[1]
+            else:
+                positions = positions[0], positions[1]
+        else:
+            positions = positions[0], positions[1]
+
+        # Use positions from self.positions dictionary (these are relative coordinates)
+        player_relx, player_rely = self.positions[position]
+        
+        # Calculate the center position of the oval
+        oval_center_x = player_relx * self.pitch_width
+        oval_center_y = player_rely * self.pitch_height
+        
+        # Calculate the icon position relative to the oval center
+        # positions[0] and positions[1] are relative offsets from the icon positions
+        icon_x = oval_center_x + (positions[0] - 0.5) * (2 * self.player_radius)
+        icon_y = oval_center_y + (positions[1] - 0.5) * (2 * self.player_radius)
+
+        position_tag = position.replace(" ", "_")
+        self.canvas.create_image(icon_x, icon_y, image = image, tags = (position_tag, "icon"))
+
+    def addInjurIcon(self, position, image):
+        pass
 
     def addPlayer(self, position, playerName):
         relx, rely = self.positions[position]
@@ -968,6 +1019,12 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
 
         self.canvas.delete(oval_tag)
         self.canvas.delete(text_tag)
+
+    def placePitch(self):
+        super().place(relx = self.relx, rely = self.rely, anchor = self.anchor)
+
+    def removePitch(self):
+        super().place_forget()
 
 class LineupPlayerFrame(ctk.CTkFrame):
     def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions):

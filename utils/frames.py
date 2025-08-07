@@ -4,6 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 from PIL import Image
 import io
+import tkinter.font as tkFont
 from utils.teamLogo import TeamLogo
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -274,12 +275,18 @@ class MatchFrame(ctk.CTkFrame):
             player = Players.get_player_by_id(lineupEntry.player_id)
             rating = lineupEntry.rating
 
+            if "." not in str(rating):
+                rating = f"{rating}.0"
+
             ctk.CTkLabel(self.lineupFrame, text = f"{player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 0, sticky = "e")
             ctk.CTkLabel(self.lineupFrame, text = rating, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 1, sticky = "e", padx = (5, 10))
 
         for i, lineupEntry in enumerate(self.awayLineup):
             player = Players.get_player_by_id(lineupEntry.player_id)
             rating = lineupEntry.rating
+
+            if "." not in str(rating):
+                rating = f"{rating}.0"
 
             ctk.CTkLabel(self.lineupFrame, text = rating, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 2, sticky = "w", padx = (10, 5))
             ctk.CTkLabel(self.lineupFrame, text = f"{player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 3, sticky = "w")
@@ -910,50 +917,49 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         super().__init__(parent, width, height, relx, rely, anchor, fgColor, pitchColor)
         super().draw_pitch()
         
-        self.player_radius = 12
+        self.player_radius = 15
         self.relx = relx
         self.rely = rely
         self.anchor = anchor
         self.icon_images = {}
 
         self.positions = {
-            "Goalkeeper": (0.5, 0.9),  # Goalkeeper
-            "Left Back": (0.15, 0.75),  # Left Back
-            "Right Back": (0.85, 0.75),  # Right Back
+            "Goalkeeper": (0.5, 0.94),  # Goalkeeper
+            "Left Back": (0.12, 0.75),  # Left Back
+            "Right Back": (0.88, 0.75),  # Right Back
             "Center Back Right": (0.675, 0.75),  # Center Back Right
             "Center Back": (0.5, 0.75),  # Center Back
             "Center Back Left": (0.325, 0.75),  # Center Back Left
             "Defensive Midfielder": (0.5, 0.6),  # Defensive Midfielder
             "Defensive Midfielder Right": (0.65, 0.6),  # Defensive Midfielder Right
             "Defensive Midfielder Left": (0.35, 0.6),  # Defensive Midfielder Left
-            "Left Midfielder": (0.15, 0.45),  # Left Midfielder
-            "Central Midfielder Right": (0.65, 0.45),  # Center Midfielder Right
-            "Central Midfielder": (0.5, 0.45),  # Center Midfielder
-            "Central Midfielder Left": (0.35, 0.45),  # Center Midfielder Left
-            "Right Midfielder": (0.85, 0.45),  # Right Midfielder
-            "Left Winger": (0.15, 0.3),  # Left Winger
-            "Right Winger": (0.85, 0.3),  # Right Winger
-            "Attacking Midfielder": (0.5, 0.3),  # Attacking Midfielder
+            "Left Midfielder": (0.12, 0.4),  # Left Midfielder
+            "Central Midfielder Right": (0.65, 0.4),  # Center Midfielder Right
+            "Central Midfielder": (0.5, 0.4),  # Center Midfielder
+            "Central Midfielder Left": (0.35, 0.4),  # Center Midfielder Left
+            "Right Midfielder": (0.88, 0.4),  # Right Midfielder
+            "Left Winger": (0.12, 0.25),  # Left Winger
+            "Right Winger": (0.88, 0.25),  # Right Winger
+            "Attacking Midfielder": (0.5, 0.25),  # Attacking Midfielder
             "Striker Left": (0.3, 0.15),  # Striker Left
             "Striker Right": (0.7, 0.15),  # Striker Right
-            "Center Forward": (0.5, 0.1),  # Center Forward
+            "Center Forward": (0.5, 0.05),  # Center Forward
         }
 
         self.iconPositions = {
-            "Sub": [(0.15, 0.1), None],
-            "Goals": [(0.85, 0.8), True],
-            "Cards": [(0.1, 0.5), False],
-            "Assists": [(0.15, 0.8), False],
-            "Missed Pens": [(0.9, 0.5), True],
-            "Rating": [(0.85, 0.1), None],
+            "Sub": [(0.1, 0.1), None],
+            "Goals": [(0.9, 0.9), True],
+            "Cards": [(0, 0.5), False],
+            "Assists": [(0.1, 0.9), False],
+            "Missed Pens": [(1, 0.5), True],
         }
 
     def addIcon(self, icon_type, image, position, num):
         # Add the icon relative the the position oval (so 0.1, 0.1 is the top left of the oval)
 
         positions, offsetDirection = self.iconPositions[icon_type]
-        key = f"{position}_{icon_type}_{num}"
-        self.icon_images[key] = image
+        key = f"{icon_type}_{position}_{num}"
+        self.icon_images[key] = image  # Store the image in the dictionary
         
         # Apply offset if num > 1
         if num > 1:
@@ -983,7 +989,77 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         position_tag = position.replace(" ", "_")
         self.canvas.create_image(icon_x, icon_y, image = image, tags = (position_tag, "icon"))
 
-    def addInjurIcon(self, position, image):
+    def addRating(self, position, text, potm):
+        # Use positions from self.positions dictionary (these are relative coordinates)
+        player_relx, player_rely = self.positions[position]
+        
+        # Calculate the center position of the oval
+        oval_center_x = player_relx * self.pitch_width
+        oval_center_y = player_rely * self.pitch_height
+        
+        # Calculate the icon position relative to the oval center
+        # positions[0] and positions[1] are relative offsets from the icon positions
+        icon_x = oval_center_x + (0.9 - 0.5) * (2 * self.player_radius)
+        icon_y = oval_center_y + (0.1 - 0.5) * (2 * self.player_radius)
+
+        if text >= 7:
+            oval_color = PIE_GREEN
+        elif text >= 5:
+            oval_color = NEUTRAL_COLOR
+        else:
+            oval_color = PIE_RED
+
+        if potm:
+            oval_color = POTM_BLUE
+
+        # Text has at least 1 dp and max 2 dps
+        formatted_text = text
+        if "." not in str(text):
+            formatted_text = f"{text}.0"
+
+        position_tag = position.replace(" ", "_")
+
+        # === Font settings ===
+        font_name = APP_FONT_BOLD
+        font_size = 9
+        font = tkFont.Font(family = font_name, size = font_size)
+
+        # === Measure text width ===
+        text_width = font.measure(formatted_text)
+        padding_x = 6  # left/right padding
+        padding_y = 2  # top/bottom padding
+
+        rect_width = text_width + 2 * padding_x
+        rect_height = font.metrics("linespace") + 2 * padding_y
+        radius = rect_height // 2 + 10
+
+        x0 = icon_x - 5
+        y0 = icon_y - rect_height // 2
+        x1 = x0 + rect_width
+        y1 = y0 + rect_height
+
+        # === Draw pill ===
+        create_rounded_rectangle(
+            self.canvas,
+            x0, y0, x1, y1,
+            radius = radius,
+            fill = oval_color,
+            outline = oval_color,
+            tags = (position_tag, "rating_oval")
+        )
+
+        # === Draw left-aligned text ===
+        self.canvas.create_text(
+            x0 + padding_x,
+            icon_y,
+            text = formatted_text,
+            fill = "white",
+            font = (font_name, font_size),
+            anchor = "w",  # west (left-aligned)
+            tags = (position_tag, "rating_text")
+        )
+
+    def addInjuryIcon(self, position, image):
         pass
 
     def addPlayer(self, position, playerName):
@@ -1005,7 +1081,7 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
 
         self.canvas.create_text(
             relx * self.pitch_width,
-            rely * self.pitch_height + 20,
+            rely * self.pitch_height + 25,
             text = playerName,
             fill = "white",
             font = (APP_FONT, 10),

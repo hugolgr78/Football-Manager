@@ -25,11 +25,18 @@ class MatchProfile(ctk.CTkFrame):
         self.matchResultsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 625, corner_radius = 10)
         self.matchResultsFrame.place(relx = 0.005, rely = 0.1, anchor = "nw")
 
-        self.matchAddiInfoFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 150, corner_radius = 10)
-        self.matchAddiInfoFrame.place(relx = 0.765, rely = 0.99, anchor = "se")
+        self.matchAddiInfoFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 580, height = 150, corner_radius = 10)
+        self.matchAddiInfoFrame.place(relx = 0.995, rely = 0.99, anchor = "se")
 
-        self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 150, corner_radius = 10)
-        self.legendFrame.place(relx = 0.995, rely = 0.99, anchor = "se")
+        self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 150, corner_radius = 0, background_corner_colors = [TKINTER_BACKGROUND, TKINTER_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND])
+
+        src = Image.open("Images/information.png")
+        src.thumbnail((20, 20))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        self.helpButton = ctk.CTkButton(self, text = "", image = img, fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, corner_radius = 5, height = 30, width = 30)
+        self.helpButton.place(relx = 0.995, rely = 0.05, anchor = "e")
+        self.helpButton.bind("<Enter>", lambda e: self.legendFrame.place(relx = 0.98, rely = 0.05, anchor = "ne"))
+        self.helpButton.bind("<Leave>", lambda e: self.legendFrame.place_forget())
 
         self.homeStartLineupPitch = FootballPitchMatchDay(self, 340, 520, 0.553, 0.16, "n", TKINTER_BACKGROUND, GREY_BACKGROUND)
         self.homeEndLineupPitch = FootballPitchMatchDay(self, 340, 520, 0.553, 0.16, "n", TKINTER_BACKGROUND, GREY_BACKGROUND)
@@ -49,12 +56,13 @@ class MatchProfile(ctk.CTkFrame):
         ctk.CTkLabel(self, text = self.awayTeam.name, font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.855, rely = 0.11, anchor = "n")
 
         backButton = ctk.CTkButton(self, text = "Back", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, corner_radius = 5, height = 30, width = 100, hover_color = CLOSE_RED, command = lambda: self.changeBackFunction())
-        backButton.place(relx = 0.995, rely = 0.05, anchor = "e")
+        backButton.place(relx = 0.96, rely = 0.05, anchor = "e")
 
         self.matchResults()
         self.lineups()
         self.legend()
         self.additionalInfo()
+        self.legendFrame.lift()
 
     def changePitch(self, home):
 

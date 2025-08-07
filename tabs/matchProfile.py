@@ -25,8 +25,11 @@ class MatchProfile(ctk.CTkFrame):
         self.matchResultsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 625, corner_radius = 10)
         self.matchResultsFrame.place(relx = 0.005, rely = 0.1, anchor = "nw")
 
-        self.matchAddiInfoFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 580, height = 150, corner_radius = 10)
-        self.matchAddiInfoFrame.place(relx = 0.995, rely = 0.99, anchor = "se")
+        self.matchAddiInfoFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 150, corner_radius = 10)
+        self.matchAddiInfoFrame.place(relx = 0.765, rely = 0.99, anchor = "se")
+
+        self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 150, corner_radius = 10)
+        self.legendFrame.place(relx = 0.995, rely = 0.99, anchor = "se")
 
         self.homeStartLineupPitch = FootballPitchMatchDay(self, 340, 520, 0.553, 0.16, "n", TKINTER_BACKGROUND, GREY_BACKGROUND)
         self.homeEndLineupPitch = FootballPitchMatchDay(self, 340, 520, 0.553, 0.16, "n", TKINTER_BACKGROUND, GREY_BACKGROUND)
@@ -50,6 +53,7 @@ class MatchProfile(ctk.CTkFrame):
 
         self.matchResults()
         self.lineups()
+        self.legend()
         self.additionalInfo()
 
     def changePitch(self, home):
@@ -688,6 +692,19 @@ class MatchProfile(ctk.CTkFrame):
                 self.homeStartLineupPitch.addRating(player.position, playerRating, True if player.id == self.potm.id else False)
                 self.homeEndLineupPitch.addRating(player.position, playerRating, True if player.id == self.potm.id else False)
 
+            if injured:
+                src = Image.open("Images/injury.png")
+                src.thumbnail((15, 15))
+                img = ImageTk.PhotoImage(src)
+
+                if pitch == "Start":
+                    self.homeStartLineupPitch.addInjuryIcon(player.position, img)
+                elif pitch == "End":
+                    self.homeEndLineupPitch.addInjuryIcon(player.position, img)
+                else:
+                    self.homeStartLineupPitch.addInjuryIcon(player.position, img)
+                    self.homeEndLineupPitch.addInjuryIcon(player.position, img)
+
         for player in self.awayLineup:
             playerData = Players.get_player_by_id(player.player_id)
 
@@ -846,6 +863,39 @@ class MatchProfile(ctk.CTkFrame):
             else:
                 self.awayStartLineupPitch.addRating(player.position, playerRating, True if player.id == self.potm.id else False)
                 self.awayEndLineupPitch.addRating(player.position, playerRating, True if player.id == self.potm.id else False)
+
+            if injured:
+                src = Image.open("Images/injury.png")
+                src.thumbnail((15, 15))
+                img = ImageTk.PhotoImage(src)
+
+                if pitch == "Start":
+                    self.awayStartLineupPitch.addInjuryIcon(player.position, img)
+                elif pitch == "End":
+                    self.awayEndLineupPitch.addInjuryIcon(player.position, img)
+                else:
+                    self.awayStartLineupPitch.addInjuryIcon(player.position, img)
+                    self.awayEndLineupPitch.addInjuryIcon(player.position, img)
+
+    def legend(self):
+        self.legendFrame.grid_columnconfigure((0, 1, 2, 3, 4, 5), weight = 0)
+        self.legendFrame.grid_rowconfigure((0, 2), weight = 0)
+        self.legendFrame.grid_rowconfigure((1, 3), weight = 1)
+        self.legendFrame.grid_propagate(False)
+
+        ctk.CTkLabel(self.legendFrame, text = "Legend", font = (APP_FONT_BOLD, 18), fg_color = GREY_BACKGROUND).grid(row = 0, column = 0, columnspan = 6, pady = (5, 0))
+
+        imageNames = ["goal_wb", "assist_wb", "redCard_wb", "yellowCard_wb", "ownGoal_wb", "missed_penalty_wb", "saved_penalty_wb", "injury"]
+        iconNames = ["Goal", "Assist", "Red Card", "Yellow Card", "Own Goal", "Missed Penalty", "Saved Penalty", "Injury"]
+
+        # Image in columns 0 and 2, text in columns 1 and 3
+        for i, (imageName, iconName) in enumerate(zip(imageNames, iconNames)):
+            src = Image.open(f"Images/{imageName}.png")
+            src.thumbnail((15, 15))
+            icon = ctk.CTkImage(src, None, (src.width, src.height))
+
+            ctk.CTkLabel(self.legendFrame, text = "", image = icon, fg_color = GREY_BACKGROUND).grid(row = i // 2 + 1, column = i % 2 * 2, sticky = "w", padx = (8, 0), pady = (0, 2))
+            ctk.CTkLabel(self.legendFrame, text = iconName, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = i // 2 + 1, column = i % 2 * 2 + 1, sticky = "w", padx = (8, 0), pady = (0, 2))
 
     def additionalInfo(self):
         pass

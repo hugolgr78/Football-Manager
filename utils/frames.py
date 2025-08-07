@@ -1060,7 +1060,30 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         )
 
     def addInjuryIcon(self, position, image):
-        pass
+        # Store the image to prevent garbage collection
+        key = f"injury_{position}"
+        self.icon_images[key] = image
+        
+        text_tag = f"player_{position.replace(' ', '_')}_text"
+        playerName = self.canvas.itemcget(text_tag, "text")
+        self.canvas.delete(text_tag) 
+
+        # Add the text back offset to the right and add the image to the left of the text
+        relx, rely = self.positions[position]
+        text_x = relx * self.pitch_width + 15
+        text_y = rely * self.pitch_height + 25
+
+        self.canvas.create_text(
+            text_x,
+            text_y,
+            text = playerName,
+            fill = "white",
+            font = (APP_FONT, 10),
+            tags = text_tag
+        )
+
+        position_tag = position.replace(" ", "_")
+        self.canvas.create_image(text_x - 30, text_y, image = image, tags = (position_tag, "injury_icon"))
 
     def addPlayer(self, position, playerName):
         relx, rely = self.positions[position]

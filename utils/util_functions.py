@@ -243,3 +243,21 @@ def sort_time(time_str):
         return int(base_time) + int(injury_time) / 100  # Add injury time as decimal
     else:
         return int(time_str)
+    
+def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius=10, **kwargs):
+    """Draw a rounded rectangle on the canvas."""
+    points = [
+        x1 + radius, y1,
+        x2 - radius, y1,
+        x2, y1,
+        x2, y1 + radius,
+        x2, y2 - radius,
+        x2, y2,
+        x2 - radius, y2,
+        x1 + radius, y2,
+        x1, y2,
+        x1, y2 - radius,
+        x1, y1 + radius,
+        x1, y1
+    ]
+    return canvas.create_polygon(points, smooth=True, splinesteps=36, **kwargs)

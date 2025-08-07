@@ -32,15 +32,15 @@ class MatchProfile(ctk.CTkFrame):
         self.homeEndLineupPitch = FootballPitchMatchDay(self, 340, 520, 0.553, 0.16, "n", TKINTER_BACKGROUND, GREY_BACKGROUND)
         self.homeEndLineupPitch.removePitch()
 
-        self.changeHomeLineupButton = ctk.CTkButton(self, text = "Start", font = (APP_FONT, 15), text_color = "white", fg_color = DARK_GREY, width = 20, hover_color = DARK_GREY, command = lambda: self.changePitch(True))
-        self.changeHomeLineupButton.place(relx = 0.7, rely = 0.16, anchor = "e")
+        self.changeHomeLineupButton = ctk.CTkButton(self, text = "Start", font = (APP_FONT, 15), text_color = "white", fg_color = DARK_GREY, bg_color = GREY_BACKGROUND, width = 20, hover_color = DARK_GREY, command = lambda: self.changePitch(True))
+        self.changeHomeLineupButton.place(relx = 0.686, rely = 0.17, anchor = "ne")
 
         self.awayStartLineupPitch = FootballPitchMatchDay(self, 340, 520, 0.855, 0.16, "n", TKINTER_BACKGROUND, GREY_BACKGROUND)
         self.awayEndLineupPitch = FootballPitchMatchDay(self, 340, 520, 0.855, 0.16, "n", TKINTER_BACKGROUND, GREY_BACKGROUND)
         self.awayEndLineupPitch.removePitch()
 
-        self.changeAwayLineupButton = ctk.CTkButton(self, text = "Start", font = (APP_FONT, 15), text_color = "white", fg_color = DARK_GREY, width = 20, hover_color = DARK_GREY, command = lambda: self.changePitch(False))
-        self.changeAwayLineupButton.place(relx = 1, rely = 0.16, anchor = "e")
+        self.changeAwayLineupButton = ctk.CTkButton(self, text = "Start", font = (APP_FONT, 15), text_color = "white", fg_color = DARK_GREY, bg_color = GREY_BACKGROUND, width = 20, hover_color = DARK_GREY, command = lambda: self.changePitch(False))
+        self.changeAwayLineupButton.place(relx = 0.989, rely = 0.17, anchor = "ne")
 
         ctk.CTkLabel(self, text = self.homeTeam.name, font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.553, rely = 0.11, anchor = "n")
         ctk.CTkLabel(self, text = self.awayTeam.name, font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.855, rely = 0.11, anchor = "n")
@@ -522,6 +522,10 @@ class MatchProfile(ctk.CTkFrame):
         self.homeEvents = [event for event in self.matchEvents if Players.get_player_by_id(event.player_id).team_id == self.homeTeam.id]
         self.awayEvents = [event for event in self.matchEvents if Players.get_player_by_id(event.player_id).team_id == self.awayTeam.id]
 
+        self.imageSize = (12, 12)
+
+        self.potm = TeamLineup.get_player_OTM(self.match.id)
+
         def has_event(player_id, event_type, events_list):
             return any(event.player_id == player_id and event.event_type == event_type for event in events_list)
 
@@ -534,13 +538,13 @@ class MatchProfile(ctk.CTkFrame):
             subbed_off = has_event(player.player_id, "sub_off", self.homeEvents)
             red_carded = has_event(player.player_id, "red_card", self.homeEvents)
             yellow_carded = has_event(player.player_id, "yellow_card", self.homeEvents)
+            injured = has_event(player.player_id, "injury", self.homeEvents)
 
             numGoals = len([event for event in self.homeEvents if event.player_id == player.player_id and (event.event_type == "goal" or event.event_type == "penalty_goal")])
             numOwnGoals = len([event for event in self.homeEvents if event.player_id == player.player_id and event.event_type == "own_goal"])
             numPenaltiesMissed = len([event for event in self.homeEvents if event.player_id == player.player_id and event.event_type == "penalty_miss"])
             numAssists = len([event for event in self.homeEvents if event.player_id == player.player_id and event.event_type == "assist"])
             numPenaltiesSaved = len([event for event in self.homeEvents if event.player_id == player.player_id and event.event_type == "penalty_saved"])
-            numInjuries = len([event for event in self.homeEvents if event.player_id == player.player_id and event.event_type == "injury"])
 
             if subbed_on and subbed_off:
                 continue 
@@ -562,57 +566,55 @@ class MatchProfile(ctk.CTkFrame):
             # Add events icons and ratings
             if subbed_off:
                 src = Image.open("Images/subbed_off_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
                 self.homeStartLineupPitch.addIcon("Sub", img, player.position, 1)
             elif subbed_on:
                 src = Image.open("Images/subbed_on_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
                 self.homeEndLineupPitch.addIcon("Sub", img, player.position, 1)
             
             if yellow_carded and red_carded:
                 src = Image.open("Images/yellowCard_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 src = Image.open("Images/redCard_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img2 = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
                     self.homeStartLineupPitch.addIcon("Cards", img, player.position, 1)
+                    self.homeStartLineupPitch.addIcon("Cards", img2, player.position, 2)
                 elif pitch == "End":
-                    self.homeEndLineupPitch.addIcon("Cards", img, player.position, 2)
-                else:
-                    self.homeStartLineupPitch.addIcon("Cards", img, player.position, 1)
+                    self.homeEndLineupPitch.addIcon("Cards", img, player.position, 1)
                     self.homeEndLineupPitch.addIcon("Cards", img2, player.position, 2)
             elif yellow_carded:
                 src = Image.open("Images/yellowCard_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
                     self.homeStartLineupPitch.addIcon("Cards", img, player.position, 1)
                 elif pitch == "End":
-                    self.homeEndLineupPitch.addIcon("Cards", img, player.position, 2)
+                    self.homeEndLineupPitch.addIcon("Cards", img, player.position, 1)
                 else:
-                    self.homeStartLineupPitch.addIcon("Cards", img, player.position, 1)    
+                    self.homeStartLineupPitch.addIcon("Cards", img, player.position, 1)   
+                    self.homeEndLineupPitch.addIcon("Cards", img, player.position, 1) 
             elif red_carded:
                 src = Image.open("Images/redCard_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
                     self.homeStartLineupPitch.addIcon("Cards", img, player.position, 1)
                 elif pitch == "End":
-                    self.homeEndLineupPitch.addIcon("Cards", img, player.position, 2)
-                else:
-                    self.homeStartLineupPitch.addIcon("Cards", img, player.position, 1)
+                    self.homeEndLineupPitch.addIcon("Cards", img, player.position, 1)
 
             for i in range(numGoals):
                 src = Image.open("Images/goal_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
@@ -626,7 +628,7 @@ class MatchProfile(ctk.CTkFrame):
             count = numGoals
             for i in range(count, numOwnGoals + count):
                 src = Image.open("Images/ownGoal_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
@@ -639,8 +641,8 @@ class MatchProfile(ctk.CTkFrame):
 
             count = numGoals + numOwnGoals
             for i in range(count, count + numPenaltiesSaved):
-                src = Image.open("Images/missed_penalty_wb.png")
-                src.thumbnail((10, 10))
+                src = Image.open("Images/saved_penalty_wb.png")
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
@@ -652,8 +654,8 @@ class MatchProfile(ctk.CTkFrame):
                     self.homeEndLineupPitch.addIcon("Goals", img, player.position, i + 1)
 
             for i in range(numPenaltiesMissed):
-                src = Image.open("Images/penalty_miss_wb.png")
-                src.thumbnail((10, 10))
+                src = Image.open("Images/missed_penalty_wb.png")
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
@@ -666,7 +668,7 @@ class MatchProfile(ctk.CTkFrame):
 
             for i in range(numAssists):
                 src = Image.open("Images/assist_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
@@ -677,6 +679,15 @@ class MatchProfile(ctk.CTkFrame):
                     self.homeStartLineupPitch.addIcon("Assists", img, player.position, i + 1)
                     self.homeEndLineupPitch.addIcon("Assists", img, player.position, i + 1)
 
+            playerRating = player.rating
+            if pitch == "Start":
+                self.homeStartLineupPitch.addRating(player.position, playerRating, True if player.id == self.potm.id else False)
+            elif pitch == "End":
+                self.homeEndLineupPitch.addRating(player.position, playerRating, True if player.id == self.potm.id else False)
+            else:
+                self.homeStartLineupPitch.addRating(player.position, playerRating, True if player.id == self.potm.id else False)
+                self.homeEndLineupPitch.addRating(player.position, playerRating, True if player.id == self.potm.id else False)
+
         for player in self.awayLineup:
             playerData = Players.get_player_by_id(player.player_id)
 
@@ -686,12 +697,12 @@ class MatchProfile(ctk.CTkFrame):
             subbed_off = has_event(player.player_id, "sub_off", self.awayEvents)
             red_carded = has_event(player.player_id, "red_card", self.awayEvents)
             yellow_carded = has_event(player.player_id, "yellow_card", self.awayEvents)
+            injured = has_event(player.player_id, "injury", self.awayEvents)
 
             numGoals = len([event for event in self.awayEvents if event.player_id == player.player_id and (event.event_type == "goal" or event.event_type == "penalty_goal")])
             numOwnGoals = len([event for event in self.awayEvents if event.player_id == player.player_id and event.event_type == "own_goal"])
             numPenaltiesMissed = len([event for event in self.awayEvents if event.player_id == player.player_id and event.event_type == "penalty_miss"])
             numAssists = len([event for event in self.awayEvents if event.player_id == player.player_id and event.event_type == "assist"])
-            numInjuries = len([event for event in self.awayEvents if event.player_id == player.player_id and event.event_type == "injury"])
             numPenaltiesSaved = len([event for event in self.awayEvents if event.player_id == player.player_id and event.event_type == "penalty_saved"])
 
             if subbed_on and subbed_off:
@@ -714,57 +725,55 @@ class MatchProfile(ctk.CTkFrame):
             # Add events icons and ratings
             if subbed_off:
                 src = Image.open("Images/subbed_off_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
                 self.awayStartLineupPitch.addIcon("Sub", img, player.position, 1)
             elif subbed_on:
                 src = Image.open("Images/subbed_on_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
                 self.awayEndLineupPitch.addIcon("Sub", img, player.position, 1)
             
             if yellow_carded and red_carded:
                 src = Image.open("Images/yellowCard_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 src = Image.open("Images/redCard_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img2 = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
                     self.awayStartLineupPitch.addIcon("Cards", img, player.position, 1)
+                    self.awayStartLineupPitch.addIcon("Cards", img2, player.position, 2)
                 elif pitch == "End":
-                    self.awayEndLineupPitch.addIcon("Cards", img, player.position, 2)
-                else:
-                    self.awayStartLineupPitch.addIcon("Cards", img, player.position, 1)
+                    self.awayEndLineupPitch.addIcon("Cards", img, player.position, 1)
                     self.awayEndLineupPitch.addIcon("Cards", img2, player.position, 2)
             elif yellow_carded:
                 src = Image.open("Images/yellowCard_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
                     self.awayStartLineupPitch.addIcon("Cards", img, player.position, 1)
                 elif pitch == "End":
-                    self.awayEndLineupPitch.addIcon("Cards", img, player.position, 2)
+                    self.awayEndLineupPitch.addIcon("Cards", img, player.position, 1)
                 else:
                     self.awayStartLineupPitch.addIcon("Cards", img, player.position, 1)  
+                    self.awayEndLineupPitch.addIcon("Cards", img, player.position, 1)
             elif red_carded:
                 src = Image.open("Images/redCard_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
                     self.awayStartLineupPitch.addIcon("Cards", img, player.position, 1)
                 elif pitch == "End":
-                    self.awayEndLineupPitch.addIcon("Cards", img, player.position, 2)
-                else:
-                    self.awayStartLineupPitch.addIcon("Cards", img, player.position, 1)
+                    self.awayEndLineupPitch.addIcon("Cards", img, player.position, 1)
 
             for i in range(numGoals):
                 src = Image.open("Images/goal_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
@@ -778,7 +787,7 @@ class MatchProfile(ctk.CTkFrame):
             count = numGoals
             for i in range(count, numOwnGoals + count):
                 src = Image.open("Images/ownGoal_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
@@ -791,8 +800,8 @@ class MatchProfile(ctk.CTkFrame):
 
             count = numGoals + numOwnGoals
             for i in range(count, count + numPenaltiesSaved):
-                src = Image.open("Images/missed_penalty_wb.png")
-                src.thumbnail((10, 10))
+                src = Image.open("Images/saved_penalty_wb.png")
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
@@ -804,8 +813,8 @@ class MatchProfile(ctk.CTkFrame):
                     self.awayEndLineupPitch.addIcon("Goals", img, player.position, i + 1)
 
             for i in range(numPenaltiesMissed):
-                src = Image.open("Images/penalty_miss_wb.png")
-                src.thumbnail((10, 10))
+                src = Image.open("Images/missed_penalty_wb.png")
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
@@ -818,7 +827,7 @@ class MatchProfile(ctk.CTkFrame):
 
             for i in range(numAssists):
                 src = Image.open("Images/assist_wb.png")
-                src.thumbnail((10, 10))
+                src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
@@ -828,6 +837,15 @@ class MatchProfile(ctk.CTkFrame):
                 else:
                     self.awayStartLineupPitch.addIcon("Assists", img, player.position, i + 1)
                     self.awayEndLineupPitch.addIcon("Assists", img, player.position, i + 1)
+
+            playerRating = player.rating
+            if pitch == "Start":
+                self.awayStartLineupPitch.addRating(player.position, playerRating, True if player.id == self.potm.id else False)
+            elif pitch == "End":
+                self.awayEndLineupPitch.addRating(player.position, playerRating, True if player.id == self.potm.id else False)
+            else:
+                self.awayStartLineupPitch.addRating(player.position, playerRating, True if player.id == self.potm.id else False)
+                self.awayEndLineupPitch.addRating(player.position, playerRating, True if player.id == self.potm.id else False)
 
     def additionalInfo(self):
         pass

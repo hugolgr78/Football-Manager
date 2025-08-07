@@ -23,6 +23,7 @@ MORALE_RED = "#c90d11"
 INJURY_RED = "#ef4e42"
 
 APP_BLUE = "#443de1"
+POTM_BLUE = "#1e90ff"
 
 APP_FONT = "Arial"
 APP_FONT_BOLD = "Arial Bold"

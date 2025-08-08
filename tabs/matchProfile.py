@@ -6,6 +6,7 @@ from PIL import Image, ImageTk
 from utils.util_functions import *
 from utils.frames import FootballPitchMatchDay, TeamLogo
 from data.database import Teams, MatchEvents, TeamLineup
+from utils.refereeProfileLink import RefereeProfileLink
 import io
 import itertools
 
@@ -27,6 +28,7 @@ class MatchProfile(ctk.CTkFrame):
 
         self.matchAddiInfoFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 580, height = 150, corner_radius = 10)
         self.matchAddiInfoFrame.place(relx = 0.995, rely = 0.99, anchor = "se")
+        self.matchAddiInfoFrame.pack_propagate(False)
 
         self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 150, corner_radius = 0, background_corner_colors = [TKINTER_BACKGROUND, TKINTER_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND])
 
@@ -906,4 +908,49 @@ class MatchProfile(ctk.CTkFrame):
             ctk.CTkLabel(self.legendFrame, text = iconName, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = i // 2 + 1, column = i % 2 * 2 + 1, sticky = "w", padx = (8, 0), pady = (0, 2))
 
     def additionalInfo(self):
-        pass
+        frame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
+        frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))
+
+        src = Image.open("Images/calendar.png")
+        src.thumbnail((20, 20))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(frame, text = f"Date, {self.match.time}", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
+
+        frame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
+        frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))
+
+        src = Image.open("Images/Eclipse League.png")
+        src.thumbnail((20, 20))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(frame, text = f"Eclipse League Matchday {self.match.matchday}", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
+
+        frame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
+        frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))
+
+        src = Image.open("Images/stadium.png")
+        src.thumbnail((20, 20))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(frame, text = f"{self.homeTeam.stadium}", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
+
+        frame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
+        frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))
+
+        src = Image.open("Images/user.png")
+        src.thumbnail((20, 20))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(frame, text = f"Attendance", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
+
+        frame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
+        frame.pack(fill = "x", expand = True, padx = (5, 0), pady = 5)
+
+        referee = Referees.get_referee_by_id(self.match.referee_id)
+
+        src = Image.open("Images/whistle.png")
+        src.thumbnail((20, 20))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
+        RefereeProfileLink(frame, referee, f"{referee.first_name} {referee.last_name}", "white", 0.08, 0.5, "w", GREY_BACKGROUND, self.parentTab, 12)

@@ -177,11 +177,11 @@ class MatchFrame(ctk.CTkFrame):
             self.homeLineup = TeamLineup.get_lineup_by_match_and_team(self.match.id, self.homeTeam.id)
             self.awayLineup = TeamLineup.get_lineup_by_match_and_team(self.match.id, self.awayTeam.id)
 
-            if (max(len(self.homeLineup), len(self.awayLineup)) * 15) + (max(len(self.homeEvents), len(self.awayEvents)) * 30) > 320:
-                self.eventsAndLineupsFrame = ctk.CTkScrollableFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 235, height = 330, corner_radius = 10)
+            if (max(len(self.homeLineup), len(self.awayLineup)) * 15) + (max(len(self.homeEvents), len(self.awayEvents)) * 30) > 420:
+                self.eventsAndLineupsFrame = ctk.CTkScrollableFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 235, height = 430, corner_radius = 10)
                 self.eventsAndLineupsFrame.place(relx = 0.5, rely = 0.203, anchor = "n")
             else:
-                self.eventsAndLineupsFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 350, corner_radius = 10)
+                self.eventsAndLineupsFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 450, corner_radius = 10)
                 self.eventsAndLineupsFrame.place(relx = 0.5, rely = 0.203, anchor = "n")
                 self.eventsAndLineupsFrame.pack_propagate(False)
         else:
@@ -189,42 +189,33 @@ class MatchFrame(ctk.CTkFrame):
             self.eventsAndLineupsFrame.place(relx = 0.5, rely = 0.203, anchor = "n")
             self.eventsAndLineupsFrame.pack_propagate(False)
 
-        self.otherInfoFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 100, corner_radius = 10)
-        self.otherInfoFrame.place(relx = 0.5, rely = 0.98, anchor = "s")
-
         if self.played:
             self.matchEvents()
             self.lineups()
 
-        self.otherInfo()
-
     def matchEvents(self):
 
         self.matchEventsFrame = ctk.CTkFrame(self.eventsAndLineupsFrame, fg_color = DARK_GREY, width = 235, height = max(len(self.homeEvents), len(self.awayEvents)) * 30)
-
-        self.matchEventsFrame.grid_columnconfigure((0, 2, 3, 5), weight = 1)
-        self.matchEventsFrame.grid_columnconfigure((1, 4), weight = 2)
-        
-        for i in range(max(len(self.homeEvents), len(self.awayEvents))):
-            self.matchEventsFrame.grid_rowconfigure(i, weight = 1)
-
         self.matchEventsFrame.pack(fill = "both", pady = 5)
-        self.matchEventsFrame.grid_propagate(False)
 
-        for i, event in enumerate(self.homeEvents):
+        self.homeEventsFrame = ctk.CTkFrame(self.matchEventsFrame, fg_color = DARK_GREY, width = 120, height = len(self.homeEvents) * 30)
+        self.homeEventsFrame.place(relx = 0, rely = 0, anchor = "nw")
+        self.homeEventsFrame.pack_propagate(False)
 
-            self.addEvent(event, True, i)
+        self.awayEventsFrame = ctk.CTkFrame(self.matchEventsFrame, fg_color = DARK_GREY, width = 120, height = len(self.awayEvents) * 30)
+        self.awayEventsFrame.place(relx = 1, rely = 0, anchor = "ne")
+        self.awayEventsFrame.pack_propagate(False)
 
-        for i, event in enumerate(self.awayEvents):
+        for event in self.homeEvents:
+            self.addEvent(event, True, self.homeEventsFrame)
 
-            self.addEvent(event, False, i)
+        for event in self.awayEvents:
+            self.addEvent(event, False, self.awayEventsFrame)
 
-        if len(self.awayEvents) == 0:
-            ctk.CTkLabel(self.matchEventsFrame, text = "Hello There!", fg_color = DARK_GREY, font = (APP_FONT, 10), text_color = DARK_GREY).grid(row = 0, column = 4, sticky = "e")
-        elif len(self.homeEvents) == 0:
-            ctk.CTkLabel(self.matchEventsFrame, text = "General Kenobi!", fg_color = DARK_GREY, font = (APP_FONT, 10), text_color = DARK_GREY).grid(row = 0, column = 1, sticky = "w")
+    def addEvent(self, event, home, parent):
+        frame = ctk.CTkFrame(parent, fg_color = DARK_GREY, height = 30)
+        frame.pack(fill = "x", expand = True)
 
-    def addEvent(self, event, home, i):
         player = Players.get_player_by_id(event.player_id)
 
         if "+" in event.time:
@@ -233,11 +224,11 @@ class MatchFrame(ctk.CTkFrame):
             font = 10
 
         if home:
-            ctk.CTkLabel(self.matchEventsFrame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, font)).grid(row = i, column = 0, sticky = "w", padx = 5)
-            ctk.CTkLabel(self.matchEventsFrame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 1, sticky = "w")
+            ctk.CTkLabel(frame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, font)).place(relx = 0.1, rely = 0.5, anchor = "w")
+            ctk.CTkLabel(frame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).place(relx = 0.25, rely = 0.5, anchor = "w")
         else:
-            ctk.CTkLabel(self.matchEventsFrame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 4, sticky = "e")
-            ctk.CTkLabel(self.matchEventsFrame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, font)).grid(row = i, column = 5, sticky = "e", padx = 5)
+            ctk.CTkLabel(frame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).place(relx = 0.75, rely = 0.5, anchor = "e")
+            ctk.CTkLabel(frame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, font)).place(relx = 0.9, rely = 0.5, anchor = "e")
 
         if event.event_type == "goal":
             src = Image.open("Images/goal.png")
@@ -256,9 +247,9 @@ class MatchFrame(ctk.CTkFrame):
         ctk_image = ctk.CTkImage(src, None, (src.width, src.height))
 
         if home:
-            ctk.CTkLabel(self.matchEventsFrame, image = ctk_image, text = "", fg_color = DARK_GREY).grid(row = i, column = 2, sticky = "w")
+            ctk.CTkLabel(frame, image = ctk_image, text = "", fg_color = DARK_GREY).place(relx = 0.95, rely = 0.5, anchor = "e")
         else:
-            ctk.CTkLabel(self.matchEventsFrame, image = ctk_image, text = "", fg_color = DARK_GREY).grid(row = i, column = 3, sticky = "e")
+            ctk.CTkLabel(frame, image = ctk_image, text = "", fg_color = DARK_GREY).place(relx = 0.05, rely = 0.5, anchor = "w")
 
     def lineups(self):
         self.lineupFrame = ctk.CTkFrame(self.eventsAndLineupsFrame, fg_color = DARK_GREY, width = 235, height = max(len(self.homeLineup), len(self.awayLineup)) * 15)
@@ -290,23 +281,6 @@ class MatchFrame(ctk.CTkFrame):
 
             ctk.CTkLabel(self.lineupFrame, text = rating, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 2, sticky = "w", padx = (10, 5))
             ctk.CTkLabel(self.lineupFrame, text = f"{player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 3, sticky = "w")
-
-    def otherInfo(self):
-        self.matchReferee = Referees.get_referee_by_id(self.match.referee_id)
-
-        RefereeProfileLabel(self.otherInfoFrame, self.matchReferee, f"{self.matchReferee.first_name} {self.matchReferee.last_name}", "Referee: ", "", 260, 30, self.parentTab, "white", DARK_GREY, 15).place(relx = 0.03, rely = 0.13, anchor = "w")
-        
-        ctk.CTkLabel(self.otherInfoFrame, text = f"Stadium: {self.homeTeam.stadium}", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.38, anchor = "w")
-        ctk.CTkLabel(self.otherInfoFrame, text = f"Time: {self.match.time}", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.62, anchor = "w")
-        
-        if self.played:
-            playerOTM = TeamLineup.get_player_OTM(self.match.id)
-            player = Players.get_player_by_id(playerOTM.player_id)
-
-            ctk.CTkLabel(self.otherInfoFrame, text = f"PoTM:", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
-            PlayerProfileLink(self.otherInfoFrame, player, f"{player.first_name} {player.last_name}", "white", 0.225, 0.88, "w", DARK_GREY, self.parentTab, fontSize = 15)
-        else:
-            ctk.CTkLabel(self.otherInfoFrame, text = "PoTM: N/A", fg_color = DARK_GREY, text_color = "white", font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
 
 class MatchdayFrame(ctk.CTkFrame):
     def __init__(self, parent, matchday, matchdayNum, currentMatchday, parentFrame, parentTab, width, heigth, fgColor, relx, rely, anchor):

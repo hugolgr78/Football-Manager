@@ -6,6 +6,7 @@ from PIL import Image
 import io
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
+from utils.matchProfileLink import MatchProfileLink
 
 class RefereeProfile(ctk.CTkFrame):
     def __init__(self, parent, referee, changeBackFunction = None):
@@ -152,8 +153,10 @@ class Profile(ctk.CTkFrame):
                 awayLogo = TeamLogo(matchFrame, awaySrc, awayTeam, GREY_BACKGROUND, 0.6, 0.5, "center", self.parentTab)
                 ctk.CTkLabel(matchFrame, text = awayTeam.name, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.65, rely = 0.5, anchor = "w")
 
-                text = f"{match.score_home} - {match.score_away}"
-                ctk.CTkLabel(matchFrame, text = text, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
+                MatchProfileLink(matchFrame, match, f"{match.score_home} - {match.score_away}", "white", 0.5, 0.5, "center", GREY_BACKGROUND, self.parentTab, 15)
+
+                # text = f"{match.score_home} - {match.score_away}"
+                # ctk.CTkLabel(matchFrame, text = text, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
 
                 yellowCards = MatchEvents.get_event_by_type_and_match("yellow_card", match.id)
                 redCards = MatchEvents.get_event_by_type_and_match("red_card", match.id)

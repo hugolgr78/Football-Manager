@@ -993,11 +993,11 @@ class MatchdayPreview():
                     subbed_on = True
 
             if not subbed_on:
-                if player.position in DEFENSIVE_POSITIONS:
+                if player.start_position in DEFENSIVE_POSITIONS:
                     position_counts["defenders"] += 1
-                elif player.position in MIDFIELD_POSITIONS:
+                elif player.start_position in MIDFIELD_POSITIONS:
                     position_counts["midfielders"] += 1
-                elif player.position in ATTACKING_POSITIONS:
+                elif player.start_position in ATTACKING_POSITIONS:
                     position_counts["attackers"] += 1
 
         return position_counts['defenders'], position_counts['midfielders'], position_counts['attackers']

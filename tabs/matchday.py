@@ -1478,7 +1478,7 @@ class MatchDay(ctk.CTkFrame):
         self.matchDataFrame.update_idletasks()
         self.matchDataFrame._parent_canvas.yview_moveto(1)
 
-        if event["type"] != "Injury" and event["type"] != "red_card":
+        if event["type"] != "injury" and event["type"] != "red_card":
 
             if event["type"] == "own_goal":
                 pitch = self.awayLineupPitch if home else self.homeLineupPitch

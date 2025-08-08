@@ -381,7 +381,7 @@ EVENTS_TO_ICONS = {
     "assist": "Assists",
     "yellow_card": "Cards",
     "red_card": "Cards",
-    "penalty_missed": "Missed Pens"
+    "penalty_miss": "Missed Pens"
 }
 
 goal_group = ["goal", "penalty_goal", "own_goal", "penalty_saved"]

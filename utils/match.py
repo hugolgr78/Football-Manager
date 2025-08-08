@@ -129,9 +129,11 @@ class Match():
         if home:
             self.homeCurrentLineup = lineup
             self.homeCurrentSubs = substitutes
+            self.homeStartLineup = lineup.copy()
         else:
             self.awayCurrentLineup = lineup
             self.awayCurrentSubs = substitutes
+            self.awayStartLineup = lineup.copy()
 
     def choosePlayers(self, position_names, players, lineup, teamID):
 
@@ -175,7 +177,7 @@ class Match():
 
         if youthPlayers:
             for player in youthPlayers:
-                if lineup:
+                if lineup is not None:
                     if POSITION_CODES[position] in player.specific_positions and player not in lineup.values():
                         lineup[position] = player.id
                         return
@@ -496,7 +498,8 @@ class Match():
                             teamMatch.awayLineupPitch.removePlayer(playerPosition)
 
         elif event["type"] == "red_card":
-            redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
+            # redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
+            redCardPosition = "goalkeeper"
             players = [player.id for player in players_dict.values() if player.position == redCardPosition]
 
             while len(players) == 0:
@@ -519,6 +522,7 @@ class Match():
 
             if playerPosition == "Goalkeeper" and not managing_team:
 
+                # Find out if the team can make a substitution
                 subPossible = False
                 if subsCount == MAX_SUBS:
                     for event_time, event_data in events.items():
@@ -526,42 +530,65 @@ class Match():
                             subPossible = True
                             events.pop(event_time)
                             break
-
                 else:
                     subPossible = True
 
                 if not subPossible:
-                    return
+                    players = [player.id for player in players_dict.values() if player.position == "forward"]
 
-                minute = time.split(":")[0]
-                newTime = str(int(minute) + 1) + ":" + time.split(":")[1]
+                    if len(players) == 0:
+                        newKeeper = random.choices(list(lineup.values()), k = 1)[0]
+                    else:
+                        newKeeper = random.choices(list(players), k = 1)[0]
+
+                    newKeeperPosition = list(lineup.keys())[list(lineup.values()).index(newKeeper)]
+                    lineup.pop(newKeeperPosition)
+                    lineup["Goalkeeper"] = newKeeper
+
+                    if teamMatch:
+                        if home:
+                            teamMatch.homeLineupPitch.removePlayer(newKeeperPosition)
+                            teamMatch.homeLineupPitch.addPlayer("Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
+                        else:
+                            teamMatch.awayLineupPitch.removePlayer(newKeeperPosition)
+                            teamMatch.awayLineupPitch.addPlayer("Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
+
+                    return event
+
+                # Create the substitution event
+                minute = int(time.split(":")[0])
+                seconds = int(time.split(":")[1])
+                newSeconds = seconds + 10
+
+                if newSeconds >= 60:
+                    newSeconds -= 60
+                    minute = minute + 1
+
+                newTime = str(minute) + ":" + str(newSeconds)
                 self.checkSubsitutionTime(newTime, events)
-
-                minute = time.split(":")[0]
-                seconds = time.split(":")[1]
-                eventTime = str(int(minute) + 1) + ":" + seconds
 
                 extra = False
                 if self.halfTime or self.fullTime:
                     extra = True
 
-                events[eventTime] = {
+                # Take a random forward off
+                players = [player.id for player in players_dict.values() if player.position == "forward"]
+
+                if len(players) == 0:
+                    playerOffID = random.choices(list(lineup.values()), k = 1)[0]
+                else:
+                    playerOffID = random.choices(list(players), k = 1)[0]
+
+                playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
+
+                events[newTime] = {
                     "type": "substitution",
                     "player": None,
-                    "player_off": None,
+                    "player_off": playerOffID,
                     "player_on": None,
                     "injury": False,
                     "extra": extra
                 }
-
-                playerOffID = random.choices(list(lineup.values()), k = 1)[0]
-                playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
-
-                playerPositionOff = list(lineup.keys())[list(lineup.values()).index(playerOffID)]
-                lineup.pop(playerPositionOff)
-                finalLineup.append((playerPositionOff, playerOffID))
-
-                self.findSubstitute(events[eventTime], playerOffID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
 
         elif event["type"] == "injury":
             injuredPlayerID = random.choices(list(lineup.values()), k = 1)[0]
@@ -587,10 +614,16 @@ class Match():
                         self.findSubstitute(event_data, injuredPlayerID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
 
         elif event["type"] == "substitution" and not event["injury"] and not managing_team:
-            players = [player.id for player in players_dict.values() if player.position != "goalkeeper"]
-            playerOffID = random.choices(list(players), k = 1)[0]
 
-            playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
+            redCardKeeper = True
+            if not event["player_off"]:
+                redCardKeeper = False
+                players = [player.id for player in players_dict.values() if player.position != "goalkeeper"]
+                playerOffID = random.choices(list(players), k = 1)[0]
+                playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
+            else:
+                playerOffID = event["player_off"]
+
             playerPosition = list(lineup.keys())[list(lineup.values()).index(playerOffID)]
             lineup.pop(playerPosition)
             finalLineup.append((playerPosition, playerOffID))
@@ -601,6 +634,7 @@ class Match():
                 else:
                     teamMatch.awayLineupPitch.removePlayer(playerPosition)
 
+            playerPosition = "Goalkeeper" if redCardKeeper else playerPosition
             self.findSubstitute(event, playerOffID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
         
         if teamMatch:
@@ -624,7 +658,7 @@ class Match():
 
                     available_players = [player.id for player in players_dict.values() if player.position != "goalkeeper" and player.id not in checked_players]
                     if not available_players:
-                        return None  # No more players to check
+                        return random.choices(list(lineup.values()), k = 1)[0]  # No available players, return a random player
                     
                     new_player = random.choices(available_players, k = 1)[0]
                     return self.checkPlayerOff(new_player, processEvents, time, lineup, checked_players)

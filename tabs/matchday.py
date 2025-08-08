@@ -117,9 +117,11 @@ class MatchDay(ctk.CTkFrame):
                     self.home = False
                     self.matchFrame.matchInstance.awayCurrentLineup = self.teamLineup
                     self.matchFrame.matchInstance.awayCurrentSubs = self.teamSubstitutes
+                    self.matchFrame.matchInstance.awayStartLineup = self.teamLineup.copy()
                 else:
                     self.matchFrame.matchInstance.homeCurrentLineup = self.teamLineup
                     self.matchFrame.matchInstance.homeCurrentSubs = self.teamSubstitutes
+                    self.matchFrame.matchInstance.homeStartLineup = self.teamLineup.copy()
 
             else:
                 frame = MatchDayMatchFrame(self.otherMatchesFrame, match, TKINTER_BACKGROUND, 60, 300)

@@ -1090,8 +1090,17 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         oval_tag = f"player_{position_tag}_oval"
         text_tag = f"player_{position_tag}_text"
 
+        # Delete the player oval and text
         self.canvas.delete(oval_tag)
         self.canvas.delete(text_tag)
+        
+        # Delete any icons associated with this position
+        self.canvas.delete(position_tag)  # This will delete all items with this tag including icons
+
+        # Clear any stored images for this position
+        for key in list(self.icon_images.keys()):
+            if position_tag in key:
+                del self.icon_images[key]
 
     def placePitch(self):
         super().place(relx = self.relx, rely = self.rely, anchor = self.anchor)

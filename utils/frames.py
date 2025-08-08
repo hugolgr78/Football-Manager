@@ -4,12 +4,14 @@ from data.database import *
 from data.gamesDatabase import *
 from PIL import Image
 import io
+import tkinter.font as tkFont
 from utils.teamLogo import TeamLogo
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from utils.playerProfileLink import PlayerProfileLink
 from utils.match import Match
 from utils.refereeProfileLink import RefereeProfileLabel
+from utils.matchProfileLink import MatchProfileLink
 from utils.util_functions import *
 
 class MatchFrame(ctk.CTkFrame):
@@ -146,12 +148,11 @@ class MatchFrame(ctk.CTkFrame):
         awayLogo = TeamLogo(self.scoreFrame, srcAway, self.awayTeam, DARK_GREY, 0.8, 0.5, "center", self.parentTab)
 
         if self.played:
-            scoreLabel = ctk.CTkLabel(self.scoreFrame, text = f"{self.match.score_home} - {self.match.score_away}", fg_color = DARK_GREY, font = (APP_FONT_BOLD, 30))
+            scoreLabel = MatchProfileLink(self.scoreFrame, self.match, f"{self.match.score_home} - {self.match.score_away}", "white", 0.5, 0.5, "center", DARK_GREY, self.parentTab, 30, APP_FONT_BOLD)
         else:
             scoreLabel = ctk.CTkLabel(self.scoreFrame, text = self.match.time, fg_color = DARK_GREY, font = (APP_FONT, 30))
+            scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
         
-        scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
-
         self.matchdayEvents = MatchEvents.get_events_by_match(self.match.id)
         self.homeEvents = []
         self.awayEvents = []
@@ -176,11 +177,11 @@ class MatchFrame(ctk.CTkFrame):
             self.homeLineup = TeamLineup.get_lineup_by_match_and_team(self.match.id, self.homeTeam.id)
             self.awayLineup = TeamLineup.get_lineup_by_match_and_team(self.match.id, self.awayTeam.id)
 
-            if (max(len(self.homeLineup), len(self.awayLineup)) * 15) + (max(len(self.homeEvents), len(self.awayEvents)) * 30) > 320:
-                self.eventsAndLineupsFrame = ctk.CTkScrollableFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 235, height = 330, corner_radius = 10)
+            if (max(len(self.homeLineup), len(self.awayLineup)) * 15) + (max(len(self.homeEvents), len(self.awayEvents)) * 30) > 420:
+                self.eventsAndLineupsFrame = ctk.CTkScrollableFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 235, height = 430, corner_radius = 10)
                 self.eventsAndLineupsFrame.place(relx = 0.5, rely = 0.203, anchor = "n")
             else:
-                self.eventsAndLineupsFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 350, corner_radius = 10)
+                self.eventsAndLineupsFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 450, corner_radius = 10)
                 self.eventsAndLineupsFrame.place(relx = 0.5, rely = 0.203, anchor = "n")
                 self.eventsAndLineupsFrame.pack_propagate(False)
         else:
@@ -188,42 +189,33 @@ class MatchFrame(ctk.CTkFrame):
             self.eventsAndLineupsFrame.place(relx = 0.5, rely = 0.203, anchor = "n")
             self.eventsAndLineupsFrame.pack_propagate(False)
 
-        self.otherInfoFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 100, corner_radius = 10)
-        self.otherInfoFrame.place(relx = 0.5, rely = 0.98, anchor = "s")
-
         if self.played:
             self.matchEvents()
             self.lineups()
 
-        self.otherInfo()
-
     def matchEvents(self):
 
         self.matchEventsFrame = ctk.CTkFrame(self.eventsAndLineupsFrame, fg_color = DARK_GREY, width = 235, height = max(len(self.homeEvents), len(self.awayEvents)) * 30)
-
-        self.matchEventsFrame.grid_columnconfigure((0, 2, 3, 5), weight = 1)
-        self.matchEventsFrame.grid_columnconfigure((1, 4), weight = 2)
-        
-        for i in range(max(len(self.homeEvents), len(self.awayEvents))):
-            self.matchEventsFrame.grid_rowconfigure(i, weight = 1)
-
         self.matchEventsFrame.pack(fill = "both", pady = 5)
-        self.matchEventsFrame.grid_propagate(False)
 
-        for i, event in enumerate(self.homeEvents):
+        self.homeEventsFrame = ctk.CTkFrame(self.matchEventsFrame, fg_color = DARK_GREY, width = 120, height = len(self.homeEvents) * 30)
+        self.homeEventsFrame.place(relx = 0, rely = 0, anchor = "nw")
+        self.homeEventsFrame.pack_propagate(False)
 
-            self.addEvent(event, True, i)
+        self.awayEventsFrame = ctk.CTkFrame(self.matchEventsFrame, fg_color = DARK_GREY, width = 120, height = len(self.awayEvents) * 30)
+        self.awayEventsFrame.place(relx = 1, rely = 0, anchor = "ne")
+        self.awayEventsFrame.pack_propagate(False)
 
-        for i, event in enumerate(self.awayEvents):
+        for event in self.homeEvents:
+            self.addEvent(event, True, self.homeEventsFrame)
 
-            self.addEvent(event, False, i)
+        for event in self.awayEvents:
+            self.addEvent(event, False, self.awayEventsFrame)
 
-        if len(self.awayEvents) == 0:
-            ctk.CTkLabel(self.matchEventsFrame, text = "Hello There!", fg_color = DARK_GREY, font = (APP_FONT, 10), text_color = DARK_GREY).grid(row = 0, column = 4, sticky = "e")
-        elif len(self.homeEvents) == 0:
-            ctk.CTkLabel(self.matchEventsFrame, text = "General Kenobi!", fg_color = DARK_GREY, font = (APP_FONT, 10), text_color = DARK_GREY).grid(row = 0, column = 1, sticky = "w")
+    def addEvent(self, event, home, parent):
+        frame = ctk.CTkFrame(parent, fg_color = DARK_GREY, height = 30)
+        frame.pack(fill = "x", expand = True)
 
-    def addEvent(self, event, home, i):
         player = Players.get_player_by_id(event.player_id)
 
         if "+" in event.time:
@@ -232,11 +224,11 @@ class MatchFrame(ctk.CTkFrame):
             font = 10
 
         if home:
-            ctk.CTkLabel(self.matchEventsFrame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, font)).grid(row = i, column = 0, sticky = "w", padx = 5)
-            ctk.CTkLabel(self.matchEventsFrame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 1, sticky = "w")
+            ctk.CTkLabel(frame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, font)).place(relx = 0.1, rely = 0.5, anchor = "w")
+            ctk.CTkLabel(frame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).place(relx = 0.25, rely = 0.5, anchor = "w")
         else:
-            ctk.CTkLabel(self.matchEventsFrame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 4, sticky = "e")
-            ctk.CTkLabel(self.matchEventsFrame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, font)).grid(row = i, column = 5, sticky = "e", padx = 5)
+            ctk.CTkLabel(frame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).place(relx = 0.75, rely = 0.5, anchor = "e")
+            ctk.CTkLabel(frame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, font)).place(relx = 0.9, rely = 0.5, anchor = "e")
 
         if event.event_type == "goal":
             src = Image.open("Images/goal.png")
@@ -255,9 +247,9 @@ class MatchFrame(ctk.CTkFrame):
         ctk_image = ctk.CTkImage(src, None, (src.width, src.height))
 
         if home:
-            ctk.CTkLabel(self.matchEventsFrame, image = ctk_image, text = "", fg_color = DARK_GREY).grid(row = i, column = 2, sticky = "w")
+            ctk.CTkLabel(frame, image = ctk_image, text = "", fg_color = DARK_GREY).place(relx = 0.95, rely = 0.5, anchor = "e")
         else:
-            ctk.CTkLabel(self.matchEventsFrame, image = ctk_image, text = "", fg_color = DARK_GREY).grid(row = i, column = 3, sticky = "e")
+            ctk.CTkLabel(frame, image = ctk_image, text = "", fg_color = DARK_GREY).place(relx = 0.05, rely = 0.5, anchor = "w")
 
     def lineups(self):
         self.lineupFrame = ctk.CTkFrame(self.eventsAndLineupsFrame, fg_color = DARK_GREY, width = 235, height = max(len(self.homeLineup), len(self.awayLineup)) * 15)
@@ -274,6 +266,9 @@ class MatchFrame(ctk.CTkFrame):
             player = Players.get_player_by_id(lineupEntry.player_id)
             rating = lineupEntry.rating
 
+            if "." not in str(rating):
+                rating = f"{rating}.0"
+
             ctk.CTkLabel(self.lineupFrame, text = f"{player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 0, sticky = "e")
             ctk.CTkLabel(self.lineupFrame, text = rating, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 1, sticky = "e", padx = (5, 10))
 
@@ -281,25 +276,11 @@ class MatchFrame(ctk.CTkFrame):
             player = Players.get_player_by_id(lineupEntry.player_id)
             rating = lineupEntry.rating
 
+            if "." not in str(rating):
+                rating = f"{rating}.0"
+
             ctk.CTkLabel(self.lineupFrame, text = rating, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 2, sticky = "w", padx = (10, 5))
             ctk.CTkLabel(self.lineupFrame, text = f"{player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 3, sticky = "w")
-
-    def otherInfo(self):
-        self.matchReferee = Referees.get_referee_by_id(self.match.referee_id)
-
-        RefereeProfileLabel(self.otherInfoFrame, self.matchReferee, f"{self.matchReferee.first_name} {self.matchReferee.last_name}", "Referee: ", "", 260, 30, self.parentTab, "white", DARK_GREY, 15).place(relx = 0.03, rely = 0.13, anchor = "w")
-        
-        ctk.CTkLabel(self.otherInfoFrame, text = f"Stadium: {self.homeTeam.stadium}", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.38, anchor = "w")
-        ctk.CTkLabel(self.otherInfoFrame, text = f"Time: {self.match.time}", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.62, anchor = "w")
-        
-        if self.played:
-            playerOTM = TeamLineup.get_player_OTM(self.match.id)
-            player = Players.get_player_by_id(playerOTM.player_id)
-
-            ctk.CTkLabel(self.otherInfoFrame, text = f"PoTM:", text_color = "white", fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
-            PlayerProfileLink(self.otherInfoFrame, player, f"{player.first_name} {player.last_name}", "white", 0.225, 0.88, "w", DARK_GREY, self.parentTab, fontSize = 15)
-        else:
-            ctk.CTkLabel(self.otherInfoFrame, text = "PoTM: N/A", fg_color = DARK_GREY, text_color = "white", font = (APP_FONT, 15)).place(relx = 0.03, rely = 0.88, anchor = "w")
 
 class MatchdayFrame(ctk.CTkFrame):
     def __init__(self, parent, matchday, matchdayNum, currentMatchday, parentFrame, parentTab, width, heigth, fgColor, relx, rely, anchor):
@@ -910,30 +891,173 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         super().__init__(parent, width, height, relx, rely, anchor, fgColor, pitchColor)
         super().draw_pitch()
         
-        self.player_radius = 12
+        self.player_radius = 15
+        self.relx = relx
+        self.rely = rely
+        self.anchor = anchor
+        self.icon_images = {}
 
         self.positions = {
-            "Goalkeeper": (0.5, 0.9),  # Goalkeeper
-            "Left Back": (0.15, 0.75),  # Left Back
-            "Right Back": (0.85, 0.75),  # Right Back
+            "Goalkeeper": (0.5, 0.94),  # Goalkeeper
+            "Left Back": (0.12, 0.75),  # Left Back
+            "Right Back": (0.88, 0.75),  # Right Back
             "Center Back Right": (0.675, 0.75),  # Center Back Right
             "Center Back": (0.5, 0.75),  # Center Back
             "Center Back Left": (0.325, 0.75),  # Center Back Left
             "Defensive Midfielder": (0.5, 0.6),  # Defensive Midfielder
             "Defensive Midfielder Right": (0.65, 0.6),  # Defensive Midfielder Right
             "Defensive Midfielder Left": (0.35, 0.6),  # Defensive Midfielder Left
-            "Left Midfielder": (0.15, 0.45),  # Left Midfielder
-            "Central Midfielder Right": (0.65, 0.45),  # Center Midfielder Right
-            "Central Midfielder": (0.5, 0.45),  # Center Midfielder
-            "Central Midfielder Left": (0.35, 0.45),  # Center Midfielder Left
-            "Right Midfielder": (0.85, 0.45),  # Right Midfielder
-            "Left Winger": (0.15, 0.3),  # Left Winger
-            "Right Winger": (0.85, 0.3),  # Right Winger
-            "Attacking Midfielder": (0.5, 0.3),  # Attacking Midfielder
+            "Left Midfielder": (0.12, 0.4),  # Left Midfielder
+            "Central Midfielder Right": (0.65, 0.4),  # Center Midfielder Right
+            "Central Midfielder": (0.5, 0.4),  # Center Midfielder
+            "Central Midfielder Left": (0.35, 0.4),  # Center Midfielder Left
+            "Right Midfielder": (0.88, 0.4),  # Right Midfielder
+            "Left Winger": (0.12, 0.25),  # Left Winger
+            "Right Winger": (0.88, 0.25),  # Right Winger
+            "Attacking Midfielder": (0.5, 0.25),  # Attacking Midfielder
             "Striker Left": (0.3, 0.15),  # Striker Left
             "Striker Right": (0.7, 0.15),  # Striker Right
-            "Center Forward": (0.5, 0.1),  # Center Forward
+            "Center Forward": (0.5, 0.05),  # Center Forward
         }
+
+        self.iconPositions = {
+            "Sub": [(0.1, 0.1), None],
+            "Goals": [(0.9, 0.9), True],
+            "Cards": [(0, 0.5), False],
+            "Assists": [(0.1, 0.9), False],
+            "Missed Pens": [(1, 0.5), True],
+        }
+
+    def addIcon(self, icon_type, image, position, num):
+        # Add the icon relative the the position oval (so 0.1, 0.1 is the top left of the oval)
+
+        positions, offsetDirection = self.iconPositions[icon_type]
+        key = f"{icon_type}_{position}_{num}"
+        self.icon_images[key] = image  # Store the image in the dictionary
+        
+        # Apply offset if num > 1
+        if num > 1:
+            if offsetDirection is not None:  # Only apply offset if direction is specified
+                offset = 0.25 * (num - 1)  # Calculate offset based on num
+                if offsetDirection:  # True means positive offset
+                    positions = positions[0] + offset, positions[1]
+                else:  # False means negative offset
+                    positions = positions[0] - offset, positions[1]
+            else:
+                positions = positions[0], positions[1]
+        else:
+            positions = positions[0], positions[1]
+
+        # Use positions from self.positions dictionary (these are relative coordinates)
+        player_relx, player_rely = self.positions[position]
+        
+        # Calculate the center position of the oval
+        oval_center_x = player_relx * self.pitch_width
+        oval_center_y = player_rely * self.pitch_height
+        
+        # Calculate the icon position relative to the oval center
+        # positions[0] and positions[1] are relative offsets from the icon positions
+        icon_x = oval_center_x + (positions[0] - 0.5) * (2 * self.player_radius)
+        icon_y = oval_center_y + (positions[1] - 0.5) * (2 * self.player_radius)
+
+        position_tag = position.replace(" ", "_")
+        self.canvas.create_image(icon_x, icon_y, image = image, tags = (position_tag, "icon"))
+
+    def addRating(self, position, text, potm):
+        # Use positions from self.positions dictionary (these are relative coordinates)
+        player_relx, player_rely = self.positions[position]
+        
+        # Calculate the center position of the oval
+        oval_center_x = player_relx * self.pitch_width
+        oval_center_y = player_rely * self.pitch_height
+        
+        # Calculate the icon position relative to the oval center
+        # positions[0] and positions[1] are relative offsets from the icon positions
+        icon_x = oval_center_x + (0.9 - 0.5) * (2 * self.player_radius)
+        icon_y = oval_center_y + (0.1 - 0.5) * (2 * self.player_radius)
+
+        if text >= 7:
+            oval_color = PIE_GREEN
+        elif text >= 5:
+            oval_color = NEUTRAL_COLOR
+        else:
+            oval_color = PIE_RED
+
+        if potm:
+            oval_color = POTM_BLUE
+
+        # Text has at least 1 dp and max 2 dps
+        formatted_text = text
+        if "." not in str(text):
+            formatted_text = f"{text}.0"
+
+        position_tag = position.replace(" ", "_")
+
+        # === Font settings ===
+        font_name = APP_FONT_BOLD
+        font_size = 9
+        font = tkFont.Font(family = font_name, size = font_size)
+
+        # === Measure text width ===
+        text_width = font.measure(formatted_text)
+        padding_x = 6  # left/right padding
+        padding_y = 2  # top/bottom padding
+
+        rect_width = text_width + 2 * padding_x
+        rect_height = font.metrics("linespace") + 2 * padding_y
+        radius = rect_height // 2 + 10
+
+        x0 = icon_x - 5
+        y0 = icon_y - rect_height // 2
+        x1 = x0 + rect_width
+        y1 = y0 + rect_height
+
+        # === Draw pill ===
+        create_rounded_rectangle(
+            self.canvas,
+            x0, y0, x1, y1,
+            radius = radius,
+            fill = oval_color,
+            outline = oval_color,
+            tags = (position_tag, "rating_oval")
+        )
+
+        # === Draw left-aligned text ===
+        self.canvas.create_text(
+            x0 + padding_x,
+            icon_y,
+            text = formatted_text,
+            fill = "white",
+            font = (font_name, font_size),
+            anchor = "w",  # west (left-aligned)
+            tags = (position_tag, "rating_text")
+        )
+
+    def addInjuryIcon(self, position, image):
+        # Store the image to prevent garbage collection
+        key = f"injury_{position}"
+        self.icon_images[key] = image
+        
+        text_tag = f"player_{position.replace(' ', '_')}_text"
+        playerName = self.canvas.itemcget(text_tag, "text")
+        self.canvas.delete(text_tag) 
+
+        # Add the text back offset to the right and add the image to the left of the text
+        relx, rely = self.positions[position]
+        text_x = relx * self.pitch_width + 15
+        text_y = rely * self.pitch_height + 25
+
+        self.canvas.create_text(
+            text_x,
+            text_y,
+            text = playerName,
+            fill = "white",
+            font = (APP_FONT, 10),
+            tags = text_tag
+        )
+
+        position_tag = position.replace(" ", "_")
+        self.canvas.create_image(text_x - 30, text_y, image = image, tags = (position_tag, "injury_icon"))
 
     def addPlayer(self, position, playerName):
         relx, rely = self.positions[position]
@@ -954,7 +1078,7 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
 
         self.canvas.create_text(
             relx * self.pitch_width,
-            rely * self.pitch_height + 20,
+            rely * self.pitch_height + 25,
             text = playerName,
             fill = "white",
             font = (APP_FONT, 10),
@@ -966,8 +1090,23 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         oval_tag = f"player_{position_tag}_oval"
         text_tag = f"player_{position_tag}_text"
 
+        # Delete the player oval and text
         self.canvas.delete(oval_tag)
         self.canvas.delete(text_tag)
+        
+        # Delete any icons associated with this position
+        self.canvas.delete(position_tag)  # This will delete all items with this tag including icons
+
+        # Clear any stored images for this position
+        for key in list(self.icon_images.keys()):
+            if position_tag in key:
+                del self.icon_images[key]
+
+    def placePitch(self):
+        super().place(relx = self.relx, rely = self.rely, anchor = self.anchor)
+
+    def removePitch(self):
+        super().place_forget()
 
 class LineupPlayerFrame(ctk.CTkFrame):
     def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions):

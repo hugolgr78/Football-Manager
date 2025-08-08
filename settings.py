@@ -23,6 +23,7 @@ MORALE_RED = "#c90d11"
 INJURY_RED = "#ef4e42"
 
 APP_BLUE = "#443de1"
+POTM_BLUE = "#1e90ff"
 
 APP_FONT = "Arial"
 APP_FONT_BOLD = "Arial Bold"
@@ -370,6 +371,29 @@ PROMPT_REACTIONS = {
 }
 
 SEARCH_LIMIT = 12
+
+EVENTS_TO_ICONS = {
+    "substitution": "Sub",
+    "goal": "Goals",
+    "penalty_goal": "Goals",
+    "own_goal": "Goals",
+    "penalty_saved": "Goals",
+    "assist": "Assists",
+    "yellow_card": "Cards",
+    "red_card": "Cards",
+    "penalty_miss": "Missed Pens"
+}
+
+goal_group = ["goal", "penalty_goal", "own_goal", "penalty_saved"]
+card_group = ["yellow_card", "red_card"]
+
+EVENT_GROUPS = {
+    **{k: goal_group for k in goal_group},
+    **{k: card_group for k in card_group},
+    "assist": ["assist"],
+    "substitution": ["substitution"],
+    "penalty_missed": ["penalty_missed"],
+}
 
 from data.database import StatsManager
 

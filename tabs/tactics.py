@@ -82,7 +82,11 @@ class Tactics(ctk.CTkFrame):
 
         playersCount = 0
         for playerData in self.lineup:
-            position = playerData.position
+            position = playerData.start_position
+
+            if not position:
+                continue
+
             positionCode = POSITION_CODES[position]
             player = Players.get_player_by_id(playerData.player_id)
 
@@ -93,16 +97,7 @@ class Tactics(ctk.CTkFrame):
             # If the player finished the match out of position, skip them
             if positionCode not in player.specific_positions.split(","):
                 continue
-
-            events = MatchEvents.get_events_by_match_and_player(self.lastTeamMatch.id, player.id)
-            
-            # Remove any players that were subbed on
-            if events:
-                subOnEvents = [event for event in events if event.event_type == "sub_on" and event.player_id == player.id]
-
-                if subOnEvents:
-                    continue
-            
+        
             # Remove any players that are banned
             if PlayerBans.check_bans_for_player(player.id, self.league.id):
                 continue

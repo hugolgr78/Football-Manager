@@ -372,6 +372,29 @@ PROMPT_REACTIONS = {
 
 SEARCH_LIMIT = 12
 
+EVENTS_TO_ICONS = {
+    "substitution": "Sub",
+    "goal": "Goals",
+    "penalty_goal": "Goals",
+    "own_goal": "Goals",
+    "penalty_saved": "Goals",
+    "assist": "Assists",
+    "yellow_card": "Cards",
+    "red_card": "Cards",
+    "penalty_missed": "Missed Pens"
+}
+
+goal_group = ["goal", "penalty_goal", "own_goal", "penalty_saved"]
+card_group = ["yellow_card", "red_card"]
+
+EVENT_GROUPS = {
+    **{k: goal_group for k in goal_group},
+    **{k: card_group for k in card_group},
+    "assist": ["assist"],
+    "substitution": ["substitution"],
+    "penalty_missed": ["penalty_missed"],
+}
+
 from data.database import StatsManager
 
 STAT_FUNCTIONS = {

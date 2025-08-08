@@ -3650,7 +3650,7 @@ def searchResults(search, limit = SEARCH_LIMIT):
 
         referee_results = [{
             "type": "referee",
-            "data": r,
+            "data": r, 
             "sort_key": f"{r.first_name or ''} {r.last_name or ''}".strip()
         } for r in query_results['referees']]
 

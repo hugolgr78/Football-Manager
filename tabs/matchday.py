@@ -7,7 +7,7 @@ from utils.shouts import ShoutFrame
 from utils.util_functions import *
 import threading, time
 import concurrent.futures
-from PIL import Image
+from PIL import Image, ImageTk
 import math
 
 class MatchDay(ctk.CTkFrame):
@@ -1430,18 +1430,23 @@ class MatchDay(ctk.CTkFrame):
 
         if event["type"] == "goal" or event["type"] == "penalty_goal":
             src = Image.open("Images/goal.png")
+            srcWB = Image.open("Images/goal_wb.png")
+            srcWB2 = Image.open("Images/assist_wb.png") if "assister" in event else None
             subText = Players.get_player_by_id(event["assister"]).last_name if "assister" in event else "Penalty"
         elif event["type"] == "own_goal":
             src = Image.open("Images/ownGoal.png")
+            srcWB = Image.open("Images/ownGoal_wb.png")
             subText = "Own Goal"
         elif event["type"] == "yellow_card":
             src = Image.open("Images/yellowCard.png")
+            srcWB = Image.open("Images/yellowCard_wb.png")
             subText = "Yellow Card"
         elif event["type"] == "red_card":
             src = Image.open("Images/redCard.png")
             subText = "Red Card"
         elif event["type"] == "penalty_miss":
             src = Image.open("Images/missed_penalty.png")
+            srcWB = Image.open("Images/missed_penalty_wb.png")
             subText = "Missed Penalty"
         elif event["type"] == "injury":
             src = Image.open("Images/injury.png")
@@ -1451,6 +1456,8 @@ class MatchDay(ctk.CTkFrame):
                 src = Image.open("Images/substitution_home.png")
             else:
                 src = Image.open("Images/substitution_away.png")
+
+            srcWB = Image.open("Images/subbed_on_wb.png")
 
         src.thumbnail((40, 40))
         image = ctk.CTkImage(src, None, (src.width, src.height))
@@ -1468,6 +1475,43 @@ class MatchDay(ctk.CTkFrame):
 
         self.matchDataFrame.update_idletasks()
         self.matchDataFrame._parent_canvas.yview_moveto(1)
+
+        if event["type"] != "Injury" and event["type"] != "red_card":
+
+            if event["type"] == "own_goal":
+                pitch = self.awayLineupPitch if home else self.homeLineupPitch
+                lineup = self.matchFrame.matchInstance.awayCurrentLineup if home else self.matchFrame.matchInstance.homeCurrentLineup
+            else:
+                pitch = self.homeLineupPitch if home else self.awayLineupPitch
+                lineup = self.matchFrame.matchInstance.homeCurrentLineup if home else self.matchFrame.matchInstance.awayCurrentLineup
+            
+            events = self.matchFrame.matchInstance.homeProcessedEvents if home else self.matchFrame.matchInstance.awayProcessedEvents
+            playerID = event["player"] if event["type"] != "substitution" else event["player_on"]
+
+            # Find the player (value) position (key) from the lineup
+            position = list(lineup.keys())[list(lineup.values()).index(playerID)]
+
+            srcWB.thumbnail((12, 12))
+            image = ImageTk.PhotoImage(srcWB)
+            num = self.countPlayerEvents(playerID, events, event["type"])
+            pitch.addIcon(EVENTS_TO_ICONS[event["type"]], image, position, num)
+
+            if event["type"] == "goal":
+                playerID = event["assister"]
+                position = list(lineup.keys())[list(lineup.values()).index(playerID)]
+
+                srcWB2.thumbnail((12, 12))
+                image = ImageTk.PhotoImage(srcWB2)
+                num = self.countPlayerEvents(playerID, events, "assister")
+                pitch.addIcon(EVENTS_TO_ICONS["assist"], image, position, num)
+
+    def countPlayerEvents(self, player_id, events, event_type):
+        group = EVENT_GROUPS.get(event_type, [event_type])
+
+        if event_type == "assister":
+            return sum(1 for e in events.values() if e.get("assister") == player_id)
+        else:
+            return sum(1 for e in events.values() if e["player"] == player_id and e["type"] in group)
 
     def endSimulation(self):
 

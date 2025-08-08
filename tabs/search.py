@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from settings import *
-from data.database import searchResults, Teams, LeagueTeams, League, Players, Managers, Referees
+from data.database import Matches, searchResults, Teams, LeagueTeams, League, Players, Managers, Referees
 from utils.util_functions import getSuffix
 
 class Search(ctk.CTkFrame):
@@ -19,6 +19,9 @@ class Search(ctk.CTkFrame):
         self.searchVar.trace_add("write", self.search)  # Detect changes
         self.searchBox = ctk.CTkEntry(self.searchFrame, width = 800, height = 40, border_color = APP_BLUE, border_width = 2, corner_radius = 10, textvariable = self.searchVar)
         self.searchBox.place(relx = 0.11, rely = 0.5, anchor = "w")
+
+        # Put focus on search box
+        self.searchBox.focus()
 
         ctk.CTkLabel(self.searchFrame, text = "Search:", font = (APP_FONT_BOLD, 20), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
         
@@ -107,6 +110,12 @@ class Search(ctk.CTkFrame):
                     ctk.CTkLabel(resultFrame, text = "Referee", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
 
                     onClickCommand = self.openRefereeProfile
+                case "match":
+                    ctk.CTkLabel(resultFrame, text = f"{Teams.get_team_by_id(resultData.home_id).name} vs {Teams.get_team_by_id(resultData.away_id).name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = firstDataX, rely = 0.5, anchor = "w")
+                    ctk.CTkLabel(resultFrame, text = f"{resultData.score_home} - {resultData.score_away}", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
+                    ctk.CTkLabel(resultFrame, text = f"Eclipse League Matchday {resultData.matchday}", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = thirdDataX - 0.1, rely = 0.5, anchor = "w")
+
+                    onClickCommand = self.openMatchProfile
 
             resultFrame.bind("<Enter>", lambda e, f = resultFrame: self.onFrameHover(f))
             resultFrame.bind("<Leave>", lambda e, f = resultFrame: self.onFrameLeave(f))
@@ -184,6 +193,14 @@ class Search(ctk.CTkFrame):
 
         referee = Referees.get_referee_by_id(referee_id)
         self.profile = RefereeProfile(self, referee, changeBackFunction = self.changeBack)
+        self.profile.place(x = 0, y = 0, anchor = "nw")
+        self.parent.overlappingProfiles.append(self.profile)
+
+    def openMatchProfile(self, match_id):
+        from tabs.matchProfile import MatchProfile
+
+        match = Matches.get_match_by_id(match_id)
+        self.profile = MatchProfile(self, match, self, changeBackFunction = self.changeBack)
         self.profile.place(x = 0, y = 0, anchor = "nw")
         self.parent.overlappingProfiles.append(self.profile)
 

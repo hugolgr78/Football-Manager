@@ -8,6 +8,7 @@ from utils.leagueProfileLink import LeagueProfileLabel
 from utils.playerProfileLink import *
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
+from utils.matchProfileLink import MatchProfileLink
 from PIL import Image
 import io
 
@@ -546,7 +547,8 @@ class MatchdayReview():
         ctk.CTkLabel(matchFrame, text = awayTeam.name.split()[0], font = (APP_FONT, 13), fg_color = TKINTER_BACKGROUND).place(relx = 0.8, rely = 0.65, anchor = "center")
         ctk.CTkLabel(matchFrame, text = awayTeam.name.split()[1], font = (APP_FONT_BOLD, 18), fg_color = TKINTER_BACKGROUND).place(relx = 0.8, rely = 0.75, anchor = "center")
 
-        ctk.CTkLabel(matchFrame, text = f"{bestMatch.score_home} - {bestMatch.score_away}", font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+        MatchProfileLink(matchFrame, bestMatch, f"{bestMatch.score_home} - {bestMatch.score_away}", "white", 0.5, 0.5, "center", TKINTER_BACKGROUND, self.parent.parentTab, 25, APP_FONT_BOLD)
+        # ctk.CTkLabel(matchFrame, text = f"{bestMatch.score_home} - {bestMatch.score_away}", font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
         playerOTM, _ = self.getPlayerOfTheMatch(bestMatch)
 

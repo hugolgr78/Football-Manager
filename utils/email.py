@@ -8,6 +8,7 @@ from utils.leagueProfileLink import LeagueProfileLabel
 from utils.playerProfileLink import *
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
+from utils.matchProfileLink import MatchProfileLink
 from PIL import Image
 import io
 
@@ -546,7 +547,8 @@ class MatchdayReview():
         ctk.CTkLabel(matchFrame, text = awayTeam.name.split()[0], font = (APP_FONT, 13), fg_color = TKINTER_BACKGROUND).place(relx = 0.8, rely = 0.65, anchor = "center")
         ctk.CTkLabel(matchFrame, text = awayTeam.name.split()[1], font = (APP_FONT_BOLD, 18), fg_color = TKINTER_BACKGROUND).place(relx = 0.8, rely = 0.75, anchor = "center")
 
-        ctk.CTkLabel(matchFrame, text = f"{bestMatch.score_home} - {bestMatch.score_away}", font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+        MatchProfileLink(matchFrame, bestMatch, f"{bestMatch.score_home} - {bestMatch.score_away}", "white", 0.5, 0.5, "center", TKINTER_BACKGROUND, self.parent.parentTab, 25, APP_FONT_BOLD)
+        # ctk.CTkLabel(matchFrame, text = f"{bestMatch.score_home} - {bestMatch.score_away}", font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
         playerOTM, _ = self.getPlayerOfTheMatch(bestMatch)
 
@@ -991,11 +993,11 @@ class MatchdayPreview():
                     subbed_on = True
 
             if not subbed_on:
-                if player.position in DEFENSIVE_POSITIONS:
+                if player.start_position in DEFENSIVE_POSITIONS:
                     position_counts["defenders"] += 1
-                elif player.position in MIDFIELD_POSITIONS:
+                elif player.start_position in MIDFIELD_POSITIONS:
                     position_counts["midfielders"] += 1
-                elif player.position in ATTACKING_POSITIONS:
+                elif player.start_position in ATTACKING_POSITIONS:
                     position_counts["attackers"] += 1
 
         return position_counts['defenders'], position_counts['midfielders'], position_counts['attackers']

@@ -1031,7 +1031,8 @@ class TeamLineup(Base):
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     match_id = Column(String(128), ForeignKey('matches.id'))
     player_id = Column(String(128), ForeignKey('players.id'))
-    position = Column(String(128), nullable = False)
+    start_position = Column(String(128), nullable = False)
+    end_position = Column(String(128), nullable = False)
     rating = Column(Integer, nullable = False, default = 0)
 
     @classmethod
@@ -1042,7 +1043,8 @@ class TeamLineup(Base):
                 new_player = TeamLineup(
                     match_id = match_id,
                     player_id = player.id,
-                    position = position
+                    start_position = position,
+                    end_position = position,
                 )
                 session.add(new_player)
             session.commit()
@@ -1063,8 +1065,9 @@ class TeamLineup(Base):
                     "id": str(uuid.uuid4()),
                     "match_id": lineup[0],
                     "player_id": lineup[1],
-                    "position": lineup[2],
-                    "rating": lineup[3]
+                    "start_position": lineup[2],
+                    "end_position": lineup[3],
+                    "rating": lineup[4]
                 }
                 for lineup in lineups
             ]
@@ -1085,7 +1088,8 @@ class TeamLineup(Base):
             new_player = TeamLineup(
                 match_id = match_id,
                 player_id = player_id,
-                position = position,
+                start_position = position,
+                end_position = position,
                 rating = rating
             )
             session.add(new_player)
@@ -3510,7 +3514,7 @@ def setUpProgressBar(progressB, progressL, progressF, percentageL):
     progressFrame = progressF
     percentageLabel = percentageL
 
-def searchResults(search, limit=SEARCH_LIMIT):
+def searchResults(search, limit = SEARCH_LIMIT):
     session = DatabaseManager().get_session()
 
     try:
@@ -3526,18 +3530,52 @@ def searchResults(search, limit=SEARCH_LIMIT):
                     # If only one term in the search, match either first or last name
                     term = terms[0]
                     return or_(
-                        cls.first_name.ilike(f"{term}%"),
-                        cls.last_name.ilike(f"{term}%")
+                        cls.first_name.ilike(f"%{term}%"),
+                        cls.last_name.ilike(f"%{term}%")
                     )
                 elif len(terms) >= 2:
                     # Otherwise, match both first and last names
                     t1, t2 = terms[0], terms[1]
                     return or_(
-                        and_(cls.first_name.ilike(f"{t1}%"), cls.last_name.ilike(f"{t2}%")),
+                        and_(cls.first_name.ilike(f"%{t1}%"), cls.last_name.ilike(f"%{t2}%")),
                     )
             elif hasattr(cls, 'name'):
                 # For the Leagues and Teams, we can use the name field, and match all terms
                 return and_(*[cls.name.ilike(f"%{term}%") for term in terms])
+            elif cls.__name__.lower() == 'matches':
+                team_ids_list = []
+
+                # Try to match the whole query as one team name first
+                full_query = " ".join(terms)
+                full_match_teams = session.query(Teams).filter(Teams.name.ilike(f"%{full_query}%")).all()
+                if full_match_teams:
+                    team_ids_list.append([t.id for t in full_match_teams])
+
+                # Also match each individual term to teams
+                for term in terms:
+                    teams_found = session.query(Teams).filter(Teams.name.ilike(f"%{term}%")).all()
+                    if teams_found:
+                        team_ids_list.append([t.id for t in teams_found])
+
+                # Remove duplicates
+                team_ids_list = [list(set(ids)) for ids in team_ids_list if ids]
+
+                if not team_ids_list:
+                    return None
+
+                if len(team_ids_list) != 1:
+                    # Multiple possible teams matched
+                    all_filters = []
+                    for i in range(len(team_ids_list)):
+                        for j in range(len(team_ids_list)):
+                            if i != j:
+                                all_filters.append(
+                                    and_(
+                                        cls.home_id.in_(team_ids_list[i]),
+                                        cls.away_id.in_(team_ids_list[j])
+                                    )
+                                )
+                    return or_(*all_filters)
             
             return None
 
@@ -3565,14 +3603,20 @@ def searchResults(search, limit=SEARCH_LIMIT):
             return session.query(Referees).filter(
                 build_name_filter(Referees)
             ).limit(limit).all()
+        
+        def query_matches():
+            return session.query(Matches).filter(
+                build_name_filter(Matches)
+            ).limit(limit).all()
 
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers = 5) as executor:
             future_to_type = {
                 executor.submit(query_players): 'players',
                 executor.submit(query_managers): 'managers',
                 executor.submit(query_teams): 'teams',
                 executor.submit(query_leagues): 'leagues',
-                executor.submit(query_referees): 'referees'
+                executor.submit(query_referees): 'referees',
+                executor.submit(query_matches): 'matches'
             }
 
             query_results = {}
@@ -3610,13 +3654,20 @@ def searchResults(search, limit=SEARCH_LIMIT):
 
         referee_results = [{
             "type": "referee",
-            "data": r,
+            "data": r, 
             "sort_key": f"{r.first_name or ''} {r.last_name or ''}".strip()
         } for r in query_results['referees']]
 
+        match_results = [{
+            "type": "match",
+            "data": m,
+            "sort_key": f"{Teams.get_team_by_id(m.home_id).name} vs {Teams.get_team_by_id(m.away_id).name}"
+        } for m in query_results['matches'] 
+        if m.matchday < League.get_league_by_name("Eclipse League").current_matchday]
+
         combined = (
             player_results + manager_results + team_results +
-            league_results + referee_results
+            league_results + referee_results + match_results
         )
         combined.sort(key = lambda x: x["sort_key"].lower())
         return combined[:limit]

@@ -498,8 +498,7 @@ class Match():
                             teamMatch.awayLineupPitch.removePlayer(playerPosition)
 
         elif event["type"] == "red_card":
-            # redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
-            redCardPosition = "goalkeeper"
+            redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
             players = [player.id for player in players_dict.values() if player.position == redCardPosition]
 
             while len(players) == 0:
@@ -929,8 +928,14 @@ class Match():
             lineups_to_add = []
             morales_to_update = []
 
-            for (position, playerID) in self.homeFinalLineup:
-                lineups_to_add.append((self.match.id, playerID, position, self.homeRatings[playerID]))
+            # Players that were substituted off
+            for (_, playerID) in self.homeFinalLineup:
+                if playerID in self.homeStartLineup.values():
+                    start_position = list(self.homeStartLineup.keys())[list(self.homeStartLineup.values()).index(playerID)]
+                else:
+                    start_position = None
+
+                lineups_to_add.append((self.match.id, playerID, start_position, None, self.homeRatings[playerID]))
                 
                 if not self.getGameTime(playerID, self.homeProcessedEvents):
                     # Player hasnt played more than 20 mins or at all -> decrease morale based on player role
@@ -942,9 +947,15 @@ class Match():
                 
                 morales_to_update.append((playerID, moraleChange))
 
-            for position, playerID in self.homeCurrentLineup.items():
-                lineups_to_add.append((self.match.id, playerID, position, self.homeRatings[playerID]))
-                
+            # Players that finished the game
+            for end_position, playerID in self.homeCurrentLineup.items():
+                if playerID in self.homeStartLineup.values():
+                    start_position = list(self.homeStartLineup.keys())[list(self.homeStartLineup.values()).index(playerID)]
+                else:
+                    start_position = None
+
+                lineups_to_add.append((self.match.id, playerID, start_position, end_position, self.homeRatings[playerID]))
+
                 if not self.getGameTime(playerID, self.homeProcessedEvents):
                     player = Players.get_player_by_id(playerID)
                     moraleChange = get_morale_decrease_role(player)
@@ -953,9 +964,14 @@ class Match():
 
                 morales_to_update.append((playerID, moraleChange))
             
-            for (position, playerID) in self.awayFinalLineup:
-                lineups_to_add.append((self.match.id, playerID, position, self.awayRatings[playerID]))
-                
+            for (_, playerID) in self.awayFinalLineup:
+                if playerID in self.awayStartLineup.values():
+                    start_position = list(self.awayStartLineup.keys())[list(self.awayStartLineup.values()).index(playerID)]
+                else:
+                    start_position = None
+
+                lineups_to_add.append((self.match.id, playerID, start_position, None, self.awayRatings[playerID]))
+
                 if not self.getGameTime(playerID, self.awayProcessedEvents):
                     player = Players.get_player_by_id(playerID)
                     moraleChange = get_morale_decrease_role(player)
@@ -964,9 +980,14 @@ class Match():
 
                 morales_to_update.append((playerID, moraleChange))
 
-            for position, playerID in self.awayCurrentLineup.items():
-                lineups_to_add.append((self.match.id, playerID, position, self.awayRatings[playerID]))
-                
+            for end_position, playerID in self.awayCurrentLineup.items():
+                if playerID in self.awayStartLineup.values():
+                    start_position = list(self.awayStartLineup.keys())[list(self.awayStartLineup.values()).index(playerID)]
+                else:
+                    start_position = None
+
+                lineups_to_add.append((self.match.id, playerID, start_position, end_position, self.awayRatings[playerID]))
+
                 if not self.getGameTime(playerID, self.awayProcessedEvents):
                     player = Players.get_player_by_id(playerID)
                     moraleChange = get_morale_decrease_role(player)
@@ -980,6 +1001,7 @@ class Match():
             homePlayers = Players.get_all_players_by_team(self.homeTeam.id, youths = False)
             awayPlayers = Players.get_all_players_by_team(self.awayTeam.id, youths = False)
 
+            # Players that did not play
             final_lineup_players = [p for _, p in self.homeFinalLineup]
             for player in homePlayers:
                 if player.id not in self.homeCurrentLineup.values() and player.id not in final_lineup_players:

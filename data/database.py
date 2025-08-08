@@ -1031,7 +1031,8 @@ class TeamLineup(Base):
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     match_id = Column(String(128), ForeignKey('matches.id'))
     player_id = Column(String(128), ForeignKey('players.id'))
-    position = Column(String(128), nullable = False)
+    start_position = Column(String(128), nullable = False)
+    end_position = Column(String(128), nullable = False)
     rating = Column(Integer, nullable = False, default = 0)
 
     @classmethod
@@ -1042,7 +1043,8 @@ class TeamLineup(Base):
                 new_player = TeamLineup(
                     match_id = match_id,
                     player_id = player.id,
-                    position = position
+                    start_position = position,
+                    end_position = position,
                 )
                 session.add(new_player)
             session.commit()
@@ -1063,8 +1065,9 @@ class TeamLineup(Base):
                     "id": str(uuid.uuid4()),
                     "match_id": lineup[0],
                     "player_id": lineup[1],
-                    "position": lineup[2],
-                    "rating": lineup[3]
+                    "start_position": lineup[2],
+                    "end_position": lineup[3],
+                    "rating": lineup[4]
                 }
                 for lineup in lineups
             ]
@@ -1085,7 +1088,8 @@ class TeamLineup(Base):
             new_player = TeamLineup(
                 match_id = match_id,
                 player_id = player_id,
-                position = position,
+                start_position = position,
+                end_position = position,
                 rating = rating
             )
             session.add(new_player)
@@ -3605,7 +3609,7 @@ def searchResults(search, limit = SEARCH_LIMIT):
                 build_name_filter(Matches)
             ).limit(limit).all()
 
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        with ThreadPoolExecutor(max_workers = 5) as executor:
             future_to_type = {
                 executor.submit(query_players): 'players',
                 executor.submit(query_managers): 'managers',

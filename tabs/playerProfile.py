@@ -1,12 +1,12 @@
 import customtkinter as ctk
 import tkinter.font as tkFont
 from settings import *
-from data.database import *
+from data.database import Matches, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents
 from data.gamesDatabase import *
 from PIL import Image
 import io
 from utils.teamLogo import TeamLogo
-from utils.frames import FootballPitchPlayerPos, FormGraph
+from utils.frames import FootballPitchPlayerPos, FormGraph, PlayerMatchFrame
 from utils.util_functions import *
 
 class PlayerProfile(ctk.CTkFrame):
@@ -26,7 +26,7 @@ class PlayerProfile(ctk.CTkFrame):
         self.history = None
         self.titles = ["Profile", "Matches", "Attributes", "History"]
         self.tabs = [self.profile, self.matches, self.attributes, self.history]
-        self.classNames = [Profile, Matches, Attributes, History]
+        self.classNames = [Profile, MatchesTab, Attributes, History]
 
         self.activeButton = 0
         self.buttons = []
@@ -191,12 +191,23 @@ class Profile(ctk.CTkFrame):
 
             ctk.CTkLabel(self.statsFrame, text = stat, font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = relx_position, rely = 0.7, anchor = "center")
 
-class Matches(ctk.CTkFrame):
+class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
         self.player = player
+
+        self.matchesFrame = ctk.CTkScrollableFrame(self, fg_color = TKINTER_BACKGROUND, width = 950, height = 630, corner_radius = 0)
+        self.matchesFrame.pack(fill = "both", expand = True, pady = (0, 10))
+
+        self.games = Matches.get_all_player_matches(self.player.id)
+
+        for game in reversed(self.games):
+            PlayerMatchFrame(self.matchesFrame, game, self.player, 940, 80, TKINTER_BACKGROUND, self.parent.parent)
+
+            canvas = ctk.CTkCanvas(self.matchesFrame, width = 940, height = 5, bg = GREY_BACKGROUND, highlightthickness = 0)
+            canvas.pack(fill = "x")
 
 class Attributes(ctk.CTkFrame):
     def __init__(self, parent, player):

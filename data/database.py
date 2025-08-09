@@ -1025,6 +1025,21 @@ class Matches(Base):
         finally:
             session.close()
 
+    @classmethod
+    def get_all_player_matches(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            matches = (
+                session.query(Matches)
+                .join(TeamLineup, TeamLineup.match_id == Matches.id)
+                .filter(TeamLineup.player_id == player_id)
+                .distinct()
+                .all()
+            )
+            return matches
+        finally:
+            session.close()
+
 class TeamLineup(Base):
     __tablename__ = 'team_lineup'
     
@@ -1737,12 +1752,42 @@ class MatchEvents(Base):
                 MatchEvents.event_type == "sub_off"
             ).first()
 
-            if sub_on_event:
-                game_time = 90 - int(sub_on_event.time)
-            elif sub_off_event:
-                game_time = int(sub_off_event.time)
+            red_card_event = session.query(MatchEvents).filter(
+                MatchEvents.player_id == player_id,
+                MatchEvents.match_id == match_id,
+                MatchEvents.event_type == "red_card"
+            ).first()
+
+            injury_event = session.query(MatchEvents).filter(
+                MatchEvents.player_id == player_id,
+                MatchEvents.match_id == match_id,
+                MatchEvents.event_type == "injury"
+            ).first()
+
+            subOnTime = int(sub_on_event.time) if sub_on_event else None
+            subOffTime = int(sub_off_event.time) if sub_off_event else None
+            redCardTime = int(red_card_event.time) if red_card_event else None
+            injuryTime = int(injury_event.time) if injury_event else None
+
+            if not redCardTime and not injuryTime:
+                if subOnTime and subOffTime:
+                    game_time = subOffTime - subOnTime
+                elif subOnTime:
+                    game_time = 90 - subOnTime
+                elif subOffTime:
+                    game_time = subOffTime
+                else:
+                    game_time = 90
+            elif redCardTime and not injuryTime:
+                if subOnTime:
+                    game_time = redCardTime - subOnTime
+                else:
+                    game_time = redCardTime
             else:
-                game_time = 90
+                if subOnTime:
+                    game_time = injuryTime - subOnTime
+                else:
+                    game_time = injuryTime
 
             return game_time
         finally:

@@ -1614,4 +1614,155 @@ class FormGraph(ctk.CTkCanvas):
             # Add minutes played text below the axis
             self.create_text(bar_x, self.height - 15, text = f"{timePlayed}'", fill = "white", font = ("Arial", 10))
 
-        
+class PlayerMatchFrame(ctk.CTkFrame):
+    def __init__(self, parent, game, player, width, height, fgColor, parentTab):
+        super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 10)
+        self.pack(expand = True, fill = "both", pady = 10)
+
+        self.game = game
+        self.player = player
+        self.fgColor = fgColor
+        self.parentTab = parentTab
+
+        oppositionID = self.game.home_id if self.player.team_id != self.game.home_id else self.game.away_id
+        home = "(H)" if self.player.team_id == self.game.home_id else "(A)"
+        opposition = Teams.get_team_by_id(oppositionID)
+        self.rating = TeamLineup.get_player_rating(self.player.id, self.game.id)
+        potm = TeamLineup.get_player_OTM(self.game.id)
+        events = MatchEvents.get_events_by_match_and_player(self.game.id, self.player.id)
+
+        src = Image.open(io.BytesIO(opposition.logo))
+        src.thumbnail((65, 65))
+        self.logo = TeamLogo(self, src, opposition, self.fgColor, 0.05, 0.5, "center", self.parentTab)
+
+        self.oppName = ctk.CTkLabel(self, text = f"{opposition.name} {home}", font = (APP_FONT_BOLD, 18), fg_color = self.fgColor).place(relx = 0.1, rely = 0.35, anchor = "w")
+        self.score = ctk.CTkLabel(self, text = f"{self.game.score_home} - {self.game.score_away}", font = (APP_FONT, 15), fg_color = self.fgColor, height = 10).place(relx = 0.1, rely = 0.65, anchor = "w")
+
+        self.compName = ctk.CTkLabel(self, text = f"Eclipse League - Matchday {self.game.matchday}", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10).place(relx = 0.97, rely = 0.25, anchor = "e")
+
+        ratingBG = PIE_RED
+        if self.rating >= 7:
+            ratingBG = PIE_GREEN
+        elif self.rating >= 5:
+            ratingBG = NEUTRAL_COLOR
+
+        if self.player.id == potm.player_id:
+            ratingBG = POTM_BLUE
+
+        if "." not in str(self.rating):
+            self.rating = f"{self.rating}.0"
+
+        self.ratingLabel = ctk.CTkLabel(self, text = self.rating, font = (APP_FONT_BOLD, 15), fg_color = ratingBG, height = 30, width = 50, corner_radius = 10).place(relx = 0.97, rely = 0.7, anchor = "e")
+
+        eventsToShow = {}
+        subOnTime = None
+        subOffTime = None
+
+        for event in events:
+            if event.event_type == "goal" or event.event_type == "penalty_goal":
+                if "goal" not in eventsToShow:
+                    eventsToShow["goal"] = 0
+                eventsToShow["goal"] += 1
+            elif event.event_type == "yellow_card":
+                if "yellow_card" not in eventsToShow:
+                    eventsToShow["yellow_card"] = 0
+                eventsToShow["yellow_card"] += 1
+            elif event.event_type == "red_card":
+                if "red_card" not in eventsToShow:
+                    eventsToShow["red_card"] = 0
+                eventsToShow["red_card"] += 1
+            elif event.event_type == "assist":
+                if "assist" not in eventsToShow:
+                    eventsToShow["assist"] = 0
+                eventsToShow["assist"] += 1
+            elif event.event_type == "own_goal":
+                if "own_goal" not in eventsToShow:
+                    eventsToShow["own_goal"] = 0
+                eventsToShow["own_goal"] += 1
+            elif event.event_type == "penalty_saved":
+                if "penalty_saved" not in eventsToShow:
+                    eventsToShow["penalty_saved"] = 0
+                eventsToShow["penalty_saved"] += 1
+            elif event.event_type == "penalty_miss":
+                if "penalty_miss" not in eventsToShow:
+                    eventsToShow["penalty_miss"] = 0
+                eventsToShow["penalty_miss"] += 1
+
+            if event.event_type == "sub_on":
+                subOnTime = int(event.time)
+
+            if event.event_type == "sub_off":
+                subOffTime = int(event.time)
+
+        if subOnTime and subOffTime:
+            self.gameTime = subOffTime - subOnTime
+        elif subOnTime:
+            self.gameTime = 90 - subOnTime
+        elif subOffTime:
+            self.gameTime = subOffTime
+        else:
+            self.gameTime = 90
+
+        self.gameTimeLabel = ctk.CTkLabel(self, text = f"{self.gameTime}'", font = (APP_FONT_BOLD, 15), fg_color = DARK_GREY, height = 32, width = 50, corner_radius = 10).place(relx = 0.91, rely = 0.7, anchor = "e")
+
+        startRelx = 0.83  # Starting position moved more to the right
+        overlay = 0.015  # Amount of overlap between icons
+        overallCount = 0
+        for eventType, count in eventsToShow.items():
+            match eventType:
+                case "goal":
+                    src = Image.open("Images/goal.png")
+                case "yellow_card":
+                    src = Image.open("Images/yellowCard.png")
+                case "red_card":
+                    src = Image.open("Images/redCard.png")
+                case "assist":
+                    src = Image.open("Images/assist.png")
+                case "own_goal":
+                    src = Image.open("Images/ownGoal.png")
+                case "penalty_saved":
+                    src = Image.open("Images/saved_penalty.png")
+                case "penalty_miss":
+                    src = Image.open("Images/missed_penalty.png")
+
+            for _ in range(count):
+                src.thumbnail((20, 20))
+                image = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(self, image = image, text = "", fg_color = self.fgColor).place(relx = startRelx - (overallCount * overlay), rely = 0.7, anchor = "e")
+
+                overallCount += 1
+
+        self.bind("<Enter>", lambda e: self.onHover())
+        self.bind("<Leave>", lambda e: self.onLeave())
+
+        self.bind("<Button-1>", lambda e: self.onClick())
+
+        for widget in self.winfo_children():
+            widget.bind("<Enter>", lambda e: self.onHover())
+            if isinstance(widget, ctk.CTkLabel) and hasattr(widget, '_image') and isinstance(widget._image, TeamLogo):
+                continue
+            widget.bind("<Button-1>", lambda e: self.onClick())
+
+    def onHover(self):
+        self.configure(fg_color = GREY_BACKGROUND)
+
+        for widget in self.winfo_children():
+            if isinstance(widget, ctk.CTkLabel) and widget.cget("text") != self.rating and widget.cget("text") != f"{self.gameTime}'":
+                widget.configure(fg_color = GREY_BACKGROUND)
+
+    def onLeave(self):
+        self.configure(fg_color = self.fgColor)
+
+        for widget in self.winfo_children():
+            if isinstance(widget, ctk.CTkLabel) and widget.cget("text") != self.rating and widget.cget("text") != f"{self.gameTime}'":
+                widget.configure(fg_color = self.fgColor)
+
+    def onClick(self):
+        from tabs.matchProfile import MatchProfile
+
+        self.profile = MatchProfile(self.parentTab, self.game, self.parentTab, changeBackFunction = self.changeBack)
+        self.profile.place(x = 0, y = 0, anchor = "nw")
+        self.parentTab.parent.overlappingProfiles.append(self.profile)
+
+    def changeBack(self):
+        self.profile.place_forget()

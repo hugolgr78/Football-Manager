@@ -1025,6 +1025,21 @@ class Matches(Base):
         finally:
             session.close()
 
+    @classmethod
+    def get_all_player_matches(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            matches = (
+                session.query(Matches)
+                .join(TeamLineup, TeamLineup.match_id == Matches.id)
+                .filter(TeamLineup.player_id == player_id)
+                .distinct()
+                .all()
+            )
+            return matches
+        finally:
+            session.close()
+
 class TeamLineup(Base):
     __tablename__ = 'team_lineup'
     

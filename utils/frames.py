@@ -1564,26 +1564,7 @@ class FormGraph(ctk.CTkCanvas):
             playerLineupData = [player for player in lineup if player.player_id == self.player.id][0]
             rating = playerLineupData.rating
 
-            # Calculate minutes played
-            matchEvents = MatchEvents.get_events_by_match_and_player(match.id, self.player.id)
-            self.last5Events.append(matchEvents)
-            timePlayed = 90
-            subbedOn = None
-            subbedOff = None
-
-            if matchEvents:
-                for event in matchEvents:
-                    if event.event_type == "sub_on":
-                        subbedOn = int(event.time)
-                    elif event.event_type == "sub_off":
-                        subbedOff = int(event.time)
-            
-            if subbedOn is not None and subbedOff is not None:
-                timePlayed = subbedOff - subbedOn
-            elif subbedOn is not None:
-                timePlayed = 90 - subbedOn
-            elif subbedOff is not None:
-                timePlayed = subbedOff
+            timePlayed = MatchEvents.get_player_game_time(self.player.id, match.id)
 
             # Determine bar color based on rating
             if rating >= 7:
@@ -1655,8 +1636,6 @@ class PlayerMatchFrame(ctk.CTkFrame):
         self.ratingLabel = ctk.CTkLabel(self, text = self.rating, font = (APP_FONT_BOLD, 15), fg_color = ratingBG, height = 30, width = 50, corner_radius = 10).place(relx = 0.97, rely = 0.7, anchor = "e")
 
         eventsToShow = {}
-        subOnTime = None
-        subOffTime = None
 
         for event in events:
             if event.event_type == "goal" or event.event_type == "penalty_goal":
@@ -1688,45 +1667,31 @@ class PlayerMatchFrame(ctk.CTkFrame):
                     eventsToShow["penalty_miss"] = 0
                 eventsToShow["penalty_miss"] += 1
 
-            if event.event_type == "sub_on":
-                subOnTime = int(event.time)
-
-            if event.event_type == "sub_off":
-                subOffTime = int(event.time)
-
-        if subOnTime and subOffTime:
-            self.gameTime = subOffTime - subOnTime
-        elif subOnTime:
-            self.gameTime = 90 - subOnTime
-        elif subOffTime:
-            self.gameTime = subOffTime
-        else:
-            self.gameTime = 90
-
+        self.gameTime = MatchEvents.get_player_game_time(self.player.id, self.game.id)
         self.gameTimeLabel = ctk.CTkLabel(self, text = f"{self.gameTime}'", font = (APP_FONT_BOLD, 15), fg_color = DARK_GREY, height = 32, width = 50, corner_radius = 10).place(relx = 0.91, rely = 0.7, anchor = "e")
 
         startRelx = 0.83  # Starting position moved more to the right
-        overlay = 0.015  # Amount of overlap between icons
+        overlay = 0.02  # Amount of overlap between icons
         overallCount = 0
         for eventType, count in eventsToShow.items():
             match eventType:
                 case "goal":
-                    src = Image.open("Images/goal.png")
+                    src = Image.open("Images/goal_bo.png")
                 case "yellow_card":
-                    src = Image.open("Images/yellowCard.png")
+                    src = Image.open("Images/yellowCard_bo.png")
                 case "red_card":
-                    src = Image.open("Images/redCard.png")
+                    src = Image.open("Images/redCard_bo.png")
                 case "assist":
-                    src = Image.open("Images/assist.png")
+                    src = Image.open("Images/assist_bo.png")
                 case "own_goal":
-                    src = Image.open("Images/ownGoal.png")
+                    src = Image.open("Images/ownGoal_bo.png")
                 case "penalty_saved":
-                    src = Image.open("Images/saved_penalty.png")
+                    src = Image.open("Images/saved_penalty_bo.png")
                 case "penalty_miss":
-                    src = Image.open("Images/missed_penalty.png")
+                    src = Image.open("Images/missed_penalty_bo.png")
 
             for _ in range(count):
-                src.thumbnail((20, 20))
+                src.thumbnail((25, 25))
                 image = ctk.CTkImage(src, None, (src.width, src.height))
                 ctk.CTkLabel(self, image = image, text = "", fg_color = self.fgColor).place(relx = startRelx - (overallCount * overlay), rely = 0.7, anchor = "e")
 
@@ -1747,14 +1712,14 @@ class PlayerMatchFrame(ctk.CTkFrame):
         self.configure(fg_color = GREY_BACKGROUND)
 
         for widget in self.winfo_children():
-            if isinstance(widget, ctk.CTkLabel) and widget.cget("text") != self.rating and widget.cget("text") != f"{self.gameTime}'":
+            if isinstance(widget, ctk.CTkLabel) and widget.cget("text") != self.rating and widget.cget("text") != f"{self.gameTime}'" and widget.cget("text") != f"Eclipse League - Matchday {self.game.matchday}":
                 widget.configure(fg_color = GREY_BACKGROUND)
 
     def onLeave(self):
         self.configure(fg_color = self.fgColor)
 
         for widget in self.winfo_children():
-            if isinstance(widget, ctk.CTkLabel) and widget.cget("text") != self.rating and widget.cget("text") != f"{self.gameTime}'":
+            if isinstance(widget, ctk.CTkLabel) and widget.cget("text") != self.rating and widget.cget("text") != f"{self.gameTime}'" and widget.cget("text") != f"Eclipse League - Matchday {self.game.matchday}":
                 widget.configure(fg_color = self.fgColor)
 
     def onClick(self):

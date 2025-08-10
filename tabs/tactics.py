@@ -6,6 +6,7 @@ from data.gamesDatabase import *
 from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame
 from utils.util_functions import *
 from tabs.matchday import MatchDay
+from PIL import Image
 
 class Tactics(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
@@ -86,12 +87,18 @@ class Lineup(ctk.CTkFrame):
 
         self.positionsCopy = POSITION_CODES.copy()
 
-        self.addFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 50, corner_radius = 10)
-        self.addFrame.place(relx = 0.076, rely = 0.98, anchor = "sw")
+        self.addFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 340, height = 50, corner_radius = 10)
+        self.addFrame.place(relx = 0.086, rely = 0.98, anchor = "sw")
+
+        src = Image.open("Images/settings.png")
+        src.thumbnail((30, 30))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        self.settingsButton = ctk.CTkButton(self, text = "", image = img, width = 50, height = 50, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, corner_radius = 10)
+        self.settingsButton.place(relx = 0.023, rely = 0.98, anchor = "sw")
 
         ctk.CTkLabel(self.addFrame, text = "Add Position:", font = (APP_FONT, 18), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.04, rely = 0.5, anchor = "w")
 
-        self.dropDown = ctk.CTkComboBox(self.addFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY, width = 200, height = 30, state = "readonly", command = self.choosePlayer)
+        self.dropDown = ctk.CTkComboBox(self.addFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY, width = 190, height = 30, state = "readonly", command = self.choosePlayer)
         self.dropDown.place(relx = 0.4, rely = 0.5, anchor = "w")
         self.dropDown.set("Choose Position")
         self.dropDown.configure(values = list(POSITION_CODES.keys()))
@@ -304,7 +311,7 @@ class Lineup(ctk.CTkFrame):
         self.dropDown.configure(state = "disabled")
         self.resetButton.configure(state = "disabled")
 
-        self.choosePlayerFrame.place(relx = 0.225, rely = 0.5, anchor = "center")
+        self.choosePlayerFrame.place(relx = 0.221, rely = 0.435, anchor = "center")
 
         values = []
         for playerID in self.players:

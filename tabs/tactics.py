@@ -15,6 +15,68 @@ class Tactics(ctk.CTkFrame):
         self.parent = parent
         self.selected_position = None
 
+        self.lineupTab = Lineup(self, self.manager_id)
+        self.analysis = None
+
+        self.titles = ["Lineup", "Analysis"]
+        self.tabs = [self.lineupTab, self.analysis]
+        self.classNames = [Lineup, Analysis]
+
+        self.activeButton = 0
+        self.buttons = []
+
+        self.tabsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 50, corner_radius = 0)
+        self.tabsFrame.pack(expand = True, fill = "both", padx = 10, pady = 10)
+
+        self.createTabs()
+        self.lineupTab.pack(expand = True, fill = "both")
+
+    def createTabs(self):
+
+        self.buttonHeight = 40
+        self.buttonWidth = 200
+        self.button_background = TKINTER_BACKGROUND
+        self.hover_background = GREY_BACKGROUND
+        self.gap = 0.102
+
+        gapCount = 0
+        for i in range(len(self.tabs)):
+            button = ctk.CTkButton(self.tabsFrame, text = self.titles[i], font = (APP_FONT, 20), fg_color = self.button_background, corner_radius = 0, height = self.buttonHeight, width = self.buttonWidth, hover_color = self.hover_background)
+            button.place(relx = self.gap * gapCount, rely = 0, anchor = "nw")
+            button.configure(command = lambda i = i: self.changeTab(i))
+            
+            gapCount += 2
+            self.buttons.append(button)
+            self.canvas(6, 55, self.gap * gapCount - 0.005)
+
+        self.buttons[self.activeButton].configure(state = "disabled")
+
+        ctk.CTkCanvas(self.tabsFrame, width = 1220, height = 5, bg = APP_BLUE, bd = 0, highlightthickness = 0).place(relx = 0, rely = 0.82, anchor = "w")
+
+    def canvas(self, width, height, relx):
+        canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
+        canvas.place(relx = relx, rely = 0, anchor = "nw")
+
+    def changeTab(self, index):
+        self.buttons[self.activeButton].configure(state = "normal")
+        self.tabs[self.activeButton].pack_forget()
+        
+        self.activeButton = index
+        self.buttons[self.activeButton].configure(state = "disabled")
+
+        if not self.tabs[self.activeButton]:
+            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.manager_id)
+
+        self.tabs[self.activeButton].pack(expand = True, fill = "both")
+
+class Lineup(ctk.CTkFrame):
+    def __init__(self, parent, manager_id):
+        super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
+
+        self.manager_id = manager_id
+        self.parent = parent
+        self.mainMenu = self.parent.parent
+
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.players = Players.get_all_players_by_team(self.team.id)
 
@@ -24,14 +86,12 @@ class Tactics(ctk.CTkFrame):
 
         self.positionsCopy = POSITION_CODES.copy()
 
-        ctk.CTkLabel(self, text = "Lineup", font = (APP_FONT_BOLD, 35), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.05, anchor = "w")
+        self.addFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 50, corner_radius = 10)
+        self.addFrame.place(relx = 0.076, rely = 0.98, anchor = "sw")
 
-        self.addFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 50, corner_radius = 10)
-        self.addFrame.place(relx = 0.02, rely = 0.98, anchor = "sw")
+        ctk.CTkLabel(self.addFrame, text = "Add Position:", font = (APP_FONT, 18), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.04, rely = 0.5, anchor = "w")
 
-        ctk.CTkLabel(self.addFrame, text = "Add Position:", font = (APP_FONT, 20), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
-
-        self.dropDown = ctk.CTkComboBox(self.addFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY, width = 220, height = 30, state = "readonly", command = self.choosePlayer)
+        self.dropDown = ctk.CTkComboBox(self.addFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY, width = 200, height = 30, state = "readonly", command = self.choosePlayer)
         self.dropDown.place(relx = 0.4, rely = 0.5, anchor = "w")
         self.dropDown.set("Choose Position")
         self.dropDown.configure(values = list(POSITION_CODES.keys()))
@@ -40,12 +100,13 @@ class Tactics(ctk.CTkFrame):
         self.resetButton.place(relx = 0.43, rely = 0.98, anchor = "sw")
 
         self.finishButton = ctk.CTkButton(self, text = "Matchday >>", font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, height = 50, width = 300, state = "disabled", command = self.finishLineup)
-        self.finishButton.place(relx = 0.98, rely = 0.98, anchor = "se")
+        self.finishButton.place(relx = 0.965, rely = 0.98, anchor = "se")
 
-        self.substituteFrame = ctk.CTkScrollableFrame(self, fg_color = DARK_GREY, width = 520, height = 520, corner_radius = 10)
-        self.substituteFrame.place(relx = 0.98, rely = 0.1, anchor = "ne")
+        self.substituteFrame = ctk.CTkScrollableFrame(self, fg_color = DARK_GREY, width = 520, height = 523, corner_radius = 10)
+        self.substituteFrame.place(relx = 0.965, rely = 0.005, anchor = "ne")
 
-        self.lineupPitch = FootballPitchLineup(self, 450, 675, 0.02, 0.08, "nw", TKINTER_BACKGROUND, "green")
+        self.lineupPitch = FootballPitchLineup(self, 500, 675, 0, -0.02, "nw", TKINTER_BACKGROUND, "green")
+        self.substituteFrame.lift()
 
         self.createChoosePlayerFrame()
         self.importLineup()
@@ -63,7 +124,7 @@ class Tactics(ctk.CTkFrame):
     def importLineup(self):
         self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
         self.league = League.get_league_by_id(self.leagueTeams.league_id)
-        self.players = Players.get_all_players_by_team(self.team.id, youths = False)
+        self.players = [player.id for player in Players.get_all_players_by_team(self.team.id, youths = False)]
 
         self.checkPositionsForYouth()
 
@@ -91,7 +152,7 @@ class Tactics(ctk.CTkFrame):
             player = Players.get_player_by_id(playerData.player_id)
 
             # Remove any youths that arent in the players list as the position is now free
-            if player.player_role == "Youth Team" and player not in self.players:
+            if player.player_role == "Youth Team" and player.id not in self.players:
                 continue
 
             # If the player finished the match out of position, skip them
@@ -135,11 +196,16 @@ class Tactics(ctk.CTkFrame):
         self.dropDown.configure(values = self.positionsCopy)
 
     def checkPositionsForYouth(self):
-        nonBannedPlayers = PlayerBans.get_all_non_banned_players_for_comp(self.team.id, self.league.id)
 
         for position in POSITION_CODES.keys():
+            playersForPosition = []
+            for playerID in self.players:
+                player = Players.get_player_by_id(playerID)
+                if POSITION_CODES[position] not in player.specific_positions.split(","):
+                    continue
 
-            playersForPosition = [player for player in nonBannedPlayers if POSITION_CODES[position] in player.specific_positions.split(",")]
+                if not PlayerBans.check_bans_for_player(player.id, self.league.id):
+                    playersForPosition.append(playerID)
 
             if position in DEFENSIVE_POSITIONS:
                 overallPosition = "defender"
@@ -152,29 +218,27 @@ class Tactics(ctk.CTkFrame):
 
             if len(playersForPosition) == 0:
                 youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
-                playerIDs = [player.id for player in self.players]
-                youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth.id not in playerIDs]
+                youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth.id not in self.players]
 
                 if len(youthForPosition) > 0:
-                    self.players.append(youthForPosition[0])
+                    self.players.append(youthForPosition[0].id)
                 else:
                     newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
-                    self.players.append(newYouth)
+                    self.players.append(newYouth.id)
 
                 if position == "Goalkeeper":
                     newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
-                    self.players.append(newYouth)
+                    self.players.append(newYouth.id)
 
             elif position == "Goalkeeper" and len(playersForPosition) == 1:
                 youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
-                playerIDs = [player.id for player in self.players]
-                youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth.id not in playerIDs]
+                youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth.id not in self.players]
 
                 if len(youthForPosition) > 0:
-                    self.players.append(youthForPosition[0])
+                    self.players.append(youthForPosition[0].id)
                 else:
                     newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
-                    self.players.append(newYouth)
+                    self.players.append(newYouth.id)
 
     def addSubstitutePlayers(self, importing = False, playersCount = None):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)
@@ -190,7 +254,7 @@ class Tactics(ctk.CTkFrame):
         ]
 
         playersIDs = self.players.copy()
-        playersList = [Players.get_player_by_id(player.id) for player in playersIDs]
+        playersList = [Players.get_player_by_id(player) for player in playersIDs]
         playersList.sort(key = lambda x: (POSITION_ORDER.get(x.position, 99), x.last_name))
 
         for pos_key, heading in position_groups:
@@ -214,7 +278,7 @@ class Tactics(ctk.CTkFrame):
 
                 row = 1 + count // players_per_row
                 col = count % players_per_row
-                sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, self.checkSubstitute)
+                sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self.parent, self.league.id, row, col, self.checkSubstitute)
 
                 if importing and playersCount == 11:
                     sub_frame.showCheckBox()
@@ -243,7 +307,8 @@ class Tactics(ctk.CTkFrame):
         self.choosePlayerFrame.place(relx = 0.225, rely = 0.5, anchor = "center")
 
         values = []
-        for player in self.players:
+        for playerID in self.players:
+            player = Players.get_player_by_id(playerID)
             playerName = player.first_name + " " + player.last_name
             if POSITION_CODES[selected_position] in player.specific_positions.split(",") and player.id not in self.selectedLineup.values() and not PlayerBans.check_bans_for_player(player.id, self.league.id):
                 values.append(playerName)
@@ -415,4 +480,12 @@ class Tactics(ctk.CTkFrame):
                                 widget.disableCheckBox()
 
     def finishLineup(self):
-        MatchDay(self.parent, self.selectedLineup, self.substitutePlayers, self.team, self.players)
+        players = [Players.get_player_by_id(playerID) for playerID in self.players]
+        MatchDay(self.mainMenu, self.selectedLineup, self.substitutePlayers, self.team, players)
+
+class Analysis(ctk.CTkFrame):
+    def __init__(self, parent, manager_id):
+        super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
+
+        self.manager_id = manager_id
+

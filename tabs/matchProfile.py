@@ -444,8 +444,8 @@ class MatchProfile(ctk.CTkFrame):
 
         halfTimeAdded = False
         for event in self.matchEvents:
-
-            if event.event_type == "sub_on" or event.event_type == "assist" or event.event_type == "clean_sheet":
+            
+            if event.event_type == "sub_on" or event.event_type == "assist" or event.event_type == "clean_sheet" or event.event_type == "penalty_saved":
                 continue
 
             frame = ctk.CTkFrame(self.matchEventsFrame, fg_color = GREY_BACKGROUND, width = frameWidth, height = 50)
@@ -478,7 +478,7 @@ class MatchProfile(ctk.CTkFrame):
 
                 if event.event_type == "goal" or event.event_type == "penalty_goal":
                     src = Image.open("Images/goal.png")
-                    assist_event = self.matchEvents[self.matchEvents.index(event) + 1] if self.matchEvents.index(event) + 1 < len(self.matchEvents) else None
+                    assist_event = self.matchEvents[self.matchEvents.index(event) + 1] if event.event_type == "goal" else None
                     subText = Players.get_player_by_id(assist_event.player_id).last_name if assist_event else "Penalty"
                 elif event.event_type == "own_goal":
                     src = Image.open("Images/ownGoal.png")

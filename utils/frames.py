@@ -925,7 +925,7 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
             "Goals": [(0.9, 0.9), True],
             "Cards": [(0, 0.5), False],
             "Assists": [(0.1, 0.9), False],
-            "Missed Pens": [(1, 0.5), True],
+            "Missed Pens": [(1, 0.6), True],
         }
 
     def addIcon(self, icon_type, image, position, num):
@@ -1004,11 +1004,11 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         padding_y = 2  # top/bottom padding
 
         rect_width = text_width + 2 * padding_x
-        rect_height = font.metrics("linespace") + 2 * padding_y
+        rect_height = font.metrics("linespace") + 3 * padding_y
         radius = rect_height // 2 + 10
 
         x0 = icon_x - 5
-        y0 = icon_y - rect_height // 2
+        y0 = (icon_y - rect_height // 2) - 3
         x1 = x0 + rect_width
         y1 = y0 + rect_height
 
@@ -1025,7 +1025,7 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         # === Draw left-aligned text ===
         self.canvas.create_text(
             x0 + padding_x,
-            icon_y,
+            icon_y - 3,
             text = formatted_text,
             fill = "white",
             font = (font_name, font_size),
@@ -1514,6 +1514,8 @@ class FormGraph(ctk.CTkCanvas):
 
         self.leagueTeams = LeagueTeams.get_league_by_team(self.player.team_id)
         self.last5 = Matches.get_team_last_5_matches(self.player.team_id, self.leagueTeams.league_id)
+
+        self.last5Events = []
         
         self.draw_bars()
 
@@ -1552,6 +1554,7 @@ class FormGraph(ctk.CTkCanvas):
         for i, match in enumerate(self.last5):
             lineup = TeamLineup.get_lineup_by_match(match.id)
             playerIDs = [player.player_id for player in lineup]
+            self.last5Events.append(MatchEvents.get_events_by_match_and_player(match.id, self.player.id))
             
             # Calculate bar position
             bar_x = i * bar_width + bar_width / 2
@@ -1671,24 +1674,24 @@ class PlayerMatchFrame(ctk.CTkFrame):
         self.gameTimeLabel = ctk.CTkLabel(self, text = f"{self.gameTime}'", font = (APP_FONT_BOLD, 15), fg_color = DARK_GREY, height = 32, width = 50, corner_radius = 10).place(relx = 0.91, rely = 0.7, anchor = "e")
 
         startRelx = 0.83  # Starting position moved more to the right
-        overlay = 0.02  # Amount of overlap between icons
+        overlay = 0.03  # Amount of overlap between icons
         overallCount = 0
         for eventType, count in eventsToShow.items():
             match eventType:
                 case "goal":
-                    src = Image.open("Images/goal_bo.png")
+                    src = Image.open("Images/goal.png")
                 case "yellow_card":
-                    src = Image.open("Images/yellowCard_bo.png")
+                    src = Image.open("Images/yellowCard.png")
                 case "red_card":
-                    src = Image.open("Images/redCard_bo.png")
+                    src = Image.open("Images/redCard.png")
                 case "assist":
-                    src = Image.open("Images/assist_bo.png")
+                    src = Image.open("Images/assist.png")
                 case "own_goal":
-                    src = Image.open("Images/ownGoal_bo.png")
+                    src = Image.open("Images/ownGoal.png")
                 case "penalty_saved":
-                    src = Image.open("Images/saved_penalty_bo.png")
+                    src = Image.open("Images/saved_penalty.png")
                 case "penalty_miss":
-                    src = Image.open("Images/missed_penalty_bo.png")
+                    src = Image.open("Images/missed_penalty.png")
 
             for _ in range(count):
                 src.thumbnail((25, 25))

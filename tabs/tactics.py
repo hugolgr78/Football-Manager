@@ -93,8 +93,11 @@ class Lineup(ctk.CTkFrame):
         src = Image.open("Images/settings.png")
         src.thumbnail((30, 30))
         img = ctk.CTkImage(src, None, (src.width, src.height))
-        self.settingsButton = ctk.CTkButton(self, text = "", image = img, width = 50, height = 50, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, corner_radius = 10)
+        self.settingsButton = ctk.CTkButton(self, text = "", image = img, width = 50, height = 50, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, corner_radius = 10, command = self.lineupSettings)
         self.settingsButton.place(relx = 0.023, rely = 0.98, anchor = "sw")
+
+        self.settingsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 250, corner_radius = 10, border_color = APP_BLUE, border_width = 2, background_corner_colors = ["green", DARK_GREY, DARK_GREY, "green"])
+        self.createSettingsFrame()
 
         ctk.CTkLabel(self.addFrame, text = "Add Position:", font = (APP_FONT, 18), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.04, rely = 0.5, anchor = "w")
 
@@ -127,6 +130,31 @@ class Lineup(ctk.CTkFrame):
         self.playerDropDown = ctk.CTkComboBox(self.choosePlayerFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY, width = 220, height = 30, state = "readonly", command = self.choosePosition)
         self.playerDropDown.place(relx = 0.05, rely = 0.5, anchor = "w")
         self.playerDropDown.set("Choose Player")
+
+    def createSettingsFrame(self):
+        ctk.CTkButton(self.settingsFrame, text = "Back", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 100, hover_color = CLOSE_RED, command = self.settingsFrame.place_forget).place(relx = 0.95, rely = 0.05, anchor = "ne")
+
+        ctk.CTkLabel(self.settingsFrame, text = "Save lineup", font = (APP_FONT, 15), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.15, anchor = "w")
+        self.saveBox = ctk.CTkTextbox(self.settingsFrame, width = 250, height = 20, font = (APP_FONT, 10), fg_color = GREY_BACKGROUND, corner_radius = 10, border_color = GREY, border_width = 2)
+        self.saveBox.place(relx = 0.05, rely = 0.28, anchor = "w")
+        ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.saveLineup).place(relx = 0.95, rely = 0.28, anchor = "e")
+
+        ctk.CTkLabel(self.settingsFrame, text = "Load lineup", font = (APP_FONT, 15), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.45, anchor = "w")
+        self.loadBox = ctk.CTkComboBox(self.settingsFrame, width = 250, height = 30, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY)
+        self.loadBox.place(relx = 0.05, rely = 0.58, anchor = "w")
+        ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.loadLineup).place(relx = 0.95, rely = 0.58, anchor = "e")
+
+        lineupNames = SavedLineups.get_all_lineup_names()
+        self.loadBox.set("Choose Lineup")
+        self.loadBox.configure(values = lineupNames)
+
+        ctk.CTkLabel(self.settingsFrame, text = "Automatic lineup", font = (APP_FONT, 15), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.75, anchor = "w")
+        self.autoBox = ctk.CTkComboBox(self.settingsFrame, width = 250, height = 30, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY)
+        self.autoBox.place(relx = 0.05, rely = 0.88, anchor = "w")
+        ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.autoLineup).place(relx = 0.95, rely = 0.88, anchor = "e")
+
+        self.autoBox.set("Choose Lineup")
+        self.autoBox.configure(values = FORMATIONS_POSITIONS.keys())
 
     def importLineup(self):
         self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
@@ -443,7 +471,7 @@ class Lineup(ctk.CTkFrame):
 
     def reset(self):
         self.lineupPitch.destroy()
-        self.lineupPitch = FootballPitchLineup(self, 450, 675, 0.02, 0.08, "nw", TKINTER_BACKGROUND, "green")
+        self.lineupPitch = FootballPitchLineup(self, 500, 675, 0, -0.02, "nw", TKINTER_BACKGROUND, "green")
 
         self.lineupPitch.reset_counter()
         self.dropDown.configure(state = "normal")
@@ -489,6 +517,28 @@ class Lineup(ctk.CTkFrame):
     def finishLineup(self):
         players = [Players.get_player_by_id(playerID) for playerID in self.players]
         MatchDay(self.mainMenu, self.selectedLineup, self.substitutePlayers, self.team, players)
+
+    def lineupSettings(self):
+        self.settingsFrame.place(relx = 0.5, rely = 0.4, anchor = "center")
+        self.settingsFrame.lift()
+
+    def saveLineup(self):
+        lineupName = self.saveBox.get()
+        if lineupName:
+            self.settingsFrame.place_forget()
+            pass
+
+    def loadLineup(self):
+        lineupName = self.loadBox.get()
+        if lineupName and lineupName != "Choose Lineup":
+            self.settingsFrame.place_forget()
+            self.reset()
+
+    def autoLineup(self):
+        lineupName = self.autoBox.get()
+        if lineupName and lineupName != "Choose Lineup":
+            self.settingsFrame.place_forget()
+            self.reset()
 
 class Analysis(ctk.CTkFrame):
     def __init__(self, parent, manager_id):

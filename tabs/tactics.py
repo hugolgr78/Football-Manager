@@ -2,6 +2,7 @@ import customtkinter as ctk
 import math
 from settings import *
 from data.database import *
+from CTkMessagebox import CTkMessagebox
 from data.gamesDatabase import *
 from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame
 from utils.util_functions import *
@@ -135,7 +136,7 @@ class Lineup(ctk.CTkFrame):
         ctk.CTkButton(self.settingsFrame, text = "Back", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 100, hover_color = CLOSE_RED, command = self.settingsFrame.place_forget).place(relx = 0.95, rely = 0.05, anchor = "ne")
 
         ctk.CTkLabel(self.settingsFrame, text = "Save lineup", font = (APP_FONT, 15), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.15, anchor = "w")
-        self.saveBox = ctk.CTkTextbox(self.settingsFrame, width = 250, height = 20, font = (APP_FONT, 10), fg_color = GREY_BACKGROUND, corner_radius = 10, border_color = GREY, border_width = 2)
+        self.saveBox = ctk.CTkEntry(self.settingsFrame, width = 250, height = 30, font = (APP_FONT, 10), fg_color = GREY_BACKGROUND, corner_radius = 10, border_color = GREY, border_width = 2)
         self.saveBox.place(relx = 0.05, rely = 0.28, anchor = "w")
         ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.saveLineup).place(relx = 0.95, rely = 0.28, anchor = "e")
 
@@ -144,16 +145,11 @@ class Lineup(ctk.CTkFrame):
         self.loadBox.place(relx = 0.05, rely = 0.58, anchor = "w")
         ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.loadLineup).place(relx = 0.95, rely = 0.58, anchor = "e")
 
-        lineupNames = SavedLineups.get_all_lineup_names()
-        self.loadBox.set("Choose Lineup")
-        self.loadBox.configure(values = lineupNames)
-
         ctk.CTkLabel(self.settingsFrame, text = "Automatic lineup", font = (APP_FONT, 15), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.75, anchor = "w")
         self.autoBox = ctk.CTkComboBox(self.settingsFrame, width = 250, height = 30, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY)
         self.autoBox.place(relx = 0.05, rely = 0.88, anchor = "w")
         ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.autoLineup).place(relx = 0.95, rely = 0.88, anchor = "e")
 
-        self.autoBox.set("Choose Lineup")
         self.autoBox.configure(values = FORMATIONS_POSITIONS.keys())
 
     def importLineup(self):
@@ -522,9 +518,27 @@ class Lineup(ctk.CTkFrame):
         self.settingsFrame.place(relx = 0.5, rely = 0.4, anchor = "center")
         self.settingsFrame.lift()
 
+        lineupNames = SavedLineups.get_all_lineup_names()
+        self.loadBox.set("Choose Lineup")
+        self.loadBox.configure(values = lineupNames)
+
+        self.autoBox.set("Choose Lineup")
+
     def saveLineup(self):
         lineupName = self.saveBox.get()
         if lineupName:
+
+            if self.lineupPitch.get_counter() != 11:
+                CTkMessagebox(title = "Error", message = "You need 11 players in your lineup to save it.", icon = "cancel")
+                return
+            
+            lineupNames = SavedLineups.get_all_lineup_names()
+            if lineupName in lineupNames:
+                CTkMessagebox(title = "Error", message = "This lineup name already exists.", icon = "cancel")
+                return
+            
+            SavedLineups.add_lineup(lineupName, self.selectedLineup)
+
             self.settingsFrame.place_forget()
             pass
 

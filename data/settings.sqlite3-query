@@ -1,0 +1,9 @@
+-- database: ./HugoLegrand.db
+
+CREATE TABLE IF NOT EXISTS saved_lineups (
+    id TEXT PRIMARY KEY,
+    lineup_name TEXT NOT NULL,
+    player_id TEXT,
+    position TEXT NOT NULL,
+    FOREIGN KEY (player_id) REFERENCES players(id)
+);

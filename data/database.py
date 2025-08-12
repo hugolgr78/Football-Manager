@@ -2503,6 +2503,51 @@ class PlayerBans(Base):
         finally:
             session.close()
 
+class SavedLineups(Base):
+    __tablename__ = 'saved_lineups'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    lineup_name = Column(String(128), nullable = False)
+    player_id = Column(String(128), ForeignKey('players.id'))
+    position = Column(String(128), nullable = False)
+
+    @classmethod
+    def add_lineup(cls, lineup_name, player_ids, positions):
+        session = DatabaseManager().get_session()
+        try:
+            for player_id, position in zip(player_ids, positions):
+                lineup_entry = SavedLineups(
+                    lineup_name = lineup_name,
+                    player_id = player_id,
+                    position = position
+                )
+                session.add(lineup_entry)
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_lineup_by_name(cls, name):
+        session = DatabaseManager().get_session()
+        try:
+            lineup = session.query(SavedLineups).filter(SavedLineups.lineup_name == name).all()
+            return lineup
+        finally:
+            session.close()
+
+    @classmethod
+    def get_all_lineup_names(cls):
+        session = DatabaseManager().get_session()
+        try:
+            lineups = session.query(SavedLineups.lineup_name).distinct().all()
+            return [l[0] for l in lineups]
+        finally:
+            session.close()
+
 class StatsManager:
     @staticmethod
     def get_goals_scored(leagueTeams, league_id):

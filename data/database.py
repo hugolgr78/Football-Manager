@@ -2512,10 +2512,10 @@ class SavedLineups(Base):
     position = Column(String(128), nullable = False)
 
     @classmethod
-    def add_lineup(cls, lineup_name, player_ids, positions):
+    def add_lineup(cls, lineup_name, lineup):
         session = DatabaseManager().get_session()
         try:
-            for player_id, position in zip(player_ids, positions):
+            for position, player_id in lineup.items():
                 lineup_entry = SavedLineups(
                     lineup_name = lineup_name,
                     player_id = player_id,

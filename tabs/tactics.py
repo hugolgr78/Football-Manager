@@ -741,7 +741,7 @@ class Analysis(ctk.CTkFrame):
     def last5Form(self):
         ctk.CTkLabel(self.last5FormFrame, text = "Last games", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
 
-        for i, match in enumerate(self.oppLast5Matches):
+        for i, match in enumerate(reversed(self.oppLast5Matches)):
             frame = ctk.CTkFrame(self.last5FormFrame, fg_color = DARK_GREY, width = 90, height = 110)
             frame.place(relx = 0.005 + i * 0.2, rely = 0.25, anchor = "nw")
 

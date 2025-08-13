@@ -4,7 +4,7 @@ from settings import *
 from data.database import *
 from CTkMessagebox import CTkMessagebox
 from data.gamesDatabase import *
-from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame
+from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame, PlayerProfileLink
 from utils.util_functions import *
 from tabs.matchday import MatchDay
 from PIL import Image
@@ -17,6 +17,8 @@ class Tactics(ctk.CTkFrame):
         self.manager_id = manager_id
         self.parent = parent
         self.selected_position = None
+
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
 
         self.lineupTab = Lineup(self, self.manager_id)
         self.analysis = None
@@ -79,8 +81,8 @@ class Lineup(ctk.CTkFrame):
         self.manager_id = manager_id
         self.parent = parent
         self.mainMenu = self.parent.parent
+        self.team = self.parent.team
 
-        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.players = Players.get_all_players_by_team(self.team.id)
 
         self.selectedLineup = {}
@@ -631,5 +633,101 @@ class Analysis(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
+        self.parent = parent
         self.manager_id = manager_id
+        self.team = self.parent.team
 
+        league = LeagueTeams.get_league_by_team(self.team.id)
+        self.nextmatch = Matches.get_team_next_match(self.team.id, league.league_id)
+        self.opponent = Teams.get_team_by_id(self.nextmatch.away_id if self.nextmatch.home_id == self.team.id else self.nextmatch.home_id)
+
+        self.oppLastMatch = Matches.get_team_last_match(self.opponent.id, league.league_id)
+        self.oppLast5Matches = Matches.get_team_last_5_matches(self.opponent.id, league.league_id)
+
+        if not self.oppLastMatch:
+            ctk.CTkLabel(self, text = "No analysis available for this team.", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+            return
+
+        canvas = ctk.CTkCanvas(self, width = 5, height = 770, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
+        canvas.place(relx = 0.5, rely = 0, anchor = "n")
+
+        ctk.CTkLabel(self, text = f"{self.opponent.name} Analysis", font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.25, rely = 0.02, anchor = "center")
+
+        self.best5PlayersFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 480, height = 150, corner_radius = 10)
+        self.best5PlayersFrame.place(relx = 0.25, rely = 0.1, anchor = "n")
+        self.best5PlayersFrame.pack_propagate(False)
+
+        self.last5FormFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 480, height = 150, corner_radius = 10)
+        self.last5FormFrame.place(relx = 0.25, rely = 0.4, anchor = "n")
+
+        self.topStatPlayersFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 480, height = 150, corner_radius = 10)
+        self.topStatPlayersFrame.place(relx = 0.25, rely = 0.7, anchor = "n")
+
+        self.predictedLineupFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 390, corner_radius = 10)
+        self.predictedLineupFrame.place(relx = 0.74, rely = 0.02, anchor = "n")
+
+        self.lastMeetingsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 150, corner_radius = 10)
+        self.lastMeetingsFrame.place(relx = 0.74, rely = 0.7, anchor = "n")
+
+        self.best5Players()
+        self.last5Form()
+        self.topStatPlayers()
+        self.predictedLineup()
+        self.lastMeetings()
+
+    def best5Players(self):
+        ctk.CTkLabel(self.best5PlayersFrame, text = "Best players over the last 5 games", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
+
+        last5lineups = [TeamLineup.get_lineup_by_match_and_team(match.id, self.opponent.id) for match in self.oppLast5Matches if match]
+        best5Players = self.getBest5Players(last5lineups)
+
+        frame = ctk.CTkFrame(self.best5PlayersFrame, fg_color = GREY_BACKGROUND, width = 460, height = 15)
+        frame.pack(expand = True, fill = "x", padx = 2, pady = (0, 5))
+
+        ctk.CTkLabel(frame, text = "Player", font = (APP_FONT_BOLD, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(frame, text = "Position", font = (APP_FONT_BOLD, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.3, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(frame, text = "Avg. Rating", font = (APP_FONT_BOLD, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(frame, text = "Goals / Assists", font = (APP_FONT_BOLD, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.75, rely = 0.5, anchor = "w")
+
+        for i in range(len(best5Players)):
+            player = best5Players[i]['player']
+            rating = best5Players[i]['average_rating']
+            frame = ctk.CTkFrame(self.best5PlayersFrame, fg_color = GREY_BACKGROUND, width = 460, height = 15)
+            frame.pack(expand = True, fill = "x", padx = 2, pady = (0, 5))
+
+            PlayerProfileLink(frame, player, f"{player.first_name} {player.last_name}", "white", 0.02, 0.5, "w", GREY_BACKGROUND, self.parent, 12)
+
+    def getBest5Players(self, lineups):
+        players = {}
+        for lineup in lineups:
+            for player in lineup:
+                playerData = Players.get_player_by_id(player.player_id)
+                key = f"{playerData.first_name} {playerData.last_name}"
+                if key in players:
+                    players[key]['total_rating'] += player.rating
+                    players[key]['matches'] += 1
+                else:
+                    players[key] = {'player': playerData, 'total_rating': player.rating, 'matches': 1}
+
+        # Filter for players with at least 3 matches and calculate average rating
+        qualified_players = {}
+        for key, data in players.items():
+            if data['matches'] >= 3:
+                data['average_rating'] = round(data['total_rating'] / data['matches'], 2)
+                qualified_players[key] = data
+
+        # Sort qualified players by average rating
+        sorted_players = sorted(qualified_players.values(), key = lambda x: x['average_rating'], reverse = True)
+        return sorted_players[:4]
+
+    def last5Form(self):
+        pass
+
+    def topStatPlayers(self):
+        pass
+
+    def predictedLineup(self):
+        pass
+
+    def lastMeetings(self):
+        pass

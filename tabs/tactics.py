@@ -8,6 +8,7 @@ from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFram
 from utils.util_functions import *
 from tabs.matchday import MatchDay
 from PIL import Image
+from collections import defaultdict
 
 class Tactics(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
@@ -152,35 +153,45 @@ class Lineup(ctk.CTkFrame):
 
         self.autoBox.configure(values = FORMATIONS_POSITIONS.keys())
 
-    def importLineup(self):
+    def importLineup(self, loaded = None, auto = None):
         self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
         self.league = League.get_league_by_id(self.leagueTeams.league_id)
         self.players = [player.id for player in Players.get_all_players_by_team(self.team.id, youths = False)]
-
         self.checkPositionsForYouth()
 
-        lastMatchday = self.league.current_matchday - 1
+        if not loaded and not auto:
 
-        if lastMatchday == 0:
-            self.addSubstitutePlayers()
-            return
-        
-        self.matchdayMatches = Matches.get_matchday_for_league(self.league.id, lastMatchday)
+            lastMatchday = self.league.current_matchday - 1
 
-        for match in self.matchdayMatches:
-            if match.home_id == self.team.id or match.away_id == self.team.id:
-                self.lastTeamMatch = match
-                self.lineup = TeamLineup.get_lineup_by_match_and_team(match.id, self.team.id)
+            if lastMatchday == 0:
+                self.addSubstitutePlayers()
+                return
+            
+            self.matchdayMatches = Matches.get_matchday_for_league(self.league.id, lastMatchday)
+
+            for match in self.matchdayMatches:
+                if match.home_id == self.team.id or match.away_id == self.team.id:
+                    self.lastTeamMatch = match
+                    self.lineup = TeamLineup.get_lineup_by_match_and_team(match.id, self.team.id)
+        else:
+            self.lineup = loaded if loaded else auto
 
         playersCount = 0
-        for playerData in self.lineup:
-            position = playerData.start_position
+        for playerData in self.lineup.values() if auto else self.lineup:
+            if not loaded and not auto:
+                position = playerData.start_position
+                player = Players.get_player_by_id(playerData.player_id)
+            elif loaded:
+                position = playerData.position
+                player = Players.get_player_by_id(playerData.player_id)
+            else:
+                position = [pos for pos, pid in self.lineup.items() if pid == playerData][0]
+                player = Players.get_player_by_id(playerData.id)
 
             if not position:
                 continue
 
             positionCode = POSITION_CODES[position]
-            player = Players.get_player_by_id(playerData.player_id)
 
             # Remove any youths that arent in the players list as the position is now free
             if player.player_role == "Youth Team" and player.id not in self.players:
@@ -247,7 +258,12 @@ class Lineup(ctk.CTkFrame):
             else:
                 overallPosition = "goalkeeper"
 
-            if len(playersForPosition) == 0:
+            if POSITION_CODES[position] in POSITIONS_MAX.keys():
+                maxPlayers = POSITIONS_MAX[POSITION_CODES[position]]
+            else:
+                maxPlayers = 1
+
+            if len(playersForPosition) < maxPlayers:
                 youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
                 youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth.id not in self.players]
 
@@ -465,7 +481,7 @@ class Lineup(ctk.CTkFrame):
         self.selectedLineup[position_1] = self.selectedLineup[position_2]
         self.selectedLineup[position_2] = temp
 
-    def reset(self):
+    def reset(self, addSubs = True):
         self.lineupPitch.destroy()
         self.lineupPitch = FootballPitchLineup(self, 500, 675, 0, -0.02, "nw", TKINTER_BACKGROUND, "green")
 
@@ -480,7 +496,8 @@ class Lineup(ctk.CTkFrame):
         for frame in self.substituteFrame.winfo_children():
             frame.destroy()
         
-        self.addSubstitutePlayers()
+        if addSubs:
+            self.addSubstitutePlayers()
 
         self.choosePlayerFrame.destroy()
         self.createChoosePlayerFrame()
@@ -546,13 +563,69 @@ class Lineup(ctk.CTkFrame):
         lineupName = self.loadBox.get()
         if lineupName and lineupName != "Choose Lineup":
             self.settingsFrame.place_forget()
-            self.reset()
+            self.reset(addSubs = False)
+
+            chosenLineup = SavedLineups.get_lineup_by_name(lineupName)
+            self.importLineup(loaded = chosenLineup)
 
     def autoLineup(self):
         lineupName = self.autoBox.get()
         if lineupName and lineupName != "Choose Lineup":
             self.settingsFrame.place_forget()
-            self.reset()
+            self.reset(addSubs = False)
+
+            lineup = {}
+            defNums, midNums, _ = map(int, lineupName.split("-"))
+
+            goalkeepers = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "goalkeeper"]
+            defenders = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "defender"]
+            midfielders = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "midfielder"]
+            attackers = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "forward"]
+
+            lineup["Goalkeeper"] = goalkeepers[0]
+
+            # defenders
+            self.choosePlayers(FORMATIONS_POSITIONS[lineupName][1:defNums + 1], defenders, lineup)
+
+            # midfielders
+            self.choosePlayers(FORMATIONS_POSITIONS[lineupName][defNums + 1:defNums + midNums + 1], midfielders, lineup)
+
+            # attackers
+            self.choosePlayers(FORMATIONS_POSITIONS[lineupName][defNums + midNums + 1:], attackers, lineup)
+
+            self.importLineup(auto = lineup)
+
+    def choosePlayers(self, position_names, players, lineup):
+
+        position_options = defaultdict(list)
+
+        for position in position_names:
+            position_options[position] = []
+            for player in players:
+                if POSITION_CODES[position] in player.specific_positions:
+                    position_options[position].append(player)
+
+        assigned_players = set()
+
+        while position_options != {}:
+            sorted_positions = sorted(position_options.keys(), key = lambda pos: len(position_options[pos]))
+
+            position = sorted_positions[0]
+            available_players = [p for p in position_options[position] if p not in assigned_players]
+            
+            # Step 3: Prioritize by role (star > first_team > rotation)
+            best_fit = next((p for p in available_players if p.player_role == "Star player"), None) or \
+                    next((p for p in available_players if p.player_role == "First Team"), None) or \
+                    next((p for p in available_players if p.player_role == "Rotation"), None)
+
+            if not best_fit:
+                best_fit = available_players[0]
+
+            lineup[position] = best_fit
+            assigned_players.add(best_fit)
+
+            # Remove empty position entries
+            del position_options[position]
 
 class Analysis(ctk.CTkFrame):
     def __init__(self, parent, manager_id):

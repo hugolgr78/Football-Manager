@@ -4,11 +4,14 @@ from settings import *
 from data.database import *
 from CTkMessagebox import CTkMessagebox
 from data.gamesDatabase import *
-from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame, PlayerProfileLink
+from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame, TeamLogo
+from utils.playerProfileLink import PlayerProfileLink
+from utils.matchProfileLink import MatchProfileLink
 from utils.util_functions import *
 from tabs.matchday import MatchDay
 from PIL import Image
 from collections import defaultdict
+import io
 
 class Tactics(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
@@ -651,7 +654,7 @@ class Analysis(ctk.CTkFrame):
         canvas = ctk.CTkCanvas(self, width = 5, height = 770, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = 0.5, rely = 0, anchor = "n")
 
-        ctk.CTkLabel(self, text = f"{self.opponent.name} Analysis", font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.25, rely = 0.02, anchor = "center")
+        ctk.CTkLabel(self, text = f"{self.opponent.name} Analysis", font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.25, rely = 0.03, anchor = "center")
 
         self.best5PlayersFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 480, height = 150, corner_radius = 10)
         self.best5PlayersFrame.place(relx = 0.25, rely = 0.1, anchor = "n")
@@ -659,9 +662,11 @@ class Analysis(ctk.CTkFrame):
 
         self.last5FormFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 480, height = 150, corner_radius = 10)
         self.last5FormFrame.place(relx = 0.25, rely = 0.4, anchor = "n")
+        self.last5FormFrame.pack_propagate(False)
 
         self.topStatPlayersFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 480, height = 150, corner_radius = 10)
         self.topStatPlayersFrame.place(relx = 0.25, rely = 0.7, anchor = "n")
+        self.topStatPlayersFrame.pack_propagate(False)
 
         self.predictedLineupFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 390, corner_radius = 10)
         self.predictedLineupFrame.place(relx = 0.74, rely = 0.02, anchor = "n")
@@ -685,9 +690,9 @@ class Analysis(ctk.CTkFrame):
         frame.pack(expand = True, fill = "x", padx = 2, pady = (0, 5))
 
         ctk.CTkLabel(frame, text = "Player", font = (APP_FONT_BOLD, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
-        ctk.CTkLabel(frame, text = "Position", font = (APP_FONT_BOLD, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.3, rely = 0.5, anchor = "w")
-        ctk.CTkLabel(frame, text = "Avg. Rating", font = (APP_FONT_BOLD, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "w")
-        ctk.CTkLabel(frame, text = "Goals / Assists", font = (APP_FONT_BOLD, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.75, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(frame, text = "Position", font = (APP_FONT_BOLD, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.35, rely = 0.5, anchor = "center")
+        ctk.CTkLabel(frame, text = "Avg. Rating", font = (APP_FONT_BOLD, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.6, rely = 0.5, anchor = "center")
+        ctk.CTkLabel(frame, text = "Goals / Assists", font = (APP_FONT_BOLD, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.85, rely = 0.5, anchor = "center")
 
         for i in range(len(best5Players)):
             player = best5Players[i]['player']
@@ -696,6 +701,19 @@ class Analysis(ctk.CTkFrame):
             frame.pack(expand = True, fill = "x", padx = 2, pady = (0, 5))
 
             PlayerProfileLink(frame, player, f"{player.first_name} {player.last_name}", "white", 0.02, 0.5, "w", GREY_BACKGROUND, self.parent, 12)
+            ctk.CTkLabel(frame, text = player.position.capitalize(), font = (APP_FONT, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.35, rely = 0.5, anchor = "center")
+            ctk.CTkLabel(frame, text = str(rating), font = (APP_FONT, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.6, rely = 0.5, anchor = "center")
+
+            goals, assists = 0, 0
+            for match in self.oppLast5Matches:
+                playerEvents = MatchEvents.get_events_by_match_and_player(match.id, player.id)
+                for event in playerEvents:
+                    if event.event_type == "goal" or event.event_type == "penalty_goal":
+                        goals += 1
+                    elif event.event_type == "assist":
+                        assists += 1
+
+            ctk.CTkLabel(frame, text = f"{goals} / {assists}", font = (APP_FONT, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.85, rely = 0.5, anchor = "center")
 
     def getBest5Players(self, lineups):
         players = {}
@@ -721,7 +739,41 @@ class Analysis(ctk.CTkFrame):
         return sorted_players[:4]
 
     def last5Form(self):
-        pass
+        ctk.CTkLabel(self.last5FormFrame, text = "Last games", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
+
+        for i, match in enumerate(self.oppLast5Matches):
+            frame = ctk.CTkFrame(self.last5FormFrame, fg_color = DARK_GREY, width = 90, height = 110)
+            frame.place(relx = 0.005 + i * 0.2, rely = 0.25, anchor = "nw")
+
+            opponentID = match.away_id if match.home_id == self.opponent.id else match.home_id
+            opponent = Teams.get_team_by_id(opponentID)
+            src = Image.open(io.BytesIO(opponent.logo))
+            src.thumbnail((50, 50))
+            TeamLogo(frame, src, opponent, DARK_GREY, 0.5, 0.25, "center", self.parent)
+
+            MatchProfileLink(frame, match, f"{match.score_home} - {match.score_away}", "white", 0.5, 0.6, "center", DARK_GREY, self.parent, 15, APP_FONT_BOLD)
+            ctk.CTkLabel(frame, text = "H" if match.home_id == self.opponent.id else "A", font = (APP_FONT, 12), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.75, anchor = "center")
+
+            result = "draw"
+            if match.home_id == self.opponent.id:
+                if match.score_home > match.score_away:
+                    result = "win"
+                elif match.score_home < match.score_away:
+                    result = "loss"
+            else:
+                if match.score_away > match.score_home:
+                    result = "win"
+                elif match.score_away < match.score_home:
+                    result = "loss"
+
+            if result == "win":
+                colour = PIE_GREEN
+            elif result == "loss":
+                colour = PIE_RED
+            else:
+                colour = NEUTRAL_COLOR
+
+            ctk.CTkCanvas(frame, bg = colour, height = 10, width = 120, bd = 0, highlightthickness = 0).place(relx = 0.5, rely = 0.98, anchor = "s")
 
     def topStatPlayers(self):
         pass

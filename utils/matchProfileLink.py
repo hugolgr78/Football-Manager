@@ -39,7 +39,7 @@ class MatchProfileLabel(ctk.CTkFrame):
 
 class MatchProfileLink(ctk.CTkLabel):
     def __init__(self, parent, match, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20, font = APP_FONT):
-        super().__init__(parent, text = text, font = (font, fontSize), fg_color = fg_color, text_color = textColor)
+        super().__init__(parent, text = text, font = (font, fontSize), fg_color = fg_color, text_color = textColor, height = 0)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
         self.match = match

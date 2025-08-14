@@ -39,7 +39,7 @@ class PlayerProfileLabel(ctk.CTkFrame):
 
 class PlayerProfileLink(ctk.CTkLabel):
     def __init__(self, parent, player, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20, font = APP_FONT, ingame = False, ingameFunction = None):
-        super().__init__(parent, text = text, font = (font, fontSize), fg_color = fg_color, text_color = textColor)
+        super().__init__(parent, text = text, font = (font, fontSize), fg_color = fg_color, text_color = textColor, height = 0)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
         self.player = player

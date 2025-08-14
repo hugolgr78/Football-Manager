@@ -548,7 +548,6 @@ class MatchdayReview():
         ctk.CTkLabel(matchFrame, text = awayTeam.name.split()[1], font = (APP_FONT_BOLD, 18), fg_color = TKINTER_BACKGROUND).place(relx = 0.8, rely = 0.75, anchor = "center")
 
         MatchProfileLink(matchFrame, bestMatch, f"{bestMatch.score_home} - {bestMatch.score_away}", "white", 0.5, 0.5, "center", TKINTER_BACKGROUND, self.parent.parentTab, 25, APP_FONT_BOLD)
-        # ctk.CTkLabel(matchFrame, text = f"{bestMatch.score_home} - {bestMatch.score_away}", font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
         playerOTM, _ = self.getPlayerOfTheMatch(bestMatch)
 

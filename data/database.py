@@ -1008,7 +1008,7 @@ class Matches(Base):
             match = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
                 ((Matches.home_id == team_1) & (Matches.away_id == team_2)) |
                 ((Matches.home_id == team_2) & (Matches.away_id == team_1))
-            ).order_by(Matches.matchday.desc()).first()
+            ).order_by(Matches.matchday.desc()).all()
             return match
         finally:
             session.close()

@@ -680,7 +680,7 @@ class Analysis(ctk.CTkFrame):
         self.best5Players()
         self.last5Form()
         self.topStatPlayers()
-        self.predictedLineup()
+        # self.predictedLineup()
         self.lastMeetings()
 
     def best5Players(self):
@@ -824,3 +824,37 @@ class Analysis(ctk.CTkFrame):
 
     def lastMeetings(self):
         ctk.CTkLabel(self.lastMeetingsFrame, text = "Last meetings", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
+
+        lastMeetings = Matches.get_last_encounter(self.opponent.id, self.team.id)
+
+        scrollable = False
+        if len(lastMeetings) > 5:
+            meetingsFrame = ctk.CTkScrollableFrame(self.lastMeetingsFrame, fg_color = GREY_BACKGROUND, width = 440, height = 80, orientation = "horizontal", scrollbar_button_color = GREY_BACKGROUND, scrollbar_button_hover_color = GREY_BACKGROUND)
+            
+            def _on_mousewheel(event):
+                meetingsFrame._parent_canvas.xview_scroll(-10 * int(event.delta/120), "units")
+                return "break"
+
+            # Bind to the frame and its canvas
+            meetingsFrame.bind('<MouseWheel>', _on_mousewheel)
+            meetingsFrame._parent_canvas.bind('<MouseWheel>', _on_mousewheel)
+            meetingsFrame.place(relx = 0.01, rely = 0.25, anchor = "nw")
+            scrollable = True
+        else:
+            meetingsFrame = ctk.CTkFrame(self.lastMeetingsFrame, fg_color = GREY_BACKGROUND, width = 450, height = 90)
+            meetingsFrame.place(relx = 0.01, rely = 0.25, anchor = "nw")
+            meetingsFrame.pack_propagate(False)
+
+        for i, match in enumerate(lastMeetings):
+            frame = ctk.CTkFrame(meetingsFrame, fg_color = DARK_GREY, width = 80, height = 80)
+            frame.pack(side = "left", padx = 5) if scrollable else frame.grid(row = 0, column  = i, padx = 5)
+
+            MatchProfileLink(frame, match, f"{match.score_home} - {match.score_away}", "white", 0.5, 0.3, "center", DARK_GREY, self.parent, 20, APP_FONT_BOLD)
+            ctk.CTkLabel(frame, text = "Eclipse League", font = (APP_FONT, 10), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.6, anchor = "center")
+            ctk.CTkLabel(frame, text = "H" if match.home_id == self.opponent.id else "A", font = (APP_FONT, 12), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.85, anchor = "center")
+
+            if scrollable:
+                frame.bind('<MouseWheel>', _on_mousewheel)
+                for child in frame.winfo_children():
+                    child.bind('<MouseWheel>', _on_mousewheel)
+

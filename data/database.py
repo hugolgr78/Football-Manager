@@ -3568,18 +3568,23 @@ class StatsManager:
         
         session = DatabaseManager().get_session()
         try:
+            # Get team's players
+            team_players = session.query(Players.id).filter(Players.team_id == teamID).all()
+            team_player_ids = [p.id for p in team_players]
+
             # Get all matches played by the team
             matches = session.query(Matches.id).filter(
                 or_(Matches.home_id == teamID, Matches.away_id == teamID)
             ).all()
             match_ids = [m.id for m in matches]
 
-            # Get all events for these matches
+            # Get events for these matches but only for players in the team
             events = session.query(
                 MatchEvents.player_id,
                 MatchEvents.event_type
             ).filter(
-                MatchEvents.match_id.in_(match_ids)
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.player_id.in_(team_player_ids)
             ).all()
 
             # Process all events

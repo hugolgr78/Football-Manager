@@ -4,6 +4,7 @@ from settings import *
 from data.database import *
 from CTkMessagebox import CTkMessagebox
 from data.gamesDatabase import *
+from utils import match
 from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame, TeamLogo
 from utils.playerProfileLink import PlayerProfileLink
 from utils.matchProfileLink import MatchProfileLink
@@ -276,11 +277,11 @@ class Lineup(ctk.CTkFrame):
                     self.players.append(youthForPosition[0].id)
                 else:
                     newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
-                    self.players.append(newYouth.id)
+                    self.players.append(newYouth)
 
                 if position == "Goalkeeper":
                     newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
-                    self.players.append(newYouth.id)
+                    self.players.append(newYouth)
 
             elif position == "Goalkeeper" and len(playersForPosition) == 1:
                 youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
@@ -290,7 +291,7 @@ class Lineup(ctk.CTkFrame):
                     self.players.append(youthForPosition[0].id)
                 else:
                     newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
-                    self.players.append(newYouth.id)
+                    self.players.append(newYouth)
 
     def addSubstitutePlayers(self, importing = False, playersCount = None):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)
@@ -656,15 +657,15 @@ class Analysis(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = f"{self.opponent.name} Analysis", font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.25, rely = 0.03, anchor = "center")
 
-        self.best5PlayersFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 480, height = 150, corner_radius = 10)
+        self.best5PlayersFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 480, height = 170, corner_radius = 10)
         self.best5PlayersFrame.place(relx = 0.25, rely = 0.1, anchor = "n")
         self.best5PlayersFrame.pack_propagate(False)
 
-        self.last5FormFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 480, height = 150, corner_radius = 10)
+        self.last5FormFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 480, height = 170, corner_radius = 10)
         self.last5FormFrame.place(relx = 0.25, rely = 0.4, anchor = "n")
         self.last5FormFrame.pack_propagate(False)
 
-        self.topStatPlayersFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 480, height = 150, corner_radius = 10)
+        self.topStatPlayersFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 480, height = 170, corner_radius = 10)
         self.topStatPlayersFrame.place(relx = 0.25, rely = 0.7, anchor = "n")
         self.topStatPlayersFrame.pack_propagate(False)
 
@@ -736,23 +737,23 @@ class Analysis(ctk.CTkFrame):
 
         # Sort qualified players by average rating
         sorted_players = sorted(qualified_players.values(), key = lambda x: x['average_rating'], reverse = True)
-        return sorted_players[:4]
+        return sorted_players[:5]
 
     def last5Form(self):
         ctk.CTkLabel(self.last5FormFrame, text = "Last games", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
 
         for i, match in enumerate(reversed(self.oppLast5Matches)):
-            frame = ctk.CTkFrame(self.last5FormFrame, fg_color = DARK_GREY, width = 90, height = 110)
+            frame = ctk.CTkFrame(self.last5FormFrame, fg_color = DARK_GREY, width = 90, height = 120)
             frame.place(relx = 0.005 + i * 0.2, rely = 0.25, anchor = "nw")
 
             opponentID = match.away_id if match.home_id == self.opponent.id else match.home_id
             opponent = Teams.get_team_by_id(opponentID)
             src = Image.open(io.BytesIO(opponent.logo))
-            src.thumbnail((50, 50))
-            TeamLogo(frame, src, opponent, DARK_GREY, 0.5, 0.25, "center", self.parent)
+            src.thumbnail((60, 60))
+            TeamLogo(frame, src, opponent, DARK_GREY, 0.5, 0.3, "center", self.parent)
 
-            MatchProfileLink(frame, match, f"{match.score_home} - {match.score_away}", "white", 0.5, 0.6, "center", DARK_GREY, self.parent, 15, APP_FONT_BOLD)
-            ctk.CTkLabel(frame, text = "H" if match.home_id == self.opponent.id else "A", font = (APP_FONT, 12), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.75, anchor = "center")
+            MatchProfileLink(frame, match, f"{match.score_home} - {match.score_away}", "white", 0.5, 0.65, "center", DARK_GREY, self.parent, 15, APP_FONT_BOLD)
+            ctk.CTkLabel(frame, text = "H" if match.home_id == self.opponent.id else "A", font = (APP_FONT, 12), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.8, anchor = "center")
 
             result = "draw"
             if match.home_id == self.opponent.id:
@@ -773,10 +774,30 @@ class Analysis(ctk.CTkFrame):
             else:
                 colour = NEUTRAL_COLOR
 
-            ctk.CTkCanvas(frame, bg = colour, height = 10, width = 120, bd = 0, highlightthickness = 0).place(relx = 0.5, rely = 0.98, anchor = "s")
+            ctk.CTkCanvas(frame, bg = colour, height = 10, width = 120, bd = 0, highlightthickness = 0).place(relx = 0.5, rely = 0.99, anchor = "s")
 
     def topStatPlayers(self):
-        pass
+        ctk.CTkLabel(self.topStatPlayersFrame, text = "Leading players", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
+
+        stats = StatsManager.get_team_top_stats(self.opponent.id, 1)
+
+        for i, (stat, players) in enumerate(stats.items()):
+            frame = ctk.CTkFrame(self.topStatPlayersFrame, fg_color = DARK_GREY, width = 90, height = 120)
+            frame.place(relx = 0.005 + i * 0.2, rely = 0.25, anchor = "nw")
+            
+            if len(players) == 0:
+                ctk.CTkLabel(frame, text = "N/A", font = (APP_FONT, 12), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.65, anchor = "center")
+                ctk.CTkLabel(frame, text = "-", font = (APP_FONT_BOLD, 20), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.85, anchor = "center")
+            else:
+                playerID, value = players[0]
+                player = Players.get_player_by_id(playerID)
+                PlayerProfileLink(frame, player, f"{player.first_name} {player.last_name}", "white", 0.5, 0.65, "center", DARK_GREY, self.parent, 12)
+                ctk.CTkLabel(frame, text = value, font = (APP_FONT_BOLD, 20), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.85, anchor = "center")
+             
+            src = Image.open(f"Images/{stat}.png")
+            src.thumbnail((60, 60))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(frame, image = img, text = "", width = 50, height = 50, fg_color = DARK_GREY).place(relx = 0.5, rely = 0.3, anchor = "center")
 
     def predictedLineup(self):
         pass

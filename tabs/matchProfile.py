@@ -704,7 +704,7 @@ class MatchProfile(ctk.CTkFrame):
 
             if injured:
                 src = Image.open("Images/injury.png")
-                src.thumbnail((15, 15))
+                src.thumbnail((10, 10))
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":
@@ -876,7 +876,7 @@ class MatchProfile(ctk.CTkFrame):
 
             if injured:
                 src = Image.open("Images/injury.png")
-                src.thumbnail((15, 15))
+                src.thumbnail((10, 10))
                 img = ImageTk.PhotoImage(src)
 
                 if pitch == "Start":

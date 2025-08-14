@@ -490,6 +490,7 @@ class Match():
                     playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
                     lineup.pop(playerPosition)
                     finalLineup.append((playerPosition, playerID))
+                    event["position"] = playerPosition
 
                     if teamMatch:
                         if home:

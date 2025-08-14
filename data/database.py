@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, func, or_, case
 from sqlalchemy.orm import sessionmaker, aliased, scoped_session
 from sqlalchemy.types import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import defaultdict
 import uuid, json, random
 from faker import Faker
 from settings import *
@@ -1046,29 +1047,9 @@ class TeamLineup(Base):
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     match_id = Column(String(128), ForeignKey('matches.id'))
     player_id = Column(String(128), ForeignKey('players.id'))
-    start_position = Column(String(128), nullable = False)
-    end_position = Column(String(128), nullable = False)
+    start_position = Column(String(128))
+    end_position = Column(String(128))
     rating = Column(Integer, nullable = False, default = 0)
-
-    @classmethod
-    def add_lineup_multiple(cls, match_id, players, positions):
-        session = DatabaseManager().get_session()
-        try:
-            for player, position in zip(players, positions):
-                new_player = TeamLineup(
-                    match_id = match_id,
-                    player_id = player.id,
-                    start_position = position,
-                    end_position = position,
-                )
-                session.add(new_player)
-            session.commit()
-            return new_player
-        except Exception as e:
-            session.rollback()
-            raise e
-        finally:
-            session.close()
 
     @classmethod
     def batch_add_lineups(cls, lineups):
@@ -1097,14 +1078,14 @@ class TeamLineup(Base):
             session.close()
     
     @classmethod
-    def add_lineup_single(cls, match_id, player_id, position, rating):
+    def add_lineup_single(cls, match_id, player_id, start_position, end_position, rating):
         session = DatabaseManager().get_session()
         try:
             new_player = TeamLineup(
                 match_id = match_id,
                 player_id = player_id,
-                start_position = position,
-                end_position = position,
+                start_position = start_position,
+                end_position = end_position,
                 rating = rating
             )
             session.add(new_player)
@@ -3573,6 +3554,71 @@ class StatsManager:
                 stats_result.append([stat_name, "N/A", "N/A"])
 
         return stats_result
+
+    @staticmethod
+    def get_team_top_stats(teamID, num):
+        """
+        Get the top N players for each statistic (goals, assists, clean sheets, etc.)
+        Returns a dictionary with each stat category containing a list of tuples (player_id, stat_value)
+        sorted in descending order and limited to the top N players
+        """
+
+        # Create a dict of all players with entries for goals, assists, clean sheets, yellow and red cards
+        player_stats = defaultdict(lambda: {"goal": 0, "assist": 0, "cleanSheet": 0, "yellowCard": 0, "redCard": 0})
+        
+        session = DatabaseManager().get_session()
+        try:
+            # Get all matches played by the team
+            matches = session.query(Matches.id).filter(
+                or_(Matches.home_id == teamID, Matches.away_id == teamID)
+            ).all()
+            match_ids = [m.id for m in matches]
+
+            # Get all events for these matches
+            events = session.query(
+                MatchEvents.player_id,
+                MatchEvents.event_type
+            ).filter(
+                MatchEvents.match_id.in_(match_ids)
+            ).all()
+
+            # Process all events
+            for player_id, event_type in events:
+                if event_type in ["goal", "penalty_goal"]:
+                    player_stats[player_id]["goal"] += 1
+                elif event_type == "assist":
+                    player_stats[player_id]["assist"] += 1
+                elif event_type == "clean_sheet":
+                    player_stats[player_id]["cleanSheet"] += 1
+                elif event_type == "yellow_card":
+                    player_stats[player_id]["yellowCard"] += 1
+                elif event_type == "red_card":
+                    player_stats[player_id]["redCard"] += 1
+
+            # Convert to dictionary of lists sorted by each stat value
+            result = {
+                "goal": [],
+                "assist": [],
+                "cleanSheet": [],
+                "yellowCard": [],
+                "redCard": []
+            }
+
+            # For each stat category, get the top N players
+            for stat in result.keys():
+                # Sort players by the stat value in descending order
+                top_players = sorted(
+                    [(pid, stats[stat]) for pid, stats in player_stats.items()],
+                    key = lambda x: x[1],
+                    reverse = True
+                )
+                # Take only the top N players with non-zero stats
+                result[stat] = [(pid, val) for pid, val in top_players[:num] if val > 0]
+
+            return result
+        finally:
+            session.close()
+
 
 def updateProgress(textIndex):
     global progressBar, progressLabel, progressFrame, percentageLabel, PROGRESS

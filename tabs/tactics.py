@@ -669,10 +669,10 @@ class Analysis(ctk.CTkFrame):
         self.topStatPlayersFrame.place(relx = 0.25, rely = 0.7, anchor = "n")
         self.topStatPlayersFrame.pack_propagate(False)
 
-        self.predictedLineupFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 390, corner_radius = 10)
+        self.predictedLineupFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 410, corner_radius = 10)
         self.predictedLineupFrame.place(relx = 0.74, rely = 0.02, anchor = "n")
 
-        self.lastMeetingsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 150, corner_radius = 10)
+        self.lastMeetingsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 170, corner_radius = 10)
         self.lastMeetingsFrame.place(relx = 0.74, rely = 0.7, anchor = "n")
 
         self.best5Players()
@@ -731,7 +731,7 @@ class Analysis(ctk.CTkFrame):
         # Filter for players with at least 3 matches and calculate average rating
         qualified_players = {}
         for key, data in players.items():
-            if data['matches'] >= 3:
+            if data['matches'] >= len(lineups) - 2:
                 data['average_rating'] = round(data['total_rating'] / data['matches'], 2)
                 qualified_players[key] = data
 
@@ -784,7 +784,7 @@ class Analysis(ctk.CTkFrame):
         for i, (stat, players) in enumerate(stats.items()):
             frame = ctk.CTkFrame(self.topStatPlayersFrame, fg_color = DARK_GREY, width = 90, height = 120)
             frame.place(relx = 0.005 + i * 0.2, rely = 0.25, anchor = "nw")
-            
+
             if len(players) == 0:
                 ctk.CTkLabel(frame, text = "N/A", font = (APP_FONT, 12), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.65, anchor = "center")
                 ctk.CTkLabel(frame, text = "-", font = (APP_FONT_BOLD, 20), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.85, anchor = "center")

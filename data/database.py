@@ -3816,3 +3816,72 @@ def searchResults(search, limit = SEARCH_LIMIT):
     finally:
         session.close()
 
+def getPredictedLineup(opponent_id):
+    session = DatabaseManager().get_session()
+    try:
+        team = Teams.get_team_by_id(opponent_id)
+        league = LeagueTeams.get_league_by_team(team.id)
+        matches = Matches.get_all_played_matches_by_team_and_comp(team.id, league.league_id)
+
+        # Step 1: Find the most used formation
+        formation_counts = defaultdict(int)
+        for match in matches:
+            lineup = TeamLineup.get_lineup_by_match_and_team(match.id, team.id)
+            if lineup:
+                positions = [entry.start_position for entry in lineup if entry.start_position is not None]
+                formation = next(form for form, pos in FORMATIONS_POSITIONS.items() if set(pos) == set(positions))
+                formation_counts[formation] += 1
+
+        most_used_formation = max(formation_counts.items(), key = lambda x: x[1])[0] if formation_counts else None
+        if not most_used_formation:
+            return None
+
+        # Step 2: Get all available players (excluding banned/injured)
+        available_players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
+        
+        # Step 3: For each position in the formation, find most started player
+        predicted_lineup = {}
+        positions = FORMATIONS_POSITIONS[most_used_formation]
+
+        for position in positions:
+            # Find players who can play in this position
+            position_players = []
+            for player in available_players:
+                if POSITION_CODES[position] in player.specific_positions.split(","):
+                    position_players.append(player)
+
+            if not position_players:
+                print(f"Error predicting lineup for team {team.name}, position {position}, lineup {predicted_lineup}")
+                return
+
+            # Count starts in this position
+            player_starts = defaultdict(int)
+            for match in matches:
+                lineup = TeamLineup.get_lineup_by_match_and_team(match.id, team.id)
+                if lineup:
+                    for entry in lineup:
+                        if entry.start_position == position and entry.player_id in [p.id for p in position_players]:
+                            player_starts[entry.player_id] += 1
+
+            # Select most started player or use role-based selection if no starts
+            if player_starts:
+                most_started_id = max(player_starts.items(), key = lambda x: x[1])[0]
+                selected_player = next(p for p in position_players if p.id == most_started_id)
+            else:
+                # Sort by role priority first, then by morale if no historical starts
+                role_priority = {
+                    "Star player": 1,
+                    "First Team": 2,
+                    "Rotation": 3,
+                    "Backup": 4,
+                    "Youngster": 5
+                }
+                selected_player = min(position_players, key = lambda p: (role_priority[p.player_role], -p.morale))
+
+            predicted_lineup[position] = selected_player
+
+        return predicted_lineup
+
+    finally:
+        session.close()
+

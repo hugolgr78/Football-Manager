@@ -5,8 +5,8 @@ from data.database import *
 from CTkMessagebox import CTkMessagebox
 from data.gamesDatabase import *
 from utils import match
-from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame, TeamLogo
-from utils.playerProfileLink import PlayerProfileLink
+from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame, TeamLogo, FootballPitchMatchDay
+from utils.playerProfileLink import PlayerProfileLink, PlayerProfileLabel
 from utils.matchProfileLink import MatchProfileLink
 from utils.util_functions import *
 from tabs.matchday import MatchDay
@@ -669,11 +669,13 @@ class Analysis(ctk.CTkFrame):
         self.topStatPlayersFrame.place(relx = 0.25, rely = 0.7, anchor = "n")
         self.topStatPlayersFrame.pack_propagate(False)
 
-        self.predictedLineupFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 410, corner_radius = 10)
+        self.predictedLineupFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 460, corner_radius = 10)
         self.predictedLineupFrame.place(relx = 0.74, rely = 0.02, anchor = "n")
+        self.predictedLineupFrame.pack_propagate(False)
 
-        self.lastMeetingsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 170, corner_radius = 10)
-        self.lastMeetingsFrame.place(relx = 0.74, rely = 0.7, anchor = "n")
+        self.lastMeetingsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 130, corner_radius = 10)
+        self.lastMeetingsFrame.place(relx = 0.74, rely = 0.76, anchor = "n")
+        self.lastMeetingsFrame.pack_propagate(False)
 
         self.best5Players()
         self.last5Form()
@@ -800,7 +802,25 @@ class Analysis(ctk.CTkFrame):
             ctk.CTkLabel(frame, image = img, text = "", width = 50, height = 50, fg_color = DARK_GREY).place(relx = 0.5, rely = 0.3, anchor = "center")
 
     def predictedLineup(self):
-        pass
+        ctk.CTkLabel(self.predictedLineupFrame, text = "Predicted lineup", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
+
+        playersFrame = ctk.CTkFrame(self.predictedLineupFrame, fg_color = GREY_BACKGROUND, width = 160, height = 400)
+        playersFrame.place(relx = 0.01, rely = 0.08, anchor = "nw")
+
+        ctk.CTkLabel(playersFrame, text = "Players", font = (APP_FONT_BOLD, 12), fg_color = GREY_BACKGROUND).pack(pady = 5, anchor = "center")
+
+        lineupPitch = FootballPitchMatchDay(self.predictedLineupFrame, 340, 510, 0.99, 0.08, "ne", GREY_BACKGROUND, GREY_BACKGROUND)
+        lineup = getPredictedLineup(self.opponent.id)
+        
+        for position, player in lineup.items():
+            lineupPitch.addPlayer(position, player.last_name)
+
+            frame = ctk.CTkFrame(playersFrame, fg_color = GREY_BACKGROUND, width = 150, height = 15)
+            frame.pack(expand = True, fill = "x", padx = 2, pady = (0, 5))
+
+            ctk.CTkLabel(frame, text = f"{POSITION_CODES[position]}", font = (APP_FONT, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
+            ctk.CTkLabel(frame, text = "-", font = (APP_FONT, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.18, rely = 0.5, anchor = "w")
+            PlayerProfileLink(frame, player, f"{player.first_name} {player.last_name}", "white", 0.24, 0.5, "w", GREY_BACKGROUND, self.parent, 12)
 
     def lastMeetings(self):
-        pass
+        ctk.CTkLabel(self.lastMeetingsFrame, text = "Last meetings", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")

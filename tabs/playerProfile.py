@@ -112,7 +112,7 @@ class Profile(ctk.CTkFrame):
             if ban.ban_type == "injury":
                 injuryLabel = ctk.CTkLabel(self, text = f"Expected return in {ban.ban_length} matchday(s)", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND)
 
-                src = Image.open("Images/hospital.png")
+                src = Image.open("Images/injury.png")
                 src.thumbnail((35, 35))
                 img = ctk.CTkImage(src, None, (src.width, src.height))
                 injuryImage = ctk.CTkLabel(self, image = img, text = "")

@@ -680,7 +680,7 @@ class Analysis(ctk.CTkFrame):
         self.best5Players()
         self.last5Form()
         self.topStatPlayers()
-        # self.predictedLineup()
+        self.predictedLineup()
         self.lastMeetings()
 
     def best5Players(self):

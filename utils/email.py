@@ -667,9 +667,15 @@ class MatchdayPreview():
         self.frame = self.parent.emailFrame
         self.matchday = self.parent.matchday
 
-        self.subject = f"Matchday {self.parent.matchday} preview"
+        self.nextMatch = Matches.get_team_matchday_match(self.parent.team.id, self.parent.league.id, self.matchday)
+        self.homeTeam = Teams.get_team_by_id(self.nextMatch.home_id)
+        self.awayTeam = Teams.get_team_by_id(self.nextMatch.away_id)
+        self.opponent = self.homeTeam if self.homeTeam.id != self.parent.team.id else self.awayTeam
+        self.opponentData = TeamHistory.get_team_data_matchday(self.opponent.id, self.matchday - 1)
+
+        self.subject = f"{self.opponent.name} preview"
         self.sender = "Name, Assistant Manager"
-        self.subjectFontSize = 20
+        self.subjectFontSize = 20 if len(self.subject) < 25 else 15
 
     def openEmail(self):
         for widget in self.frame.winfo_children():
@@ -687,31 +693,21 @@ class MatchdayPreview():
         ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.275, anchor = "w")
         ctk.CTkLabel(self.frame, text = self.title_2, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.355, anchor = "w")
         self.emailFrame_4.place(relx = 0.05, rely = 0.39, anchor = "w")
-        ctk.CTkLabel(self.frame, text = self.emailText_3, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.44, anchor = "w")
-        ctk.CTkLabel(self.frame, text = self.title_3, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.53, anchor = "w")
-        ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.55, anchor = "nw")
+        ctk.CTkLabel(self.frame, text = self.emailText_3, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.405, anchor = "nw")
 
-        for i in range(len(self.emailFrames_5)):
-            self.emailFrames_5[i].place(relx = 0.05, rely = 0.6 + 0.031 * i, anchor = "w")
-
-        ctk.CTkLabel(self.frame, text = self.title_4, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.72, anchor = "w")
-        self.emailFrame_6.place(relx = 0.05, rely = 0.76, anchor = "w")
-        ctk.CTkLabel(self.frame, text = self.title_5, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.82, anchor = "w")
-        ctk.CTkLabel(self.frame, text = self.emailText_6, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.85, anchor = "nw")
+        if self.matchday != 1:
+            self.emailText_5 = ctk.CTkLabel(self.frame, text = "For more information, you can open your analysis tab by going to Tactics -> Analysis", font = (APP_FONT, 15), justify = "left", text_color = "white")
+            self.emailText_5.place(relx = 0.05, rely = 0.428, anchor = "nw")
+            
+        ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.5, anchor = "nw")
 
     def setUpEmail(self):
 
-        self.nextMatch = Matches.get_team_matchday_match(self.parent.team.id, self.parent.league.id, self.matchday)
-        homeTeam = Teams.get_team_by_id(self.nextMatch.home_id)
-        awayTeam = Teams.get_team_by_id(self.nextMatch.away_id)
-        self.opponent = homeTeam if homeTeam.id != self.parent.team.id else awayTeam
-        self.opponentData = TeamHistory.get_team_data_matchday(self.opponent.id, self.matchday - 1)
-
-        font = tkFont.Font(family = APP_FONT, size = 15)  # Use same font/size as emailFrame_2 content
-        text_width_px = font.measure(homeTeam.name)
+        font = tkFont.Font(family = APP_FONT, size = 15)
+        text_width_px = font.measure(self.homeTeam.name)
 
         # Measure parent frame width (fallback to fixed value if needed)
-        frame_width_px = self.frame.winfo_width() or 800  # adjust 800 if you know the actual width
+        frame_width_px = self.frame.winfo_width() or 800
 
         # Convert to relx
         rel_offset = 0.165 + (text_width_px / frame_width_px) 
@@ -732,14 +728,11 @@ class MatchdayPreview():
 
         self.title_1 = "Match Details"
         self.title_2 = "Opposition Analysis"
-        self.title_3 = "Key players to watch"
-        self.title_4 = "Last Encounter"
-        self.title_5 = "Last lineup"
 
         self.emailFrame_2 = TeamProfileLabel(
             self.frame,
-            homeTeam.manager_id,
-            homeTeam.name,
+            self.homeTeam.manager_id,
+            self.homeTeam.name,
             f"- Fixture: ",
             f" vs ",
             600,
@@ -750,8 +743,8 @@ class MatchdayPreview():
 
         self.emailFrame_3 = TeamProfileLabel(
             self.frame,
-            awayTeam.manager_id,
-            awayTeam.name,
+            self.awayTeam.manager_id,
+            self.awayTeam.name,
             f"",
             f"",
             600,
@@ -763,7 +756,7 @@ class MatchdayPreview():
         self.emailText_2 = (
             f"- Date: \n"
             f"- Kick-off: {self.nextMatch.time}\n"
-            f"- Venue: {homeTeam.stadium}\n"
+            f"- Venue: {self.homeTeam.stadium}\n"
             f"- Weather Forecast: \n"
         )
 
@@ -786,35 +779,6 @@ class MatchdayPreview():
                 f"Keep an eye on their key players who have shown great potential in the past.\n"
                 f"Stay prepared and let's aim for a strong start to the season!"
             )
-            
-            self.stars = Players.get_all_star_players(self.opponent.id)
-            top_players = min(3, len(self.stars))
-            self.emailText_4 = "Here are the top players to watch out for in the upcoming match:\n"
-
-            self.emailFrames_5 = []
-
-            for i in range(top_players):
-                player = self.stars[i]
-                frame = PlayerProfileLabel(
-                    self.frame,
-                    player,
-                    f"{player.first_name} {player.last_name}",
-                    f"- ",
-                    f" ({player.position}, star player)",
-                    600,
-                    30,
-                    self.parent.parentTab,
-                    fontSize = 15
-                )
-                self.emailFrames_5.append(frame)
-
-            self.emailText_4 = self.emailText_4.strip()  # Remove the trailing newline
-
-            self.emailText_6 = (
-                f"No games have been played yet this season so we do not have data on {self.opponent.name}'s\n"
-                f"last lineup. We expect them to field a strong team and we need to be prepared for any\n"
-                f"formation they might use."
-            )
 
         else:
             last5 = Matches.get_team_last_5_matches_from_matchday(self.opponent.id, self.matchday)
@@ -836,7 +800,7 @@ class MatchdayPreview():
             if wins > 0:
                 results.append(f"won {wins}")
             if draws > 0:
-                results.append(f"drew {draws}")
+                results.append(f"drawn {draws}")
             if losses > 0:
                 results.append(f"lost {losses}")
 
@@ -858,148 +822,11 @@ class MatchdayPreview():
 
             self.emailText_3 = (
                 f"In their last {text}, they have {results_text}. They scored {goals_scored} goals and conceded {goals_conceded}.\n"
-                f"Their current top scorer is Name with N goals and their top assist provider is Name with N assists.\n"
-                f"Throughout the season, they have kept N clean sheets and have failed to score in N matches."
-            )
-        
-            last5lineups = [TeamLineup.get_lineup_by_match_and_team(match.id, self.opponent.id) for match in last5]
-            best3Players = self.getBest3Players(last5lineups)
-            self.emailText_4 = (
-                f"Here are the top 3 players to watch out for in the upcoming match:"
             )
 
-            self.emailFrames_5 = []
-
-            for i in range(3):
-                player = best3Players[i]['player']
-                frame = PlayerProfileLabel(
-                    self.frame,
-                    player,
-                    f"{player.first_name} {player.last_name}",
-                    f"- ",
-                    f" ({player.position}, had an average rating of {best3Players[i]['average_rating']} in the last 5 matches)",
-                    600,
-                    30,
-                    self.parent.parentTab,
-                    fontSize = 15
-                )
-                self.emailFrames_5.append(frame)
-
-            lastMatch = Matches.get_team_last_match_from_matchday(self.opponent.id, self.matchday)
-
-            lastLineup = TeamLineup.get_lineup_by_match_and_team(lastMatch.id, self.opponent.id)
-            defs, mids, fwds = self.countFormation(lastLineup, lastMatch)
-            goalkeeper = Players.get_player_by_id(lastLineup[0].player_id)
-
-            self.emailText_6 = (
-                f"In their last match, {self.opponent.name} lined up in a {defs}-{mids}-{fwds} formation. Here is their starting XI:\n"
-                f"- Goalkeeper: {goalkeeper.first_name} {goalkeeper.last_name}\n"
-            )
-
-            text1 = "- Defenders: "
-            for i in range(1, defs + 1):
-                player = Players.get_player_by_id(lastLineup[i].player_id)
-                if i != defs:
-                    text1 += f"{player.first_name} {player.last_name}, "
-                else:
-                    text1 += f"{player.first_name} {player.last_name}"
-
-            self.emailText_6 += text1 + "\n"
-
-            # Midfielders
-            text2 = "- Midfielders: "
-            for i in range(defs + 1, defs + mids + 1):
-                player = Players.get_player_by_id(lastLineup[i].player_id)
-                if i != defs + mids:
-                    text2 += f"{player.first_name} {player.last_name}, "
-                else:
-                    text2 += f"{player.first_name} {player.last_name}"
-
-            self.emailText_6 += text2 + "\n"
-
-            # Forwards
-            text3 = "- Forwards: "
-            for i in range(defs + mids + 1, defs + mids + fwds + 1):
-                player = Players.get_player_by_id(lastLineup[i].player_id)
-                if i != defs + mids + fwds:
-                    text3 += f"{player.first_name} {player.last_name}, "
-                else:
-                    text3 += f"{player.first_name} {player.last_name}"
-
-            self.emailText_6 += text3
-
-        lastEncounter = Matches.get_last_encounter_from_matchday(self.parent.team.id, self.opponent.id, self.matchday)
-
-        if lastEncounter:
-
-            self.emailFrame_6 = TeamProfileLabel(
-                self.frame,
-                self.opponent.manager_id,
-                self.opponent.name,
-                f"Our last encounter against ",
-                f" ended in {lastEncounter.score_home}-{lastEncounter.score_away}.",
-                600,
-                30,
-                self.parent.parentTab,
-                fontSize = 15
-            )
-        else:
-
-            self.emailFrame_6 = TeamProfileLabel(
-                self.frame,
-                self.opponent.manager_id,
-                self.opponent.name,
-                f"We have never faced ",
-                f" before.",
-                600,
-                30,
-                self.parent.parentTab,
-                fontSize = 15
-            )
-
-        self.emailText_7 = (
+        self.emailText_4 = (
             "Name, Assistant Manager"
         )
-
-    def getBest3Players(self, lineups):
-        players = {}
-        for lineup in lineups:
-            for player in lineup:
-                playerData = Players.get_player_by_id(player.player_id)
-                key = f"{playerData.first_name} {playerData.last_name}"
-                if key in players:
-                    players[key]['total_rating'] += player.rating
-                    players[key]['matches'] += 1
-                else:
-                    players[key] = {'player': playerData, 'total_rating': player.rating, 'matches': 1}
-
-        # Calculate average rating and sort players by it
-        for key in players:
-            players[key]['average_rating'] = round(players[key]['total_rating'] / players[key]['matches'], 2)
-
-        sorted_players = sorted(players.values(), key = lambda x: x['average_rating'], reverse = True)
-        return sorted_players[:3]
-
-    def countFormation(self, lineup, match):
-        position_counts = {"defenders": 0, "midfielders": 0, "attackers": 0}
-        events = MatchEvents.get_events_by_match(match.id)
-
-        for player in lineup:
-            
-            subbed_on = False
-            for event in events:
-                if event.event_type == "sub_on" and event.player_id == player.player_id:
-                    subbed_on = True
-
-            if not subbed_on:
-                if player.start_position in DEFENSIVE_POSITIONS:
-                    position_counts["defenders"] += 1
-                elif player.start_position in MIDFIELD_POSITIONS:
-                    position_counts["midfielders"] += 1
-                elif player.start_position in ATTACKING_POSITIONS:
-                    position_counts["attackers"] += 1
-
-        return position_counts['defenders'], position_counts['midfielders'], position_counts['attackers']
 
 class PlayerGamesIssue():
     def __init__(self, parent):

@@ -3829,6 +3829,10 @@ def getPredictedLineup(opponent_id):
             lineup = TeamLineup.get_lineup_by_match_and_team(match.id, team.id)
             if lineup:
                 positions = [entry.start_position for entry in lineup if entry.start_position is not None]
+
+                if not positions:
+                    continue
+
                 formation = next(form for form, pos in FORMATIONS_POSITIONS.items() if set(pos) == set(positions))
                 formation_counts[formation] += 1
 

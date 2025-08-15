@@ -150,17 +150,77 @@ RELATED_POSITIONS = {
 }
 
 FORMATIONS_CHANCES = {
-    "4-4-2": 0.2,
-    "4-3-3": 0.5,
-    "4-5-1": 0.1,
-    "3-4-3": 0.2,
+    "4-4-2 CM": 0.10,
+    "4-4-2 DM": 0.10,
+    "4-3-3 CM": 0.25,
+    "4-3-3 DM": 0.25,
+    "4-5-1 DM": 0.05,
+    "4-5-1 AM": 0.025,
+    "4-5-1 CM": 0.025,
+    "3-4-3": 0.15,
+    "3-5-2 CM": 0.04,
+    "3-5-2 AM": 0.04,
+    "5-3-2": 0.015,
+    "5-4-1": 0.015,
+    "4-2-4": 0.015,
+    "3-6-1": 0.015,
 }
 
 FORMATIONS_POSITIONS = {
-    "4-4-2": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back", "Defensive Midfielder", "Central Midfielder", "Left Midfielder", "Right Midfielder", "Striker Left", "Striker Right"],
-    "4-3-3": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back", "Central Midfielder", "Left Midfielder", "Right Midfielder", "Left Winger", "Right Winger", "Center Forward"],
-    "4-5-1": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back", "Defensive Midfielder Right", "Defensive Midfielder Left", "Central Midfielder", "Left Midfielder", "Right Midfielder", "Center Forward"],
-    "3-4-3": ["Goalkeeper", "Right Back", "Center Back", "Left Back", "Defensive Midfielder", "Central Midfielder", "Left Midfielder", "Right Midfielder", "Left Winger", "Right Winger", "Center Forward"],
+    "4-4-2 CM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+              "Defensive Midfielder", "Central Midfielder", "Left Midfielder", "Right Midfielder",
+              "Striker Left", "Striker Right"],
+
+    "4-4-2 DM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+            "Defensive Midfielder Right",
+            "Left Midfielder", "Defensive Midfielder Left", "Right Midfielder",
+            "Striker Left", "Striker Right"],
+
+    "4-3-3 CM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+                 "Left Midfielder", "Central Midfielder", "Right Midfielder",
+                 "Left Winger", "Right Winger", "Center Forward"],
+
+    "4-3-3 DM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+                 "Defensive Midfielder Left", "Central Midfielder", "Defensive Midfielder Right",
+                 "Left Winger", "Right Winger", "Center Forward"],
+
+    "3-4-3": ["Goalkeeper", "Right Back", "Center Back", "Left Back",
+              "Defensive Midfielder", "Central Midfielder", "Left Midfielder", "Right Midfielder",
+              "Left Winger", "Right Winger", "Center Forward"],
+
+    "4-2-4": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+              "Defensive Midfielder Right", "Defensive Midfielder Left",
+              "Left Winger", "Right Winger", "Striker Left", "Striker Right"],
+
+    "4-5-1 DM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+              "Defensive Midfielder Right", "Defensive Midfielder Left", "Central Midfielder",
+              "Left Midfielder", "Right Midfielder", "Center Forward"],
+
+    "4-5-1 AM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+                "Defensive Midfielder Right", "Defensive Midfielder Left",
+                "Left Midfielder", "Attacking Midfielder", "Right Midfielder", "Center Forward"],
+
+    "4-5-1 CM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+                "Defensive Midfielder",
+                "Left Midfielder", "Central Midfielder Right", "Central Midfielder Left", "Right Midfielder",
+                "Center Forward"],
+
+    "3-5-2 CM": ["Goalkeeper", "Right Back", "Center Back", "Left Back",
+              "Left Midfielder", "Right Midfielder", "Defensive Midfielder",
+              "Central Midfielder Right", "Central Midfielder Left",
+              "Striker Left", "Striker Right"],
+
+    "3-5-2 AM": ["Goalkeeper", "Right Back", "Center Back", "Left Back",
+                "Left Midfielder", "Right Midfielder", "Defensive Midfielder", "Central Midfielder",
+                "Attacking Midfielder", "Striker Left", "Striker Right"],
+
+    "5-3-2": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back",
+              "Right Midfielder", "Central Midfielder", "Left Midfielder",
+              "Striker Left", "Striker Right"],
+
+    "5-4-1": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back",
+              "Left Midfielder", "Central Midfielder Right", "Central Midfielder Left", "Right Midfielder",
+              "Center Forward"],
 }
 
 DEFENSIVE_POSITIONS = ["Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back"]

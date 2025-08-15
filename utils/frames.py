@@ -220,14 +220,16 @@ class MatchFrame(ctk.CTkFrame):
 
         if "+" in event.time:
             font = 9
+            playerRelX = 0.35
         else:
             font = 10
+            playerRelX = 0.25
 
         if home:
             ctk.CTkLabel(frame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, font)).place(relx = 0.1, rely = 0.5, anchor = "w")
-            ctk.CTkLabel(frame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).place(relx = 0.25, rely = 0.5, anchor = "w")
+            ctk.CTkLabel(frame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).place(relx = playerRelX, rely = 0.5, anchor = "w")
         else:
-            ctk.CTkLabel(frame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).place(relx = 0.75, rely = 0.5, anchor = "e")
+            ctk.CTkLabel(frame, text = player.last_name, fg_color = DARK_GREY, font = (APP_FONT, 10)).place(relx = 1 - playerRelX, rely = 0.5, anchor = "e")
             ctk.CTkLabel(frame, text = event.time + "'", fg_color = DARK_GREY, font = (APP_FONT, font)).place(relx = 0.9, rely = 0.5, anchor = "e")
 
         if event.event_type == "goal":

@@ -4,6 +4,7 @@ from sqlalchemy import create_engine, func, or_, case
 from sqlalchemy.orm import sessionmaker, aliased, scoped_session
 from sqlalchemy.types import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import defaultdict
 import uuid, json, random
 from faker import Faker
 from settings import *
@@ -1007,7 +1008,7 @@ class Matches(Base):
             match = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
                 ((Matches.home_id == team_1) & (Matches.away_id == team_2)) |
                 ((Matches.home_id == team_2) & (Matches.away_id == team_1))
-            ).order_by(Matches.matchday.desc()).first()
+            ).order_by(Matches.matchday.desc()).all()
             return match
         finally:
             session.close()
@@ -1046,29 +1047,9 @@ class TeamLineup(Base):
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     match_id = Column(String(128), ForeignKey('matches.id'))
     player_id = Column(String(128), ForeignKey('players.id'))
-    start_position = Column(String(128), nullable = False)
-    end_position = Column(String(128), nullable = False)
+    start_position = Column(String(128))
+    end_position = Column(String(128))
     rating = Column(Integer, nullable = False, default = 0)
-
-    @classmethod
-    def add_lineup_multiple(cls, match_id, players, positions):
-        session = DatabaseManager().get_session()
-        try:
-            for player, position in zip(players, positions):
-                new_player = TeamLineup(
-                    match_id = match_id,
-                    player_id = player.id,
-                    start_position = position,
-                    end_position = position,
-                )
-                session.add(new_player)
-            session.commit()
-            return new_player
-        except Exception as e:
-            session.rollback()
-            raise e
-        finally:
-            session.close()
 
     @classmethod
     def batch_add_lineups(cls, lineups):
@@ -1097,14 +1078,14 @@ class TeamLineup(Base):
             session.close()
     
     @classmethod
-    def add_lineup_single(cls, match_id, player_id, position, rating):
+    def add_lineup_single(cls, match_id, player_id, start_position, end_position, rating):
         session = DatabaseManager().get_session()
         try:
             new_player = TeamLineup(
                 match_id = match_id,
                 player_id = player_id,
-                start_position = position,
-                end_position = position,
+                start_position = start_position,
+                end_position = end_position,
                 rating = rating
             )
             session.add(new_player)
@@ -2503,6 +2484,51 @@ class PlayerBans(Base):
         finally:
             session.close()
 
+class SavedLineups(Base):
+    __tablename__ = 'saved_lineups'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    lineup_name = Column(String(128), nullable = False)
+    player_id = Column(String(128), ForeignKey('players.id'))
+    position = Column(String(128), nullable = False)
+
+    @classmethod
+    def add_lineup(cls, lineup_name, lineup):
+        session = DatabaseManager().get_session()
+        try:
+            for position, player_id in lineup.items():
+                lineup_entry = SavedLineups(
+                    lineup_name = lineup_name,
+                    player_id = player_id,
+                    position = position
+                )
+                session.add(lineup_entry)
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_lineup_by_name(cls, name):
+        session = DatabaseManager().get_session()
+        try:
+            lineup = session.query(SavedLineups).filter(SavedLineups.lineup_name == name).all()
+            return lineup
+        finally:
+            session.close()
+
+    @classmethod
+    def get_all_lineup_names(cls):
+        session = DatabaseManager().get_session()
+        try:
+            lineups = session.query(SavedLineups.lineup_name).distinct().all()
+            return [l[0] for l in lineups]
+        finally:
+            session.close()
+
 class StatsManager:
     @staticmethod
     def get_goals_scored(leagueTeams, league_id):
@@ -3529,6 +3555,76 @@ class StatsManager:
 
         return stats_result
 
+    @staticmethod
+    def get_team_top_stats(teamID, num):
+        """
+        Get the top N players for each statistic (goals, assists, clean sheets, etc.)
+        Returns a dictionary with each stat category containing a list of tuples (player_id, stat_value)
+        sorted in descending order and limited to the top N players
+        """
+
+        # Create a dict of all players with entries for goals, assists, clean sheets, yellow and red cards
+        player_stats = defaultdict(lambda: {"goal": 0, "assist": 0, "cleanSheet": 0, "yellowCard": 0, "redCard": 0})
+        
+        session = DatabaseManager().get_session()
+        try:
+            # Get team's players
+            team_players = session.query(Players.id).filter(Players.team_id == teamID).all()
+            team_player_ids = [p.id for p in team_players]
+
+            # Get all matches played by the team
+            matches = session.query(Matches.id).filter(
+                or_(Matches.home_id == teamID, Matches.away_id == teamID)
+            ).all()
+            match_ids = [m.id for m in matches]
+
+            # Get events for these matches but only for players in the team
+            events = session.query(
+                MatchEvents.player_id,
+                MatchEvents.event_type
+            ).filter(
+                MatchEvents.match_id.in_(match_ids),
+                MatchEvents.player_id.in_(team_player_ids)
+            ).all()
+
+            # Process all events
+            for player_id, event_type in events:
+                if event_type in ["goal", "penalty_goal"]:
+                    player_stats[player_id]["goal"] += 1
+                elif event_type == "assist":
+                    player_stats[player_id]["assist"] += 1
+                elif event_type == "clean_sheet":
+                    player_stats[player_id]["cleanSheet"] += 1
+                elif event_type == "yellow_card":
+                    player_stats[player_id]["yellowCard"] += 1
+                elif event_type == "red_card":
+                    player_stats[player_id]["redCard"] += 1
+
+            # Convert to dictionary of lists sorted by each stat value
+            result = {
+                "goal": [],
+                "assist": [],
+                "cleanSheet": [],
+                "yellowCard": [],
+                "redCard": []
+            }
+
+            # For each stat category, get the top N players
+            for stat in result.keys():
+                # Sort players by the stat value in descending order
+                top_players = sorted(
+                    [(pid, stats[stat]) for pid, stats in player_stats.items()],
+                    key = lambda x: x[1],
+                    reverse = True
+                )
+                # Take only the top N players with non-zero stats
+                result[stat] = [(pid, val) for pid, val in top_players[:num] if val > 0]
+
+            return result
+        finally:
+            session.close()
+
+
 def updateProgress(textIndex):
     global progressBar, progressLabel, progressFrame, percentageLabel, PROGRESS
     PROGRESS += 1
@@ -3716,6 +3812,79 @@ def searchResults(search, limit = SEARCH_LIMIT):
         )
         combined.sort(key = lambda x: x["sort_key"].lower())
         return combined[:limit]
+
+    finally:
+        session.close()
+
+def getPredictedLineup(opponent_id):
+    session = DatabaseManager().get_session()
+    try:
+        team = Teams.get_team_by_id(opponent_id)
+        league = LeagueTeams.get_league_by_team(team.id)
+        matches = Matches.get_all_played_matches_by_team_and_comp(team.id, league.league_id)
+
+        # Step 1: Find the most used formation
+        formation_counts = defaultdict(int)
+        for match in matches:
+            lineup = TeamLineup.get_lineup_by_match_and_team(match.id, team.id)
+            if lineup:
+                positions = [entry.start_position for entry in lineup if entry.start_position is not None]
+
+                if not positions:
+                    continue
+
+                formation = next(form for form, pos in FORMATIONS_POSITIONS.items() if set(pos) == set(positions))
+                formation_counts[formation] += 1
+
+        most_used_formation = max(formation_counts.items(), key = lambda x: x[1])[0] if formation_counts else None
+        if not most_used_formation:
+            return None
+
+        # Step 2: Get all available players (excluding banned/injured)
+        available_players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
+        
+        # Step 3: For each position in the formation, find most started player
+        predicted_lineup = {}
+        positions = FORMATIONS_POSITIONS[most_used_formation]
+
+        for position in positions:
+            # Find players who can play in this position
+            position_players = []
+            for player in available_players:
+                if POSITION_CODES[position] in player.specific_positions.split(","):
+                    position_players.append(player)
+
+            if not position_players:
+                print(f"Error predicting lineup for team {team.name}, position {position}, lineup {predicted_lineup}")
+                return
+
+            # Count starts in this position
+            player_starts = defaultdict(int)
+            for match in matches:
+                lineup = TeamLineup.get_lineup_by_match_and_team(match.id, team.id)
+                if lineup:
+                    for entry in lineup:
+                        if entry.start_position == position and entry.player_id in [p.id for p in position_players]:
+                            player_starts[entry.player_id] += 1
+
+            # Select most started player or use role-based selection if no starts
+            if player_starts:
+                most_started_id = max(player_starts.items(), key = lambda x: x[1])[0]
+                selected_player = next(p for p in position_players if p.id == most_started_id)
+            else:
+                # Sort by role priority first, then by morale if no historical starts
+                role_priority = {
+                    "Star player": 1,
+                    "First Team": 2,
+                    "Rotation": 3,
+                    "Backup": 4,
+                    "Youngster": 5
+                }
+                selected_player = min(position_players, key = lambda p: (role_priority[p.player_role], -p.morale))
+
+            predicted_lineup[position] = selected_player
+
+        return predicted_lineup
 
     finally:
         session.close()

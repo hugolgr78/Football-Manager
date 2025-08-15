@@ -133,6 +133,13 @@ POSITIONS_PITCH_POSITIONS = {
     "Center Forward": (0.5, 0.1),  # Center Forward
 }
 
+POSITIONS_MAX = {
+    "CB": 3,
+    "DM": 3,
+    "CM": 3,
+    "CF": 3
+}
+
 RELATED_POSITIONS = {
     "Central Midfielder": ["Central Midfielder Right", "Central Midfielder Left"],
     "Central Midfielder Right": ["Central Midfielder"],

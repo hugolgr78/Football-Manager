@@ -61,7 +61,8 @@ class Match():
         formations = list(FORMATIONS_CHANCES.keys())
         weights = list(FORMATIONS_CHANCES.values())
         oppFormation = random.choices(formations, weights = weights, k = 1)[0]
-        defNums, midNums, _ = map(int, oppFormation.split("-"))
+        oppFormationPositions = oppFormation.split(" ")[0]
+        defNums, midNums, _ = map(int, oppFormationPositions.split("-"))
 
         players = PlayerBans.get_all_non_banned_players_for_comp(teamID, self.match.league_id)
         goalkeepers = [player for player in players if player.position == "goalkeeper"]

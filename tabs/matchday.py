@@ -1516,20 +1516,125 @@ class MatchDay(ctk.CTkFrame):
             return sum(1 for e in events.values() if e["player"] == player_id and e["type"] in group)
 
     def endSimulation(self):
+        # Build progress UI
+        self.progressFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, height = 200, width = 500, corner_radius = 15, border_width = 2, border_color = APP_BLUE)
+        self.progressFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [executor.submit(frame.matchInstance.saveData) for frame in self.otherMatchesFrame.winfo_children()]
-            concurrent.futures.wait(futures)
+        self.progressLabel = ctk.CTkLabel(self.progressFrame, text = "Saving data...", font = (APP_FONT_BOLD, 30), bg_color = TKINTER_BACKGROUND)
+        self.progressLabel.place(relx = 0.5, rely = 0.2, anchor = "center")
 
-        self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away")
+        self.progressBar = ctk.CTkSlider(
+            self.progressFrame,
+            fg_color = GREY_BACKGROUND,
+            bg_color = TKINTER_BACKGROUND,
+            corner_radius = 10,
+            width = 400,
+            height = 50,
+            orientation = "horizontal",
+            from_ = 0,
+            to = 100,
+            state = "disabled",
+            button_length = 0,
+            button_color = APP_BLUE,
+            progress_color = APP_BLUE,
+            border_width = 0,
+            border_color = GREY_BACKGROUND
+        )
 
-        LeagueTeams.update_team_positions(self.league.id)
+        self.progressBar.place(relx = 0.5, rely = 0.52, anchor = "center")
+        self.progressBar.set(0)
+        # Ensure slider can be updated programmatically while saving
+        try:
+            self.progressBar.configure(state="normal")
+        except Exception:
+            pass
 
-        for team in LeagueTeams.get_teams_by_league(self.league.id):
-            TeamHistory.add_team(self.currentMatchDay, team.team_id, team.position, team.points)
+        self.percentageLabel = ctk.CTkLabel(self.progressFrame, text = "0%", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND)
+        self.percentageLabel.place(relx = 0.5, rely = 0.76, anchor = "center")
 
-        League.update_current_matchday(self.league.id)
+        ctk.CTkLabel(self.progressFrame, text = "This might take a few minutes", font = (APP_FONT, 10), bg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.9, anchor = "center")
 
-        self.pack_forget()
-        self.update_idletasks()
-        self.parent.resetMenu()
+        self.progressFrame.update_idletasks()
+
+        # We'll aggregate ticks from all match.saveData calls (other matches run in threads).
+        per_match_total = 10
+        other_frames = self.otherMatchesFrame.winfo_children()
+        total_matches = len(other_frames) + 1
+        overall_total_ticks = per_match_total * total_matches if total_matches > 0 else per_match_total
+        # Align slider numeric domain to total tick count for direct updates
+
+        self.progressBar.configure(number_of_steps = overall_total_ticks)
+        self.progressBar.configure(from_ = 0, to = overall_total_ticks)
+
+        import threading as _threading
+        _counter = {"count": 0}
+        _lock = _threading.Lock()
+
+        def _make_progress_callback():
+            def _cb(step, total):
+                try:
+                    with _lock:
+                        _counter["count"] += 1
+                        cnt = _counter["count"]
+                    pct = int(cnt / overall_total_ticks * 100)
+                    if pct > 100:
+                        pct = 100
+
+                    # Use raw tick count to set slider position (slider range is 0..overall_total_ticks)
+                    def _update_ui(raw_cnt = cnt, percent = pct):
+
+                        self.progressBar.set(raw_cnt)
+                        self.percentageLabel.configure(text = f"{percent}%")
+                        self.progressFrame.update_idletasks()
+
+                    self.after(0, _update_ui)
+                except Exception:
+                    import traceback as _tb
+                    _tb.print_exc()
+            return _cb
+
+        progress_cb = _make_progress_callback()
+
+        # Submit all saves to a thread pool (including the managing match) so the main
+        # Tkinter thread remains responsive and can process `after` callbacks.
+        executor = concurrent.futures.ThreadPoolExecutor()
+        futures = [executor.submit(frame.matchInstance.saveData, progress_cb, per_match_total) for frame in other_frames]
+        futures.append(executor.submit(self.matchFrame.matchInstance.saveData, progress_cb, per_match_total, "home" if self.home else "away"))
+
+        # Background thread to wait for completion and finalize (so we don't block the UI)
+        def _wait_and_finalize(futs, exec):
+            try:
+                concurrent.futures.wait(futs)
+            except Exception:
+                import traceback as _tb
+                _tb.print_exc()
+
+            # Finalize on the main thread
+            def _finalize():
+                try:
+                    # Ensure UI reaches completion
+                    self.progressBar.set(overall_total_ticks)
+                    self.percentageLabel.configure(text = "100%")
+                    self.progressBar.configure(state = "disabled")
+
+                    LeagueTeams.update_team_positions(self.league.id)
+                    
+                    for team in LeagueTeams.get_teams_by_league(self.league.id):
+                        TeamHistory.add_team(self.currentMatchDay, team.team_id, team.position, team.points)
+
+                    League.update_current_matchday(self.league.id)
+
+                    self.pack_forget()
+                    self.update_idletasks()
+                    self.parent.resetMenu()
+                finally:
+                    # Try to shutdown executor
+                    try:
+                        exec.shutdown(wait = False)
+                    except Exception:
+                        pass
+
+            self.after(0, _finalize)
+
+        bg = threading.Thread(target = _wait_and_finalize, args = (futures, executor), daemon = True)
+        bg.start()

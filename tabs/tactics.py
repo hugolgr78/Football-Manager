@@ -580,8 +580,10 @@ class Lineup(ctk.CTkFrame):
             self.settingsFrame.place_forget()
             self.reset(addSubs = False)
 
+            lineupPositions = lineupName.split(" ")[0]
+
             lineup = {}
-            defNums, midNums, _ = map(int, lineupName.split("-"))
+            defNums, midNums, _ = map(int, lineupPositions.split("-"))
 
             goalkeepers = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "goalkeeper"]
             defenders = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "defender"]

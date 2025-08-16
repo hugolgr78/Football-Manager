@@ -60,7 +60,19 @@ class PlayerProfile(ctk.CTkFrame):
         ctk.CTkCanvas(self.tabsFrame, width = 1220, height = 5, bg = APP_BLUE, bd = 0, highlightthickness = 0).place(relx = 0, rely = 0.82, anchor = "w")
 
         backButton = ctk.CTkButton(self.tabsFrame, text = "Back", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, corner_radius = 5, height = self.buttonHeight - 10, width = 100, hover_color = CLOSE_RED, command = lambda: self.changeBackFunction())
-        backButton.place(relx = 0.975, rely = 0, anchor = "ne")
+        backButton.place(relx = 0.94, rely = 0, anchor = "ne")
+
+        self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 150, corner_radius = 0, background_corner_colors = [TKINTER_BACKGROUND, TKINTER_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND])
+
+        src = Image.open("Images/information.png")
+        src.thumbnail((20, 20))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        self.helpButton = ctk.CTkButton(self.tabsFrame, text = "", image = img, fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, corner_radius = 5, height = 30, width = 30)
+        self.helpButton.place(relx = 0.975, rely = 0, anchor = "ne")
+        self.helpButton.bind("<Enter>", lambda e: self.legendFrame.place(relx = 0.96, rely = 0.05, anchor = "ne"))
+        self.helpButton.bind("<Leave>", lambda e: self.legendFrame.place_forget())
+
+        self.legend()
 
     def canvas(self, width, height, relx):
         canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
@@ -77,6 +89,37 @@ class PlayerProfile(ctk.CTkFrame):
             self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.player)
 
         self.tabs[self.activeButton].pack()
+
+    def legend(self):
+        self.legendFrame.grid_columnconfigure((0, 1, 2, 3, 4, 5), weight = 0)
+        self.legendFrame.grid_rowconfigure((0, 2), weight = 0)
+        self.legendFrame.grid_rowconfigure((1, 3), weight = 1)
+        self.legendFrame.grid_propagate(False)
+
+        ctk.CTkLabel(self.legendFrame, text = "Legend", font = (APP_FONT_BOLD, 18), fg_color = GREY_BACKGROUND).grid(row = 0, column = 0, columnspan = 6, pady = (5, 0))
+
+        imageNames = ["played", "redCard", "yellowCard", "averageRating"]
+        iconNames = ["Played", "Red Cards", "Yellow Cards", "Average Rating"]
+
+        if self.player.position == "goalkeeper":
+            imageNames.append("cleanSheet")
+            iconNames.append("Clean Sheets")
+            imageNames.append("saved_penalty")
+            iconNames.append("Saved Penalties")
+        else:
+            imageNames.append("goal")
+            iconNames.append("Goals")
+            imageNames.append("assist")
+            iconNames.append("Assists")
+
+        # Image in columns 0 and 2, text in columns 1 and 3
+        for i, (imageName, iconName) in enumerate(zip(imageNames, iconNames)):
+            src = Image.open(f"Images/{imageName}.png")
+            src.thumbnail((15, 15))
+            icon = ctk.CTkImage(src, None, (src.width, src.height))
+
+            ctk.CTkLabel(self.legendFrame, text = "", image = icon, fg_color = GREY_BACKGROUND).grid(row = i // 2 + 1, column = i % 2 * 2, sticky = "w", padx = (8, 0), pady = (0, 2))
+            ctk.CTkLabel(self.legendFrame, text = iconName, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = i // 2 + 1, column = i % 2 * 2 + 1, sticky = "w", padx = (8, 0), pady = (0, 2))
 
 class Profile(ctk.CTkFrame):
     def __init__(self, parent, player):

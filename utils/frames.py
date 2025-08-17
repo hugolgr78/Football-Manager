@@ -1370,16 +1370,28 @@ class SubstitutePlayer(ctk.CTkFrame):
             textColor = PIE_RED
 
         positions = self.player.specific_positions.replace(",", " ")
-        self.positionLabel = ctk.CTkLabel(self, text = positions, font = (APP_FONT, 11), height = 10, fg_color = fgColor)
-        self.positionLabel.place(relx = 0.05, rely = 0.05, anchor = "nw")
+        self.positionLabel = ctk.CTkLabel(self, text = positions, font = (APP_FONT, 10), height = 10, fg_color = fgColor)
+        self.positionLabel.place(relx = 0.05, rely = 0.2, anchor = "nw")
+
+        self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 65, height = 15, corner_radius = 15)
+        self.caFrame.place(relx = 0.03, rely = 0.05, anchor = "nw")
+
+        caStars = Players.get_player_star_rating(self.player.id, comp_id)
+        imageNames = star_images(caStars)
+
+        for i, imageName in enumerate(imageNames):
+            src = Image.open(f"Images/{imageName}.png")
+            src.thumbnail((12, 12))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(self.caFrame, image = img, text = "").place(relx = 0.1 + i * 0.2, rely = 0.3, anchor = "center")
 
         self.firstName = ctk.CTkLabel(self, text = self.player.first_name, font = (APP_FONT, 13), height = 10, fg_color = fgColor)
-        self.firstName.place(relx = 0.5, rely = 0.35, anchor = "center")
+        self.firstName.place(relx = 0.5, rely = 0.46, anchor = "center")
 
-        PlayerProfileLink(self, player, self.player.last_name, textColor, 0.5, 0.59, "center", fgColor, parentTab, 15, APP_FONT_BOLD, ingame = ingame, ingameFunction = ingameFunction)
+        PlayerProfileLink(self, player, self.player.last_name, textColor, 0.5, 0.65, "center", fgColor, parentTab, 15, APP_FONT_BOLD, ingame = ingame, ingameFunction = ingameFunction)
 
         if checkBoxFunction is not None:
-            self.checkBox = ctk.CTkCheckBox(self, text = "", fg_color = GREY, checkbox_height = 10, checkbox_width = 60, border_width = 1, border_color = GREY)
+            self.checkBox = ctk.CTkCheckBox(self, text = "", fg_color = GREY, checkbox_height = 10, checkbox_width = 80, border_width = 1, border_color = GREY)
             self.checkBox.configure(command = lambda: checkBoxFunction(self.checkBox, player))
 
     def showCheckBox(self):
@@ -1387,7 +1399,7 @@ class SubstitutePlayer(ctk.CTkFrame):
         if self.playerBanned:
             return
 
-        self.checkBox.place(relx = 0.73, rely = 1, anchor = "s")
+        self.checkBox.place(relx = 0.6, rely = 1, anchor = "s")
         self.checkBox.configure(state = "normal")
 
     def hideCheckBox(self):

@@ -296,7 +296,7 @@ class Lineup(ctk.CTkFrame):
     def addSubstitutePlayers(self, importing = False, playersCount = None):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)
         
-        players_per_row = 5
+        players_per_row = 4
 
         # Define position groups and their display names
         position_groups = [
@@ -331,7 +331,7 @@ class Lineup(ctk.CTkFrame):
 
                 row = 1 + count // players_per_row
                 col = count % players_per_row
-                sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self.parent, self.league.id, row, col, self.checkSubstitute)
+                sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self.parent, self.league.id, row, col, self.checkSubstitute)
 
                 if importing and playersCount == 11:
                     sub_frame.showCheckBox()

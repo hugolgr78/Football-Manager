@@ -1,7 +1,7 @@
 import customtkinter as ctk
 import tkinter.font as tkFont
 from settings import *
-from data.database import Matches, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents
+from data.database import Matches, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players
 from data.gamesDatabase import *
 from PIL import Image
 import io
@@ -170,8 +170,35 @@ class Profile(ctk.CTkFrame):
                 self.susBan = ban
 
         teamLogo = Image.open(io.BytesIO(self.parent.team.logo))
-        teamLogo.thumbnail((200, 200))
-        self.teamLogo = TeamLogo(self, teamLogo, self.parent.team, TKINTER_BACKGROUND, 0.83, 0.22, "center", self.parent.parent)
+        teamLogo.thumbnail((150, 150))
+        self.teamLogo = TeamLogo(self, teamLogo, self.parent.team, TKINTER_BACKGROUND, 0.83, 0.15, "center", self.parent.parent)
+
+        caStars = Players.get_player_star_rating(self.player.id, self.parent.league.league_id)
+        paStars = Players.get_player_star_rating(self.player.id, self.parent.league.league_id, CA = False)
+
+        caFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 200, height = 30, corner_radius = 15)
+        caFrame.place(relx = 0.83, rely = 0.3, anchor = "center")
+        ctk.CTkLabel(caFrame, text = "CA", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.6, anchor = "center")
+
+        imageNames = star_images(caStars)
+
+        for i, imageName in enumerate(imageNames):
+            src = Image.open(f"Images/{imageName}.png")
+            src.thumbnail((25, 25))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(caFrame, image = img, text = "").place(relx = 0.25 + i * 0.15, rely = 0.5, anchor = "center")
+
+        paFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 200, height = 30, corner_radius = 15)
+        paFrame.place(relx = 0.83, rely = 0.36, anchor = "center")
+        ctk.CTkLabel(paFrame, text = "PA", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.6, anchor = "center")
+
+        imageNames = star_images(paStars)
+
+        for i, imageName in enumerate(imageNames):
+            src = Image.open(f"Images/{imageName}.png")
+            src.thumbnail((25, 25))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(paFrame, image = img, text = "").place(relx = 0.25 + i * 0.15, rely = 0.5, anchor = "center")
 
         canvas = ctk.CTkCanvas(self, width = 1000, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = 0.5, rely = 0.4, anchor = "center")

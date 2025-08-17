@@ -552,6 +552,60 @@ class Players(Base):
             session.close()
 
     @classmethod
+    def get_player_star_rating(cls, player_id, league_id, CA=True):
+        session = DatabaseManager().get_session()
+        try:
+            player = session.query(Players).filter(Players.id == player_id).first()
+            player_value = player.current_ability if CA else player.potential_ability
+            position = player.position
+
+            # Fetch all values for players in this league and position
+            col = Players.current_ability if CA else Players.potential_ability
+            league_rows = (
+                session.query(col)
+                .join(Teams, Players.team_id == Teams.id)
+                .join(LeagueTeams, LeagueTeams.team_id == Teams.id)
+                .filter(LeagueTeams.league_id == league_id, Players.position == position)
+                .all()
+            )
+
+            if not league_rows:
+                return 3.0
+
+            league_data = [row[0] for row in league_rows]
+            league_data.sort()
+
+            # Percentile of player in league
+            rank = sum(1 for v in league_data if v <= player_value)
+            percentile = rank / len(league_data)  # 0 = worst, 1 = best
+
+            # Map percentile to stars (0.5 increments)
+            if percentile >= 0.95:
+                stars = 5.0
+            elif percentile >= 0.85:
+                stars = 4.5
+            elif percentile >= 0.70:
+                stars = 4.0
+            elif percentile >= 0.50:
+                stars = 3.5
+            elif percentile >= 0.30:
+                stars = 3.0
+            elif percentile >= 0.15:
+                stars = 2.5
+            elif percentile >= 0.05:
+                stars = 2.0
+            else:
+                stars = 1.5
+
+            if not CA:
+                ca_stars = cls.get_player_star_rating(player_id, league_id, CA=True)
+                stars = max(stars, ca_stars)
+
+            return stars
+        finally:
+            session.close()
+
+    @classmethod
     def get_player_by_id(cls, id):
         session = DatabaseManager().get_session()
         try:

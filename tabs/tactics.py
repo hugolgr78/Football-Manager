@@ -399,6 +399,13 @@ class Lineup(ctk.CTkFrame):
         player = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1], self.team.id)
         self.selectedLineup[self.selected_position] = player.id
 
+        for child in self.substituteFrame.winfo_children():
+            for widget in child.winfo_children():
+                if isinstance(widget, SubstitutePlayer) and widget.player.id == player.id:
+                    playerCaStars = widget.caStars
+
+            child.destroy()
+
         LineupPlayerFrame(self.lineupPitch, 
                             POSITIONS_PITCH_POSITIONS[self.selected_position][0], 
                             POSITIONS_PITCH_POSITIONS[self.selected_position][1], 
@@ -412,11 +419,10 @@ class Lineup(ctk.CTkFrame):
                             self.removePlayer,
                             self.updateLineup,
                             self.substituteFrame,
-                            self.swapLineupPositions
+                            self.swapLineupPositions,
+                            caStars = playerCaStars
                         )
 
-        for widget in self.substituteFrame.winfo_children():
-            widget.destroy()
 
         self.addSubstitutePlayers(importing = True, playersCount = self.lineupPitch.get_counter())
 

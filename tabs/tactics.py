@@ -276,11 +276,11 @@ class Lineup(ctk.CTkFrame):
                 if len(youthForPosition) > 0:
                     self.players.append(youthForPosition[0].id)
                 else:
-                    newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
+                    newYouth = Players.add_youth_player(self.team.id, overallPosition, position)
                     self.players.append(newYouth)
 
                 if position == "Goalkeeper":
-                    newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
+                    newYouth = Players.add_youth_player(self.team.id, overallPosition, position)
                     self.players.append(newYouth)
 
             elif position == "Goalkeeper" and len(playersForPosition) == 1:
@@ -290,7 +290,7 @@ class Lineup(ctk.CTkFrame):
                 if len(youthForPosition) > 0:
                     self.players.append(youthForPosition[0].id)
                 else:
-                    newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
+                    newYouth = Players.add_youth_player(self.team.id, overallPosition, position)
                     self.players.append(newYouth)
 
     def addSubstitutePlayers(self, importing = False, playersCount = None):
@@ -622,7 +622,7 @@ class Lineup(ctk.CTkFrame):
             available_players = [p for p in position_options[position] if p not in assigned_players]
             
             # Step 3: Prioritize by role (star > first_team > rotation)
-            best_fit = next((p for p in available_players if p.player_role == "Star player"), None) or \
+            best_fit = next((p for p in available_players if p.player_role == "Star Player"), None) or \
                     next((p for p in available_players if p.player_role == "First Team"), None) or \
                     next((p for p in available_players if p.player_role == "Rotation"), None)
 

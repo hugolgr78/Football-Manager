@@ -74,7 +74,7 @@ def get_morale_change(match_result, player_rating, goal_difference):
 def get_morale_decrease_role(player):
     role = player.player_role
 
-    if role == "Star player":
+    if role == "Star Player":
         return -5
     elif role == "First Team":
         return -3
@@ -261,3 +261,113 @@ def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius = 10, **kwargs):
         x1, y1
     ]
     return canvas.create_polygon(points, smooth = True, splinestep = 36, **kwargs)
+
+def generate_CA(age: int, min_level: int = 150) -> int:
+    """
+    Generate a player's Current Ability (CA) based on age.
+
+    Skewed distribution: high chance near min_level, very low chance near max_level.
+    """
+    max_level = min_level + 50
+    CAs = list(range(min_level, max_level + 1))
+
+    # Age factor: younger players slightly boosted
+    if age <= 25:
+        age_factor = 1.05
+    elif age <= 30:
+        age_factor = 1.0
+    else:
+        age_factor = 0.9
+
+    # Skewed weights: lower CA much more likely, higher CA exponentially less likely
+    weights = [(max_level - ca + 1) ** 3 * age_factor for ca in CAs]  # cubic decay
+
+    level = random.choices(CAs, weights=weights, k=1)[0]
+    return level
+
+def generate_youth_player_level(max_level: int = 150) -> int:
+    """
+    Generate a youth player level between [max_level - 50, max_level].
+    No role/age influence, just weighted by intervals (higher levels rarer).
+    
+    Args:
+        max_level (int): The maximum possible level (capped at 200).
+    
+    Returns:
+        int: The generated player level.
+    """
+
+    # Clamp max_level to 200
+    max_level = min(max_level, 200)
+
+    # Lower bound is max_level - 50, but not below 0
+    min_level = max(max_level - 50, 0)
+
+    # Build intervals of ~10 points
+    intervals = []
+    start = min_level
+    while start < max_level:
+        end = min(start + 10, max_level)
+        intervals.append((start, end))
+        start += 10
+
+    # Default "youth" probability distribution (up to 5 intervals)
+    base_probs = [30, 25, 20, 15, 10]  # favors lower end, rarer at the top
+
+    # Trim to match number of intervals
+    probs = base_probs[-len(intervals):]
+
+    # Normalize to sum 1
+    total = sum(probs)
+    probs = [p / total for p in probs]
+
+    # Choose interval
+    chosen_interval = random.choices(intervals, weights = probs, k = 1)[0]
+
+    # Pick uniformly inside interval
+    return random.randint(chosen_interval[0], chosen_interval[1])
+
+def calculate_potential_ability(age: int, CA: int) -> int:
+    """
+    Calculate Potential Ability (PA) based on age and CA.
+    - Younger players can have huge jumps (wonderkids), but those are rarer.
+    - Older players have small gaps.
+    - PA capped at 200.
+    """
+
+    if age <= 18:
+        max_gap = 200 - CA
+        min_gap = 10
+    elif age <= 21:
+        max_gap = min(60, 200 - CA)
+        min_gap = 5
+    elif age <= 24:
+        max_gap = min(40, 200 - CA)
+        min_gap = 2
+    elif age <= 27:
+        max_gap = min(25, 200 - CA)
+        min_gap = 1
+    elif age <= 30:
+        max_gap = min(15, 200 - CA)
+        min_gap = 0
+    else:
+        max_gap = min(5, 200 - CA)
+        min_gap = 0
+
+    # Ensure min_gap never exceeds max_gap
+    if min_gap > max_gap:
+        min_gap = 0
+
+    if max_gap <= 0:
+        return CA  # already at cap or no growth possible
+
+    # Build possible gaps
+    gaps = list(range(min_gap, max_gap + 1))
+
+    # Weighting: smaller gaps are more likely, big gaps rarer
+    weights = [1 / (g + 1) for g in gaps]
+
+    gap = random.choices(gaps, weights=weights, k=1)[0]
+
+    return min(CA + gap, 200)
+

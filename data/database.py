@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_
+from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
 from sqlalchemy.orm import sessionmaker, aliased, scoped_session
@@ -212,6 +212,7 @@ class Teams(Base):
     logo = Column(BLOB)
     year_created = Column(Integer, nullable = False)
     stadium = Column(String(128), nullable = False)
+    strength = Column(Float, nullable = False)
 
     @classmethod
     def add_teams(cls, chosenTeamName, manager_id):
@@ -224,6 +225,7 @@ class Teams(Base):
                 name = team['name']
                 year_created = team['year_created']
                 stadium = team['stadium']
+                strength = team['strength']
 
                 with open(f"Images/Teams/{name}.png", 'rb') as file:
                     logo = file.read()
@@ -239,13 +241,15 @@ class Teams(Base):
                     name = name,
                     year_created = year_created,
                     stadium = stadium,
-                    logo = logo
+                    logo = logo,
+                    strength = strength
                 )
 
                 updateProgress(None)
-                Players.add_players(new_team.id)
-
                 session.add(new_team)
+                session.commit()
+
+                Players.add_players(new_team.id)
 
             session.commit()
         except Exception as e:
@@ -390,6 +394,7 @@ class Players(Base):
     @classmethod
     def add_players(cls, team_id):
         session = DatabaseManager().get_session()
+        team = session.query(Teams).filter(Teams.id == team_id).first()
         try:
             base_positions = {
                 "goalkeeper": 3,
@@ -427,7 +432,7 @@ class Players(Base):
                     with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
                         flag = file.read()
 
-                    date_of_birth = faker.date_of_birth(minimum_age=18, maximum_age=35)
+                    date_of_birth = faker.date_of_birth(minimum_age = 18, maximum_age = 35)
                     player_number = random.randint(1, 99)
                     while player_number in numbers:
                         player_number = random.randint(1, 99)
@@ -439,7 +444,7 @@ class Players(Base):
                     if specific_pos not in new_player_positions:
                         new_player_positions[0] = specific_pos
 
-                    playerCA = generate_CA(2024 - date_of_birth.year)
+                    playerCA = generate_CA(2024 - date_of_birth.year, team.strength)
                     playerPA = calculate_potential_ability(2024 - date_of_birth.year, playerCA)
 
                     new_player = Players(
@@ -477,7 +482,7 @@ class Players(Base):
                                                 weights=position_weights[:min(len(specific_pos_list), 4)])[0]
                     new_player_positions = random.sample(specific_pos_list, k=num_positions)
 
-                    playerCA = generate_CA(2024 - date_of_birth.year)
+                    playerCA = generate_CA(2024 - date_of_birth.year, team.strength)
                     playerPA = calculate_potential_ability(2024 - date_of_birth.year, playerCA)
 
                     new_player = Players(

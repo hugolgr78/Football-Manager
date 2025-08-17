@@ -1128,7 +1128,7 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         super().place_forget()
 
 class LineupPlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions):
+    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions, caStars = None):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -1139,7 +1139,10 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.updateLineup = updateLineup
         self.substitutesFrame = substitutesFrame
         self.swapLineupPositions = swapLineupPositions
+        self.caStars = caStars
         self.additionalPositions = []
+
+        league_id = LeagueTeams.get_league_by_team(self.player.team_id).league_id
 
         self.parent.zone_occupancies[self.position] = 1  # Set the initial occupancy status
         self.current_zone = self.position
@@ -1154,16 +1157,30 @@ class LineupPlayerFrame(ctk.CTkFrame):
             matching_titles = [position for position, code in POSITION_CODES.items() if code == pos]
             self.positionsTitles.extend(matching_titles)
 
-        self.positionLabel = ctk.CTkLabel(self, text = positionCode, font = (APP_FONT, 15), height = 10, fg_color = fgColor)
-        self.positionLabel.place(relx = 0.05, rely = 0.05, anchor = "nw")
+        self.positionLabel = ctk.CTkLabel(self, text = positionCode, font = (APP_FONT, 10), height = 0, fg_color = fgColor)
+        self.positionLabel.place(relx = 0.05, rely = 0.03, anchor = "nw")
 
         self.firstName = ctk.CTkLabel(self, text = self.player.first_name, font = (APP_FONT, 10), height = 10, fg_color = fgColor)
-        self.firstName.place(relx = 0.5, rely = 0.45, anchor = "center")
-        self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 13), fg_color = fgColor, height = 1)
-        self.lastName.place(relx = 0.5, rely = 0.75, anchor = "center")
+        self.firstName.place(relx = 0.5, rely = 0.35, anchor = "center")
+        self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 12), fg_color = fgColor, height = 1)
+        self.lastName.place(relx = 0.5, rely = 0.6, anchor = "center")
 
-        self.removeButton = ctk.CTkButton(self, text = "X", width = 10, height = 10, fg_color = fgColor, hover_color = CLOSE_RED, corner_radius = 0, command = self.remove)
-        self.removeButton.place(relx = 0.95, rely = 0.05, anchor = "ne")
+        self.removeButton = ctk.CTkButton(self, text = "X", font = (APP_FONT, 10), width = 0, height = 0, fg_color = fgColor, hover_color = CLOSE_RED, corner_radius = 0, command = self.remove)
+        self.removeButton.place(relx = 0.97, rely = 0.02, anchor = "ne")
+
+        self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 65, height = 15, corner_radius = 0)
+        self.caFrame.place(relx = 0.5, rely = 0.97, anchor = "s")
+
+        if not self.caStars:
+            self.caStars = Players.get_player_star_rating(self.player.id, league_id)
+            
+        imageNames = star_images(self.caStars)
+
+        for i, imageName in enumerate(imageNames):
+            src = Image.open(f"Images/{imageName}.png")
+            src.thumbnail((10, 10))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(self.caFrame, image = img, text = "").place(relx = 0.12 + i * 0.18, rely = 0.3, anchor = "center")
 
         self.bind("<Button-1>", self.start_drag)
         self.bind("<B1-Motion>", self.do_drag)
@@ -1376,8 +1393,8 @@ class SubstitutePlayer(ctk.CTkFrame):
         self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 65, height = 15, corner_radius = 15)
         self.caFrame.place(relx = 0.03, rely = 0.05, anchor = "nw")
 
-        caStars = Players.get_player_star_rating(self.player.id, comp_id)
-        imageNames = star_images(caStars)
+        self.caStars = Players.get_player_star_rating(self.player.id, comp_id)
+        imageNames = star_images(self.caStars)
 
         for i, imageName in enumerate(imageNames):
             src = Image.open(f"Images/{imageName}.png")

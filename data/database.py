@@ -558,57 +558,63 @@ class Players(Base):
 
     @classmethod
     def get_player_star_rating(cls, player_id, league_id, CA=True):
+        """
+        Fast star calculation for a single player.
+        If CA=False, ensures stars are at least the CA stars.
+        """
         session = DatabaseManager().get_session()
         try:
-            player = session.query(Players).filter(Players.id == player_id).first()
-            player_value = player.current_ability if CA else player.potential_ability
-            position = player.position
+            player = (
+                session.query(Players)
+                .join(LeagueTeams, Players.team_id == LeagueTeams.team_id)
+                .filter(Players.id == player_id, LeagueTeams.league_id == league_id)
+                .first()
+            )
+            if not player:
+                return 3.0  # default if player not found
 
-            # Fetch all values for players in this league and position
-            col = Players.current_ability if CA else Players.potential_ability
-            league_rows = (
-                session.query(col)
-                .join(Teams, Players.team_id == Teams.id)
-                .join(LeagueTeams, LeagueTeams.team_id == Teams.id)
-                .filter(LeagueTeams.league_id == league_id, Players.position == position)
+            col_value = player.current_ability if CA else player.potential_ability
+            # Fetch all abilities of same position in league
+            abilities = (
+                session.query(
+                    Players.current_ability, Players.potential_ability
+                )
+                .join(LeagueTeams, Players.team_id == LeagueTeams.team_id)
+                .filter(LeagueTeams.league_id == league_id, Players.position == player.position)
                 .all()
             )
-
-            if not league_rows:
+            if not abilities:
                 return 3.0
 
-            league_data = [row[0] for row in league_rows]
-            league_data.sort()
+            # Determine percentile
+            sorted_col = sorted([x[0] if CA else x[1] for x in abilities])
+            rank = sorted_col.index(col_value) + 1
+            percentile = rank / len(sorted_col)
 
-            # Percentile of player in league
-            rank = sum(1 for v in league_data if v <= player_value)
-            percentile = rank / len(league_data)  # 0 = worst, 1 = best
+            # Map percentile to stars
+            def percentile_to_stars(p):
+                if p >= 0.95: return 5.0
+                if p >= 0.85: return 4.5
+                if p >= 0.70: return 4.0
+                if p >= 0.50: return 3.5
+                if p >= 0.30: return 3.0
+                if p >= 0.15: return 2.5
+                if p >= 0.05: return 2.0
+                return 1.5
 
-            # Map percentile to stars (0.5 increments)
-            if percentile >= 0.95:
-                stars = 5.0
-            elif percentile >= 0.85:
-                stars = 4.5
-            elif percentile >= 0.70:
-                stars = 4.0
-            elif percentile >= 0.50:
-                stars = 3.5
-            elif percentile >= 0.30:
-                stars = 3.0
-            elif percentile >= 0.15:
-                stars = 2.5
-            elif percentile >= 0.05:
-                stars = 2.0
-            else:
-                stars = 1.5
+            stars = percentile_to_stars(percentile)
 
+            # Ensure PA >= CA if needed
             if not CA:
-                ca_stars = cls.get_player_star_rating(player_id, league_id, CA=True)
-                stars = max(stars, ca_stars)
+                ca_star = percentile_to_stars(
+                    (sorted([x[0] for x in abilities]).index(player.current_ability) + 1) / len(sorted_col)
+                )
+                stars = max(stars, ca_star)
 
             return stars
         finally:
             session.close()
+
 
     @classmethod
     def get_player_by_id(cls, id):

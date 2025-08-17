@@ -330,7 +330,7 @@ class MatchdayFrame(ctk.CTkFrame):
         self.place(relx = self.relx, rely = self.rely, anchor = self.anchor)
 
 class PlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, manager_id, player, parentFrame, teamSquad = True, talkFunction = None):
+    def __init__(self, parent, manager_id, player, parentFrame, caStars, teamSquad = True, talkFunction = None):
         super().__init__(parentFrame, fg_color = TKINTER_BACKGROUND, width = 982, height = 50, corner_radius = 5)
         self.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
 
@@ -354,14 +354,13 @@ class PlayerFrame(ctk.CTkFrame):
         self.playerNumber.place(relx = 0.05, rely = 0.5, anchor = "center")
         self.playerNumber.bind("<Enter>", lambda event: self.onFrameHover())
 
-        self.playerName = PlayerProfileLink(self, self.player, self.player.first_name + " " + self.player.last_name, "white", 0.12, 0.5, "w", TKINTER_BACKGROUND, self.parentTab)
+        self.playerName = PlayerProfileLink(self, self.player, self.player.first_name + " " + self.player.last_name, "white", 0.12, 0.5, "w", TKINTER_BACKGROUND, self.parentTab, caStars = caStars)
         self.playerName.bind("<Enter>", lambda event: self.onFrameHover())
 
         self.caFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 105, height = 30, corner_radius = 15)
         self.caFrame.place(relx = 0.48, rely = 0.5, anchor = "e")
         self.caFrame.bind("<Enter>", lambda event: self.onFrameHover())
 
-        caStars = Players.get_player_star_rating(self.player.id, league.league_id)
         imageNames = star_images(caStars)
 
         for i, imageName in enumerate(imageNames):
@@ -1173,7 +1172,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
 
         if not self.caStars:
             self.caStars = Players.get_player_star_rating(self.player.id, league_id)
-            
+
         imageNames = star_images(self.caStars)
 
         for i, imageName in enumerate(imageNames):
@@ -1371,7 +1370,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.removePlayer(self, player_name, self.position)
 
 class SubstitutePlayer(ctk.CTkFrame):
-    def __init__(self, parent, fgColor, height, width, player, parentTab, comp_id, row, column, checkBoxFunction = None, unavailable = False, ingame = False, ingameFunction = None):
+    def __init__(self, parent, fgColor, height, width, player, parentTab, comp_id, row, column, caStars, checkBoxFunction = None, unavailable = False, ingame = False, ingameFunction = None):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.grid(row = row, column = column, padx = 5, pady = 5)
         self.fgColor = fgColor
@@ -1393,8 +1392,7 @@ class SubstitutePlayer(ctk.CTkFrame):
         self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 65, height = 15, corner_radius = 15)
         self.caFrame.place(relx = 0.03, rely = 0.05, anchor = "nw")
 
-        self.caStars = Players.get_player_star_rating(self.player.id, comp_id)
-        imageNames = star_images(self.caStars)
+        imageNames = star_images(caStars)
 
         for i, imageName in enumerate(imageNames):
             src = Image.open(f"Images/{imageName}.png")

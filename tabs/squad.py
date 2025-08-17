@@ -17,6 +17,7 @@ class Squad(ctk.CTkFrame):
         self.playerInjured = False
 
         self.team = Teams.get_teams_by_manager(manager_id)[0]
+        self.leagueId = LeagueTeams.get_league_by_team(self.team.id).league_id
         self.players = Players.get_all_players_by_team(self.team.id)
 
         self.titleFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 100, corner_radius = 0)
@@ -49,9 +50,11 @@ class Squad(ctk.CTkFrame):
             for widget in self.winfo_children():
                 widget.destroy()
 
+        starRatings = Players.get_players_star_ratings(self.players, self.leagueId)
+
         for player in self.players:
             if player.player_role != "Youth Team":
-                PlayerFrame(self, self.manager_id, player, self.playersFrame, talkFunction = self.talkToPlayer)
+                PlayerFrame(self, self.manager_id, player, self.playersFrame, starRatings[player.id], talkFunction = self.talkToPlayer)
 
     def talkToPlayer(self, player):
 

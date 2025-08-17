@@ -25,6 +25,7 @@ class TeamProfile(ctk.CTkFrame):
         self.manager = Managers.get_manager_by_id(manager_id)
         self.team = Teams.get_teams_by_manager(manager_id)[0]
         self.leagueData = LeagueTeams.get_league_by_team(self.team.id)
+        self.leagueId = self.leagueData.league_id
 
         self.profile = Profile(self, self.manager_id)
 
@@ -154,9 +155,11 @@ class Squad(ctk.CTkFrame):
         self.playersFrame = ctk.CTkScrollableFrame(self, fg_color = TKINTER_BACKGROUND, width = 965, height = 590, corner_radius = 0)
         self.playersFrame.pack()
 
+        starRatings = Players.get_players_star_ratings(self.players, self.parent.leagueID)
+
         for player in self.players:
             if player.player_role != "Youth Team":
-                PlayerFrame(self.parent, self.manager_id, player, self.playersFrame, teamSquad = False)
+                PlayerFrame(self.parent, self.manager_id, player, self.playersFrame, starRatings[player.id], teamSquad = False)
 
 class Schedule(ctk.CTkFrame):
     def __init__(self, parent, manager_id):

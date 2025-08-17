@@ -557,41 +557,34 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def get_player_star_rating(cls, player_id, league_id, CA=True):
+    def get_players_star_ratings(cls, players, league_id, CA=True):
         """
-        Fast star calculation for a single player.
-        If CA=False, ensures stars are at least the CA stars.
+        Return star ratings for a list of players in a league.
+        Output: {player_id: stars, ...}
         """
         session = DatabaseManager().get_session()
+        player_ids = [p.id for p in players]
         try:
-            player = (
-                session.query(Players)
-                .join(LeagueTeams, Players.team_id == LeagueTeams.team_id)
-                .filter(Players.id == player_id, LeagueTeams.league_id == league_id)
-                .first()
-            )
-            if not player:
-                return 3.0  # default if player not found
-
-            col_value = player.current_ability if CA else player.potential_ability
-            # Fetch all abilities of same position in league
-            abilities = (
+            # Fetch all players in league with their abilities + positions
+            league_players = (
                 session.query(
-                    Players.current_ability, Players.potential_ability
+                    Players.id,
+                    Players.position,
+                    Players.current_ability,
+                    Players.potential_ability,
                 )
                 .join(LeagueTeams, Players.team_id == LeagueTeams.team_id)
-                .filter(LeagueTeams.league_id == league_id, Players.position == player.position)
+                .filter(LeagueTeams.league_id == league_id)
                 .all()
             )
-            if not abilities:
-                return 3.0
+            if not league_players:
+                return {pid: 3.0 for pid in player_ids}
 
-            # Determine percentile
-            sorted_col = sorted([x[0] if CA else x[1] for x in abilities])
-            rank = sorted_col.index(col_value) + 1
-            percentile = rank / len(sorted_col)
+            # Group players by position
+            pos_groups = {}
+            for pid, pos, ca, pa in league_players:
+                pos_groups.setdefault(pos, []).append((pid, ca, pa))
 
-            # Map percentile to stars
             def percentile_to_stars(p):
                 if p >= 0.95: return 5.0
                 if p >= 0.85: return 4.5
@@ -602,19 +595,41 @@ class Players(Base):
                 if p >= 0.05: return 2.0
                 return 1.5
 
-            stars = percentile_to_stars(percentile)
+            results = {}
+            for pid in player_ids:
+                # Find the player
+                player = next((p for p in league_players if p[0] == pid), None)
+                if not player:
+                    results[pid] = 3.0
+                    continue
 
-            # Ensure PA >= CA if needed
-            if not CA:
-                ca_star = percentile_to_stars(
-                    (sorted([x[0] for x in abilities]).index(player.current_ability) + 1) / len(sorted_col)
-                )
-                stars = max(stars, ca_star)
+                _, pos, ca, pa = player
+                # Use each teammate's ability (c/p) — previous code mistakenly used the
+                # target player's ca/pa for every entry, producing identical values.
+                abilities = [c if CA else p for _, c, p in pos_groups[pos]]
+                abilities_sorted = sorted(abilities)
 
-            return stars
+                player_val = ca if CA else pa
+                # Handle duplicates safely with bisect (better than index)
+                import bisect
+                rank = bisect.bisect_right(abilities_sorted, player_val)
+                percentile = rank / len(abilities_sorted)
+
+                stars = percentile_to_stars(percentile)
+
+                # Ensure PA >= CA
+                if not CA:
+                    ca_abilities = sorted([c for _, c, _ in pos_groups[pos]])
+                    ca_rank = bisect.bisect_right(ca_abilities, ca)
+                    ca_percentile = ca_rank / len(ca_abilities)
+                    ca_stars = percentile_to_stars(ca_percentile)
+                    stars = max(stars, ca_stars)
+
+                results[pid] = stars
+
+            return results
         finally:
             session.close()
-
 
     @classmethod
     def get_player_by_id(cls, id):

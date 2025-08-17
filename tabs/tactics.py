@@ -86,8 +86,10 @@ class Lineup(ctk.CTkFrame):
         self.parent = parent
         self.mainMenu = self.parent.parent
         self.team = self.parent.team
+        self.leagueID = LeagueTeams.get_league_by_team(self.team.id).league_id
 
         self.players = Players.get_all_players_by_team(self.team.id)
+        self.starRatings = Players.get_players_star_ratings(self.players, self.leagueID)
 
         self.selectedLineup = {}
         self.substitutePlayers = []
@@ -227,7 +229,8 @@ class Lineup(ctk.CTkFrame):
                             self.removePlayer,
                             self.updateLineup,
                             self.substituteFrame,
-                            self.swapLineupPositions
+                            self.swapLineupPositions,
+                            caStars = self.starRatings[player.id]
                         )
             
         self.lineupPitch.set_counter(playersCount)
@@ -331,7 +334,7 @@ class Lineup(ctk.CTkFrame):
 
                 row = 1 + count // players_per_row
                 col = count % players_per_row
-                sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self.parent, self.league.id, row, col, self.checkSubstitute)
+                sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self.parent, self.league.id, row, col, self.starRatings[player.id], self.checkSubstitute)
 
                 if importing and playersCount == 11:
                     sub_frame.showCheckBox()
@@ -400,10 +403,6 @@ class Lineup(ctk.CTkFrame):
         self.selectedLineup[self.selected_position] = player.id
 
         for child in self.substituteFrame.winfo_children():
-            for widget in child.winfo_children():
-                if isinstance(widget, SubstitutePlayer) and widget.player.id == player.id:
-                    playerCaStars = widget.caStars
-
             child.destroy()
 
         LineupPlayerFrame(self.lineupPitch, 
@@ -420,7 +419,7 @@ class Lineup(ctk.CTkFrame):
                             self.updateLineup,
                             self.substituteFrame,
                             self.swapLineupPositions,
-                            caStars = playerCaStars
+                            caStars = self.starRatings[player.id]
                         )
 
 

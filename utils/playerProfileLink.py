@@ -38,7 +38,7 @@ class PlayerProfileLabel(ctk.CTkFrame):
         self.suffix_label.pack(side = "left")
 
 class PlayerProfileLink(ctk.CTkLabel):
-    def __init__(self, parent, player, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20, font = APP_FONT, ingame = False, ingameFunction = None):
+    def __init__(self, parent, player, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20, font = APP_FONT, ingame = False, ingameFunction = None, caStars = None):
         super().__init__(parent, text = text, font = (font, fontSize), fg_color = fg_color, text_color = textColor, height = 0)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -49,6 +49,7 @@ class PlayerProfileLink(ctk.CTkLabel):
         self.font = font
         self.ingame = ingame
         self.ingameFunction = ingameFunction
+        self.caStars = caStars
 
         self.bind("<Enter>", self.on_enter)
         self.bind("<Leave>", self.on_leave)
@@ -68,7 +69,7 @@ class PlayerProfileLink(ctk.CTkLabel):
         else:
             from tabs.playerProfile import PlayerProfile
 
-            self.profile = PlayerProfile(self.tab, self.player, self.changeBack)
+            self.profile = PlayerProfile(self.tab, self.player, changeBackFunction = self.changeBack, caStars = self.caStars)
             self.profile.place(x = 0, y = 0, anchor = "nw")
 
             self.tab.parent.overlappingProfiles.append(self.profile)

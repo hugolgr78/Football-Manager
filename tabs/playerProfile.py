@@ -10,12 +10,13 @@ from utils.frames import FootballPitchPlayerPos, FormGraph, PlayerMatchFrame
 from utils.util_functions import *
 
 class PlayerProfile(ctk.CTkFrame):
-    def __init__(self, parent, player, changeBackFunction = None):
+    def __init__(self, parent, player, changeBackFunction = None, caStars = None):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
         self.player = player
         self.changeBackFunction = changeBackFunction
+        self.caStars = caStars
 
         self.team = Teams.get_team_by_id(self.player.team_id)
         self.league = LeagueTeams.get_league_by_team(self.team.id)
@@ -173,14 +174,16 @@ class Profile(ctk.CTkFrame):
         teamLogo.thumbnail((150, 150))
         self.teamLogo = TeamLogo(self, teamLogo, self.parent.team, TKINTER_BACKGROUND, 0.83, 0.15, "center", self.parent.parent)
 
-        caStars = Players.get_player_star_rating(self.player.id, self.parent.league.league_id)
-        paStars = Players.get_player_star_rating(self.player.id, self.parent.league.league_id, CA = False)
+        if not self.parent.caStars:
+            self.parent.caStars, = Players.get_players_star_ratings([self.player], self.parent.league.league_id).values()
+
+        paStars, = Players.get_players_star_ratings([self.player], self.parent.league.league_id, CA = False).values()
 
         caFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 200, height = 30, corner_radius = 15)
         caFrame.place(relx = 0.83, rely = 0.3, anchor = "center")
         ctk.CTkLabel(caFrame, text = "CA", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.6, anchor = "center")
 
-        imageNames = star_images(caStars)
+        imageNames = star_images(self.parent.caStars)
 
         for i, imageName in enumerate(imageNames):
             src = Image.open(f"Images/{imageName}.png")

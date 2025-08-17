@@ -326,13 +326,14 @@ class StartMenu(ctk.CTkFrame):
         self.last_selected_team = button
 
         # Calculate the expected finish
-        level = team["level"]
-        expected_finish = (200 - level) // 2 + 1
-        suffix = getSuffix(expected_finish)
+        strength = team["strength"]
+        teamStrengths = [(t["name"], t["strength"]) for t in self.teamsJson]
+        expectedFinish = expected_finish(team["name"], teamStrengths)
+        suffix = getSuffix(expectedFinish)
 
         self.teamNameLabel.configure(text = team["name"])
         self.createdLabel.configure(text = "Created: " + str(team["year_created"]))
-        self.expectedFinish.configure(text = f"Expected finish: {expected_finish}{suffix}")
+        self.expectedFinish.configure(text = f"Expected finish: {expectedFinish}{suffix}")
 
     def finishCreateManager(self):
         

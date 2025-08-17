@@ -343,6 +343,8 @@ class PlayerFrame(ctk.CTkFrame):
         self.player = player
         self.parentTab = self.parent
 
+        league = LeagueTeams.get_league_by_team(self.player.team_id)
+
         self.teamSquad = teamSquad
 
         if not self.teamSquad:
@@ -352,15 +354,28 @@ class PlayerFrame(ctk.CTkFrame):
         self.playerNumber.place(relx = 0.05, rely = 0.5, anchor = "center")
         self.playerNumber.bind("<Enter>", lambda event: self.onFrameHover())
 
-        self.playerName = PlayerProfileLink(self, self.player, self.player.first_name + " " + self.player.last_name, "white", 0.155, 0.5, "w", TKINTER_BACKGROUND, self.parentTab)
+        self.playerName = PlayerProfileLink(self, self.player, self.player.first_name + " " + self.player.last_name, "white", 0.12, 0.5, "w", TKINTER_BACKGROUND, self.parentTab)
         self.playerName.bind("<Enter>", lambda event: self.onFrameHover())
 
-        self.playerAge = ctk.CTkLabel(self, text = self.player.age, font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND)
-        self.playerAge.place(relx = 0.4655, rely = 0.5, anchor = "center")
+        self.caFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 105, height = 30, corner_radius = 15)
+        self.caFrame.place(relx = 0.48, rely = 0.5, anchor = "e")
+        self.caFrame.bind("<Enter>", lambda event: self.onFrameHover())
+
+        caStars = Players.get_player_star_rating(self.player.id, league.league_id)
+        imageNames = star_images(caStars)
+
+        for i, imageName in enumerate(imageNames):
+            src = Image.open(f"Images/{imageName}.png")
+            src.thumbnail((20, 20))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(self.caFrame, image = img, text = "").place(relx = 0.1 + i * 0.2, rely = 0.5, anchor = "center")
+
+        self.playerAge = ctk.CTkLabel(self, text = self.player.age, font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND)
+        self.playerAge.place(relx = 0.5155, rely = 0.5, anchor = "center")
         self.playerAge.bind("<Enter>", lambda event: self.onFrameHover())
 
         self.positions = self.player.specific_positions.replace(",", ", ")
-        self.playerPosition = ctk.CTkLabel(self, text = self.positions, font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND)
+        self.playerPosition = ctk.CTkLabel(self, text = self.positions, font = (APP_FONT, 13), fg_color = TKINTER_BACKGROUND)
         self.playerPosition.place(relx = 0.6, rely = 0.5, anchor = "center")
         self.playerPosition.bind("<Enter>", lambda event: self.onFrameHover())
 
@@ -413,6 +428,7 @@ class PlayerFrame(ctk.CTkFrame):
         self.playerAge.configure(fg_color = DARK_GREY)
         self.playerPosition.configure(fg_color = DARK_GREY)
         self.flagLabel.configure(fg_color = DARK_GREY)
+        self.caFrame.configure(fg_color = DARK_GREY)
 
         if self.teamSquad:
             self.talkButton.configure(fg_color = DARK_GREY)
@@ -434,6 +450,7 @@ class PlayerFrame(ctk.CTkFrame):
         self.playerAge.configure(fg_color = TKINTER_BACKGROUND)
         self.playerPosition.configure(fg_color = TKINTER_BACKGROUND)
         self.flagLabel.configure(fg_color = TKINTER_BACKGROUND)
+        self.caFrame.configure(fg_color = TKINTER_BACKGROUND)
 
         if self.teamSquad:
             self.talkButton.configure(fg_color = TKINTER_BACKGROUND)

@@ -262,16 +262,17 @@ def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius = 10, **kwargs):
     ]
     return canvas.create_polygon(points, smooth = True, splinestep = 36, **kwargs)
 
-def generate_CA(age: int, min_level: int = 150) -> int:
+def generate_CA(age: int, team_strength: float, min_level: int = 150) -> int:
     """
-    Generate a player's Current Ability (CA) based on age.
-
+    Generate a player's Current Ability (CA) based on age and team strength.
     Skewed distribution: high chance near min_level, very low chance near max_level.
+    
+    team_strength > 1.0 makes stronger teams more likely to get higher CAs
     """
     max_level = min_level + 50
     CAs = list(range(min_level, max_level + 1))
 
-    # Age factor: younger players slightly boosted
+    # Age factor
     if age <= 25:
         age_factor = 1.05
     elif age <= 30:
@@ -279,10 +280,15 @@ def generate_CA(age: int, min_level: int = 150) -> int:
     else:
         age_factor = 0.9
 
-    # Skewed weights: lower CA much more likely, higher CA exponentially less likely
-    weights = [(max_level - ca + 1) ** 3 * age_factor for ca in CAs]  # cubic decay
+    # Skewed weights: lower CA more likely
+    weights = [(max_level - ca + 1) ** 3 * age_factor for ca in CAs]
 
-    level = random.choices(CAs, weights=weights, k=1)[0]
+    # Apply team strength: shift distribution toward higher CAs
+    if team_strength != 1.0:
+        # Multiply weight for higher CAs
+        weights = [w * ((ca - min_level + 1) ** (team_strength - 1)) for ca, w in zip(CAs, weights)]
+
+    level = random.choices(CAs, weights = weights, k = 1)[0]
     return level
 
 def generate_youth_player_level(max_level: int = 150) -> int:
@@ -389,3 +395,25 @@ def star_images(star_rating: float):
     stars += ["star_empty"] * empty_stars
 
     return stars
+
+def expected_finish(team_name: str, team_scores: list) -> int:
+    """
+    Calculate expected league finish based on team scores.
+    
+    Args:
+        team_name (str): Name of the team to calculate for.
+        team_scores (list): List of tuples [(team_name, score), ...]
+        
+    Returns:
+        int: Expected finishing position (1 = first place).
+    """
+    # Sort teams by score descending
+    sorted_teams = sorted(team_scores, key=lambda x: x[1], reverse=True)
+    
+    # Find the position of the requested team
+    for position, (name, score) in enumerate(sorted_teams, start=1):
+        if name == team_name:
+            return position
+    
+    # Team not found
+    return None

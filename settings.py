@@ -223,7 +223,7 @@ FORMATIONS_POSITIONS = {
 }
 
 DEFENSIVE_POSITIONS = ["Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back"]
-MIDFIELD_POSITIONS = ["Defensive Midfielder", "Central Midfielder", "Left Midfielder", "Right Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]
+MIDFIELD_POSITIONS = ["Defensive Midfielder", "Central Midfielder", "Central Midfielder Left", "Central Midfielder Right", "Left Midfielder", "Right Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]
 ATTACKING_POSITIONS = ["Left Winger", "Right Winger", "Attacking Midfielder", "Striker Left", "Striker Right", "Center Forward"]
 
 SCORER_CHANCES = {

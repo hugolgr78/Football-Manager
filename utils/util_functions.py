@@ -371,3 +371,21 @@ def calculate_potential_ability(age: int, CA: int) -> int:
 
     return min(CA + gap, 200)
 
+def star_images(star_rating: float):
+    """
+    Convert a star rating (0.5 to 5.0 in 0.5 increments) into counts of full, half, and empty stars.
+    
+    :param star_rating: float, e.g., 3.5
+    :return: list of strings representing the stars, e.g., ["full", "full", "full", "half", "empty"]
+    """
+
+    full_stars = int(star_rating)
+    half_star = 1 if (star_rating - full_stars) >= 0.5 else 0
+    empty_stars = 5 - full_stars - half_star
+
+    stars = []
+    stars += ["star_full"] * full_stars
+    stars += ["star_half"] * half_star
+    stars += ["star_empty"] * empty_stars
+
+    return stars

@@ -1400,6 +1400,33 @@ class TeamLineup(Base):
         finally:
             session.close()
 
+    @classmethod
+    def get_player_potm_awards(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            # Subquery: for each match_id compute the maximum rating
+            max_per_match = (
+                session.query(
+                    TeamLineup.match_id.label('match_id'),
+                    func.max(TeamLineup.rating).label('max_rating')
+                )
+                .group_by(TeamLineup.match_id)
+                .subquery()
+            )
+
+            # Join player's rows to the subquery and count where player's rating == match max
+            potm_count = (
+                session.query(func.count(TeamLineup.id))
+                .join(max_per_match, TeamLineup.match_id == max_per_match.c.match_id)
+                .filter(TeamLineup.player_id == player_id)
+                .filter(TeamLineup.rating == max_per_match.c.max_rating)
+                .scalar()
+            )
+
+            return int(potm_count or 0)
+        finally:
+            session.close()
+
 class MatchEvents(Base):
     __tablename__ = 'match_events'
 

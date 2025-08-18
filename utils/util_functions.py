@@ -2,11 +2,13 @@ from settings import *
 import random
 import math
 
-def get_objective_for_level(level):
-    for (max_level, min_level), objective in OBJECTIVES.items():
-        if min_level <= level <= max_level:
+def get_objective_for_level(teamAverages, teamID):
+    sorted_teams = sorted(teamAverages.items(), key = lambda x: x[1]["avg_ca"], reverse = True)
+    teamRank = next((rank for rank, (tid, _) in enumerate(sorted_teams, start = 1) if tid == teamID), None)
+
+    for (min_rank, max_rank), objective in OBJECTIVES.items():
+        if min_rank <= teamRank <= max_rank:
             return objective
-    return "no specific objective" 
 
 def generate_lower_div_objectives(min_level, max_level):
     range_size = (max_level - min_level) // 3
@@ -22,9 +24,9 @@ def get_fan_reaction(result, expectation):
     index = EXPECTATION_LEVELS.index(expectation)
     return FAN_REACTIONS.get(result, ["Unknown"] * 5)[index]
 
-def get_expectation(team_level, opponent_level):
+def get_expectation(team_avg, opponent_avg):
     """Determine expectation level based on team level difference."""
-    level_diff = team_level - opponent_level
+    level_diff = team_avg - opponent_avg
     for diff_range, expectation in TEAM_EXPECTATIONS.items():
         if level_diff in diff_range:
             return expectation
@@ -413,10 +415,10 @@ def expected_finish(team_name: str, team_scores: list) -> int:
         int: Expected finishing position (1 = first place).
     """
     # Sort teams by score descending
-    sorted_teams = sorted(team_scores, key=lambda x: x[1], reverse=True)
+    sorted_teams = sorted(team_scores, key = lambda x: x[1], reverse = True)
     
     # Find the position of the requested team
-    for position, (name, score) in enumerate(sorted_teams, start=1):
+    for position, (name, _) in enumerate(sorted_teams, start = 1):
         if name == team_name:
             return position
     

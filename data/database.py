@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_
+from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
 from sqlalchemy.orm import sessionmaker, aliased, scoped_session
@@ -105,7 +105,7 @@ class Managers(Base):
             updateProgress(1)
 
             if user:
-                Teams.add_teams(chosenTeam, new_manager.first_name, new_manager.last_name, managerID)
+                Teams.add_teams(chosenTeam, managerID)
                 updateProgress(2)
                 Referees.add_referees()
                 updateProgress(3)
@@ -212,10 +212,10 @@ class Teams(Base):
     logo = Column(BLOB)
     year_created = Column(Integer, nullable = False)
     stadium = Column(String(128), nullable = False)
-    level = Column(Integer, nullable = False)
+    strength = Column(Float, nullable = False)
 
     @classmethod
-    def add_teams(cls, chosenTeamName, manager_first_name, manager_last_name, manager_id):
+    def add_teams(cls, chosenTeamName, manager_id):
         session = DatabaseManager().get_session()
         try:
             with open("data/teams.json", 'r') as file:
@@ -225,7 +225,7 @@ class Teams(Base):
                 name = team['name']
                 year_created = team['year_created']
                 stadium = team['stadium']
-                level = team['level']
+                strength = team['strength']
 
                 with open(f"Images/Teams/{name}.png", 'rb') as file:
                     logo = file.read()
@@ -241,14 +241,15 @@ class Teams(Base):
                     name = name,
                     year_created = year_created,
                     stadium = stadium,
-                    level = level,
-                    logo = logo
+                    logo = logo,
+                    strength = strength
                 )
 
                 updateProgress(None)
-                Players.add_players(new_team.id)
-
                 session.add(new_team)
+                session.commit()
+
+                Players.add_players(new_team.id)
 
             session.commit()
         except Exception as e:
@@ -294,15 +295,71 @@ class Teams(Base):
             session.close()
 
     @classmethod
-    def update_level(cls, id, level):
+    def get_average_current_ability_per_team(cls, league_id = None):
+        """
+        Return a mapping of team_id -> {"name": team_name, "avg_ca": float, "count": int}.
+        If league_id is provided, only teams participating in that league are considered.
+        """
         session = DatabaseManager().get_session()
         try:
-            team = session.query(Teams).filter(Teams.id == id).first()
-            if team:
-                team.level = level
-                session.commit()
-            else:
-                return None
+            # Base query: Teams joined with Players to compute average CA per team
+            query = (
+                session.query(
+                    Teams.id.label("team_id"),
+                    Teams.name.label("team_name"),
+                    func.avg(Players.current_ability).label("avg_ca"),
+                    func.count(Players.id).label("player_count"),
+                )
+                .join(Players, Players.team_id == Teams.id)
+            )
+            # Optionally filter to teams in a specific league
+            if league_id is not None:
+                query = query.join(LeagueTeams, Teams.id == LeagueTeams.team_id).filter(LeagueTeams.league_id == league_id)
+
+            query = query.group_by(Teams.id)
+
+            rows = query.all()
+
+            # Build result dict
+            results = {}
+            for team_id, team_name, avg_ca, player_count in rows:
+                # avg_ca can be Decimal/DecimalProxy depending on DB; convert to float safely
+                try:
+                    avg_val = float(avg_ca) if avg_ca is not None else 0.0
+                except Exception:
+                    avg_val = float(avg_ca or 0.0)
+
+                results[team_id] = {
+                    "name": team_name,
+                    "avg_ca": round(avg_val, 2),
+                    "count": int(player_count),
+                }
+
+            return results
+        finally:
+            session.close()
+
+    @classmethod
+    def get_team_average_current_ability(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            avg_ca = session.query(func.avg(Players.current_ability)).filter(Players.team_id == team_id).scalar()
+            return round(float(avg_ca) if avg_ca is not None else 0.0, 2)
+        finally:
+            session.close()
+
+    @classmethod
+    def get_team_strengths(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            rows = (
+                session.query(Teams.name, Teams.strength)
+                .join(LeagueTeams, Teams.id == LeagueTeams.team_id)
+                .filter(LeagueTeams.league_id == league_id)
+                .all()
+            )
+
+            return [(name, strength) for name, strength in rows]
         finally:
             session.close()
 
@@ -313,6 +370,8 @@ class Players(Base):
     team_id = Column(String(128), ForeignKey('teams.id'))
     first_name = Column(String(128), nullable = False)
     last_name = Column(String(128), nullable = False)
+    current_ability = Column(Integer, nullable = False)
+    potential_ability = Column(Integer, nullable = False)
     number = Column(Integer, nullable = False)
     position = Column(Enum("goalkeeper", "defender", "midfielder", "forward"), nullable = False)
     specific_positions = Column(String(128), nullable = False)
@@ -321,7 +380,7 @@ class Players(Base):
     nationality = Column(String(128), nullable = False)
     flag = Column(BLOB)
     morale = Column(Integer, nullable = False, default = 50)
-    player_role = Column(Enum("Star player", "Youngster", "Backup", "Rotation", "First Team", "Youth Team"), nullable = False)
+    player_role = Column(Enum("Star Player", "Backup", "Rotation", "First Team", "Youth Team"), nullable = False)
 
     @classmethod
     def add_player_entry(cls, data):
@@ -336,9 +395,10 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def add_player(cls, team_id, position, required_position, role):
+    def add_youth_player(cls, team_id, position, required_position):
         session = DatabaseManager().get_session()
         try:
+            role = "Youth Team"
             selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
             _, countryWeights = COUNTRIES[selectedContinent]
             country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
@@ -348,11 +408,16 @@ class Players(Base):
 
             faker = Faker()
             date_of_birth = faker.date_of_birth(minimum_age = 15, maximum_age = 17)
+            playerCA = generate_youth_player_level()
+            playerPA = calculate_potential_ability(2024 - date_of_birth.year, playerCA)
+
             new_player = Players(
                 id = str(uuid.uuid4()),
                 team_id = team_id,
                 first_name = faker.first_name_male(),
                 last_name = faker.last_name(),
+                current_ability = playerCA,
+                potential_ability = playerPA,
                 number = random.randint(1, 99),
                 position = position,
                 date_of_birth = str(date_of_birth),
@@ -398,12 +463,18 @@ class Players(Base):
     @classmethod
     def add_players(cls, team_id):
         session = DatabaseManager().get_session()
+        team = session.query(Teams).filter(Teams.id == team_id).first()
         try:
-            positions = {
+            base_positions = {
                 "goalkeeper": 3,
                 "defender": 8,
                 "midfielder": 8,
                 "forward": 6
+            }
+
+            positions = {
+                pos: random.randint(val, val + (1 if pos == "goalkeeper" else 2))
+                for pos, val in base_positions.items()
             }
 
             specific_positions = {
@@ -413,123 +484,232 @@ class Players(Base):
                 "forward": ["LW", "CF", "RW"]
             }
 
-            player_role_counts = {
-                "Star player": 4,
-                "First Team": 11,
-                "Rotation": 8
-            }
-
             numbers = []
             faker = Faker()
-
-            gk_assigned = False
-
             position_weights = [0.4, 0.3, 0.2, 0.1]
 
+            all_players = []
+
+            # --- Generate all players without assigning roles ---
             for overall_position, specific_pos_list in specific_positions.items():
+                # Minimum players for each specific position
                 for specific_pos in specific_pos_list:
-                    selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
+                    selectedContinent = random.choices(list(continentWeights.keys()), weights=list(continentWeights.values()), k=1)[0]
                     _, countryWeights = COUNTRIES[selectedContinent]
-                    country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
+                    country = random.choices(list(countryWeights.keys()), weights=list(countryWeights.values()), k=1)[0]
 
                     with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
                         flag = file.read()
 
                     date_of_birth = faker.date_of_birth(minimum_age = 18, maximum_age = 35)
-                    new_player = Players(
-                        team_id = team_id,
-                        first_name = faker.first_name_male(),
-                        last_name = faker.last_name(),
-                        number = random.randint(1, 99),
-                        position = overall_position,
-                        date_of_birth = str(date_of_birth),
-                        age = 2024 - date_of_birth.year,
-                        nationality = country,
-                        flag = flag
-                    )
+                    player_number = random.randint(1, 99)
+                    while player_number in numbers:
+                        player_number = random.randint(1, 99)
+                    numbers.append(player_number)
 
-                    num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1), weights = position_weights[:min(len(specific_pos_list), 4)])[0]
-                    new_player_positions = random.sample(specific_pos_list, k = num_positions)
+                    num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1),
+                                                weights=position_weights[:min(len(specific_pos_list), 4)])[0]
+                    new_player_positions = random.sample(specific_pos_list, k=num_positions)
                     if specific_pos not in new_player_positions:
                         new_player_positions[0] = specific_pos
-                    new_player.specific_positions = ','.join(new_player_positions)
 
-                    while new_player.number in numbers:
-                        new_player.number = random.randint(1, 99)
+                    playerCA = generate_CA(2024 - date_of_birth.year, team.strength)
+                    playerPA = calculate_potential_ability(2024 - date_of_birth.year, playerCA)
 
-                    numbers.append(new_player.number)
-
-                    if new_player.age <= 21:
-                        new_player.player_role = "Youngster"
-                    elif overall_position == "goalkeeper":
-                        if not gk_assigned:
-                            new_player.player_role = "First Team"
-                            gk_assigned = True
-                        else:
-                            new_player.player_role = "Backup"
-                    else:
-                        available_roles = [role for role, count in player_role_counts.items() if count > 0]
-                        if available_roles:
-                            chosen_role = random.choice(available_roles)
-                            new_player.player_role = chosen_role
-                            player_role_counts[chosen_role] -= 1
-
-                    session.add(new_player)
-                    updateProgress(None)
-
-            for overall_position, count in positions.items():
-                for _ in range(count - len(specific_positions[overall_position])):
-                    selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
-                    continent, countryWeights = COUNTRIES[selectedContinent]
-                    country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
-
-                    with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
-                        flag = file.read()
-
-                    date_of_birth = faker.date_of_birth(minimum_age = 18, maximum_age = 35)
                     new_player = Players(
                         team_id = team_id,
                         first_name = faker.first_name_male(),
                         last_name = faker.last_name(),
-                        number = random.randint(1, 99),
+                        number = player_number,
                         position = overall_position,
                         date_of_birth = str(date_of_birth),
                         age = 2024 - date_of_birth.year,
                         nationality = country,
-                        flag = flag 
+                        flag = flag,
+                        specific_positions = ','.join(new_player_positions),
+                        current_ability = playerCA,
+                        potential_ability = playerPA
                     )
+                    all_players.append(new_player)
 
-                    num_positions = random.choices(range(1, min(len(specific_positions[overall_position]), 4) + 1), weights = position_weights[:min(len(specific_positions[overall_position]), 4)])[0]
-                    new_player_positions = random.sample(specific_positions[overall_position], k = num_positions)
-                    new_player.specific_positions = ','.join(new_player_positions)
+                # Add extra players to reach desired count
+                for _ in range(positions[overall_position] - len(specific_pos_list)):
+                    selectedContinent = random.choices(list(continentWeights.keys()), weights=list(continentWeights.values()), k=1)[0]
+                    _, countryWeights = COUNTRIES[selectedContinent]
+                    country = random.choices(list(countryWeights.keys()), weights=list(countryWeights.values()), k=1)[0]
 
-                    while new_player.number in numbers:
-                        new_player.number = random.randint(1, 99)
+                    with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
+                        flag = file.read()
 
-                    numbers.append(new_player.number)
+                    date_of_birth = faker.date_of_birth(minimum_age=18, maximum_age=35)
+                    player_number = random.randint(1, 99)
+                    while player_number in numbers:
+                        player_number = random.randint(1, 99)
+                    numbers.append(player_number)
 
-                    if new_player.age <= 21:
-                        new_player.player_role = "Youngster"
-                    elif overall_position == "goalkeeper":
-                        if not gk_assigned:
-                            new_player.player_role = "First Team"
-                            gk_assigned = True
+                    num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1),
+                                                weights=position_weights[:min(len(specific_pos_list), 4)])[0]
+                    new_player_positions = random.sample(specific_pos_list, k=num_positions)
+
+                    playerCA = generate_CA(2024 - date_of_birth.year, team.strength)
+                    playerPA = calculate_potential_ability(2024 - date_of_birth.year, playerCA)
+
+                    new_player = Players(
+                        team_id = team_id,
+                        first_name = faker.first_name_male(),
+                        last_name = faker.last_name(),
+                        number = player_number,
+                        position = overall_position,
+                        date_of_birth = str(date_of_birth),
+                        age = 2024 - date_of_birth.year,
+                        nationality = country,
+                        flag = flag,
+                        specific_positions = ','.join(new_player_positions),
+                        current_ability = playerCA,
+                        potential_ability = playerPA
+                    )
+                    all_players.append(new_player)
+
+            # 1. Star Players: top 4 in the team
+            all_players.sort(key = lambda p: p.current_ability, reverse = True)
+
+            starKeeperPicked = False
+            count = 0
+
+            for player in all_players:
+                if count < 4:
+                    if player.position == "GK":
+                        if not starKeeperPicked:
+                            player.player_role = "Star Player"
+                            starKeeperPicked = True
+                            count += 1
                         else:
-                            new_player.player_role = "Backup"
+                            player.player_role = None
                     else:
-                        available_roles = [role for role, count in player_role_counts.items() if count > 0]
-                        if available_roles:
-                            chosen_role = random.choice(available_roles)
-                            new_player.player_role = chosen_role
-                            player_role_counts[chosen_role] -= 1
+                        player.player_role = "Star Player"
+                        count += 1
+                else:
+                    player.player_role = None
 
-                    session.add(new_player)
-                    updateProgress(None)
+            # Tie-break for Star Player limit
+            for i in range(4, len(all_players)):
+                if all_players[i].current_ability == all_players[3].current_ability:
+                    all_players[i].current_ability -= 5
+
+            # 2. First team and Rotation per position (Backup only for goalkeepers)
+            positions = ["goalkeeper", "defender", "midfielder", "forward"]
+            max_top_per_position = {"goalkeeper": 1, "defender": 4, "midfielder": 4, "forward": 4}
+
+            for pos in positions:
+                pos_players = [p for p in all_players if p.position == pos and p.player_role is None]
+                pos_players.sort(key=lambda p: p.current_ability, reverse=True)
+
+                # Count existing Star Players in this position
+                sp_count = sum(1 for p in all_players if p.position == pos and p.player_role == "Star Player")
+                remaining_top_slots = max(0, max_top_per_position[pos] - sp_count)
+
+                # Assign First Team up to remaining slots
+                for i in range(min(remaining_top_slots, len(pos_players))):
+                    pos_players[i].player_role = "First Team"
+
+                # Tie-break for First Team limit
+                if len(pos_players) > remaining_top_slots:
+                    if remaining_top_slots > 0:
+                        limit_CA = pos_players[remaining_top_slots - 1].current_ability
+                        for player in pos_players[remaining_top_slots:]:
+                            if player.current_ability == limit_CA:
+                                player.current_ability -= 5
+
+                # Assign Rotation or Backup
+                for player in pos_players[remaining_top_slots:]:
+                    if pos == "goalkeeper":
+                        player.player_role = "Backup"
+                    else:
+                        player.player_role = "Rotation"
+
+            # Add all players to session
+            for player in all_players:
+                session.add(player)
 
             session.commit()
         except Exception as e:
             session.rollback()
             raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_players_star_ratings(cls, players, league_id, CA=True):
+        """
+        Return star ratings for a list of players in a league.
+        Output: {player_id: stars, ...}
+        """
+        session = DatabaseManager().get_session()
+        player_ids = [p.id for p in players]
+        try:
+            # Fetch all players in league with their abilities + positions
+            league_players = (
+                session.query(
+                    Players.id,
+                    Players.position,
+                    Players.current_ability,
+                    Players.potential_ability,
+                )
+                .join(LeagueTeams, Players.team_id == LeagueTeams.team_id)
+                .filter(LeagueTeams.league_id == league_id)
+                .all()
+            )
+            if not league_players:
+                return {pid: 3.0 for pid in player_ids}
+
+            # Group players by position
+            pos_groups = {}
+            for pid, pos, ca, pa in league_players:
+                pos_groups.setdefault(pos, []).append((pid, ca, pa))
+
+            def percentile_to_stars(p):
+                if p >= 0.95: return 5.0
+                if p >= 0.85: return 4.5
+                if p >= 0.70: return 4.0
+                if p >= 0.50: return 3.5
+                if p >= 0.30: return 3.0
+                if p >= 0.15: return 2.5
+                if p >= 0.05: return 2.0
+                return 1.5
+
+            results = {}
+            for pid in player_ids:
+                # Find the player
+                player = next((p for p in league_players if p[0] == pid), None)
+                if not player:
+                    results[pid] = 3.0
+                    continue
+
+                _, pos, ca, pa = player
+                # Use each teammate's ability (c/p) — previous code mistakenly used the
+                # target player's ca/pa for every entry, producing identical values.
+                abilities = [c if CA else p for _, c, p in pos_groups[pos]]
+                abilities_sorted = sorted(abilities)
+
+                player_val = ca if CA else pa
+                # Handle duplicates safely with bisect (better than index)
+                import bisect
+                rank = bisect.bisect_right(abilities_sorted, player_val)
+                percentile = rank / len(abilities_sorted)
+
+                stars = percentile_to_stars(percentile)
+
+                # Ensure PA >= CA
+                if not CA:
+                    ca_abilities = sorted([c for _, c, _ in pos_groups[pos]])
+                    ca_rank = bisect.bisect_right(ca_abilities, ca)
+                    ca_percentile = ca_rank / len(ca_abilities)
+                    ca_stars = percentile_to_stars(ca_percentile)
+                    stars = max(stars, ca_stars)
+
+                results[pid] = stars
+
+            return results
         finally:
             session.close()
 
@@ -650,7 +830,7 @@ class Players(Base):
     def get_all_star_players(cls, team_id):
         session = DatabaseManager().get_session()
         try:
-            players = session.query(Players).filter(Players.team_id == team_id, Players.player_role == 'Star player').all()
+            players = session.query(Players).filter(Players.team_id == team_id, Players.player_role == 'Star Player').all()
             return players
         finally:
             session.close()
@@ -670,7 +850,7 @@ class Players(Base):
         try:
             role_order = case(
                 [ 
-                    (Players.player_role == 'Star player', 1),
+                    (Players.player_role == 'Star Player', 1),
                     (Players.player_role == 'First Team', 2),
                     (Players.player_role == 'Rotation', 3),
                 ],
@@ -688,7 +868,7 @@ class Players(Base):
         try:
             role_order = case(
                 [
-                    (Players.player_role == 'Star player', 1),
+                    (Players.player_role == 'Star Player', 1),
                     (Players.player_role == 'First Team', 2),
                     (Players.player_role == 'Rotation', 3),
                 ],
@@ -706,7 +886,7 @@ class Players(Base):
         try:
             role_order = case(
                 [
-                    (Players.player_role == 'Star player', 1),
+                    (Players.player_role == 'Star Player', 1),
                     (Players.player_role == 'First Team', 2),
                     (Players.player_role == 'Rotation', 3),
                 ],
@@ -3874,7 +4054,7 @@ def getPredictedLineup(opponent_id):
             else:
                 # Sort by role priority first, then by morale if no historical starts
                 role_priority = {
-                    "Star player": 1,
+                    "Star Player": 1,
                     "First Team": 2,
                     "Rotation": 3,
                     "Backup": 4,

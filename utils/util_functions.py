@@ -1,11 +1,14 @@
 from settings import *
 import random
+import math
 
-def get_objective_for_level(level):
-    for (max_level, min_level), objective in OBJECTIVES.items():
-        if min_level <= level <= max_level:
+def get_objective_for_level(teamAverages, teamID):
+    sorted_teams = sorted(teamAverages.items(), key = lambda x: x[1]["avg_ca"], reverse = True)
+    teamRank = next((rank for rank, (tid, _) in enumerate(sorted_teams, start = 1) if tid == teamID), None)
+
+    for (min_rank, max_rank), objective in OBJECTIVES.items():
+        if min_rank <= teamRank <= max_rank:
             return objective
-    return "no specific objective" 
 
 def generate_lower_div_objectives(min_level, max_level):
     range_size = (max_level - min_level) // 3
@@ -21,9 +24,9 @@ def get_fan_reaction(result, expectation):
     index = EXPECTATION_LEVELS.index(expectation)
     return FAN_REACTIONS.get(result, ["Unknown"] * 5)[index]
 
-def get_expectation(team_level, opponent_level):
+def get_expectation(team_avg, opponent_avg):
     """Determine expectation level based on team level difference."""
-    level_diff = team_level - opponent_level
+    level_diff = team_avg - opponent_avg
     for diff_range, expectation in TEAM_EXPECTATIONS.items():
         if level_diff in diff_range:
             return expectation
@@ -74,7 +77,7 @@ def get_morale_change(match_result, player_rating, goal_difference):
 def get_morale_decrease_role(player):
     role = player.player_role
 
-    if role == "Star player":
+    if role == "Star Player":
         return -5
     elif role == "First Team":
         return -3
@@ -261,3 +264,163 @@ def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius = 10, **kwargs):
         x1, y1
     ]
     return canvas.create_polygon(points, smooth = True, splinestep = 36, **kwargs)
+
+def generate_CA(age: int, team_strength: float, min_level: int = 150) -> int:
+    """
+    Generate a player's Current Ability (CA) based on age and team strength.
+    Skewed distribution: high chance near min_level, very low chance near max_level.
+    
+    team_strength > 1.0 makes stronger teams more likely to get higher CAs
+    """
+    max_level = min_level + 50
+    CAs = list(range(min_level, max_level + 1))
+
+    # Age factor
+    if age <= 21:
+        age_factor = 0.8
+    elif age <= 25:
+        age_factor = 1.05
+    elif age <= 30:
+        age_factor = 1.0
+    else:
+        age_factor = 0.9
+
+    # Skewed weights: lower CA more likely
+    weights = [(max_level - ca + 1) ** 3 * age_factor for ca in CAs]
+
+    # Apply team strength: shift distribution toward higher CAs
+    if team_strength != 1.0:
+            # scale factor determines how much stronger/weaker the curve is
+            scale = 15 * (team_strength - 1)   # stronger teams get exponential boost
+            weights = [w * math.exp(scale * ((ca - min_level) / (max_level - min_level)))
+                    for ca, w in zip(CAs, weights)]
+
+    level = random.choices(CAs, weights = weights, k = 1)[0]
+    return level
+
+def generate_youth_player_level(max_level: int = 150) -> int:
+    """
+    Generate a youth player level between [max_level - 50, max_level].
+    No role/age influence, just weighted by intervals (higher levels rarer).
+    
+    Args:
+        max_level (int): The maximum possible level (capped at 200).
+    
+    Returns:
+        int: The generated player level.
+    """
+
+    # Clamp max_level to 200
+    max_level = min(max_level, 200)
+
+    # Lower bound is max_level - 50, but not below 0
+    min_level = max(max_level - 50, 0)
+
+    # Build intervals of ~10 points
+    intervals = []
+    start = min_level
+    while start < max_level:
+        end = min(start + 10, max_level)
+        intervals.append((start, end))
+        start += 10
+
+    # Default "youth" probability distribution (up to 5 intervals)
+    base_probs = [30, 25, 20, 15, 10]  # favors lower end, rarer at the top
+
+    # Trim to match number of intervals
+    probs = base_probs[-len(intervals):]
+
+    # Normalize to sum 1
+    total = sum(probs)
+    probs = [p / total for p in probs]
+
+    # Choose interval
+    chosen_interval = random.choices(intervals, weights = probs, k = 1)[0]
+
+    # Pick uniformly inside interval
+    return random.randint(chosen_interval[0], chosen_interval[1])
+
+def calculate_potential_ability(age: int, CA: int) -> int:
+    """
+    Calculate Potential Ability (PA) based on age and CA.
+    - Younger players can have huge jumps (wonderkids), but those are rarer.
+    - Older players have small gaps.
+    - PA capped at 200.
+    """
+
+    if age <= 18:
+        max_gap = 200 - CA
+        min_gap = 10
+    elif age <= 21:
+        max_gap = min(60, 200 - CA)
+        min_gap = 5
+    elif age <= 24:
+        max_gap = min(40, 200 - CA)
+        min_gap = 2
+    elif age <= 27:
+        max_gap = min(25, 200 - CA)
+        min_gap = 1
+    elif age <= 30:
+        max_gap = min(15, 200 - CA)
+        min_gap = 0
+    else:
+        max_gap = min(5, 200 - CA)
+        min_gap = 0
+
+    # Ensure min_gap never exceeds max_gap
+    if min_gap > max_gap:
+        min_gap = 0
+
+    if max_gap <= 0:
+        return CA  # already at cap or no growth possible
+
+    # Build possible gaps
+    gaps = list(range(min_gap, max_gap + 1))
+
+    # Weighting: smaller gaps are more likely, big gaps rarer
+    weights = [1 / (g + 1) for g in gaps]
+
+    gap = random.choices(gaps, weights=weights, k=1)[0]
+
+    return min(CA + gap, 200)
+
+def star_images(star_rating: float):
+    """
+    Convert a star rating (0.5 to 5.0 in 0.5 increments) into counts of full, half, and empty stars.
+    
+    :param star_rating: float, e.g., 3.5
+    :return: list of strings representing the stars, e.g., ["full", "full", "full", "half", "empty"]
+    """
+
+    full_stars = int(star_rating)
+    half_star = 1 if (star_rating - full_stars) >= 0.5 else 0
+    empty_stars = 5 - full_stars - half_star
+
+    stars = []
+    stars += ["star_full"] * full_stars
+    stars += ["star_half"] * half_star
+    stars += ["star_empty"] * empty_stars
+
+    return stars
+
+def expected_finish(team_name: str, team_scores: list) -> int:
+    """
+    Calculate expected league finish based on team scores.
+    
+    Args:
+        team_name (str): Name of the team to calculate for.
+        team_scores (list): List of tuples [(team_name, score), ...]
+        
+    Returns:
+        int: Expected finishing position (1 = first place).
+    """
+    # Sort teams by score descending
+    sorted_teams = sorted(team_scores, key = lambda x: x[1], reverse = True)
+    
+    # Find the position of the requested team
+    for position, (name, _) in enumerate(sorted_teams, start = 1):
+        if name == team_name:
+            return position
+    
+    # Team not found
+    return None

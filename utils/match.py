@@ -160,7 +160,7 @@ class Match():
                 continue
 
             # Step 3: Prioritize by role (star > first_team > rotation)
-            best_fit = next((p for p in available_players if p.player_role == "Star player"), None) or \
+            best_fit = next((p for p in available_players if p.player_role == "Star Player"), None) or \
                     next((p for p in available_players if p.player_role == "First Team"), None) or \
                     next((p for p in available_players if p.player_role == "Rotation"), None)
 
@@ -197,7 +197,7 @@ class Match():
             overallPosition = "goalkeeper"
                 
     # list empty or no player found with the specific position
-        newYouth = Players.add_player(teamID, overallPosition, position, "Youth Team")
+        newYouth = Players.add_youth_player(teamID, overallPosition, position)
         if lineup is not None: # if lineup is passed as None, then add to subs
             lineup[position] = newYouth
         else:
@@ -827,8 +827,8 @@ class Match():
             homeManager = Managers.get_manager_by_id(self.homeTeam.manager_id)
             awayManager = Managers.get_manager_by_id(self.awayTeam.manager_id)
 
-                # Use a thread pool for DB writes where appropriate; safe_submit will
-                # fall back to synchronous execution if the executor is unavailable.
+            # Use a thread pool for DB writes where appropriate; safe_submit will
+            # fall back to synchronous execution if the executor is unavailable.
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 executor_var = executor
                 futures = []

@@ -27,6 +27,7 @@ class MainMenu(ctk.CTkFrame):
     def initUI(self):
 
         self.overlappingProfiles = []
+        self.emailsAdded = False
 
         self.hub = Hub(self, self.manager_id)
         self.hub.place(x = 200, y = 0, anchor = "nw")
@@ -102,7 +103,8 @@ class MainMenu(ctk.CTkFrame):
         self.tabs[self.activeButton].place(x = 200, y = 0, anchor = "nw")
         
         # Call addEmails if switching to Inbox tab
-        if index == 1 and self.tabs[self.activeButton]:  # Index 1 is Inbox
+        if index == 1 and self.tabs[self.activeButton] and not self.emailsAdded: 
+            self.emailsAdded = True
             self.tabs[self.activeButton].addEmails()
 
     def resetMenu(self):

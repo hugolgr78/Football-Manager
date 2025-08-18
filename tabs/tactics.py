@@ -86,8 +86,10 @@ class Lineup(ctk.CTkFrame):
         self.parent = parent
         self.mainMenu = self.parent.parent
         self.team = self.parent.team
+        self.leagueID = LeagueTeams.get_league_by_team(self.team.id).league_id
 
         self.players = Players.get_all_players_by_team(self.team.id)
+        self.starRatings = Players.get_players_star_ratings(self.players, self.leagueID)
 
         self.selectedLineup = {}
         self.substitutePlayers = []
@@ -159,6 +161,18 @@ class Lineup(ctk.CTkFrame):
 
         self.autoBox.configure(values = FORMATIONS_POSITIONS.keys())
 
+    def getDropdownValues(self):
+        self.positionsCopy = {}
+        for position, position_code in POSITION_CODES.items():
+            if position not in self.selectedLineup.keys():
+                self.positionsCopy[position] = position_code
+
+        for position in self.selectedLineup.keys():
+            if position in RELATED_POSITIONS:
+                for related_position in RELATED_POSITIONS[position]:
+                    if related_position in self.positionsCopy.keys():
+                        del self.positionsCopy[related_position]
+
     def importLineup(self, loaded = None, auto = None):
         self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
         self.league = League.get_league_by_id(self.leagueTeams.league_id)
@@ -227,7 +241,8 @@ class Lineup(ctk.CTkFrame):
                             self.removePlayer,
                             self.updateLineup,
                             self.substituteFrame,
-                            self.swapLineupPositions
+                            self.swapLineupPositions,
+                            caStars = self.starRatings[player.id]
                         )
             
         self.lineupPitch.set_counter(playersCount)
@@ -276,11 +291,11 @@ class Lineup(ctk.CTkFrame):
                 if len(youthForPosition) > 0:
                     self.players.append(youthForPosition[0].id)
                 else:
-                    newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
+                    newYouth = Players.add_youth_player(self.team.id, overallPosition, position)
                     self.players.append(newYouth)
 
                 if position == "Goalkeeper":
-                    newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
+                    newYouth = Players.add_youth_player(self.team.id, overallPosition, position)
                     self.players.append(newYouth)
 
             elif position == "Goalkeeper" and len(playersForPosition) == 1:
@@ -290,13 +305,13 @@ class Lineup(ctk.CTkFrame):
                 if len(youthForPosition) > 0:
                     self.players.append(youthForPosition[0].id)
                 else:
-                    newYouth = Players.add_player(self.team.id, overallPosition, position, "Youth Team")
+                    newYouth = Players.add_youth_player(self.team.id, overallPosition, position)
                     self.players.append(newYouth)
 
     def addSubstitutePlayers(self, importing = False, playersCount = None):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)
         
-        players_per_row = 5
+        players_per_row = 4
 
         # Define position groups and their display names
         position_groups = [
@@ -309,7 +324,7 @@ class Lineup(ctk.CTkFrame):
         playersIDs = self.players.copy()
         playersList = [Players.get_player_by_id(player) for player in playersIDs]
         playersList.sort(key = lambda x: (POSITION_ORDER.get(x.position, 99), x.last_name))
-
+        
         for pos_key, heading in position_groups:
             group_players = [p for p in playersList if p.position == pos_key and p.id not in self.selectedLineup.values()]
             num_players = len(group_players)
@@ -331,7 +346,7 @@ class Lineup(ctk.CTkFrame):
 
                 row = 1 + count // players_per_row
                 col = count % players_per_row
-                sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self.parent, self.league.id, row, col, self.checkSubstitute)
+                sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self.parent, self.league.id, row, col, self.starRatings[player.id], self.checkSubstitute)
 
                 if importing and playersCount == 11:
                     sub_frame.showCheckBox()
@@ -383,21 +398,17 @@ class Lineup(ctk.CTkFrame):
     def choosePosition(self, selected_player):
 
         self.stop_choosePlayer()
-
-        if self.selected_position in self.positionsCopy:
-            del self.positionsCopy[self.selected_position]
-
-            if self.selected_position in RELATED_POSITIONS:
-                for related_position in RELATED_POSITIONS[self.selected_position]:
-                    if related_position in self.positionsCopy:
-                        del self.positionsCopy[related_position]
-
+        
+        self.getDropdownValues()
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
 
         self.lineupPitch.increment_counter()
 
         player = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1], self.team.id)
         self.selectedLineup[self.selected_position] = player.id
+
+        for child in self.substituteFrame.winfo_children():
+            child.destroy()
 
         LineupPlayerFrame(self.lineupPitch, 
                             POSITIONS_PITCH_POSITIONS[self.selected_position][0], 
@@ -412,11 +423,10 @@ class Lineup(ctk.CTkFrame):
                             self.removePlayer,
                             self.updateLineup,
                             self.substituteFrame,
-                            self.swapLineupPositions
+                            self.swapLineupPositions,
+                            caStars = self.starRatings[player.id]
                         )
 
-        for widget in self.substituteFrame.winfo_children():
-            widget.destroy()
 
         self.addSubstitutePlayers(importing = True, playersCount = self.lineupPitch.get_counter())
 
@@ -426,27 +436,19 @@ class Lineup(ctk.CTkFrame):
             if playerID == playerData.id:
                 del self.selectedLineup[position]
                 break
-
+        
         self.lineupPitch.decrement_counter()
         frame.place_forget()
-
-        for position, position_code in POSITION_CODES.items():
-            if position == playerPosition:
-                self.positionsCopy[position] = position_code
-
-                if position in RELATED_POSITIONS:
-                    for related_position in RELATED_POSITIONS[position]:
-                        self.positionsCopy[related_position] = position_code
-
-                break
 
         for widget in self.substituteFrame.winfo_children():
             widget.destroy()
 
         self.addSubstitutePlayers(importing = True, playersCount = self.lineupPitch.get_counter())
 
-        # Reset the substitutes chosen
+        self.getDropdownValues()
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
+
+        # Reset the substitutes chosen
         self.substitutePlayers = []
         self.subCounter = 0
 
@@ -456,30 +458,7 @@ class Lineup(ctk.CTkFrame):
 
         self.selectedLineup[new_position] = player.id
 
-        ## Add the old position back into to dropdown, accouting for related positions and remove the new position
-        if old_position not in self.positionsCopy:
-            # Don't add old_position if new_position is a related position of old_position, or vice versa
-            related_to_old = RELATED_POSITIONS.get(old_position, [])
-            related_to_new = RELATED_POSITIONS.get(new_position, [])
-            if new_position not in related_to_old and old_position not in related_to_new:
-                self.positionsCopy[old_position] = POSITION_CODES[old_position]
-
-        if old_position in RELATED_POSITIONS:
-            for related_position in RELATED_POSITIONS[old_position]:
-                # Only add the related position if none of its other related positions are in the lineup
-                other_related = [r for r in RELATED_POSITIONS.get(related_position, []) if r != old_position]
-                if all(r not in self.selectedLineup for r in other_related):
-                    if related_position not in self.selectedLineup:
-                        self.positionsCopy[related_position] = POSITION_CODES[old_position]
-
-        if new_position in self.positionsCopy:
-            del self.positionsCopy[new_position]
-
-        if new_position in RELATED_POSITIONS:
-            for related_position in RELATED_POSITIONS[new_position]:
-                if related_position in self.positionsCopy:
-                    del self.positionsCopy[related_position]
-
+        self.getDropdownValues()
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
 
     def swapLineupPositions(self, position_1, position_2):
@@ -622,7 +601,7 @@ class Lineup(ctk.CTkFrame):
             available_players = [p for p in position_options[position] if p not in assigned_players]
             
             # Step 3: Prioritize by role (star > first_team > rotation)
-            best_fit = next((p for p in available_players if p.player_role == "Star player"), None) or \
+            best_fit = next((p for p in available_players if p.player_role == "Star Player"), None) or \
                     next((p for p in available_players if p.player_role == "First Team"), None) or \
                     next((p for p in available_players if p.player_role == "Rotation"), None)
 

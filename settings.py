@@ -223,7 +223,7 @@ FORMATIONS_POSITIONS = {
 }
 
 DEFENSIVE_POSITIONS = ["Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back"]
-MIDFIELD_POSITIONS = ["Defensive Midfielder", "Central Midfielder", "Left Midfielder", "Right Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]
+MIDFIELD_POSITIONS = ["Defensive Midfielder", "Central Midfielder", "Central Midfielder Left", "Central Midfielder Right", "Left Midfielder", "Right Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]
 ATTACKING_POSITIONS = ["Left Winger", "Right Winger", "Attacking Midfielder", "Striker Left", "Striker Right", "Center Forward"]
 
 SCORER_CHANCES = {
@@ -276,9 +276,9 @@ MAX_SUBS = 5
 SHOUTS = ["Encourage", "Praise", "Focus", "Berate"]
 
 OBJECTIVES = {
-    (200, 190): "fight for the title",
-    (189, 175): "finish in the top half",
-    (174, 162): "avoid relegation",
+    (1, 5): "fight for the title",
+    (6, 14): "finish in the top half",
+    (15, 20): "avoid relegation",
 }
 
 GOAL_RATINGS = [1.00, 1.03, 1.06, 1.09, 1.12, 1.15, 1.17, 1.20]
@@ -312,11 +312,11 @@ FAN_REACTIONS = {
 EXPECTATION_LEVELS = ["Clear Favorite", "Slight Favorite", "Even Match", "Slight Underdog", "Clear Underdog"]
 
 TEAM_EXPECTATIONS = {
-    range(9, 100): "Clear Favorite",   # Team is much stronger
-    range(5, 9): "Slight Favorite",    # Team is slightly stronger
-    range(-4, 5): "Even Match",        # Teams are evenly matched
-    range(-8, -4): "Slight Underdog",  # Team is slightly weaker
-    range(-100, -8): "Clear Underdog"  # Team is much weaker
+    range(10, 200): "Clear Favorite",   # Team is much stronger
+    range(5, 10): "Slight Favorite",    # Team is slightly stronger
+    range(-5, 5): "Even Match",        # Teams are evenly matched
+    range(-10, -5): "Slight Underdog",  # Team is slightly weaker
+    range(-200, -10): "Clear Underdog"  # Team is much weaker
 }
 
 RESULT_CATEGORIES = {

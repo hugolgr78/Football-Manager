@@ -22,8 +22,6 @@ class TeamProfile(ctk.CTkFrame):
         else:
             self.parentTab = parentTab
 
-        print(Teams.get_average_current_ability_per_team())
-
         self.manager = Managers.get_manager_by_id(manager_id)
         self.team = Teams.get_teams_by_manager(manager_id)[0]
         self.leagueData = LeagueTeams.get_league_by_team(self.team.id)

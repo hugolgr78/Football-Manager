@@ -11,6 +11,9 @@ class Score():
         self.homeLineup = homeLineup
         self.awayLineup = awayLineup
 
+        self.homeLevel = Teams.get_team_average_current_ability(self.homeTeam.id)
+        self.awayLevel = Teams.get_team_average_current_ability(self.awayTeam.id)
+
         self.score = []
         self.winner = None
 
@@ -21,9 +24,9 @@ class Score():
     def decideWinner(self, advantage = True):
         if advantage: # home advantage
             homeAdvantage = 5  # Define the home advantage
-            levelDiff = self.awayTeam.level - (self.homeTeam.level + homeAdvantage)  # Add the home advantage to team1's level
+            levelDiff = self.awayLevel - (self.homeLevel + homeAdvantage)  # Add the home advantage to team1's level
         else:
-            levelDiff = self.awayTeam.level - self.homeTeam.level
+            levelDiff = self.awayLevel - self.homeLevel
 
         probDraw = self.getProbability(abs(levelDiff), "draw") # get the probability of a draw
 
@@ -43,6 +46,8 @@ class Score():
             self.winner = None
         else: # else team 2 wins
             self.winner = self.awayTeam
+        
+        self.winnerLevel = Teams.get_team_average_current_ability(self.winner.id) if self.winner else None
         
     ## This function will probably be left unchanged
     def getProbability(self, levelDiff, probType):
@@ -69,9 +74,9 @@ class Score():
 
     ## Might change how the scores are generated
     def generateScore(self):
-        
-        levelDiff = abs(self.awayTeam.level - self.homeTeam.level)
-        
+
+        levelDiff = abs(self.awayLevel - self.homeLevel)
+
         if self.winner == None:
             # If it's a draw, both teams score the same number of goals
             goalChoices = [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 5]
@@ -83,7 +88,7 @@ class Score():
         losingTeam = self.homeTeam if self.winner == self.awayTeam else self.awayTeam
 
         # Check if the winning team has a lower level as if it does, it should realistically not score many goals
-        if self.winner.level < losingTeam.level:
+        if self.winnerLevel < Teams.get_team_average_current_ability(losingTeam.id):
             # Limit the maximum number of goals that the winning team can score
             winningGoalsChoices = [1, 2, 2, 2, 3, 3]
             losingGoalsChoices = [0, 1, 1, 1, 2]

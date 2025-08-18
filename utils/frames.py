@@ -330,7 +330,7 @@ class MatchdayFrame(ctk.CTkFrame):
         self.place(relx = self.relx, rely = self.rely, anchor = self.anchor)
 
 class PlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, manager_id, player, parentFrame, teamSquad = True, talkFunction = None):
+    def __init__(self, parent, manager_id, player, parentFrame, caStars, teamSquad = True, talkFunction = None):
         super().__init__(parentFrame, fg_color = TKINTER_BACKGROUND, width = 982, height = 50, corner_radius = 5)
         self.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
 
@@ -343,6 +343,8 @@ class PlayerFrame(ctk.CTkFrame):
         self.player = player
         self.parentTab = self.parent
 
+        league = LeagueTeams.get_league_by_team(self.player.team_id)
+
         self.teamSquad = teamSquad
 
         if not self.teamSquad:
@@ -352,15 +354,27 @@ class PlayerFrame(ctk.CTkFrame):
         self.playerNumber.place(relx = 0.05, rely = 0.5, anchor = "center")
         self.playerNumber.bind("<Enter>", lambda event: self.onFrameHover())
 
-        self.playerName = PlayerProfileLink(self, self.player, self.player.first_name + " " + self.player.last_name, "white", 0.155, 0.5, "w", TKINTER_BACKGROUND, self.parentTab)
+        self.playerName = PlayerProfileLink(self, self.player, self.player.first_name + " " + self.player.last_name, "white", 0.12, 0.5, "w", TKINTER_BACKGROUND, self.parentTab, caStars = caStars)
         self.playerName.bind("<Enter>", lambda event: self.onFrameHover())
 
-        self.playerAge = ctk.CTkLabel(self, text = self.player.age, font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND)
-        self.playerAge.place(relx = 0.4655, rely = 0.5, anchor = "center")
+        self.caFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 105, height = 30, corner_radius = 15)
+        self.caFrame.place(relx = 0.48, rely = 0.5, anchor = "e")
+        self.caFrame.bind("<Enter>", lambda event: self.onFrameHover())
+
+        imageNames = star_images(caStars)
+
+        for i, imageName in enumerate(imageNames):
+            src = Image.open(f"Images/{imageName}.png")
+            src.thumbnail((20, 20))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(self.caFrame, image = img, text = "").place(relx = 0.1 + i * 0.2, rely = 0.5, anchor = "center")
+
+        self.playerAge = ctk.CTkLabel(self, text = self.player.age, font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND)
+        self.playerAge.place(relx = 0.5155, rely = 0.5, anchor = "center")
         self.playerAge.bind("<Enter>", lambda event: self.onFrameHover())
 
         self.positions = self.player.specific_positions.replace(",", ", ")
-        self.playerPosition = ctk.CTkLabel(self, text = self.positions, font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND)
+        self.playerPosition = ctk.CTkLabel(self, text = self.positions, font = (APP_FONT, 13), fg_color = TKINTER_BACKGROUND)
         self.playerPosition.place(relx = 0.6, rely = 0.5, anchor = "center")
         self.playerPosition.bind("<Enter>", lambda event: self.onFrameHover())
 
@@ -413,6 +427,7 @@ class PlayerFrame(ctk.CTkFrame):
         self.playerAge.configure(fg_color = DARK_GREY)
         self.playerPosition.configure(fg_color = DARK_GREY)
         self.flagLabel.configure(fg_color = DARK_GREY)
+        self.caFrame.configure(fg_color = DARK_GREY)
 
         if self.teamSquad:
             self.talkButton.configure(fg_color = DARK_GREY)
@@ -434,6 +449,7 @@ class PlayerFrame(ctk.CTkFrame):
         self.playerAge.configure(fg_color = TKINTER_BACKGROUND)
         self.playerPosition.configure(fg_color = TKINTER_BACKGROUND)
         self.flagLabel.configure(fg_color = TKINTER_BACKGROUND)
+        self.caFrame.configure(fg_color = TKINTER_BACKGROUND)
 
         if self.teamSquad:
             self.talkButton.configure(fg_color = TKINTER_BACKGROUND)
@@ -1111,7 +1127,7 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         super().place_forget()
 
 class LineupPlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions):
+    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions, caStars = None):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -1122,7 +1138,10 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.updateLineup = updateLineup
         self.substitutesFrame = substitutesFrame
         self.swapLineupPositions = swapLineupPositions
+        self.caStars = caStars
         self.additionalPositions = []
+
+        league_id = LeagueTeams.get_league_by_team(self.player.team_id).league_id
 
         self.parent.zone_occupancies[self.position] = 1  # Set the initial occupancy status
         self.current_zone = self.position
@@ -1137,16 +1156,30 @@ class LineupPlayerFrame(ctk.CTkFrame):
             matching_titles = [position for position, code in POSITION_CODES.items() if code == pos]
             self.positionsTitles.extend(matching_titles)
 
-        self.positionLabel = ctk.CTkLabel(self, text = positionCode, font = (APP_FONT, 15), height = 10, fg_color = fgColor)
-        self.positionLabel.place(relx = 0.05, rely = 0.05, anchor = "nw")
+        self.positionLabel = ctk.CTkLabel(self, text = positionCode, font = (APP_FONT, 10), height = 0, fg_color = fgColor)
+        self.positionLabel.place(relx = 0.05, rely = 0.03, anchor = "nw")
 
         self.firstName = ctk.CTkLabel(self, text = self.player.first_name, font = (APP_FONT, 10), height = 10, fg_color = fgColor)
-        self.firstName.place(relx = 0.5, rely = 0.45, anchor = "center")
-        self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 13), fg_color = fgColor, height = 1)
-        self.lastName.place(relx = 0.5, rely = 0.75, anchor = "center")
+        self.firstName.place(relx = 0.5, rely = 0.35, anchor = "center")
+        self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 12), fg_color = fgColor, height = 1)
+        self.lastName.place(relx = 0.5, rely = 0.6, anchor = "center")
 
-        self.removeButton = ctk.CTkButton(self, text = "X", width = 10, height = 10, fg_color = fgColor, hover_color = CLOSE_RED, corner_radius = 0, command = self.remove)
-        self.removeButton.place(relx = 0.95, rely = 0.05, anchor = "ne")
+        self.removeButton = ctk.CTkButton(self, text = "X", font = (APP_FONT, 10), width = 0, height = 0, fg_color = fgColor, hover_color = CLOSE_RED, corner_radius = 0, command = self.remove)
+        self.removeButton.place(relx = 0.97, rely = 0.02, anchor = "ne")
+
+        self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 65, height = 15, corner_radius = 0)
+        self.caFrame.place(relx = 0.5, rely = 0.97, anchor = "s")
+
+        if not self.caStars:
+            self.caStars = Players.get_player_star_rating(self.player.id, league_id)
+
+        imageNames = star_images(self.caStars)
+
+        for i, imageName in enumerate(imageNames):
+            src = Image.open(f"Images/{imageName}.png")
+            src.thumbnail((10, 10))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(self.caFrame, image = img, text = "").place(relx = 0.12 + i * 0.18, rely = 0.3, anchor = "center")
 
         self.bind("<Button-1>", self.start_drag)
         self.bind("<B1-Motion>", self.do_drag)
@@ -1157,6 +1190,11 @@ class LineupPlayerFrame(ctk.CTkFrame):
                 child.bind("<Button-1>", self.start_drag)
                 child.bind("<B1-Motion>", self.do_drag)
                 child.bind("<ButtonRelease-1>", self.stop_drag)
+
+        for child in self.caFrame.winfo_children():
+            child.bind("<Button-1>", self.start_drag)
+            child.bind("<B1-Motion>", self.do_drag)
+            child.bind("<ButtonRelease-1>", self.stop_drag)
 
     def showBorder(self):
         self.configure(border_color = PIE_GREEN, border_width = 2)
@@ -1337,7 +1375,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.removePlayer(self, player_name, self.position)
 
 class SubstitutePlayer(ctk.CTkFrame):
-    def __init__(self, parent, fgColor, height, width, player, parentTab, comp_id, row, column, checkBoxFunction = None, unavailable = False, ingame = False, ingameFunction = None):
+    def __init__(self, parent, fgColor, height, width, player, parentTab, comp_id, row, column, caStars, checkBoxFunction = None, unavailable = False, ingame = False, ingameFunction = None):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.grid(row = row, column = column, padx = 5, pady = 5)
         self.fgColor = fgColor
@@ -1353,16 +1391,27 @@ class SubstitutePlayer(ctk.CTkFrame):
             textColor = PIE_RED
 
         positions = self.player.specific_positions.replace(",", " ")
-        self.positionLabel = ctk.CTkLabel(self, text = positions, font = (APP_FONT, 11), height = 10, fg_color = fgColor)
-        self.positionLabel.place(relx = 0.05, rely = 0.05, anchor = "nw")
+        self.positionLabel = ctk.CTkLabel(self, text = positions, font = (APP_FONT, 10), height = 10, fg_color = fgColor)
+        self.positionLabel.place(relx = 0.05, rely = 0.2, anchor = "nw")
+
+        self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 65, height = 15, corner_radius = 15)
+        self.caFrame.place(relx = 0.03, rely = 0.05, anchor = "nw")
+
+        imageNames = star_images(caStars)
+
+        for i, imageName in enumerate(imageNames):
+            src = Image.open(f"Images/{imageName}.png")
+            src.thumbnail((12, 12))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(self.caFrame, image = img, text = "").place(relx = 0.1 + i * 0.2, rely = 0.3, anchor = "center")
 
         self.firstName = ctk.CTkLabel(self, text = self.player.first_name, font = (APP_FONT, 13), height = 10, fg_color = fgColor)
-        self.firstName.place(relx = 0.5, rely = 0.35, anchor = "center")
+        self.firstName.place(relx = 0.5, rely = 0.46, anchor = "center")
 
-        PlayerProfileLink(self, player, self.player.last_name, textColor, 0.5, 0.59, "center", fgColor, parentTab, 15, APP_FONT_BOLD, ingame = ingame, ingameFunction = ingameFunction)
+        PlayerProfileLink(self, player, self.player.last_name, textColor, 0.5, 0.65, "center", fgColor, parentTab, 15, APP_FONT_BOLD, ingame = ingame, ingameFunction = ingameFunction)
 
         if checkBoxFunction is not None:
-            self.checkBox = ctk.CTkCheckBox(self, text = "", fg_color = GREY, checkbox_height = 10, checkbox_width = 60, border_width = 1, border_color = GREY)
+            self.checkBox = ctk.CTkCheckBox(self, text = "", fg_color = GREY, checkbox_height = 10, checkbox_width = 80, border_width = 1, border_color = GREY)
             self.checkBox.configure(command = lambda: checkBoxFunction(self.checkBox, player))
 
     def showCheckBox(self):
@@ -1370,7 +1419,7 @@ class SubstitutePlayer(ctk.CTkFrame):
         if self.playerBanned:
             return
 
-        self.checkBox.place(relx = 0.73, rely = 1, anchor = "s")
+        self.checkBox.place(relx = 0.6, rely = 1, anchor = "s")
         self.checkBox.configure(state = "normal")
 
     def hideCheckBox(self):

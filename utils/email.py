@@ -173,20 +173,22 @@ class Welcome():
             f"a venue known for its electric atmosphere and passionate crowd."
         )
 
+        teamAverages = Teams.get_average_current_ability_per_team(self.parent.league.id)
         self.emailFrame_3 = LeagueProfileLabel(
             self.frame,
             self.parent.manager.id,
             self.parent.league.name,
             f"Our team competes in the ",
-            f", and we’re striving to {get_objective_for_level(self.parent.team.level)} this season.",
+            f", and we’re striving to {get_objective_for_level(teamAverages, self.parent.team.id)} this season.",
             600,
             30,
             self.parent.parentTab,
             fontSize = 15
         )
 
-        expected_finish = (200 - self.parent.team.level) // 2 + 1
-        suffix = getSuffix(expected_finish)
+        teamStrengths = Teams.get_team_strengths(self.parent.league.id)
+        expectedFinish = expected_finish(self.parent.team.name, teamStrengths)
+        suffix = getSuffix(expectedFinish)
         self.firstMatch = Matches.get_team_first_match(self.parent.team.id)
         homeTeam = Teams.get_team_by_id(self.firstMatch.home_id)
         awayTeam = Teams.get_team_by_id(self.firstMatch.away_id)
@@ -202,7 +204,7 @@ class Welcome():
             self.frame,
             self.parent.manager.id,
             self.parent.league.name,
-            f"- League Finish: {expected_finish}{suffix} place in the ",
+            f"- League Finish: {expectedFinish}{suffix} place in the ",
             f".",
             600,
             30,
@@ -346,7 +348,7 @@ class MatchdayReview():
         awayTeam = Teams.get_team_by_id(match_.away_id)
 
         opponentTeam = homeTeam if homeTeam.id != self.parent.team.id else awayTeam
-        expectation = get_expectation(self.parent.team.level, opponentTeam.level)
+        expectation = get_expectation(Teams.get_team_average_current_ability(self.parent.team.id), Teams.get_team_average_current_ability(opponentTeam.id))
         home = True if homeTeam.id == self.parent.team.id else False
 
         goalDifference = match_.score_home - match_.score_away if home else match_.score_away - match_.score_home
@@ -427,6 +429,7 @@ class MatchdayReview():
 
         self.emailTitle_2 = "League Table"
 
+        teamAverages = Teams.get_average_current_ability_per_team(self.parent.league.id)
         lastMatchdayTable = TeamHistory.get_team_data_matchday(self.parent.team.id, self.matchday - 1)
         matchdayTable = TeamHistory.get_team_data_matchday(self.parent.team.id, self.matchday)
         league = self.parent.league
@@ -477,7 +480,7 @@ class MatchdayReview():
         elif currPosition <= 10 and currPosition > 5:
             text = f"We have settled nicely within the top ten of\nthe league, "
 
-            teamObjective = get_objective_for_level(self.parent.team.level)
+            teamObjective = get_objective_for_level(teamAverages, self.parent.team.id)
 
             if teamObjective == "fight for the title":
                 text += "let's keep pushing."
@@ -492,7 +495,7 @@ class MatchdayReview():
         elif currPosition >= 11 and currPosition < 18 - league.relegation:
             text = f"We are well above relegation,"
 
-            teamObjective = get_objective_for_level(self.parent.team.level)
+            teamObjective = get_objective_for_level(teamAverages, self.parent.team.id)
 
             if teamObjective == "fight for the title":
                 text += " but the\nfans are dissapointed."

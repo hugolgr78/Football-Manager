@@ -788,13 +788,13 @@ class MatchDay(ctk.CTkFrame):
                 col = count % players_per_row
 
                 if self.injuredPlayer and player.id == self.injuredPlayer.id:
-                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
+                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
                     subFrame.showBorder()
                 elif self.redCardPlayer and player.id in self.redCardPlayers:
-                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
+                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
                     subFrame.showBorder()
                 else:
-                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 85, 85, player, self, self.league.id, row, col, ingame = True, ingameFunction = self.showPlayerStats)
+                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self, self.league.id, row, col, ingame = True, ingameFunction = self.showPlayerStats)
 
                 if player.id in self.playersOff.values():
                     subFrame.showBorder()

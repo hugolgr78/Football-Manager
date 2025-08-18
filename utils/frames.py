@@ -1191,6 +1191,11 @@ class LineupPlayerFrame(ctk.CTkFrame):
                 child.bind("<B1-Motion>", self.do_drag)
                 child.bind("<ButtonRelease-1>", self.stop_drag)
 
+        for child in self.caFrame.winfo_children():
+            child.bind("<Button-1>", self.start_drag)
+            child.bind("<B1-Motion>", self.do_drag)
+            child.bind("<ButtonRelease-1>", self.stop_drag)
+
     def showBorder(self):
         self.configure(border_color = PIE_GREEN, border_width = 2)
 

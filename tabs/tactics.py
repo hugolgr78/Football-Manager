@@ -161,6 +161,18 @@ class Lineup(ctk.CTkFrame):
 
         self.autoBox.configure(values = FORMATIONS_POSITIONS.keys())
 
+    def getDropdownValues(self):
+        self.positionsCopy = {}
+        for position, position_code in POSITION_CODES.items():
+            if position not in self.selectedLineup.keys():
+                self.positionsCopy[position] = position_code
+
+        for position in self.selectedLineup.keys():
+            if position in RELATED_POSITIONS:
+                for related_position in RELATED_POSITIONS[position]:
+                    if related_position in self.positionsCopy.keys():
+                        del self.positionsCopy[related_position]
+
     def importLineup(self, loaded = None, auto = None):
         self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
         self.league = League.get_league_by_id(self.leagueTeams.league_id)
@@ -312,7 +324,7 @@ class Lineup(ctk.CTkFrame):
         playersIDs = self.players.copy()
         playersList = [Players.get_player_by_id(player) for player in playersIDs]
         playersList.sort(key = lambda x: (POSITION_ORDER.get(x.position, 99), x.last_name))
-
+        
         for pos_key, heading in position_groups:
             group_players = [p for p in playersList if p.position == pos_key and p.id not in self.selectedLineup.values()]
             num_players = len(group_players)
@@ -386,15 +398,8 @@ class Lineup(ctk.CTkFrame):
     def choosePosition(self, selected_player):
 
         self.stop_choosePlayer()
-
-        if self.selected_position in self.positionsCopy:
-            del self.positionsCopy[self.selected_position]
-
-            if self.selected_position in RELATED_POSITIONS:
-                for related_position in RELATED_POSITIONS[self.selected_position]:
-                    if related_position in self.positionsCopy:
-                        del self.positionsCopy[related_position]
-
+        
+        self.getDropdownValues()
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
 
         self.lineupPitch.increment_counter()
@@ -431,27 +436,19 @@ class Lineup(ctk.CTkFrame):
             if playerID == playerData.id:
                 del self.selectedLineup[position]
                 break
-
+        
         self.lineupPitch.decrement_counter()
         frame.place_forget()
-
-        for position, position_code in POSITION_CODES.items():
-            if position == playerPosition:
-                self.positionsCopy[position] = position_code
-
-                if position in RELATED_POSITIONS:
-                    for related_position in RELATED_POSITIONS[position]:
-                        self.positionsCopy[related_position] = position_code
-
-                break
 
         for widget in self.substituteFrame.winfo_children():
             widget.destroy()
 
         self.addSubstitutePlayers(importing = True, playersCount = self.lineupPitch.get_counter())
 
-        # Reset the substitutes chosen
+        self.getDropdownValues()
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
+
+        # Reset the substitutes chosen
         self.substitutePlayers = []
         self.subCounter = 0
 
@@ -461,30 +458,7 @@ class Lineup(ctk.CTkFrame):
 
         self.selectedLineup[new_position] = player.id
 
-        ## Add the old position back into to dropdown, accouting for related positions and remove the new position
-        if old_position not in self.positionsCopy:
-            # Don't add old_position if new_position is a related position of old_position, or vice versa
-            related_to_old = RELATED_POSITIONS.get(old_position, [])
-            related_to_new = RELATED_POSITIONS.get(new_position, [])
-            if new_position not in related_to_old and old_position not in related_to_new:
-                self.positionsCopy[old_position] = POSITION_CODES[old_position]
-
-        if old_position in RELATED_POSITIONS:
-            for related_position in RELATED_POSITIONS[old_position]:
-                # Only add the related position if none of its other related positions are in the lineup
-                other_related = [r for r in RELATED_POSITIONS.get(related_position, []) if r != old_position]
-                if all(r not in self.selectedLineup for r in other_related):
-                    if related_position not in self.selectedLineup:
-                        self.positionsCopy[related_position] = POSITION_CODES[old_position]
-
-        if new_position in self.positionsCopy:
-            del self.positionsCopy[new_position]
-
-        if new_position in RELATED_POSITIONS:
-            for related_position in RELATED_POSITIONS[new_position]:
-                if related_position in self.positionsCopy:
-                    del self.positionsCopy[related_position]
-
+        self.getDropdownValues()
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
 
     def swapLineupPositions(self, position_1, position_2):

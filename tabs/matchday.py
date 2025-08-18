@@ -42,6 +42,7 @@ class MatchDay(ctk.CTkFrame):
         self.league = League.get_league_by_id(self.leagueTeams.league_id)
         self.currentMatchDay = self.league.current_matchday
         self.matchDay = Matches.get_matchday_for_league(self.league.id, self.currentMatchDay)
+        self.caStars = Players.get_players_star_ratings(self.players, self.league.id)
 
         self.teamMatchFrame = ctk.CTkFrame(self, width = APP_SIZE[0] - 300, height = APP_SIZE[1], fg_color = TKINTER_BACKGROUND)
         self.teamMatchFrame.place(relx = 0, rely = 0.5, anchor = "w")
@@ -630,7 +631,7 @@ class MatchDay(ctk.CTkFrame):
 
         ctk.CTkLabel(self.addFrame, text = "Add Substitute:", font = (APP_FONT, 18), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
 
-        self.dropDown = ctk.CTkComboBox(self.addFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY, width = 210, height = 30, state = "disabled", command = self.choosePlayer)
+        self.dropDown = ctk.CTkComboBox(self.addFrame, font = (APP_FONT, 15), fg_color = DARK_GREY, border_color = DARK_GREY, button_color = DARK_GREY, button_hover_color = DARK_GREY, dropdown_fg_color = DARK_GREY, corner_radius = 10, dropdown_hover_color = DARK_GREY, width = 210, height = 30, state = "disabled", command = self.choosePlayer)
         self.dropDown.place(relx = 0.4, rely = 0.5, anchor = "w")
         self.dropDown.set("Choose Position")
 
@@ -671,7 +672,8 @@ class MatchDay(ctk.CTkFrame):
                                     self.removePlayer,
                                     self.updateLineup,
                                     self.substitutesFrame,
-                                    self.swapLineupPositions
+                                    self.swapLineupPositions,
+                                    self.caStars[playerID]
                                 )
                 
                     # Check if there are any players available who can play in the injured player's position
@@ -702,7 +704,8 @@ class MatchDay(ctk.CTkFrame):
                                 self.removePlayer,
                                 self.updateLineup,
                                 self.substitutesFrame,
-                                self.swapLineupPositions
+                                self.swapLineupPositions,
+                                self.caStars[playerID]
                             )
                 
                 if subbed_on:
@@ -726,7 +729,7 @@ class MatchDay(ctk.CTkFrame):
         self.backButton = ctk.CTkButton(self.choosePlayerFrame, text = "Back", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 100, hover_color = CLOSE_RED, command = self.stopChoosePlayer)
         self.backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
 
-        self.playerDropDown = ctk.CTkComboBox(self.choosePlayerFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY, width = 220, height = 30, state = "readonly", command = self.choosePosition)
+        self.playerDropDown = ctk.CTkComboBox(self.choosePlayerFrame, font = (APP_FONT, 15), fg_color = DARK_GREY, border_color = DARK_GREY, button_color = DARK_GREY, button_hover_color = DARK_GREY, dropdown_fg_color = DARK_GREY, dropdown_hover_color = DARK_GREY, corner_radius = 10, width = 220, height = 30, state = "readonly", command = self.choosePosition)
         self.playerDropDown.place(relx = 0.05, rely = 0.5, anchor = "w")
         self.playerDropDown.set("Choose Player")
 
@@ -788,13 +791,13 @@ class MatchDay(ctk.CTkFrame):
                 col = count % players_per_row
 
                 if self.injuredPlayer and player.id == self.injuredPlayer.id:
-                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
+                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self, self.league.id, row, col, self.caStars[player.id], unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
                     subFrame.showBorder()
                 elif self.redCardPlayer and player.id in self.redCardPlayers:
-                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self, self.league.id, row, col, unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
+                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self, self.league.id, row, col, self.caStars[player.id], unavailable = True, ingame = True, ingameFunction = self.showPlayerStats)
                     subFrame.showBorder()
                 else:
-                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self, self.league.id, row, col, ingame = True, ingameFunction = self.showPlayerStats)
+                    subFrame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self, self.league.id, row, col, self.caStars[player.id], ingame = True, ingameFunction = self.showPlayerStats)
 
                 if player.id in self.playersOff.values():
                     subFrame.showBorder()
@@ -1104,7 +1107,8 @@ class MatchDay(ctk.CTkFrame):
                             self.removePlayer,
                             self.updateLineup,
                             self.substitutesFrame,
-                            self.swapLineupPositions
+                            self.swapLineupPositions,
+                            self.caStars[playerData.id]
                         )
 
         if playerData.id in self.playersOn.values():

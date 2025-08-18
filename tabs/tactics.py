@@ -111,7 +111,7 @@ class Lineup(ctk.CTkFrame):
 
         ctk.CTkLabel(self.addFrame, text = "Add Position:", font = (APP_FONT, 18), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.04, rely = 0.5, anchor = "w")
 
-        self.dropDown = ctk.CTkComboBox(self.addFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY, width = 190, height = 30, state = "readonly", command = self.choosePlayer)
+        self.dropDown = ctk.CTkComboBox(self.addFrame, font = (APP_FONT, 15), fg_color = DARK_GREY, border_color = DARK_GREY, button_color = DARK_GREY, button_hover_color = DARK_GREY, dropdown_fg_color = DARK_GREY, dropdown_hover_color = DARK_GREY, corner_radius = 10, width = 190, height = 30, state = "readonly", command = self.choosePlayer)
         self.dropDown.place(relx = 0.4, rely = 0.5, anchor = "w")
         self.dropDown.set("Choose Position")
         self.dropDown.configure(values = list(POSITION_CODES.keys()))
@@ -137,7 +137,7 @@ class Lineup(ctk.CTkFrame):
         self.backButton = ctk.CTkButton(self.choosePlayerFrame, text = "Back", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 100, hover_color = CLOSE_RED, command = self.stop_choosePlayer)
         self.backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
 
-        self.playerDropDown = ctk.CTkComboBox(self.choosePlayerFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY, width = 220, height = 30, state = "readonly", command = self.choosePosition)
+        self.playerDropDown = ctk.CTkComboBox(self.choosePlayerFrame, font = (APP_FONT, 15), fg_color = DARK_GREY, border_color = DARK_GREY, button_color = DARK_GREY, button_hover_color = DARK_GREY, dropdown_fg_color = DARK_GREY, dropdown_hover_color = DARK_GREY, corner_radius = 10, width = 220, height = 30, state = "readonly", command = self.choosePosition)
         self.playerDropDown.place(relx = 0.05, rely = 0.5, anchor = "w")
         self.playerDropDown.set("Choose Player")
 
@@ -150,12 +150,12 @@ class Lineup(ctk.CTkFrame):
         ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.saveLineup).place(relx = 0.95, rely = 0.28, anchor = "e")
 
         ctk.CTkLabel(self.settingsFrame, text = "Load lineup", font = (APP_FONT, 15), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.45, anchor = "w")
-        self.loadBox = ctk.CTkComboBox(self.settingsFrame, width = 250, height = 30, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY)
+        self.loadBox = ctk.CTkComboBox(self.settingsFrame, width = 250, height = 30, font = (APP_FONT, 15), fg_color = DARK_GREY, border_color = DARK_GREY, button_color = DARK_GREY, button_hover_color = DARK_GREY, dropdown_fg_color = DARK_GREY, dropdown_hover_color = DARK_GREY, corner_radius = 10)
         self.loadBox.place(relx = 0.05, rely = 0.58, anchor = "w")
         ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.loadLineup).place(relx = 0.95, rely = 0.58, anchor = "e")
 
         ctk.CTkLabel(self.settingsFrame, text = "Automatic lineup", font = (APP_FONT, 15), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.75, anchor = "w")
-        self.autoBox = ctk.CTkComboBox(self.settingsFrame, width = 250, height = 30, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY)
+        self.autoBox = ctk.CTkComboBox(self.settingsFrame, width = 250, height = 30, font = (APP_FONT, 15), fg_color = DARK_GREY, border_color = DARK_GREY, button_color = DARK_GREY, button_hover_color = DARK_GREY, dropdown_fg_color = DARK_GREY, dropdown_hover_color = DARK_GREY, corner_radius = 10)
         self.autoBox.place(relx = 0.05, rely = 0.88, anchor = "w")
         ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.autoLineup).place(relx = 0.95, rely = 0.88, anchor = "e")
 
@@ -242,7 +242,7 @@ class Lineup(ctk.CTkFrame):
                             self.updateLineup,
                             self.substituteFrame,
                             self.swapLineupPositions,
-                            caStars = self.starRatings[player.id]
+                            self.starRatings[player.id]
                         )
             
         self.lineupPitch.set_counter(playersCount)
@@ -424,7 +424,7 @@ class Lineup(ctk.CTkFrame):
                             self.updateLineup,
                             self.substituteFrame,
                             self.swapLineupPositions,
-                            caStars = self.starRatings[player.id]
+                            self.starRatings[player.id]
                         )
 
 

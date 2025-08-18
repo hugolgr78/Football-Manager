@@ -139,6 +139,8 @@ class Squad(ctk.CTkFrame):
 
         self.parent = parent
         self.manager_id = manager_id
+        self.playerFrames = []
+        self.currentStat = "Current ability"
 
         self.players = Players.get_all_players_by_team(self.parent.team.id)
 
@@ -146,20 +148,54 @@ class Squad(ctk.CTkFrame):
         self.infoFrame.pack()
 
         ctk.CTkLabel(self.infoFrame, text = "Number", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.07, rely = 0.5, anchor = "center")
-        ctk.CTkLabel(self.infoFrame, text = "Name", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.165, rely = 0.5, anchor = "w")
-        ctk.CTkLabel(self.infoFrame, text = "Age", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.46, rely = 0.5, anchor = "center")
+        ctk.CTkLabel(self.infoFrame, text = "Name", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.135, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(self.infoFrame, text = "Age", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.505, rely = 0.5, anchor = "center")
         ctk.CTkLabel(self.infoFrame, text = "Positions", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.59, rely = 0.5, anchor = "center")
         ctk.CTkLabel(self.infoFrame, text = "Nat", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.685, rely = 0.5, anchor = "center")
         ctk.CTkLabel(self.infoFrame, text = "Morale", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.795, rely = 0.5, anchor = "center")
 
+        self.dropDown = ctk.CTkComboBox(
+            self.infoFrame,
+            font = (APP_FONT, 15),
+            fg_color = DARK_GREY,
+            border_color = DARK_GREY,
+            button_color = DARK_GREY,
+            button_hover_color = DARK_GREY,
+            corner_radius = 10,
+            dropdown_fg_color = DARK_GREY,
+            dropdown_hover_color = DARK_GREY,
+            width = 150,
+            height = 30,
+            state = "readonly",
+            command = self.changeStat
+        )
+        self.dropDown.place(relx = 0.4, rely = 0.5, anchor = "center")
+        self.dropDown.set("Current ability")
+
+        stats = ["Current ability", "Potential ability", "Form", "Fitness", "Match sharpness", "Goals / Assists", "Yellows / Reds", "POTM Awards"]
+        self.dropDown.configure(values = stats)
+
         self.playersFrame = ctk.CTkScrollableFrame(self, fg_color = TKINTER_BACKGROUND, width = 965, height = 590, corner_radius = 0)
         self.playersFrame.pack()
 
-        starRatings = Players.get_players_star_ratings(self.players, self.parent.leagueId)
+        caStarRatings = Players.get_players_star_ratings(self.players, self.parent.leagueId)
+        paStarRatings = Players.get_players_star_ratings(self.players, self.parent.leagueId, CA = False)
 
         for player in self.players:
             if player.player_role != "Youth Team":
-                PlayerFrame(self.parent, self.manager_id, player, self.playersFrame, starRatings[player.id], teamSquad = False)
+                frame = PlayerFrame(self.parent, self.manager_id, player, self.playersFrame, caStarRatings[player.id], paStarRatings[player.id], teamSquad = False)
+                self.playerFrames.append(frame)
+
+    def changeStat(self, value):
+
+        if value == self.currentStat:
+            return
+
+        self.currentStat = value
+        
+        for frame in self.playerFrames:
+            frame.stat = value
+            frame.addStat()
 
 class Schedule(ctk.CTkFrame):
     def __init__(self, parent, manager_id):

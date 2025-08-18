@@ -46,7 +46,21 @@ class StartMenu(ctk.CTkFrame):
         ctk.CTkLabel(self.chooseFrame, text = "Choose a Manager", font = (APP_FONT, 20), bg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.1, anchor = "nw")
 
         managers = Game.get_all_games(self.session)
-        self.dropDown = ctk.CTkComboBox(self.chooseFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, dropdown_fg_color = GREY_BACKGROUND, dropdown_hover_color = DARK_GREY, width = 270, height = 30, state = "readonly", command = self.chooseManager)
+        self.dropDown = ctk.CTkComboBox(
+            self.chooseFrame,
+            font = (APP_FONT, 15),
+            fg_color = DARK_GREY,
+            border_color = DARK_GREY,
+            button_color = DARK_GREY,
+            button_hover_color = DARK_GREY,
+            corner_radius = 10,
+            dropdown_fg_color = DARK_GREY,
+            dropdown_hover_color = DARK_GREY,
+            width = 270,
+            height = 30,
+            state = "readonly",
+            command = self.chooseManager
+        )
         self.dropDown.place(relx = 0.05, rely = 0.5, anchor = "nw")
 
         if not managers:

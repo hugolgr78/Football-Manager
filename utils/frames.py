@@ -330,7 +330,7 @@ class MatchdayFrame(ctk.CTkFrame):
         self.place(relx = self.relx, rely = self.rely, anchor = self.anchor)
 
 class PlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, manager_id, player, parentFrame, caStars, teamSquad = True, talkFunction = None):
+    def __init__(self, parent, manager_id, player, parentFrame, caStars, paStars, teamSquad = True, talkFunction = None):
         super().__init__(parentFrame, fg_color = TKINTER_BACKGROUND, width = 982, height = 50, corner_radius = 5)
         self.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
 
@@ -342,8 +342,10 @@ class PlayerFrame(ctk.CTkFrame):
         self.manager_id = manager_id
         self.player = player
         self.parentTab = self.parent
-
-        league = LeagueTeams.get_league_by_team(self.player.team_id)
+        self.stat = "Current ability"
+        self.league = LeagueTeams.get_league_by_team(self.player.team_id)
+        self.caStars = caStars
+        self.paStars = paStars
 
         self.teamSquad = teamSquad
 
@@ -357,17 +359,11 @@ class PlayerFrame(ctk.CTkFrame):
         self.playerName = PlayerProfileLink(self, self.player, self.player.first_name + " " + self.player.last_name, "white", 0.12, 0.5, "w", TKINTER_BACKGROUND, self.parentTab, caStars = caStars)
         self.playerName.bind("<Enter>", lambda event: self.onFrameHover())
 
-        self.caFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 105, height = 30, corner_radius = 15)
-        self.caFrame.place(relx = 0.48, rely = 0.5, anchor = "e")
-        self.caFrame.bind("<Enter>", lambda event: self.onFrameHover())
+        self.statFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 105, height = 30, corner_radius = 15)
+        self.statFrame.place(relx = 0.3995, rely = 0.5, anchor = "center")
+        self.statFrame.bind("<Enter>", lambda event: self.onFrameHover())
 
-        imageNames = star_images(caStars)
-
-        for i, imageName in enumerate(imageNames):
-            src = Image.open(f"Images/{imageName}.png")
-            src.thumbnail((20, 20))
-            img = ctk.CTkImage(src, None, (src.width, src.height))
-            ctk.CTkLabel(self.caFrame, image = img, text = "").place(relx = 0.1 + i * 0.2, rely = 0.5, anchor = "center")
+        self.addStat()
 
         self.playerAge = ctk.CTkLabel(self, text = self.player.age, font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND)
         self.playerAge.place(relx = 0.5155, rely = 0.5, anchor = "center")
@@ -427,7 +423,10 @@ class PlayerFrame(ctk.CTkFrame):
         self.playerAge.configure(fg_color = DARK_GREY)
         self.playerPosition.configure(fg_color = DARK_GREY)
         self.flagLabel.configure(fg_color = DARK_GREY)
-        self.caFrame.configure(fg_color = DARK_GREY)
+        self.statFrame.configure(fg_color = DARK_GREY)
+
+        for widget in self.statFrame.winfo_children():
+            widget.configure(fg_color = DARK_GREY)
 
         if self.teamSquad:
             self.talkButton.configure(fg_color = DARK_GREY)
@@ -449,7 +448,10 @@ class PlayerFrame(ctk.CTkFrame):
         self.playerAge.configure(fg_color = TKINTER_BACKGROUND)
         self.playerPosition.configure(fg_color = TKINTER_BACKGROUND)
         self.flagLabel.configure(fg_color = TKINTER_BACKGROUND)
-        self.caFrame.configure(fg_color = TKINTER_BACKGROUND)
+        self.statFrame.configure(fg_color = TKINTER_BACKGROUND)
+
+        for widget in self.statFrame.winfo_children():
+            widget.configure(fg_color = TKINTER_BACKGROUND)
 
         if self.teamSquad:
             self.talkButton.configure(fg_color = TKINTER_BACKGROUND)
@@ -473,6 +475,75 @@ class PlayerFrame(ctk.CTkFrame):
 
         self.moraleSlider.set(newMorale)
         self.moraleSlider.configure(progress_color = PROGRESS_COLOR, button_color = PROGRESS_COLOR)
+
+    def addStat(self):
+
+        for widget in self.statFrame.winfo_children():
+            widget.destroy()
+
+        match self.stat:
+            case "Current ability":
+                imageNames = star_images(self.caStars)
+
+                for i, imageName in enumerate(imageNames):
+                    src = Image.open(f"Images/{imageName}.png")
+                    src.thumbnail((20, 20))
+                    img = ctk.CTkImage(src, None, (src.width, src.height))
+                    ctk.CTkLabel(self.statFrame, image = img, text = "").place(relx = 0.1 + i * 0.2, rely = 0.5, anchor = "center")
+            case "Potential ability":
+                imageNames = star_images(self.paStars)
+
+                for i, imageName in enumerate(imageNames):
+                    src = Image.open(f"Images/{imageName}.png")
+                    src.thumbnail((20, 20))
+                    img = ctk.CTkImage(src, None, (src.width, src.height))
+                    ctk.CTkLabel(self.statFrame, image = img, text = "").place(relx = 0.1 + i * 0.2, rely = 0.5, anchor = "center")
+            case "Goals / Assists":
+                playerGoals = MatchEvents.get_goals_and_pens_by_player(self.player.id)
+                playerAssists = MatchEvents.get_assists_by_player(self.player.id)
+
+                ctk.CTkLabel(self.statFrame, text = f"{playerGoals} / {playerAssists}", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
+            case "Yellows / Reds":
+                yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id)
+                redCards = MatchEvents.get_red_cards_by_player(self.player.id)
+
+                ctk.CTkLabel(self.statFrame, text = f"{yellowCards} / {redCards}", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
+            case "POTM Awards":
+                potmAwards = TeamLineup.get_player_potm_awards(self.player.id)
+
+                ctk.CTkLabel(self.statFrame, text = f"{potmAwards}", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
+            case "Form":
+                leagueTeams = LeagueTeams.get_league_by_team(self.player.team_id)
+                last5 = Matches.get_team_last_5_matches(self.player.team_id, leagueTeams.league_id)
+
+                imageNames = []
+                for match in reversed(last5):
+                    lineup = TeamLineup.get_lineup_by_match(match.id)
+                    playerIDs = [player.player_id for player in lineup]
+
+                    if self.player.id not in playerIDs:
+                        imageNames.append("player_none")
+                    else:
+                        playerLineupData = [player for player in lineup if player.player_id == self.player.id][0]
+                        potm = TeamLineup.get_player_OTM(match.id)
+                        if potm.player_id == self.player.id:
+                            imageNames.append("player_potm")
+                        else:
+                            if playerLineupData.rating >= 7:
+                                imageNames.append("player_good")
+                            elif playerLineupData.rating >= 5:
+                                imageNames.append("player_mid")
+                            else:
+                                imageNames.append("player_bad")
+
+                for i, imageName in enumerate(imageNames):
+                    src = Image.open(f"Images/{imageName}.png")
+                    src.thumbnail((20, 20))
+                    img = ctk.CTkImage(src, None, (src.width, src.height))
+                    ctk.CTkLabel(self.statFrame, image = img, text = "").place(relx = 0.9 - i * 0.22, rely = 0.5, anchor = "center")
+
+        for widget in self.statFrame.winfo_children():
+            widget.bind("<Enter>", lambda event: self.onFrameHover())
 
 class LeagueTableScrollable(ctk.CTkScrollableFrame):
     def __init__(self, parent, height, width, x, y, fg_color, scrollbar_button_color, scrollbar_button_hover_color, anchor, textColor = "white", small = False, highlightManaged = False):
@@ -1127,7 +1198,7 @@ class FootballPitchMatchDay(FootballPitchHorizontal):
         super().place_forget()
 
 class LineupPlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions, caStars = None):
+    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions, caStars):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -1140,8 +1211,6 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.swapLineupPositions = swapLineupPositions
         self.caStars = caStars
         self.additionalPositions = []
-
-        league_id = LeagueTeams.get_league_by_team(self.player.team_id).league_id
 
         self.parent.zone_occupancies[self.position] = 1  # Set the initial occupancy status
         self.current_zone = self.position
@@ -1169,9 +1238,6 @@ class LineupPlayerFrame(ctk.CTkFrame):
 
         self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 65, height = 15, corner_radius = 0)
         self.caFrame.place(relx = 0.5, rely = 0.97, anchor = "s")
-
-        if not self.caStars:
-            self.caStars = Players.get_player_star_rating(self.player.id, league_id)
 
         imageNames = star_images(self.caStars)
 

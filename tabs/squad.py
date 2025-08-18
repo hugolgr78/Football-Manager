@@ -15,6 +15,8 @@ class Squad(ctk.CTkFrame):
 
         self.talkedTo = []
         self.playerInjured = False
+        self.currentStat = "Current ability"
+        self.playerFrames = []
 
         self.team = Teams.get_teams_by_manager(manager_id)[0]
         self.leagueId = LeagueTeams.get_league_by_team(self.team.id).league_id
@@ -39,6 +41,27 @@ class Squad(ctk.CTkFrame):
         ctk.CTkLabel(self.infoFrame, text = "Morale", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.79, rely = 0.5, anchor = "center")
         ctk.CTkLabel(self.infoFrame, text = "Talk", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
 
+        self.dropDown = ctk.CTkComboBox(
+            self.infoFrame,
+            font = (APP_FONT, 15),
+            fg_color = DARK_GREY,
+            border_color = DARK_GREY,
+            button_color = DARK_GREY,
+            button_hover_color = DARK_GREY,
+            corner_radius = 10,
+            dropdown_fg_color = DARK_GREY,
+            dropdown_hover_color = DARK_GREY,
+            width = 150,
+            height = 30,
+            state = "readonly",
+            command = self.changeStat
+        )
+        self.dropDown.place(relx = 0.385, rely = 0.5, anchor = "center")
+        self.dropDown.set("Current ability")
+
+        stats = ["Current ability", "Potential ability", "Form", "Fitness", "Match sharpness", "Goals / Assists", "Yellows / Reds", "POTM Awards"]
+        self.dropDown.configure(values = stats)
+
         self.playersFrame = ctk.CTkScrollableFrame(self, fg_color = TKINTER_BACKGROUND, width = 982, height = 580, corner_radius = 0)
         self.playersFrame.pack(expand = True, fill = "both", padx = (0, 20))
 
@@ -50,11 +73,13 @@ class Squad(ctk.CTkFrame):
             for widget in self.winfo_children():
                 widget.destroy()
 
-        starRatings = Players.get_players_star_ratings(self.players, self.leagueId)
+        caStarRatings = Players.get_players_star_ratings(self.players, self.leagueId)
+        paStarRatings = Players.get_players_star_ratings(self.players, self.leagueId, CA = False)
 
         for player in self.players:
             if player.player_role != "Youth Team":
-                PlayerFrame(self, self.manager_id, player, self.playersFrame, starRatings[player.id], talkFunction = self.talkToPlayer)
+                frame = PlayerFrame(self, self.manager_id, player, self.playersFrame, caStarRatings[player.id], paStarRatings[player.id], talkFunction = self.talkToPlayer)
+                self.playerFrames.append(frame)
 
     def talkToPlayer(self, player):
 
@@ -246,3 +271,14 @@ class Squad(ctk.CTkFrame):
         for frame in self.playersFrame.winfo_children():
             if frame.player.id not in self.talkedTo:
                 frame.enableTalkButton()
+
+    def changeStat(self, value):
+
+        if value == self.currentStat:
+            return
+
+        self.currentStat = value
+        
+        for frame in self.playerFrames:
+            frame.stat = value
+            frame.addStat()

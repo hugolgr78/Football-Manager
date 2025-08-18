@@ -295,9 +295,10 @@ class Teams(Base):
             session.close()
 
     @classmethod
-    def get_average_current_ability_per_team(cls):
+    def get_average_current_ability_per_team(cls, league_id = None):
         """
-        Return a mapping of team_id -> {"name": team_name, "avg_ca": float, "count": int} for all teams.
+        Return a mapping of team_id -> {"name": team_name, "avg_ca": float, "count": int}.
+        If league_id is provided, only teams participating in that league are considered.
         """
         session = DatabaseManager().get_session()
         try:
@@ -311,6 +312,10 @@ class Teams(Base):
                 )
                 .join(Players, Players.team_id == Teams.id)
             )
+            # Optionally filter to teams in a specific league
+            if league_id is not None:
+                query = query.join(LeagueTeams, Teams.id == LeagueTeams.team_id).filter(LeagueTeams.league_id == league_id)
+
             query = query.group_by(Teams.id)
 
             rows = query.all()
@@ -331,6 +336,30 @@ class Teams(Base):
                 }
 
             return results
+        finally:
+            session.close()
+
+    @classmethod
+    def get_team_average_current_ability(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            avg_ca = session.query(func.avg(Players.current_ability)).filter(Players.team_id == team_id).scalar()
+            return round(float(avg_ca) if avg_ca is not None else 0.0, 2)
+        finally:
+            session.close()
+
+    @classmethod
+    def get_team_strengths(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            rows = (
+                session.query(Teams.name, Teams.strength)
+                .join(LeagueTeams, Teams.id == LeagueTeams.team_id)
+                .filter(LeagueTeams.league_id == league_id)
+                .all()
+            )
+
+            return [(name, strength) for name, strength in rows]
         finally:
             session.close()
 

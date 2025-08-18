@@ -294,6 +294,46 @@ class Teams(Base):
         finally:
             session.close()
 
+    @classmethod
+    def get_average_current_ability_per_team(cls):
+        """
+        Return a mapping of team_id -> {"name": team_name, "avg_ca": float, "count": int} for all teams.
+        """
+        session = DatabaseManager().get_session()
+        try:
+            # Base query: Teams joined with Players to compute average CA per team
+            query = (
+                session.query(
+                    Teams.id.label("team_id"),
+                    Teams.name.label("team_name"),
+                    func.avg(Players.current_ability).label("avg_ca"),
+                    func.count(Players.id).label("player_count"),
+                )
+                .join(Players, Players.team_id == Teams.id)
+            )
+            query = query.group_by(Teams.id)
+
+            rows = query.all()
+
+            # Build result dict
+            results = {}
+            for team_id, team_name, avg_ca, player_count in rows:
+                # avg_ca can be Decimal/DecimalProxy depending on DB; convert to float safely
+                try:
+                    avg_val = float(avg_ca) if avg_ca is not None else 0.0
+                except Exception:
+                    avg_val = float(avg_ca or 0.0)
+
+                results[team_id] = {
+                    "name": team_name,
+                    "avg_ca": round(avg_val, 2),
+                    "count": int(player_count),
+                }
+
+            return results
+        finally:
+            session.close()
+
 class Players(Base):
     __tablename__ = 'players'
 
@@ -503,11 +543,24 @@ class Players(Base):
 
             # 1. Star Players: top 4 in the team
             all_players.sort(key = lambda p: p.current_ability, reverse = True)
-            for i, player in enumerate(all_players):
-                if i < 4:
-                    player.player_role = "Star Player"
+
+            starKeeperPicked = False
+            count = 0
+
+            for player in all_players:
+                if count < 4:
+                    if player.position == "GK":
+                        if not starKeeperPicked:
+                            player.player_role = "Star Player"
+                            starKeeperPicked = True
+                            count += 1
+                        else:
+                            player.player_role = None
+                    else:
+                        player.player_role = "Star Player"
+                        count += 1
                 else:
-                    player.player_role = None  # to be assigned per position
+                    player.player_role = None
 
             # Tie-break for Star Player limit
             for i in range(4, len(all_players)):

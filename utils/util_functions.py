@@ -1,5 +1,6 @@
 from settings import *
 import random
+import math
 
 def get_objective_for_level(level):
     for (max_level, min_level), objective in OBJECTIVES.items():
@@ -273,7 +274,9 @@ def generate_CA(age: int, team_strength: float, min_level: int = 150) -> int:
     CAs = list(range(min_level, max_level + 1))
 
     # Age factor
-    if age <= 25:
+    if age <= 21:
+        age_factor = 0.8
+    elif age <= 25:
         age_factor = 1.05
     elif age <= 30:
         age_factor = 1.0
@@ -285,8 +288,10 @@ def generate_CA(age: int, team_strength: float, min_level: int = 150) -> int:
 
     # Apply team strength: shift distribution toward higher CAs
     if team_strength != 1.0:
-        # Multiply weight for higher CAs
-        weights = [w * ((ca - min_level + 1) ** (team_strength - 1)) for ca, w in zip(CAs, weights)]
+            # scale factor determines how much stronger/weaker the curve is
+            scale = 15 * (team_strength - 1)   # stronger teams get exponential boost
+            weights = [w * math.exp(scale * ((ca - min_level) / (max_level - min_level)))
+                    for ca, w in zip(CAs, weights)]
 
     level = random.choices(CAs, weights = weights, k = 1)[0]
     return level

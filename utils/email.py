@@ -701,8 +701,9 @@ class MatchdayPreview():
         if self.matchday != 1:
             self.emailText_5 = ctk.CTkLabel(self.frame, text = "For more information, you can open your analysis tab by going to Tactics -> Analysis", font = (APP_FONT, 15), justify = "left", text_color = "white")
             self.emailText_5.place(relx = 0.05, rely = 0.428, anchor = "nw")
-            
-        ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.5, anchor = "nw")
+        
+        ctk.CTkLabel(self.frame, text = self.title_3, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.5, anchor = "nw")
+        ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.95, anchor = "nw")
 
     def setUpEmail(self):
 
@@ -826,6 +827,11 @@ class MatchdayPreview():
             self.emailText_3 = (
                 f"In their last {text}, they have {results_text}. They scored {goals_scored} goals and conceded {goals_conceded}.\n"
             )
+
+        self.title_3 = "Proposed Lineup"
+
+        proposedLineup = getProposedLineup(self.parent.team.id, self.opponent.id, self.parent.league.id, self.matchday)
+        print(proposedLineup)
 
         self.emailText_4 = (
             "Name, Assistant Manager"

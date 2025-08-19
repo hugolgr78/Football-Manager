@@ -831,7 +831,7 @@ class MatchdayPreview():
 
         self.title_3 = "Proposed Lineup"
 
-        proposedLineup = getProposedLineup(self.parent.team.id, self.opponent.id, self.parent.league.id, self.matchday)
+        proposedLineup = getProposedLineup(self.parent.team.id, self.opponent.id, self.parent.league.id)
 
         self.playersFrame = ctk.CTkFrame(self.frame, fg_color = TKINTER_BACKGROUND, width = 400, height = 250)
         self.playersFrame.place(relx = 0.035, rely = 0.55, anchor = "nw")
@@ -844,7 +844,7 @@ class MatchdayPreview():
             frame.pack(expand = True, fill = "x", padx = 2, pady = (0, 3))
             ctk.CTkLabel(frame, text = f"{POSITION_CODES[position]}", font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
             ctk.CTkLabel(frame, text = "-", font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.5, anchor = "w")
-            PlayerProfileLink(frame, player, f"{player.first_name} {player.last_name}", "white", 0.13, 0.5, "w", TKINTER_BACKGROUND, self.parent, 15)
+            PlayerProfileLink(frame, player, f"{player.first_name} {player.last_name}", "white", 0.13, 0.5, "w", TKINTER_BACKGROUND, self.parent.parentTab, 15)
 
         self.emailText_4 = (
             "Name, Assistant Manager"

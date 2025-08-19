@@ -4106,7 +4106,8 @@ def getPredictedLineup(opponent_id, matchday):
     finally:
         session.close()
 
-def getProposedLineup(team_id, opponent_id, comp_id, matchday):
+def getProposedLineup(team_id, opponent_id, comp_id):
+    matchday = League.get_league_by_id(comp_id).current_matchday
     predictedLineup = getPredictedLineup(opponent_id, matchday)
 
     attackingScore = 0
@@ -4207,7 +4208,7 @@ def score_formation(sortedPlayers, positions):
 
     # Assign players greedily starting with scarce positions
     for pos in ordered_positions:
-        candidates = [p for p in position_candidates[pos] if p.id not in used]
+        candidates = [p for p in position_candidates[pos] if p.id not in used and POSITION_CODES[pos] in p.specific_positions.split(",")]
         if not candidates:
             return -1, {}
         

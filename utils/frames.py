@@ -10,9 +10,9 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from utils.playerProfileLink import PlayerProfileLink
 from utils.match import Match
-from utils.refereeProfileLink import RefereeProfileLabel
 from utils.matchProfileLink import MatchProfileLink
 from utils.util_functions import *
+from utils.matchProfileLink import MatchProfileLink
 
 class MatchFrame(ctk.CTkFrame):
     def __init__(self, parent, manager_id, match, parentFrame, matchInfoFrame, parentTab):
@@ -321,8 +321,7 @@ class MatchdayFrame(ctk.CTkFrame):
             ctk.CTkLabel(self, text = awayTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * i, anchor = "w")
 
             if self.currentMatchday > self.matchdayNum:
-                text = f"{match.score_home} - {match.score_away}"
-                ctk.CTkLabel(self, text = text, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.5, rely = startY + gap * i, anchor = "center")
+                MatchProfileLink(self, match, f"{match.score_home} - {match.score_away}", "white", 0.5, startY + gap * i, "center", fgColor, self.parentTab, 20, APP_FONT_BOLD)
             else:
                 ctk.CTkLabel(self, text = match.time, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.5, rely = startY + gap * i, anchor = "center")
 

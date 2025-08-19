@@ -1,3 +1,4 @@
+import re
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
@@ -4023,12 +4024,27 @@ def searchResults(search, limit = SEARCH_LIMIT):
     finally:
         session.close()
 
-def getPredictedLineup(opponent_id):
+def getPredictedLineup(opponent_id, matchday):
     session = DatabaseManager().get_session()
     try:
         team = Teams.get_team_by_id(opponent_id)
         league = LeagueTeams.get_league_by_team(team.id)
-        matches = Matches.get_all_played_matches_by_team_and_comp(team.id, league.league_id)
+        matches = Matches.get_team_last_5_matches_from_matchday(team.id, matchday)
+
+        if len(matches) == 0:
+            bestLineup = None
+            bestScore = 0
+
+            players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
+            sortedPlayers = sorted(players, key = lambda p: effective_ability(p), reverse = True)
+    
+            for formation, positions in FORMATIONS_POSITIONS.items():
+                aScore, bScore, lineup = score_formation(sortedPlayers, positions)
+                if aScore + bScore > bestScore:
+                    bestScore = aScore + bScore
+                    bestLineup = lineup
+
+            return bestLineup
 
         # Step 1: Find the most used formation
         formation_counts = defaultdict(int)
@@ -4074,25 +4090,187 @@ def getPredictedLineup(opponent_id):
                         if entry.start_position == position and entry.player_id in [p.id for p in position_players]:
                             player_starts[entry.player_id] += 1
 
-            # Select most started player or use role-based selection if no starts
+            # Select most started player
             if player_starts:
                 most_started_id = max(player_starts.items(), key = lambda x: x[1])[0]
                 selected_player = next(p for p in position_players if p.id == most_started_id)
             else:
-                # Sort by role priority first, then by morale if no historical starts
-                role_priority = {
-                    "Star Player": 1,
-                    "First Team": 2,
-                    "Rotation": 3,
-                    "Backup": 4,
-                    "Youngster": 5
-                }
-                selected_player = min(position_players, key = lambda p: (role_priority[p.player_role], -p.morale))
+                # Choose by effective ability first, then by morale as a secondary tiebreaker
+                selected_player = max(position_players, key = lambda p: effective_ability(p))
 
-            predicted_lineup[position] = selected_player
+            predicted_lineup[position] = selected_player.id
 
         return predicted_lineup
 
     finally:
         session.close()
 
+def getProposedLineup(team_id, opponent_id, comp_id, matchday):
+    predictedLineup = getPredictedLineup(opponent_id, matchday)
+
+    attackingScore = 0
+    defendingScore = 0
+
+    for position, playerID in predictedLineup.items():
+        player = Players.get_player_by_id(playerID)
+        if position in DEFENSIVE_POSITIONS:
+            defendingScore += effective_ability(player)
+        elif position in ATTACKING_POSITIONS:
+            attackingScore += effective_ability(player)
+
+    players = PlayerBans.get_all_non_banned_players_for_comp(team_id, comp_id)
+    sortedPlayers = sorted(players, key = lambda p: effective_ability(p), reverse = True)
+
+    # # Find out how many players are needed to match the respective scores in the opponents' lineup
+    # attackersNeeded = 0
+    # defendersNeeded = 0
+    # currAttackScore = 0
+    # currDefenseScore = 0
+    # for player in sortedPlayers:
+    #     if currAttackScore < attackingScore and player.position == "forward":
+    #         attackersNeeded += 1
+    #         currAttackScore += player.current_ability
+    #     elif currDefenseScore < defendingScore and player.position == "defender":
+    #         defendersNeeded += 1
+    #         currDefenseScore += player.current_ability
+
+    # attackersNeeded = max(min(attackersNeeded, len(ATTACKING_POSITIONS)), 3)
+    # defendersNeeded = max(min(defendersNeeded, len(DEFENSIVE_POSITIONS)), 1)
+
+    # print(attackersNeeded, defendersNeeded)
+
+    # candidates = []
+    # for formation, positions in FORMATIONS_POSITIONS.items():
+    #     defenders, _, attackers = parse_formation_key(formation)
+    #     if defenders >= defendersNeeded and attackers >= attackersNeeded:
+    #         candidates.append((formation, positions))
+
+    # bestLineup = None
+    # bestScore = -1
+
+    # if len(candidates) == 0:
+    #     candidates = list(FORMATIONS_POSITIONS.items())
+
+    # for formation, positions in candidates:
+    #     totalScore, lineup = score_formation(sortedPlayers, positions)
+    #     print(totalScore, formation)
+    #     if totalScore > bestScore:
+    #         bestScore = totalScore
+    #         bestLineup = lineup
+
+    # return bestLineup
+
+    bestLineup = None
+    bestFormation = None
+
+    # ranking: 1) minimize deficit vs targets, 2) prefer balance, 3) higher floor
+    bestKey = (float("inf"), float("inf"), float("-inf"))
+
+    for formation, positions in FORMATIONS_POSITIONS.items():
+        aScore, dScore, lineup = score_formation(sortedPlayers, positions)
+        if not lineup:
+            continue  # skip incomplete formations
+
+        # How well do we meet targets?
+        deficitA = max(0.0, attackingScore - aScore)
+        deficitD = max(0.0, defendingScore - dScore)
+        totalDeficit = deficitA + deficitD
+
+        # Prefer balanced shapes when deficits tie
+        balance_penalty = abs(aScore - dScore)
+
+        # Stronger floor as tiebreaker
+        floor = min(aScore, dScore)
+
+        key = (totalDeficit, balance_penalty, -floor)
+        if key < bestKey:
+            bestKey = key
+            bestLineup = lineup
+            bestFormation = formation
+
+    print(bestFormation, bestKey)
+    return bestLineup
+
+def parse_formation_key(key: str):
+    # extract first 3 numbers (defenders-midfielders-attackers)
+    nums = re.findall(r"\d+", key)
+    if len(nums) >= 3:
+        defenders, mids, attackers = map(int, nums[:3])
+    else:
+        raise ValueError(f"Formation key {key} doesn't match expected format")
+
+    return defenders, mids, attackers
+
+def score_formation(sortedPlayers, positions):
+    lineup = {}
+    used = set()
+
+    # Pre-bucket players by role
+    role_to_players = {
+        "goalkeeper": [p for p in sortedPlayers if p.position == "goalkeeper"],
+        "defender":   [p for p in sortedPlayers if p.position == "defender"],
+        "midfielder": [p for p in sortedPlayers if p.position == "midfielder"],
+        "forward":    [p for p in sortedPlayers if p.position == "forward"],
+    }
+
+    # Map formation position names to a role
+    def get_role(pos):
+        if "Goalkeeper" in pos:
+            return "goalkeeper"
+        elif pos in DEFENSIVE_POSITIONS:
+            return "defender"
+        elif pos in MIDFIELD_POSITIONS:
+            return "midfielder"
+        elif pos in ATTACKING_POSITIONS:
+            return "forward"
+        return None
+
+    # Count how many players can fill each slot
+    position_candidates = {}
+    for pos in positions:
+        role = get_role(pos)
+        if role is None:
+            position_candidates[pos] = []
+        else:
+            position_candidates[pos] = [p for p in role_to_players[role]]
+
+    # Sort positions by "scarcity" (fewest candidates first)
+    ordered_positions = sorted(positions, key = lambda pos: len(position_candidates[pos]))
+
+    attackingScore = 0
+    defendingScore = 0
+
+    # Assign players greedily starting with scarce positions
+    for pos in ordered_positions:
+        candidates = [p for p in position_candidates[pos] if p.id not in used]
+        if not candidates:
+            return -1, {}
+        
+        chosen = candidates[0]  # best available (sortedPlayers is already by ability)
+        lineup[pos] = chosen.id
+        used.add(chosen.id)
+
+        if pos in ATTACKING_POSITIONS:
+            attackingScore += effective_ability(chosen)
+        elif pos in DEFENSIVE_POSITIONS:
+            defendingScore += effective_ability(chosen)
+
+    # Check if all positions are filled
+    if len(lineup) != len(positions):
+        return -1, {}  # incomplete formation, skip
+
+    return attackingScore, defendingScore, lineup
+
+def create_lineup(sortedPlayers, formation):
+    positions = FORMATIONS_POSITIONS[formation]
+    totalScore, lineup = score_formation(sortedPlayers, positions)
+
+    if totalScore == -1: 
+        return {}, -1
+    
+    return lineup, totalScore
+
+
+def effective_ability(p):
+    multiplier = 0.75 + (p.morale / 100.0) * 0.5
+    return p.current_ability * multiplier

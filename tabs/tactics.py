@@ -623,6 +623,7 @@ class Analysis(ctk.CTkFrame):
         self.team = self.parent.team
 
         league = LeagueTeams.get_league_by_team(self.team.id)
+        self.matchday = League.get_league_by_id(league.league_id).current_matchday
         self.nextmatch = Matches.get_team_next_match(self.team.id, league.league_id)
         self.opponent = Teams.get_team_by_id(self.nextmatch.away_id if self.nextmatch.home_id == self.team.id else self.nextmatch.home_id)
 
@@ -791,9 +792,10 @@ class Analysis(ctk.CTkFrame):
         ctk.CTkLabel(playersFrame, text = "Players", font = (APP_FONT_BOLD, 12), fg_color = GREY_BACKGROUND).pack(pady = 5, anchor = "center")
 
         lineupPitch = FootballPitchMatchDay(self.predictedLineupFrame, 340, 510, 0.99, 0.08, "ne", GREY_BACKGROUND, GREY_BACKGROUND)
-        lineup = getPredictedLineup(self.opponent.id)
+        lineup = getPredictedLineup(self.opponent.id, self.matchday)
         
-        for position, player in lineup.items():
+        for position, playerID in lineup.items():
+            player = Players.get_player_by_id(playerID)
             lineupPitch.addPlayer(position, player.last_name)
 
             frame = ctk.CTkFrame(playersFrame, fg_color = GREY_BACKGROUND, width = 150, height = 15)

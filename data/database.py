@@ -4039,7 +4039,7 @@ def getPredictedLineup(opponent_id, matchday):
             sortedPlayers = sorted(players, key = lambda p: effective_ability(p), reverse = True)
     
             for formation, positions in FORMATIONS_POSITIONS.items():
-                _, _, lineup = score_formation(sortedPlayers, positions)
+                _, _, lineup = score_formation(sortedPlayers, positions, opponent_id, league.league_id)
                 formationScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
                 if formationScore > bestScore:
                     bestScore = formationScore
@@ -4128,7 +4128,7 @@ def getProposedLineup(team_id, opponent_id, comp_id):
     lineupPositions = None
 
     for _, positions in FORMATIONS_POSITIONS.items():
-        aScore, dScore, lineup = score_formation(sortedPlayers, positions)
+        aScore, dScore, lineup = score_formation(sortedPlayers, positions, team_id, comp_id)
         if not lineup:
             continue  # skip incomplete formations
 
@@ -4147,7 +4147,7 @@ def getProposedLineup(team_id, opponent_id, comp_id):
     if not bestLineup:
         bestScore = -1
         for _, positions in FORMATIONS_POSITIONS.items():
-            _, _, lineup = score_formation(sortedPlayers, positions)
+            _, _, lineup = score_formation(sortedPlayers, positions, team_id, comp_id)
             formationScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
             if formationScore > bestScore:
                 bestScore = formationScore
@@ -4167,7 +4167,7 @@ def parse_formation_key(key: str):
 
     return defenders, mids, attackers
 
-def score_formation(sortedPlayers, positions):
+def score_formation(sortedPlayers, positions, teamID, compID):
     lineup = {}
     used = set()
 
@@ -4209,12 +4209,15 @@ def score_formation(sortedPlayers, positions):
     # Assign players greedily starting with scarce positions
     for pos in ordered_positions:
         candidates = [p for p in position_candidates[pos] if p.id not in used and POSITION_CODES[pos] in p.specific_positions.split(",")]
-        if not candidates:
-            return -1, {}
         
-        chosen = candidates[0]  # best available (sortedPlayers is already by ability)
-        lineup[pos] = chosen.id
-        used.add(chosen.id)
+        if not candidates:
+            youthID = getYouthPlayer(teamID, pos, compID, lineup.values())
+            lineup[pos] = youthID
+            used.add(youthID)
+        else:
+            chosen = candidates[0]  # best available (sortedPlayers is already by ability)
+            lineup[pos] = chosen.id
+            used.add(chosen.id)
 
         if pos in ATTACKING_POSITIONS:
             attackingScore += effective_ability(chosen)
@@ -4227,16 +4230,87 @@ def score_formation(sortedPlayers, positions):
 
     return attackingScore, defendingScore, lineup
 
-def create_lineup(sortedPlayers, formation):
-    positions = FORMATIONS_POSITIONS[formation]
-    totalScore, lineup = score_formation(sortedPlayers, positions)
+def getYouthPlayer(teamID, position, compID, players):
+    youthPlayers = PlayerBans.get_all_non_banned_youth_players_for_comp(teamID, compID)
 
-    if totalScore == -1: 
-        return {}, -1
-    
-    return lineup, totalScore
-
+    if youthPlayers:
+        for player in youthPlayers:
+            if POSITION_CODES[position] in player.specific_positions and player.id not in players:
+                return player.id
+            
+    if position in DEFENSIVE_POSITIONS:
+        overallPosition = "defender"
+    elif position in MIDFIELD_POSITIONS:
+        overallPosition = "midfielder"
+    elif position in ATTACKING_POSITIONS:
+        overallPosition = "forward"
+    else:
+        overallPosition = "goalkeeper"
+            
+    # list empty or no player found with the specific position
+    newYouth = Players.add_youth_player(teamID, overallPosition, position)
+    return newYouth
 
 def effective_ability(p):
     multiplier = 0.75 + (p.morale / 100.0) * 0.5
     return p.current_ability * multiplier
+
+def getSubstitutes(teamID, lineup, compID):
+    allPlayers = PlayerBans.get_all_non_banned_players_for_comp(teamID, compID)
+    usedPlayers = set(lineup.values())
+
+    substitutes = []
+
+    goalkeepers = [player for player in allPlayers if player.position == "goalkeeper" and player.id not in usedPlayers]
+    defenders = [player for player in allPlayers if player.position == "defender" and player.id not in usedPlayers]
+    midfielders = [player for player in allPlayers if player.position == "midfielder" and player.id not in usedPlayers]
+    attackers = [player for player in allPlayers if player.position == "forward" and player.id not in usedPlayers]
+
+    # Order each list with effective ability
+    goalkeepers.sort(key = effective_ability, reverse = True)
+    defenders.sort(key = effective_ability, reverse = True)
+    midfielders.sort(key = effective_ability, reverse = True)
+    attackers.sort(key = effective_ability, reverse = True)
+
+    if len(goalkeepers) > 0:
+        substitutes.append(goalkeepers[0].id)
+    else:
+        getYouthPlayer(teamID, "Goalkeeper", substitutes)
+
+    # Add 2 defenders to substitutes
+    defender_count = 0
+    for defender in defenders:
+        if defender_count < 2:
+            substitutes.append(defender.id)
+            defender_count += 1
+
+    if defender_count != 2:
+        for _ in range(2 - defender_count):
+            specific_position = random.choice(DEFENSIVE_POSITIONS)
+            getYouthPlayer(teamID, specific_position, substitutes)
+
+    # Add 2 midfielders to substitutes
+    midfielder_count = 0
+    for midfielder in midfielders:
+        if midfielder_count < 2:
+            substitutes.append(midfielder.id)
+            midfielder_count += 1
+
+    if midfielder_count != 2:
+        for _ in range(2 - midfielder_count):
+            specific_position = random.choice(MIDFIELD_POSITIONS)
+            getYouthPlayer(teamID, specific_position, substitutes)
+
+    # Add 2 attackers to substitutes
+    attacker_count = 0
+    for attacker in attackers:
+        if attacker_count < 2:
+            substitutes.append(attacker.id)
+            attacker_count += 1
+
+    if attacker_count != 2:
+        for _ in range(2 - attacker_count):
+            specific_position = random.choice(ATTACKING_POSITIONS)
+            getYouthPlayer(teamID, specific_position, substitutes)
+    
+    return substitutes

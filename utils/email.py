@@ -9,6 +9,7 @@ from utils.playerProfileLink import *
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 from utils.matchProfileLink import MatchProfileLink
+from utils.frames import FootballPitchMatchDay
 from PIL import Image
 import io
 
@@ -831,7 +832,19 @@ class MatchdayPreview():
         self.title_3 = "Proposed Lineup"
 
         proposedLineup = getProposedLineup(self.parent.team.id, self.opponent.id, self.parent.league.id, self.matchday)
-        print(proposedLineup)
+
+        self.playersFrame = ctk.CTkFrame(self.frame, fg_color = TKINTER_BACKGROUND, width = 400, height = 250)
+        self.playersFrame.place(relx = 0.035, rely = 0.55, anchor = "nw")
+        self.playersFrame.pack_propagate(False)
+
+        for position, playerID in proposedLineup.items():
+            player = Players.get_player_by_id(playerID)
+
+            frame = ctk.CTkFrame(self.playersFrame, fg_color = TKINTER_BACKGROUND, width = 150, height = 20)
+            frame.pack(expand = True, fill = "x", padx = 2, pady = (0, 3))
+            ctk.CTkLabel(frame, text = f"{POSITION_CODES[position]}", font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
+            ctk.CTkLabel(frame, text = "-", font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.5, anchor = "w")
+            PlayerProfileLink(frame, player, f"{player.first_name} {player.last_name}", "white", 0.13, 0.5, "w", TKINTER_BACKGROUND, self.parent, 15)
 
         self.emailText_4 = (
             "Name, Assistant Manager"

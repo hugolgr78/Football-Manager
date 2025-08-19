@@ -4039,9 +4039,10 @@ def getPredictedLineup(opponent_id, matchday):
             sortedPlayers = sorted(players, key = lambda p: effective_ability(p), reverse = True)
     
             for formation, positions in FORMATIONS_POSITIONS.items():
-                aScore, bScore, lineup = score_formation(sortedPlayers, positions)
-                if aScore + bScore > bestScore:
-                    bestScore = aScore + bScore
+                _, _, lineup = score_formation(sortedPlayers, positions)
+                formationScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
+                if formationScore > bestScore:
+                    bestScore = formationScore
                     bestLineup = lineup
 
             return bestLineup
@@ -4121,75 +4122,39 @@ def getProposedLineup(team_id, opponent_id, comp_id, matchday):
     players = PlayerBans.get_all_non_banned_players_for_comp(team_id, comp_id)
     sortedPlayers = sorted(players, key = lambda p: effective_ability(p), reverse = True)
 
-    # # Find out how many players are needed to match the respective scores in the opponents' lineup
-    # attackersNeeded = 0
-    # defendersNeeded = 0
-    # currAttackScore = 0
-    # currDefenseScore = 0
-    # for player in sortedPlayers:
-    #     if currAttackScore < attackingScore and player.position == "forward":
-    #         attackersNeeded += 1
-    #         currAttackScore += player.current_ability
-    #     elif currDefenseScore < defendingScore and player.position == "defender":
-    #         defendersNeeded += 1
-    #         currDefenseScore += player.current_ability
-
-    # attackersNeeded = max(min(attackersNeeded, len(ATTACKING_POSITIONS)), 3)
-    # defendersNeeded = max(min(defendersNeeded, len(DEFENSIVE_POSITIONS)), 1)
-
-    # print(attackersNeeded, defendersNeeded)
-
-    # candidates = []
-    # for formation, positions in FORMATIONS_POSITIONS.items():
-    #     defenders, _, attackers = parse_formation_key(formation)
-    #     if defenders >= defendersNeeded and attackers >= attackersNeeded:
-    #         candidates.append((formation, positions))
-
-    # bestLineup = None
-    # bestScore = -1
-
-    # if len(candidates) == 0:
-    #     candidates = list(FORMATIONS_POSITIONS.items())
-
-    # for formation, positions in candidates:
-    #     totalScore, lineup = score_formation(sortedPlayers, positions)
-    #     print(totalScore, formation)
-    #     if totalScore > bestScore:
-    #         bestScore = totalScore
-    #         bestLineup = lineup
-
-    # return bestLineup
-
     bestLineup = None
-    bestFormation = None
+    bestTotalScore = -1
+    lineupPositions = None
 
-    # ranking: 1) minimize deficit vs targets, 2) prefer balance, 3) higher floor
-    bestKey = (float("inf"), float("inf"), float("-inf"))
-
-    for formation, positions in FORMATIONS_POSITIONS.items():
+    for _, positions in FORMATIONS_POSITIONS.items():
         aScore, dScore, lineup = score_formation(sortedPlayers, positions)
         if not lineup:
             continue  # skip incomplete formations
 
-        # How well do we meet targets?
-        deficitA = max(0.0, attackingScore - aScore)
-        deficitD = max(0.0, defendingScore - dScore)
-        totalDeficit = deficitA + deficitD
+        buffer = 0.2 * attackingScore
+        if aScore + buffer < attackingScore or dScore + buffer < defendingScore:
+            continue
 
-        # Prefer balanced shapes when deficits tie
-        balance_penalty = abs(aScore - dScore)
+        # Total ability including midfielders
+        totalScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
 
-        # Stronger floor as tiebreaker
-        floor = min(aScore, dScore)
-
-        key = (totalDeficit, balance_penalty, -floor)
-        if key < bestKey:
-            bestKey = key
+        if totalScore > bestTotalScore:
+            bestTotalScore = totalScore
             bestLineup = lineup
-            bestFormation = formation
+            lineupPositions = positions
 
-    print(bestFormation, bestKey)
-    return bestLineup
+    if not bestLineup:
+        bestScore = -1
+        for _, positions in FORMATIONS_POSITIONS.items():
+            _, _, lineup = score_formation(sortedPlayers, positions)
+            formationScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
+            if formationScore > bestScore:
+                bestScore = formationScore
+                bestLineup = lineup
+                lineupPositions = positions
+
+    ordered_lineup = {pos: bestLineup[pos] for pos in lineupPositions if pos in bestLineup}
+    return ordered_lineup
 
 def parse_formation_key(key: str):
     # extract first 3 numbers (defenders-midfielders-attackers)

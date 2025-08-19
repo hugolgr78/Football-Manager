@@ -637,7 +637,6 @@ class MatchDay(ctk.CTkFrame):
 
         self.substitutesFrame = ctk.CTkScrollableFrame(self.substitutionFrame, width = 500, height = 590, fg_color = DARK_GREY, corner_radius = 10)
         self.substitutesFrame.place(relx = 0.33, rely = 0.02, anchor = "nw")
-        # self.substitutesFrame.pack_propagate(False)
 
         self.confirmButton = ctk.CTkButton(self.substitutionFrame, text = "Confirm", width = 255, height = 50, font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, corner_radius = 10, command = self.finishSubstitution)
         self.confirmButton.place(relx = 0.33, rely = 0.98, anchor = "sw")

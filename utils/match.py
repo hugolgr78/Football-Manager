@@ -14,12 +14,8 @@ class Match():
         self.homeTeam = Teams.get_team_by_id(self.match.home_id)
         self.awayTeam = Teams.get_team_by_id(self.match.away_id)
 
-        self.manager = Managers.get_all_user_managers()[0]
-        self.managerName = f"{self.manager.first_name}{self.manager.last_name}"
+        self.league = LeagueTeams.get_league_by_team(self.homeTeam.id)
 
-        # As soon as a player is subbed in, the player is added to the current lineup and the subbed off player is removed
-        # As soon as a player is subbed off, the player is added to the final lineup
-        # At end of game, add all players in the current lineup to the final lineup and save the final lineup
         self.homeFinalLineup = []
         self.awayFinalLineup = []
         self.homeCurrentLineup = None
@@ -54,78 +50,9 @@ class Match():
         self.fullTime = False
 
     def createTeamLineup(self, teamID, home):
-
-        lineup = {}
-        substitutes = []
-
-        formations = list(FORMATIONS_CHANCES.keys())
-        weights = list(FORMATIONS_CHANCES.values())
-        oppFormation = random.choices(formations, weights = weights, k = 1)[0]
-        oppFormationPositions = oppFormation.split(" ")[0]
-        defNums, midNums, _ = map(int, oppFormationPositions.split("-"))
-
-        players = PlayerBans.get_all_non_banned_players_for_comp(teamID, self.match.league_id)
-        goalkeepers = [player for player in players if player.position == "goalkeeper"]
-        defenders = [player for player in players if player.position == "defender"]
-        midfielders = [player for player in players if player.position == "midfielder"]
-        attackers = [player for player in players if player.position == "forward"]
-
-        # goalkeeper
-        if len(goalkeepers) == 0:
-            self.getYouthPlayer(teamID, "Goalkeeper", lineup = lineup)
-        else:
-            lineup["Goalkeeper"] = goalkeepers[0].id
-
-        # defenders
-        self.choosePlayers(FORMATIONS_POSITIONS[oppFormation][1:defNums + 1], defenders, lineup, teamID)
-
-        # midfielders
-        self.choosePlayers(FORMATIONS_POSITIONS[oppFormation][defNums + 1:defNums + midNums + 1], midfielders, lineup, teamID)
-
-        # attackers
-        self.choosePlayers(FORMATIONS_POSITIONS[oppFormation][defNums + midNums + 1:], attackers, lineup, teamID)
-
-        # substitutes
-        if len(goalkeepers) > 1:
-            substitutes.append(goalkeepers[1].id)
-        else:
-            self.getYouthPlayer(teamID, "Goalkeeper", substitutes = substitutes)
-
-        # Add 2 defenders to substitutes
-        defender_count = 0
-        for defender in defenders:
-            if defender.id not in lineup.values() and defender_count < 2:
-                substitutes.append(defender.id)
-                defender_count += 1
-
-        if defender_count != 2:
-            for _ in range(2 - defender_count):
-                specific_position = random.choice(DEFENSIVE_POSITIONS)
-                self.getYouthPlayer(teamID, specific_position, substitutes = substitutes)
-
-        # Add 2 midfielders to substitutes
-        midfielder_count = 0
-        for midfielder in midfielders:
-            if midfielder.id not in lineup.values() and midfielder_count < 2:
-                substitutes.append(midfielder.id)
-                midfielder_count += 1
-
-        if midfielder_count != 2:
-            for _ in range(2 - midfielder_count):
-                specific_position = random.choice(MIDFIELD_POSITIONS)
-                self.getYouthPlayer(teamID, specific_position, substitutes = substitutes)
-
-        # Add 2 attackers to substitutes
-        attacker_count = 0
-        for attacker in attackers:
-            if attacker.id not in lineup.values() and attacker_count < 2:
-                substitutes.append(attacker.id)
-                attacker_count += 1
-
-        if attacker_count != 2:
-            for _ in range(2 - attacker_count):
-                specific_position = random.choice(ATTACKING_POSITIONS)
-                self.getYouthPlayer(teamID, specific_position, substitutes = substitutes)
+        opponentID = self.match.away_id if home else self.match.home_id
+        lineup = getProposedLineup(teamID, opponentID, self.league.league_id)
+        substitutes = getSubstitutes(teamID, lineup, self.league.league_id)
 
         if home:
             self.homeCurrentLineup = lineup
@@ -135,73 +62,6 @@ class Match():
             self.awayCurrentLineup = lineup
             self.awayCurrentSubs = substitutes
             self.awayStartLineup = lineup.copy()
-
-    def choosePlayers(self, position_names, players, lineup, teamID):
-
-        position_options = defaultdict(list)
-
-        for position in position_names:
-            position_options[position] = []
-            for player in players:
-                if POSITION_CODES[position] in player.specific_positions:
-                    position_options[position].append(player)
-
-        assigned_players = set()
-
-        while position_options != {}:
-            sorted_positions = sorted(position_options.keys(), key = lambda pos: len(position_options[pos]))
-
-            position = sorted_positions[0]
-            available_players = [p for p in position_options[position] if p not in assigned_players]
-
-            if not available_players:
-                self.getYouthPlayer(teamID, position, lineup = lineup)
-                del position_options[position]
-                continue
-
-            # Step 3: Prioritize by role (star > first_team > rotation)
-            best_fit = next((p for p in available_players if p.player_role == "Star Player"), None) or \
-                    next((p for p in available_players if p.player_role == "First Team"), None) or \
-                    next((p for p in available_players if p.player_role == "Rotation"), None)
-
-            if not best_fit:
-                best_fit = available_players[0]
-
-            lineup[position] = best_fit.id
-            assigned_players.add(best_fit)
-
-            # Remove empty position entries
-            del position_options[position]
-
-    def getYouthPlayer(self, teamID, position, lineup = None, substitutes = None):
-        youthPlayers = PlayerBans.get_all_non_banned_youth_players_for_comp(teamID, self.match.league_id)
-
-        if youthPlayers:
-            for player in youthPlayers:
-                if lineup is not None:
-                    if POSITION_CODES[position] in player.specific_positions and player not in lineup.values():
-                        lineup[position] = player.id
-                        return
-                else:
-                    if POSITION_CODES[position] in player.specific_positions and player not in substitutes:
-                        substitutes.append(player.id)
-                        return
-                
-        if position in DEFENSIVE_POSITIONS:
-            overallPosition = "defender"
-        elif position in MIDFIELD_POSITIONS:
-            overallPosition = "midfielder"
-        elif position in ATTACKING_POSITIONS:
-            overallPosition = "forward"
-        else:
-            overallPosition = "goalkeeper"
-                
-    # list empty or no player found with the specific position
-        newYouth = Players.add_youth_player(teamID, overallPosition, position)
-        if lineup is not None: # if lineup is passed as None, then add to subs
-            lineup[position] = newYouth
-        else:
-            substitutes.append(newYouth)
 
     def generateScore(self, teamMatch = False, home = False):
         self.score = Score(self.homeTeam, self.awayTeam, self.homeCurrentLineup, self.awayCurrentLineup)

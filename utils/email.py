@@ -9,6 +9,7 @@ from utils.playerProfileLink import *
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 from utils.matchProfileLink import MatchProfileLink
+from utils.frames import FootballPitchMatchDay
 from PIL import Image
 import io
 
@@ -701,8 +702,9 @@ class MatchdayPreview():
         if self.matchday != 1:
             self.emailText_5 = ctk.CTkLabel(self.frame, text = "For more information, you can open your analysis tab by going to Tactics -> Analysis", font = (APP_FONT, 15), justify = "left", text_color = "white")
             self.emailText_5.place(relx = 0.05, rely = 0.428, anchor = "nw")
-            
-        ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.5, anchor = "nw")
+        
+        ctk.CTkLabel(self.frame, text = self.title_3, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.5, anchor = "nw")
+        ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.95, anchor = "nw")
 
     def setUpEmail(self):
 
@@ -826,6 +828,23 @@ class MatchdayPreview():
             self.emailText_3 = (
                 f"In their last {text}, they have {results_text}. They scored {goals_scored} goals and conceded {goals_conceded}.\n"
             )
+
+        self.title_3 = "Proposed Lineup"
+
+        proposedLineup = getProposedLineup(self.parent.team.id, self.opponent.id, self.parent.league.id)
+
+        self.playersFrame = ctk.CTkFrame(self.frame, fg_color = TKINTER_BACKGROUND, width = 400, height = 250)
+        self.playersFrame.place(relx = 0.035, rely = 0.55, anchor = "nw")
+        self.playersFrame.pack_propagate(False)
+
+        for position, playerID in proposedLineup.items():
+            player = Players.get_player_by_id(playerID)
+
+            frame = ctk.CTkFrame(self.playersFrame, fg_color = TKINTER_BACKGROUND, width = 150, height = 20)
+            frame.pack(expand = True, fill = "x", padx = 2, pady = (0, 3))
+            ctk.CTkLabel(frame, text = f"{POSITION_CODES[position]}", font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
+            ctk.CTkLabel(frame, text = "-", font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.5, anchor = "w")
+            PlayerProfileLink(frame, player, f"{player.first_name} {player.last_name}", "white", 0.13, 0.5, "w", TKINTER_BACKGROUND, self.parent.parentTab, 15)
 
         self.emailText_4 = (
             "Name, Assistant Manager"

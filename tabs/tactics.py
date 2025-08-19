@@ -88,6 +88,10 @@ class Lineup(ctk.CTkFrame):
         self.team = self.parent.team
         self.leagueID = LeagueTeams.get_league_by_team(self.team.id).league_id
 
+        self.matchday = League.get_league_by_id(self.leagueID).current_matchday
+        self.nextmatch = Matches.get_team_next_match(self.team.id, self.leagueID)
+        self.opponent = Teams.get_team_by_id(self.nextmatch.away_id if self.nextmatch.home_id == self.team.id else self.nextmatch.home_id)
+
         self.players = Players.get_all_players_by_team(self.team.id)
         self.starRatings = Players.get_players_star_ratings(self.players, self.leagueID)
 
@@ -106,7 +110,7 @@ class Lineup(ctk.CTkFrame):
         self.settingsButton = ctk.CTkButton(self, text = "", image = img, width = 50, height = 50, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, corner_radius = 10, command = self.lineupSettings)
         self.settingsButton.place(relx = 0.023, rely = 0.98, anchor = "sw")
 
-        self.settingsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 250, corner_radius = 10, border_color = APP_BLUE, border_width = 2, background_corner_colors = ["green", DARK_GREY, DARK_GREY, "green"])
+        self.settingsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 300, corner_radius = 10, border_color = APP_BLUE, border_width = 2, background_corner_colors = ["green", DARK_GREY, DARK_GREY, "green"])
         self.createSettingsFrame()
 
         ctk.CTkLabel(self.addFrame, text = "Add Position:", font = (APP_FONT, 18), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.04, rely = 0.5, anchor = "w")
@@ -149,17 +153,20 @@ class Lineup(ctk.CTkFrame):
         self.saveBox.place(relx = 0.05, rely = 0.28, anchor = "w")
         ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.saveLineup).place(relx = 0.95, rely = 0.28, anchor = "e")
 
-        ctk.CTkLabel(self.settingsFrame, text = "Load lineup", font = (APP_FONT, 15), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.45, anchor = "w")
+        ctk.CTkLabel(self.settingsFrame, text = "Load lineup", font = (APP_FONT, 15), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.4, anchor = "w")
         self.loadBox = ctk.CTkComboBox(self.settingsFrame, width = 250, height = 30, font = (APP_FONT, 15), fg_color = DARK_GREY, border_color = DARK_GREY, button_color = DARK_GREY, button_hover_color = DARK_GREY, dropdown_fg_color = DARK_GREY, dropdown_hover_color = DARK_GREY, corner_radius = 10)
-        self.loadBox.place(relx = 0.05, rely = 0.58, anchor = "w")
-        ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.loadLineup).place(relx = 0.95, rely = 0.58, anchor = "e")
+        self.loadBox.place(relx = 0.05, rely = 0.53, anchor = "w")
+        ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.loadLineup).place(relx = 0.95, rely = 0.53, anchor = "e")
 
-        ctk.CTkLabel(self.settingsFrame, text = "Automatic lineup", font = (APP_FONT, 15), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.75, anchor = "w")
+        ctk.CTkLabel(self.settingsFrame, text = "Automatic lineup", font = (APP_FONT, 15), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.65, anchor = "w")
         self.autoBox = ctk.CTkComboBox(self.settingsFrame, width = 250, height = 30, font = (APP_FONT, 15), fg_color = DARK_GREY, border_color = DARK_GREY, button_color = DARK_GREY, button_hover_color = DARK_GREY, dropdown_fg_color = DARK_GREY, dropdown_hover_color = DARK_GREY, corner_radius = 10)
-        self.autoBox.place(relx = 0.05, rely = 0.88, anchor = "w")
-        ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.autoLineup).place(relx = 0.95, rely = 0.88, anchor = "e")
+        self.autoBox.place(relx = 0.05, rely = 0.78, anchor = "w")
+        ctk.CTkButton(self.settingsFrame, text = "OK", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 30, command = self.autoLineup).place(relx = 0.95, rely = 0.78, anchor = "e")
 
         self.autoBox.configure(values = FORMATIONS_POSITIONS.keys())
+
+        self.proposedLineupButton = ctk.CTkButton(self.settingsFrame, text = "Proposed Lineup", font = (APP_FONT, 15), text_color = "white", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 200, command = self.proposedLineup)
+        self.proposedLineupButton.place(relx = 0.5, rely = 0.97, anchor = "s")
 
     def getDropdownValues(self):
         self.positionsCopy = {}
@@ -224,6 +231,7 @@ class Lineup(ctk.CTkFrame):
             # Remove any players that are banned
             if PlayerBans.check_bans_for_player(player.id, self.league.id):
                 continue
+
 
             playersCount += 1
 
@@ -614,6 +622,14 @@ class Lineup(ctk.CTkFrame):
             # Remove empty position entries
             del position_options[position]
 
+    def proposedLineup(self):
+        
+        lineup = getProposedLineup(self.team.id, self.opponent.id, self.league.id)
+        lineup = {position: Players.get_player_by_id(pid) for position, pid in lineup.items()}
+        self.settingsFrame.place_forget()
+        self.reset(addSubs = False)
+        self.importLineup(auto = lineup)
+
 class Analysis(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
@@ -621,14 +637,13 @@ class Analysis(ctk.CTkFrame):
         self.parent = parent
         self.manager_id = manager_id
         self.team = self.parent.team
+        self.matchday = self.parent.matchday
+        self.nextmatch = self.parent.nextmatch
+        self.opponent = self.parent.opponent
+        self.league = self.parent.league
 
-        league = LeagueTeams.get_league_by_team(self.team.id)
-        self.matchday = League.get_league_by_id(league.league_id).current_matchday
-        self.nextmatch = Matches.get_team_next_match(self.team.id, league.league_id)
-        self.opponent = Teams.get_team_by_id(self.nextmatch.away_id if self.nextmatch.home_id == self.team.id else self.nextmatch.home_id)
-
-        self.oppLastMatch = Matches.get_team_last_match(self.opponent.id, league.league_id)
-        self.oppLast5Matches = Matches.get_team_last_5_matches(self.opponent.id, league.league_id)
+        self.oppLastMatch = Matches.get_team_last_match(self.opponent.id, self.league.league_id)
+        self.oppLast5Matches = Matches.get_team_last_5_matches(self.opponent.id, self.league.league_id)
 
         if not self.oppLastMatch:
             ctk.CTkLabel(self, text = "No analysis available for this team.", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")

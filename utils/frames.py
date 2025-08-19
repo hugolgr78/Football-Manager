@@ -844,7 +844,7 @@ class TrophiesFrame(ctk.CTkFrame):
         years = years.split(",")
         return " - ".join(years) 
     
-class FootballPitchVertical(ctk.CTkFrame):
+class FootballPitchHorizontal(ctk.CTkFrame):
     def __init__(self, parent, width, heigth, relx, rely, anchor, fgColor):
         super().__init__(parent, width = width, height = heigth, fg_color = fgColor)
         self.place(relx = relx, rely = rely, anchor = anchor)
@@ -872,7 +872,7 @@ class FootballPitchVertical(ctk.CTkFrame):
         self.canvas.create_rectangle(0, self.pitch_height / 3, 25, self.pitch_height * 2 / 3, outline = "white", width = 2)
         self.canvas.create_rectangle(self.pitch_width - 21, self.pitch_height / 3, self.pitch_width + 5, self.pitch_height * 2 / 3, outline = "white", width = 2)
 
-class FootballPitchHorizontal(ctk.CTkFrame):
+class FootballPitchVertical(ctk.CTkFrame):
     def __init__(self, parent, width, height, relx, rely, anchor, fgColor, pitchColor):
         super().__init__(parent, width = width - 50, height = height - 100, fg_color = fgColor)
         self.place(relx = relx, rely = rely, anchor = anchor)
@@ -902,7 +902,7 @@ class FootballPitchHorizontal(ctk.CTkFrame):
         self.canvas.create_rectangle(self.pitch_width * (7/18), 0, self.pitch_width * (11/18), self.pitch_height * (8/135), outline = "white", width = 2)
         self.canvas.create_rectangle(self.pitch_width * (7/18), self.pitch_height - self.pitch_height * (7/135), self.pitch_width * (11/18), self.pitch_height + 5, outline = "white", width = 2)
 
-class FootballPitchPlayerPos(FootballPitchVertical):
+class FootballPitchPlayerPos(FootballPitchHorizontal):
     def __init__(self, parent, width, heigth, relx, rely, anchor, fgColor):
         super().__init__(parent, width, heigth, relx, rely, anchor, fgColor)
         super().draw_pitch()
@@ -938,7 +938,7 @@ class FootballPitchPlayerPos(FootballPitchVertical):
                 outline_color = GREY
             self.canvas.create_oval(x - player_radius, y - player_radius, x + player_radius, y + player_radius, fill = fill_color, outline = outline_color) 
 
-class FootballPitchLineup(FootballPitchHorizontal):
+class FootballPitchLineup(FootballPitchVertical):
     def __init__(self, parent, width, height, relx, rely, anchor, fgColor, pitchColor):
         super().__init__(parent, width, height, relx, rely, anchor, fgColor, pitchColor)
         super().draw_pitch()
@@ -975,7 +975,7 @@ class FootballPitchLineup(FootballPitchHorizontal):
     def set_counter(self, num):
         self.counter = num
         
-class FootballPitchMatchDay(FootballPitchHorizontal):
+class FootballPitchMatchDay(FootballPitchVertical):
     def __init__(self, parent, width, height, relx, rely, anchor, fgColor, pitchColor):
         super().__init__(parent, width, height, relx, rely, anchor, fgColor, pitchColor)
         super().draw_pitch()

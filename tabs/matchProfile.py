@@ -914,7 +914,9 @@ class MatchProfile(ctk.CTkFrame):
         src.thumbnail((20, 20))
         img = ctk.CTkImage(src, None, (src.width, src.height))
         ctk.CTkLabel(frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
-        ctk.CTkLabel(frame, text = f"Date, {self.match.time}", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
+
+        day, dateText, time = format_datetime_split(self.match.date)
+        ctk.CTkLabel(frame, text = f"{day} {dateText}, {time}", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
 
         frame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
         frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))

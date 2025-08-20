@@ -758,9 +758,11 @@ class MatchdayPreview():
             fontSize = 15
         )
 
+        day, text, time = format_datetime_split(self.nextMatch.date)
+
         self.emailText_2 = (
-            f"- Date: \n"
-            f"- Kick-off: {self.nextMatch.time}\n"
+            f"- Date: {day} {text}\n"
+            f"- Kick-off: {time}\n"
             f"- Venue: {self.homeTeam.stadium}\n"
             f"- Weather Forecast: \n"
         )

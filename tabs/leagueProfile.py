@@ -234,7 +234,7 @@ class Matchdays(ctk.CTkFrame):
     def createFrames(self):
         for i in range(self.numMacthdays):
             if i == self.currentMatchday - 1:
-                matchday = Matches.get_matchday_for_league( self.league.id, self.currentMatchday)
+                matchday = Matches.get_matchday_for_league(self.league.id, self.currentMatchday)
                 frame = MatchdayFrame(self, matchday, self.currentMatchday, self.currentMatchday, self, self.parent, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
             else:
                 frame = None

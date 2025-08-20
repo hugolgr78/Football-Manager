@@ -53,7 +53,7 @@ class MatchFrame(ctk.CTkFrame):
         self.oponent.bind("<Enter>", lambda event: self.onFrameHover()) 
         self.oponent.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
-        _, dateText = format_datetime_split(self.match.date)
+        _, dateText, time = format_datetime_split(self.match.date)
         self.date = ctk.CTkLabel(self, text = dateText, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 12), height = 0)
         self.date.place(relx = 0.1, rely = 0.65, anchor = "w")
         self.date.bind("<Enter>", lambda event: self.onFrameHover())
@@ -64,7 +64,7 @@ class MatchFrame(ctk.CTkFrame):
         self.leagueName.bind("<Enter>", lambda event: self.onFrameHover())
         self.leagueName.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
-        self.time = ctk.CTkLabel(self, text = self.match.time, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
+        self.time = ctk.CTkLabel(self, text = time, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
         self.time.place(relx = 0.9, rely = 0.5, anchor = "e")
         self.time.bind("<Enter>", lambda event: self.onFrameHover())
         self.time.bind("<Button-1>", lambda event: self.displayMatchInfo())
@@ -158,7 +158,8 @@ class MatchFrame(ctk.CTkFrame):
         if self.played:
             scoreLabel = MatchProfileLink(self.scoreFrame, self.match, f"{self.match.score_home} - {self.match.score_away}", "white", 0.5, 0.5, "center", DARK_GREY, self.parentTab, 30, APP_FONT_BOLD)
         else:
-            scoreLabel = ctk.CTkLabel(self.scoreFrame, text = self.match.time, fg_color = DARK_GREY, font = (APP_FONT, 30))
+            _, _, time = format_datetime_split(self.match.date)
+            scoreLabel = ctk.CTkLabel(self.scoreFrame, text = time, fg_color = DARK_GREY, font = (APP_FONT, 30))
             scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
         
         self.matchdayEvents = MatchEvents.get_events_by_match(self.match.id)
@@ -308,30 +309,48 @@ class MatchdayFrame(ctk.CTkFrame):
         self.rely = rely
         self.anchor = anchor
         
-        ctk.CTkLabel(self, text = f"Matchday {self.matchdayNum}", fg_color = fgColor, font = (APP_FONT_BOLD, 30)).place(relx = 0.5, rely = 0.1, anchor = "center")
+        ctk.CTkLabel(self, text = f"Matchday {self.matchdayNum}", fg_color = fgColor, font = (APP_FONT_BOLD, 30)).place(relx = 0.5, rely = 0.02, anchor = "center")
 
-        startY = 0.2
-        gap = 0.08
+        startY = 0.17
+        gap = 0.075
 
+        day, text, _ = format_datetime_split(self.matchday[0].date)
+        currDay = day
+        ctk.CTkLabel(self, text = f"{day} {text}", fg_color = fgColor, font = (APP_FONT_BOLD, 20)).place(relx = 0.02, rely = 0.1, anchor = "w")
+
+        newDay = False
         for i, match in enumerate(self.matchday):
+
+            day, text, _ = format_datetime_split(match.date)
+
+            if day != currDay:
+                ctk.CTkLabel(self, text = f"{day} {text}", fg_color = fgColor, font = (APP_FONT_BOLD, 20)).place(relx = 0.02, rely = startY + gap * i, anchor = "w")
+                currDay = day
+                newDay = True
+            
+            if newDay:
+                index = i + 1
+            else:
+                index = i
 
             homeTeam = Teams.get_team_by_id(match.home_id)
             awayTeam = Teams.get_team_by_id(match.away_id) 
 
             homeSrc = Image.open(io.BytesIO(homeTeam.logo))
             homeSrc.thumbnail((35, 35))
-            homeLogo = TeamLogo(self, homeSrc, homeTeam, fgColor, 0.4, startY + gap * i, "center", self.parentTab)
-            ctk.CTkLabel(self, text = homeTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * i, anchor = "e")
+            homeLogo = TeamLogo(self, homeSrc, homeTeam, fgColor, 0.4, startY + gap * index, "center", self.parentTab)
+            ctk.CTkLabel(self, text = homeTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
 
             awaySrc = Image.open(io.BytesIO(awayTeam.logo))
             awaySrc.thumbnail((35, 35))
-            awayLogo = TeamLogo(self, awaySrc, awayTeam, fgColor, 0.6, startY + gap * i, "center", self.parentTab)
-            ctk.CTkLabel(self, text = awayTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * i, anchor = "w")
+            awayLogo = TeamLogo(self, awaySrc, awayTeam, fgColor, 0.6, startY + gap * index, "center", self.parentTab)
+            ctk.CTkLabel(self, text = awayTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
 
             if self.currentMatchday > self.matchdayNum:
-                MatchProfileLink(self, match, f"{match.score_home} - {match.score_away}", "white", 0.5, startY + gap * i, "center", fgColor, self.parentTab, 20, APP_FONT_BOLD)
+                MatchProfileLink(self, match, f"{match.score_home} - {match.score_away}", "white", 0.5, startY + gap * index, "center", fgColor, self.parentTab, 20, APP_FONT_BOLD)
             else:
-                ctk.CTkLabel(self, text = match.time, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.5, rely = startY + gap * i, anchor = "center")
+                _, _, time = format_datetime_split(match.date)
+                ctk.CTkLabel(self, text = time, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.5, rely = startY + gap * index, anchor = "center")
 
     def placeFrame(self):
         self.place(relx = self.relx, rely = self.rely, anchor = self.anchor)

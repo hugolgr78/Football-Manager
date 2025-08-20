@@ -17,7 +17,7 @@ LEAGUE_NAME = "Eclipse League"
 FIRST_YEAR = 2024
 NUM_TEAMS = 20
 
-TOTAL_STEPS = 1003
+TOTAL_STEPS = 400
 PROGRESS = 0
 
 progressBar = None

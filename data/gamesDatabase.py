@@ -1,63 +1,77 @@
-from sqlalchemy import Column, String, BLOB, ForeignKey
+from sqlalchemy import Column, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 from settings import *
 import uuid
-from data.database import Managers
 
 Base = declarative_base()
+
+class GamesDatabaseManager:
+    """Singleton manager for this module's local games database."""
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(GamesDatabaseManager, cls).__new__(cls)
+            cls._instance.scoped_session = None
+        return cls._instance
+
+    def set_database(self):
+
+        DATABASE_URL = "sqlite:///data/games.db" 
+        engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+        session_factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        self.scoped_session = scoped_session(session_factory)
+
+    def get_session(self):
+        if not self.scoped_session:
+            self.set_database()
+        return self.scoped_session()
 
 class Game(Base):
     __tablename__ = "games"
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    # manager_id = Column(String(256), ForeignKey(Managers.id), nullable = False)
     manager_id = Column(String(256), nullable = False)
     first_name = Column(String(128), nullable = False)
     last_name = Column(String(128), nullable = False)
-    manager_database_link = Column(String(256), nullable = False)
 
     @classmethod
-    def add_game(cls, session, manager_id, first_name, last_name, manager_database_link):
-        new_game = Game(
-            manager_id = manager_id,
-            first_name = first_name,
-            last_name = last_name,
-            manager_database_link = manager_database_link)
+    def add_game(cls, manager_id, first_name, last_name):
+        session = GamesDatabaseManager().get_session()
+        try:
+            new_game = Game(
+                manager_id = manager_id,
+                first_name = first_name,
+                last_name = last_name)
+
+            session.add(new_game)
+            session.commit()
+
+            return new_game
+        except Exception:
+            if session is not None:
+                session.rollback()
+            raise
+        finally:
+            if session is not None:
+                session.close()
+
+    @classmethod
+    def get_games_by_manager_id(cls, manager_id):
+        session = GamesDatabaseManager().get_session()
+        try:
+            games = session.query(Game).filter(Game.manager_id == manager_id).all()
+            return games if games else None
+        finally:
+            session.close()
         
-        session.add(new_game)
-        session.commit()
-
-        return new_game
-
     @classmethod
-    def get_games_by_manager_id(cls, session, manager_id):
-        game = session.query(Game).filter(Game.manager_id == manager_id).all()
-
-        if game:
-            return game
-        else:
-            return None
-        
-    @classmethod
-    def get_all_games(cls, session):
-        games = session.query(Game).all()
-
-        if games:
-            return games
-        else:
-            return None
-
-def get_session():
-    DATABASE_URL = "sqlite:///data/games.db"
-    engine = create_engine(DATABASE_URL)
-    SessionLocal = sessionmaker(autocommit = False, autoflush = False, bind = engine)
-    return SessionLocal()
-
-def main():
-    session = get_session()
-    Base.metadata.create_all(bind = session.bind)
-
-if __name__ == "__main__":
-    main()
+    def get_all_games(cls):
+        session = GamesDatabaseManager().get_session()
+        try:
+            games = session.query(Game).all()
+            return games if games else None
+        finally:
+            session.close()

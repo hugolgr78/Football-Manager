@@ -96,9 +96,6 @@ class Lineup(ctk.CTkFrame):
         self.nextmatch = self.parent.nextmatch
         self.opponent = self.parent.opponent
 
-        self.players = Players.get_all_players_by_team(self.team.id)
-        self.starRatings = Players.get_players_star_ratings(self.players, self.leagueID)
-
         self.selectedLineup = {}
         self.substitutePlayers = []
         self.subCounter = 0
@@ -189,6 +186,9 @@ class Lineup(ctk.CTkFrame):
         self.league = League.get_league_by_id(self.leagueTeams.league_id)
         self.players = [player.id for player in Players.get_all_players_by_team(self.team.id, youths = False)]
         self.checkPositionsForYouth()
+
+        playerData = [Players.get_player_by_id(player_id) for player_id in self.players]
+        self.starRatings = Players.get_players_star_ratings(playerData, self.leagueID)
 
         if not loaded and not auto:
 

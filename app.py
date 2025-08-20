@@ -2,8 +2,7 @@ import customtkinter as ctk
 from ctypes import windll
 from settings import *
 from startMenu import StartMenu
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from data.gamesDatabase import GamesDatabaseManager
 import shutil
 import os
 import glob
@@ -31,16 +30,10 @@ class FootballManager(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        # Games database set up
-        DATABASE_URL = "sqlite:///data/games.db" 
-        
-        # Backup all databases in the data folder
         backup_all_databases("data", "data/backups")
 
-        # Create an engine and a session
-        engine = create_engine(DATABASE_URL)
-        SessionLocal = sessionmaker(autocommit = False, autoflush = False, bind = engine)
-        session = SessionLocal()
+        db_manager = GamesDatabaseManager()
+        db_manager.set_database()
 
         # setup
         windll.shell32.SetCurrentProcessExplicitAppUserModelID('mycompany.myproduct.subproduct.version')
@@ -50,7 +43,7 @@ class FootballManager(ctk.CTk):
         self.geometry(str(APP_SIZE[0]) + "x" + str(APP_SIZE[1]))
         self.resizable(False, False)
 
-        self.loginMenu = StartMenu(self, session)
+        self.loginMenu = StartMenu(self)
 
         self.mainloop()
 

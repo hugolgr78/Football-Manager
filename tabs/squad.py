@@ -138,9 +138,7 @@ class Squad(ctk.CTkFrame):
         lastMatchData.place(relx = 0.5, rely = 0.36, anchor = "n")
 
         team = Teams.get_team_by_id(player.team_id)
-        league = LeagueTeams.get_league_by_team(team.id)
-
-        lastMatch = Matches.get_team_last_match(team.id, league.league_id)
+        lastMatch = Matches.get_team_last_match(team.id, Game.get_game_date(self.manager_id))
 
         if not lastMatch:
             ctk.CTkLabel(lastMatchData, text = "Did not play", font = (APP_FONT, 13), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.15, anchor = "w")   

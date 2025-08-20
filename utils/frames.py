@@ -540,7 +540,7 @@ class PlayerFrame(ctk.CTkFrame):
                 ctk.CTkLabel(self.statFrame, text = f"{potmAwards}", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
             case "Form":
                 leagueTeams = LeagueTeams.get_league_by_team(self.player.team_id)
-                last5 = Matches.get_team_last_5_matches(self.player.team_id, leagueTeams.league_id)
+                last5 = Matches.get_team_last_5_matches(self.player.team_id, Game.get_game_date(Managers.get_all_user_managers()[0].id))
 
                 imageNames = []
                 for match in reversed(last5):
@@ -769,7 +769,7 @@ class next5Matches(ctk.CTkFrame):
 
     def showNext5Matches(self):
 
-        next5 = Matches.get_team_next_5_matches(self.team.id, self.league.league_id)
+        next5 = Matches.get_team_next_5_matches(self.team.id, Game.get_game_date(Managers.get_all_user_managers()[0].id))
 
         ctk.CTkLabel(self, text = "Next 5 Matches", font = (APP_FONT_BOLD, 30), text_color = "white", fg_color = self.fgColor).pack(fill = "both", pady = (10, 0))
 
@@ -1656,7 +1656,7 @@ class FormGraph(ctk.CTkCanvas):
         self.draw_axes()
 
         self.leagueTeams = LeagueTeams.get_league_by_team(self.player.team_id)
-        self.last5 = Matches.get_team_last_5_matches(self.player.team_id, self.leagueTeams.league_id)
+        self.last5 = Matches.get_team_last_5_matches(self.player.team_id, Game.get_game_date(Managers.get_all_user_managers()[0].id))
 
         self.last5Events = []
         

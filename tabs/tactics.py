@@ -26,7 +26,7 @@ class Tactics(ctk.CTkFrame):
         self.leagueID = LeagueTeams.get_league_by_team(self.team.id).league_id
         self.league = League.get_league_by_id(self.leagueID)
         self.matchday = League.get_league_by_id(self.leagueID).current_matchday
-        self.nextmatch = Matches.get_team_next_match(self.team.id, self.leagueID)
+        self.nextmatch = Matches.get_team_next_match(self.team.id, Game.get_game_date(self.manager_id))
         self.opponent = Teams.get_team_by_id(self.nextmatch.away_id if self.nextmatch.home_id == self.team.id else self.nextmatch.home_id)
 
         self.lineupTab = Lineup(self, self.manager_id)
@@ -628,7 +628,7 @@ class Lineup(ctk.CTkFrame):
 
     def proposedLineup(self):
         
-        lineup = getProposedLineup(self.team.id, self.opponent.id, self.league.id)
+        lineup = getProposedLineup(self.team.id, self.opponent.id, self.league.id, Game.get_game_date(self.manager_id))
         lineup = {position: Players.get_player_by_id(pid) for position, pid in lineup.items()}
         self.settingsFrame.place_forget()
         self.reset(addSubs = False)
@@ -646,8 +646,8 @@ class Analysis(ctk.CTkFrame):
         self.opponent = self.parent.opponent
         self.league = self.parent.league
 
-        self.oppLastMatch = Matches.get_team_last_match(self.opponent.id, self.league.id)
-        self.oppLast5Matches = Matches.get_team_last_5_matches(self.opponent.id, self.league.id)
+        self.oppLastMatch = Matches.get_team_last_match(self.opponent.id, Game.get_game_date(self.manager_id))
+        self.oppLast5Matches = Matches.get_team_last_5_matches(self.opponent.id, Game.get_game_date(self.manager_id))
 
         if not self.oppLastMatch:
             ctk.CTkLabel(self, text = "No analysis available for this team.", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
@@ -811,7 +811,7 @@ class Analysis(ctk.CTkFrame):
         ctk.CTkLabel(playersFrame, text = "Players", font = (APP_FONT_BOLD, 12), fg_color = GREY_BACKGROUND).pack(pady = 5, anchor = "center")
 
         lineupPitch = FootballPitchMatchDay(self.predictedLineupFrame, 340, 510, 0.99, 0.08, "ne", GREY_BACKGROUND, GREY_BACKGROUND)
-        lineup = getPredictedLineup(self.opponent.id, self.matchday)
+        lineup = getPredictedLineup(self.opponent.id, Game.get_game_date(self.manager_id))
         
         for position, playerID in lineup.items():
             player = Players.get_player_by_id(playerID)

@@ -51,7 +51,7 @@ class Match():
 
     def createTeamLineup(self, teamID, home):
         opponentID = self.match.away_id if home else self.match.home_id
-        lineup = getProposedLineup(teamID, opponentID, self.league.league_id)
+        lineup = getProposedLineup(teamID, opponentID, self.league.league_id, Game.get_game_date(Managers.get_all_user_managers()[0].id))
         substitutes = getSubstitutes(teamID, lineup, self.league.league_id)
 
         if home:

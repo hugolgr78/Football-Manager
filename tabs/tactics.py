@@ -15,14 +15,19 @@ from collections import defaultdict
 import io
 
 class Tactics(ctk.CTkFrame):
-    def __init__(self, parent, manager_id):
+    def __init__(self, parent):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
-        self.manager_id = manager_id
+        self.manager_id = Managers.get_all_user_managers()[0].id
         self.parent = parent
         self.selected_position = None
 
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.leagueID = LeagueTeams.get_league_by_team(self.team.id).league_id
+        self.league = League.get_league_by_id(self.leagueID)
+        self.matchday = League.get_league_by_id(self.leagueID).current_matchday
+        self.nextmatch = Matches.get_team_next_match(self.team.id, self.leagueID)
+        self.opponent = Teams.get_team_by_id(self.nextmatch.away_id if self.nextmatch.home_id == self.team.id else self.nextmatch.home_id)
 
         self.lineupTab = Lineup(self, self.manager_id)
         self.analysis = None
@@ -82,15 +87,14 @@ class Lineup(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
-        self.manager_id = manager_id
         self.parent = parent
+        self.manager_id = manager_id
         self.mainMenu = self.parent.parent
         self.team = self.parent.team
-        self.leagueID = LeagueTeams.get_league_by_team(self.team.id).league_id
-
-        self.matchday = League.get_league_by_id(self.leagueID).current_matchday
-        self.nextmatch = Matches.get_team_next_match(self.team.id, self.leagueID)
-        self.opponent = Teams.get_team_by_id(self.nextmatch.away_id if self.nextmatch.home_id == self.team.id else self.nextmatch.home_id)
+        self.leagueID = self.parent.leagueID
+        self.matchday = self.parent.matchday
+        self.nextmatch = self.parent.nextmatch
+        self.opponent = self.parent.opponent
 
         self.players = Players.get_all_players_by_team(self.team.id)
         self.starRatings = Players.get_players_star_ratings(self.players, self.leagueID)
@@ -642,8 +646,8 @@ class Analysis(ctk.CTkFrame):
         self.opponent = self.parent.opponent
         self.league = self.parent.league
 
-        self.oppLastMatch = Matches.get_team_last_match(self.opponent.id, self.league.league_id)
-        self.oppLast5Matches = Matches.get_team_last_5_matches(self.opponent.id, self.league.league_id)
+        self.oppLastMatch = Matches.get_team_last_match(self.opponent.id, self.league.id)
+        self.oppLast5Matches = Matches.get_team_last_5_matches(self.opponent.id, self.league.id)
 
         if not self.oppLastMatch:
             ctk.CTkLabel(self, text = "No analysis available for this team.", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")

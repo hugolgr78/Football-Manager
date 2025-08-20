@@ -8,7 +8,6 @@ from utils.frames import FootballPitchMatchDay, TeamLogo
 from data.database import Teams, MatchEvents, TeamLineup
 from utils.refereeProfileLink import RefereeProfileLink
 import io
-import itertools
 
 class MatchProfile(ctk.CTkFrame):
     def __init__(self, parent, match, parentTab, changeBackFunction = None):

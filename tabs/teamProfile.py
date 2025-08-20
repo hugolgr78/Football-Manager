@@ -10,20 +10,24 @@ from utils.managerProfileLink import ManagerProfileLink
 from utils.util_functions import *
 
 class TeamProfile(ctk.CTkFrame):
-    def __init__(self, parent, manager_id, parentTab = None, changeBackFunction = None):
+    def __init__(self, parent, manager_id = None, parentTab = None, changeBackFunction = None):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.manager_id = manager_id
         self.changeBackFunction = changeBackFunction
+
+        if not manager_id:
+            self.manager_id = Managers.get_all_user_managers()[0].id
+        else:
+            self.manager_id = manager_id
 
         if not parentTab:
             self.parentTab = self.parent
         else:
             self.parentTab = parentTab
 
-        self.manager = Managers.get_manager_by_id(manager_id)
-        self.team = Teams.get_teams_by_manager(manager_id)[0]
+        self.manager = Managers.get_manager_by_id(self.manager_id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.leagueData = LeagueTeams.get_league_by_team(self.team.id)
         self.leagueId = self.leagueData.league_id
 

@@ -10,20 +10,19 @@ from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 
 class LeagueProfile(ctk.CTkFrame):
-    def __init__(self, parent, league_id = None, manager_id = None, changeBackFunction = None):
+    def __init__(self, parent, league_id = None, changeBackFunction = None):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.manager_id = manager_id
-        self.league_id = league_id
         self.changeBackFunction = changeBackFunction
 
-        if not self.league_id:
+        if not league_id:
+            self.manager_id = Managers.get_all_user_managers()[0].id
             self.team = Teams.get_teams_by_manager(self.manager_id)[0]
             self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
             self.league = League.get_league_by_id(self.leagueTeams.league_id)
         else:
-            self.league = League.get_league_by_id(self.league_id)
+            self.league_id = League.get_league_by_id(self.league_id)
 
         self.profile = Profile(self, self.league)
         self.matchdays = None

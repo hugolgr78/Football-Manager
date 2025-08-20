@@ -7,18 +7,18 @@ from utils.frames import PlayerFrame
 from utils.util_functions import *
 
 class Squad(ctk.CTkFrame):
-    def __init__(self, parent, manager_id):
+    def __init__(self, parent):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.manager_id = manager_id
+        self.manager_id = Managers.get_all_user_managers()[0].id
 
         self.talkedTo = []
         self.playerInjured = False
         self.currentStat = "Current ability"
         self.playerFrames = []
 
-        self.team = Teams.get_teams_by_manager(manager_id)[0]
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.leagueId = LeagueTeams.get_league_by_team(self.team.id).league_id
         self.players = Players.get_all_players_by_team(self.team.id)
 

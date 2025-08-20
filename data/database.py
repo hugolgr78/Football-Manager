@@ -2553,7 +2553,8 @@ class PlayerBans(Base):
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     player_id = Column(String(128), ForeignKey('players.id'))
     competition_id = Column(String(128))
-    ban_length = Column(Integer, nullable = False)
+    suspension = Column(Integer)
+    injury = Column(DateTime)
     ban_type = Column(Enum("red_card", "injury", "yellow_cards"), nullable = False)
 
     @classmethod
@@ -2563,9 +2564,15 @@ class PlayerBans(Base):
             new_ban = PlayerBans(
                 player_id = player_id,
                 competition_id = competition_id,
-                ban_length = ban_length,
                 ban_type = ban_type
             )
+
+            if ban_type == "red_card" or ban_type == "yellow_cards":
+                new_ban.suspension = ban_length
+                new_ban.injury = None
+            elif ban_type == "injury":
+                new_ban.injury = ban_length
+                new_ban.suspension = None
 
             session.add(new_ban)
             session.commit()
@@ -2581,19 +2588,26 @@ class PlayerBans(Base):
     def batch_add_bans(cls, bans):
         session = DatabaseManager().get_session()
         try:
-            # Create a list of dictionaries representing each ban
-            ban_dicts = [
-                {
-                    "id": str(uuid.uuid4()),
-                    "player_id": ban[0],
-                    "competition_id": ban[1],
-                    "ban_length": ban[2],
-                    "ban_type": ban[3]
-                }
-                for ban in bans
-            ]
+            ban_dicts = []
+            for ban in bans:
+                player_id, competition_id, ban_length, ban_type = ban
 
-            # Use session.execute with an insert statement
+                entry = {
+                    "id": str(uuid.uuid4()),
+                    "player_id": player_id,
+                    "competition_id": competition_id,
+                    "ban_type": ban_type,
+                }
+
+                if ban_type in ("red_card", "yellow_cards"):
+                    entry["suspension"] = ban_length
+                    entry["injury"] = None
+                elif ban_type == "injury":
+                    entry["injury"] = ban_length
+                    entry["suspension"] = None
+
+                ban_dicts.append(entry)
+
             session.execute(insert(PlayerBans), ban_dicts)
             session.commit()
         except Exception as e:
@@ -2603,19 +2617,38 @@ class PlayerBans(Base):
             session.close()
 
     @classmethod
-    def reduce_all_player_bans_for_team(cls, team_id, competition_id):
+    def reduce_suspensions_for_team(cls, team_id, competition_id):
         session = DatabaseManager().get_session()
         try:
             bans = session.query(PlayerBans).join(Players).filter(Players.team_id == team_id).all()
 
             for ban in bans:
-                if ban.ban_type == "injury":
-                    ban.ban_length -= 1
-                elif ban.competition_id == competition_id:
-                    ban.ban_length -= 1
+                if ban.competition_id == competition_id and ban.ban_type in ["red_card", "yellow_cards"]:
+                    ban.suspension -= 1
 
-                if ban.ban_length == 0:
+                if ban.suspension == 0:
                     session.delete(ban)
+
+            session.commit()
+
+            return bans
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def reduce_injuries(cls, time):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).filter(PlayerBans.ban_type == "injury").all()
+
+            for ban in bans:
+                if ban.injury <= time:
+                    session.delete(ban)
+                else:
+                    ban.injury -= time
 
             session.commit()
 

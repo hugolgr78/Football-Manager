@@ -2,6 +2,7 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
+from PIL import Image
 from utils.util_functions import *
 
 from tabs.hub import Hub
@@ -84,6 +85,15 @@ class MainMenu(ctk.CTkFrame):
             gapCount += 2
 
         self.buttons[self.activeButton].configure(state = "disabled")
+
+        src = Image.open("Images/settings.png")
+        src.thumbnail((30, 30))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+
+        settingsButton = ctk.CTkButton(self.tabsFrame, text = "", image = img, fg_color = APP_BLUE, corner_radius = 10, height = 50, width = 50, hover_color = APP_BLUE)
+        settingsButton.place(relx = 0.03, rely = 0.99, anchor = "sw")
+        settingsButton.configure(command = lambda: self.changeTab(len(self.tabs) - 1))
+        self.buttons.append(settingsButton)
 
     def canvas(self, width, height, rely):
         canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)

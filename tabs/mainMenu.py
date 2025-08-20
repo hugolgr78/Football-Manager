@@ -24,6 +24,8 @@ class MainMenu(ctk.CTkFrame):
 
         self.parent = parent
         self.manager_id = manager_id
+        self.stateIndex = Game.get_game_state(self.manager_id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
 
         self.initUI()
 
@@ -35,7 +37,7 @@ class MainMenu(ctk.CTkFrame):
         self.hub = Hub(self)
         self.hub.place(x = 200, y = 0, anchor = "nw")
         
-        self.inbox = Inbox(self)
+        self.inbox = None
         self.squad = None
         self.schedule = None
         self.tactics = None
@@ -115,25 +117,73 @@ class MainMenu(ctk.CTkFrame):
             self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self)
 
         self.tabs[self.activeButton].place(x = 200, y = 0, anchor = "nw")
-        
-        # Call addEmails if switching to Inbox tab
-        if index == 1 and self.tabs[self.activeButton] and not self.emailsAdded: 
-            self.emailsAdded = True
-            self.tabs[self.activeButton].addEmails()
 
     def addDate(self):
         currDate = Game.get_game_date(self.manager_id)
 
         day, text, time = format_datetime_split(currDate)
 
-        ctk.CTkLabel(self.tabsFrame, text = day, font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.86, anchor = "w")
-        ctk.CTkLabel(self.tabsFrame, text = f"{text} {time}", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.89, anchor = "w")
+        self.dayLabel = ctk.CTkLabel(self.tabsFrame, text = day, font = (APP_FONT, 13), text_color = "white", fg_color = TKINTER_BACKGROUND)
+        self.dayLabel.place(relx = 0.03, rely = 0.86, anchor = "w")
+        self.timeLabel = ctk.CTkLabel(self.tabsFrame, text = f"{text} {time}", font = (APP_FONT_BOLD, 13), text_color = "white", fg_color = TKINTER_BACKGROUND)
+        self.timeLabel.place(relx = 0.03, rely = 0.89, anchor = "w")
 
-        self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Continue >>", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = APP_BLUE, corner_radius = 10, height = 50, width = 127, hover_color = APP_BLUE, command = self.moveDate)
-        self.continueButton.place(relx = 0.32, rely = 0.99, anchor = "sw")
+        currDate = Game.get_game_date(self.manager_id)
+        gameTime = Matches.check_if_game_time(self.team.id, currDate)
+
+        if not gameTime:
+            self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Continue >>", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = APP_BLUE, corner_radius = 10, height = 50, width = 127, hover_color = APP_BLUE, command = self.moveDate)
+            self.continueButton.place(relx = 0.32, rely = 0.99, anchor = "sw")
+        else:
+            self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Matchday >>", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = PIE_RED, corner_radius = 10, height = 50, width = 127, hover_color = PIE_RED, command = lambda: self.changeTab(4))
+            self.continueButton.place(relx = 0.32, rely = 0.99, anchor = "sw")
 
     def moveDate(self):
-        pass
+        self.currDate = Game.get_game_date(self.manager_id)
+        self.nextMatch = Matches.get_team_next_match(self.team.id, self.currDate)
+
+        state = STATES[self.stateIndex]
+
+        if state == "preview":
+            stopDate = self.nextMatch.date - datetime.timedelta(days = 2)
+            stopDate = stopDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0)
+        elif state == "matchday":
+            stopDate = self.nextMatch.date
+        elif state == "review":
+
+            gameTime = Matches.check_if_game_time(self.team.id, self.currDate)
+
+            if gameTime:
+                return
+
+            weekday = self.nextMatch.date.weekday()
+            days_until_monday = (7 - weekday) % 7
+            stopDate = (self.nextMatch.date + datetime.timedelta(days = days_until_monday)).replace(
+                hour = 8, minute = 0, second = 0, microsecond = 0
+            )
+
+        # Calculate the timedelta and advance currDate
+        timeInBetween = stopDate - self.currDate
+        PlayerBans.reduce_injuries(timeInBetween)
+        self.currDate += timeInBetween
+
+        Game.increment_game_date(self.manager_id, timeInBetween)
+        Game.update_game_state(self.manager_id, self.stateIndex)
+
+        # Move to next state cyclically
+        self.stateIndex = (self.stateIndex + 1) % len(STATES)
+        self.resetMenu()
+
+        # TODO: 
+        # new email system:
+            # when creating DB, add welcome, preview and review emails with correct dates (two days b4 at 8am, monday after matchday at 8am)
+            # then when loading inbox, add the emails that are before the game current date
+            # for suspensions and injuries, add them after the game to the db and they will be loaded the next monday.
+        
+        # ensure tactics matchday button only works if gameTime
+        # simulate any games inbetween the times
+        # make needed changes to match for banned players and emails
+        # make needed changes to matchday - games already played show a score, games to be played show a time, games being played as normal. Only have match instances for games being played
 
     def resetMenu(self):
         
@@ -142,5 +192,4 @@ class MainMenu(ctk.CTkFrame):
                 tab.destroy()
 
         self.tabsFrame.destroy()
-
         self.initUI()

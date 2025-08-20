@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, String, DateTime, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
@@ -36,7 +36,8 @@ class Game(Base):
     manager_id = Column(String(256), nullable = False)
     first_name = Column(String(128), nullable = False)
     last_name = Column(String(128), nullable = False)
-    curr_date = Column(DateTime, nullable = False, default = datetime.datetime(2025, 8, 14, 8, 0, 0))
+    curr_date = Column(DateTime, nullable = False, default = datetime.datetime(2025, 8, 14, 7, 0, 0))
+    state = Column(Integer, nullable = False, default = 0)
 
     @classmethod
     def add_game(cls, manager_id, first_name, last_name):
@@ -88,12 +89,32 @@ class Game(Base):
             session.close()
     
     @classmethod
-    def increment_game_date(cls, manager_id, days):
+    def increment_game_date(cls, manager_id, time):
         session = GamesDatabaseManager().get_session()
         try:
             game = session.query(Game).filter(Game.manager_id == manager_id).first()
             if game:
-                game.curr_date += datetime.timedelta(days = days)
+                game.curr_date += time
+                session.commit()
+        finally:
+            session.close()
+
+    @classmethod
+    def get_game_state(cls, manager_id):
+        session = GamesDatabaseManager().get_session()
+        try:
+            game = session.query(Game).filter(Game.manager_id == manager_id).first()
+            return game.state if game else None
+        finally:
+            session.close()
+
+    @classmethod
+    def update_game_state(cls, manager_id, new_state):
+        session = GamesDatabaseManager().get_session()
+        try:
+            game = session.query(Game).filter(Game.manager_id == manager_id).first()
+            if game:
+                game.state = new_state
                 session.commit()
         finally:
             session.close()

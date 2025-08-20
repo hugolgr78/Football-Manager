@@ -40,6 +40,8 @@ SEASON_START_DATE = datetime.date(2025, 8, 16)
 TOTAL_STEPS = 400
 PROGRESS = 0
 
+STATES = ["preview", "matchday", "review"]
+
 Europe = [
     "Albania", "Andorra", "Austria", "Belgium", 
     "Bosnia and Herzegovina", "Bulgaria", "Croatia", "Czech Republic", "Denmark", 

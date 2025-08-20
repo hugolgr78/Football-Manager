@@ -1118,7 +1118,6 @@ class Matches(Base):
         finally:
             session.close()
 
-
     @classmethod
     def get_matchday_for_league(cls, league_id, matchday):
         session = DatabaseManager().get_session()
@@ -1155,6 +1154,18 @@ class Matches(Base):
                 .all()
             )
             return matches
+        finally:
+            session.close()
+
+    @classmethod
+    def check_if_game_time(cls, team_id, game_time):
+        session = DatabaseManager().get_session()
+        try:
+            match = session.query(Matches).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                Matches.date == game_time
+            ).order_by(Matches.date.asc()).first()
+            return match is not None
         finally:
             session.close()
 
@@ -2539,10 +2550,10 @@ class Emails(Base):
             session.close()
     
     @classmethod
-    def get_all_emails(cls):
+    def get_all_emails(cls, curr_date):
         session = DatabaseManager().get_session()
         try:
-            emails = session.query(Emails).all()
+            emails = session.query(Emails).filter(Emails.date <= curr_date).order_by(Emails.date.desc()).all()
             return emails
         finally:
             session.close()      

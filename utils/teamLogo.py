@@ -24,7 +24,7 @@ class TeamLogo(ctk.CTkImage):
         manager = Managers.get_manager_by_id(self.team.manager_id)
 
         if manager.user != 1:
-            self.profile = TeamProfile(self.tab, self.team.manager_id, parentTab = self.tab, changeBackFunction = self.changeBack)
+            self.profile = TeamProfile(self.tab, manager_id = self.team.manager_id, parentTab = self.tab, changeBackFunction = self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
 
             self.tab.parent.overlappingProfiles.append(self.profile)

@@ -6,17 +6,18 @@ from utils.frames import MatchFrame
 from utils.util_functions import *
 
 class Schedule(ctk.CTkFrame):
-    def __init__(self, parent, manager_id):
+    def __init__(self, parent):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
-        self.manager_id = manager_id
+        self.manager_id = Managers.get_all_user_managers()[0].id
         self.parent = parent
 
         self.frames = []
 
-        self.team = Teams.get_teams_by_manager(manager_id)[0]
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.leagueData = LeagueTeams.get_league_by_team(self.team.id)
+        self.league = League.get_league_by_id(self.leagueData.league_id)
         self.matches = Matches.get_all_matches_by_team(self.team.id)
-        self.league = League.get_league_by_id(self.matches[0].league_id)
 
         self.titleFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 60, corner_radius = 0)
         self.titleFrame.place(relx = 0.5, rely = 0.05, anchor = "center")

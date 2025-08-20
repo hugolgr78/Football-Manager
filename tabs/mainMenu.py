@@ -13,6 +13,7 @@ from tabs.teamProfile import TeamProfile
 from tabs.leagueProfile import LeagueProfile
 from tabs.managerProfile import ManagerProfile
 from tabs.search import Search
+from tabs.settingsTab import SettingsTab
 
 class MainMenu(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
@@ -29,10 +30,10 @@ class MainMenu(ctk.CTkFrame):
         self.overlappingProfiles = []
         self.emailsAdded = False
 
-        self.hub = Hub(self, self.manager_id)
+        self.hub = Hub(self)
         self.hub.place(x = 200, y = 0, anchor = "nw")
         
-        self.inbox = Inbox(self, self.manager_id)
+        self.inbox = Inbox(self)
         self.squad = None
         self.schedule = None
         self.tactics = None
@@ -40,12 +41,13 @@ class MainMenu(ctk.CTkFrame):
         self.leagueProfile = None
         self.managerProfile = None
         self.search = None
+        self.settings = None
 
         self.activeButton = 0
         self.buttons = []
         self.titles = ["  Main Hub", "  Inbox", "  Squad", "  Schedule", "  Tactics", "  Club", "  League", "  Profile", "  Search"]
-        self.tabs = [self.hub, self.inbox, self.squad, self.schedule, self.tactics, self.teamProfile, self.leagueProfile, self.managerProfile, self.search]
-        self.classNames = [Hub, Inbox, Squad, Schedule, Tactics, TeamProfile, LeagueProfile, ManagerProfile, Search]
+        self.tabs = [self.hub, self.inbox, self.squad, self.schedule, self.tactics, self.teamProfile, self.leagueProfile, self.managerProfile, self.search, self.settings]
+        self.classNames = [Hub, Inbox, Squad, Schedule, Tactics, TeamProfile, LeagueProfile, ManagerProfile, Search, SettingsTab]
 
         self.tabsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 200, height = 700)
         self.tabsFrame.place(x = 0, y = 0, anchor = "nw")
@@ -98,7 +100,7 @@ class MainMenu(ctk.CTkFrame):
         self.buttons[self.activeButton].configure(state = "disabled")
 
         if not self.tabs[self.activeButton]:
-            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, manager_id = self.manager_id)
+            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self)
 
         self.tabs[self.activeButton].place(x = 200, y = 0, anchor = "nw")
         

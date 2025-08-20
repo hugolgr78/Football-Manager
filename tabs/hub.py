@@ -4,17 +4,16 @@ from settings import *
 from data.database import *
 from PIL import Image
 import io
-from tabs.teamProfile import TeamProfile
 from utils.frames import LeagueTableScrollable, next5Matches
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 
 class Hub(ctk.CTkFrame):
-    def __init__(self, parent, manager_id):
+    def __init__(self, parent):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.manager_id = manager_id
+        self.manager_id = Managers.get_all_user_managers()[0].id
 
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.league = LeagueTeams.get_league_by_team(self.team.id)
@@ -41,14 +40,6 @@ class Hub(ctk.CTkFrame):
 
         canvas = ctk.CTkCanvas(self, width = 5, height = 800, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(x = 830, y = 250, anchor = "nw")
-
-    def openClubProfile(self, team):
-    
-        for widget in self.winfo_children():
-            widget.place_forget()
-        
-        self.profile = TeamProfile(self.parent, team.manager_id, self.changeBack)
-        self.profile.place(x = 200, y = 0, anchor = "nw")
 
     def changeBack(self):
 

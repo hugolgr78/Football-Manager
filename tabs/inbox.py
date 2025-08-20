@@ -35,20 +35,10 @@ class Inbox(ctk.CTkFrame):
         canvas = ctk.CTkCanvas(self, width = 370, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(x = 0, y = 65, anchor = "w")
 
-        self.saveEmails()
-
-    def saveEmails(self):
-        emails = Emails.get_all_emails()
-
-        if not emails:
-            currDate = Game.get_game_date(self.manager_id)
-            self.saveEmail("welcome", date = currDate)
-            self.saveEmail("matchday_preview", matchday = 1, date = currDate)
-
-            return
+        self.addEmails()
 
     def addEmails(self):
-        emails = reversed(Emails.get_all_emails())
+        emails = reversed(Emails.get_all_emails(Game.get_game_date(self.manager_id)))
 
         for email in emails:
             self.addEmail(email.email_type, email.matchday, email.player_id, email.ban_length, email.comp_id, email.date)

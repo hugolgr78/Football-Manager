@@ -2,6 +2,7 @@ import customtkinter as ctk
 import tkinter.font as tkFont
 from settings import *
 from data.database import *
+from data.gamesDatabase import Game
 from PIL import Image
 import io
 from utils.frames import LeagueTableScrollable, next5Matches
@@ -73,7 +74,12 @@ class nextMatch(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = "VS", font = (APP_FONT_BOLD, 40), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
-        nextMatch = Matches.get_team_next_match(self.parent.team.id, self.parent.league.league_id)
+        currDate = Game.get_game_date(self.manager_id)
+        nextMatch = Matches.get_team_next_match(self.parent.team.id, currDate)
+
+        if not nextMatch:
+            ctk.CTkLabel(self, text = "No upcoming matches", font = (APP_FONT_BOLD, 20), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+            return
 
         homeTeam = Teams.get_team_by_id(nextMatch.home_id)
         awayTeam = Teams.get_team_by_id(nextMatch.away_id) 

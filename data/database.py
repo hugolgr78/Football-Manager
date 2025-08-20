@@ -735,23 +735,6 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def get_player_manager(cls, id):
-        session = DatabaseManager().get_session()
-        try:
-            player = cls.get_player_by_id(id)
-            if not player:
-                return None
-
-            team = Teams.get_team_by_id(player.team_id)
-            if not team:
-                return None
-
-            manager = Managers.get_manager_by_id(team.manager_id)
-            return manager
-        finally:
-            session.close()
-
-    @classmethod
     def update_age(cls, id, age):
         session = DatabaseManager().get_session()
         try:
@@ -969,14 +952,13 @@ class Matches(Base):
             session.close()
         
     @classmethod
-    def get_team_next_match(cls, team_id, league_id):
+    def get_team_next_match(cls, team_id, curr_date):
         session = DatabaseManager().get_session()
         try:
-            current_matchday = session.query(League).filter(League.id == league_id).first().current_matchday
             match = session.query(Matches).filter(
-                (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday == current_matchday
-            ).first()
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                Matches.date > curr_date
+            ).order_by(Matches.date.asc()).first()
             return match
         finally:
             session.close()
@@ -998,76 +980,51 @@ class Matches(Base):
     def get_team_first_match(cls, team_id):
         session = DatabaseManager().get_session()
         try:
-            match = session.query(Matches).filter(
-                (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday == 1
-            ).first()
+            # Return the earliest match for the team by date
+            match = (
+                session.query(Matches)
+                .filter((Matches.home_id == team_id) | (Matches.away_id == team_id))
+                .order_by(Matches.date.asc())
+                .first()
+            )
             return match
         finally:
             session.close()
 
     @classmethod
-    def get_team_last_match(cls, team_id, league_id):
+    def get_team_last_match(cls, team_id, curr_date):
         session = DatabaseManager().get_session()
         try:
-            current_matchday = session.query(League).filter(League.id == league_id).first().current_matchday
-            match = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
+            match = session.query(Matches).join(
+                TeamLineup, TeamLineup.match_id == Matches.id
+            ).filter(
                 (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday == current_matchday - 1
-            ).first()
+                Matches.date < curr_date
+            ).order_by(Matches.date.desc()).first()  # Get the latest previous match
             return match
         finally:
             session.close()
 
     @classmethod
-    def get_team_last_match_from_matchday(cls, team_id, matchday):
+    def get_team_next_5_matches(cls, team_id, curr_date):
         session = DatabaseManager().get_session()
         try:
-            match = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
-                (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday == matchday - 1
-            ).first()
-            return match
-        finally:
-            session.close()
-
-    @classmethod
-    def get_team_next_5_matches(cls, team_id, league_id):
-        session = DatabaseManager().get_session()
-        try:
-            current_matchday = session.query(League).filter(League.id == league_id).first().current_matchday
             matches = session.query(Matches).filter(
                 (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday >= current_matchday,
-                Matches.matchday < current_matchday + 5
-            ).all()
+                Matches.date > curr_date
+            ).order_by(Matches.date.asc()).limit(5).all()
             return matches
         finally:
             session.close()
 
     @classmethod
-    def get_team_last_5_matches(cls, team_id, league_id):
-        session = DatabaseManager().get_session()
-        try:
-            current_matchday = session.query(League).filter(League.id == league_id).first().current_matchday
-            matches = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
-                (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday >= current_matchday - 5,
-                Matches.matchday < current_matchday
-            ).all()
-            return matches
-        finally:
-            session.close()
-
-    @classmethod
-    def get_team_last_5_matches_from_matchday(cls, team_id, matchday):
+    def get_team_last_5_matches(cls, team_id, curr_date):
         session = DatabaseManager().get_session()
         try:
             matches = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
                 (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday >= matchday - 5,
-                Matches.matchday < matchday
-            ).all()
+                Matches.date < curr_date
+            ).order_by(Matches.date.desc()).limit(5).all()
             return matches
         finally:
             session.close()
@@ -1186,19 +1143,6 @@ class Matches(Base):
         finally:
             session.close()
         
-    @classmethod
-    def get_last_encounter_from_matchday(cls, team_1, team_2, matchday):
-        session = DatabaseManager().get_session()
-        try:
-            match = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
-                ((Matches.home_id == team_1) & (Matches.away_id == team_2)) |
-                ((Matches.home_id == team_2) & (Matches.away_id == team_1)),
-                Matches.matchday < matchday
-            ).order_by(Matches.matchday.desc()).first()
-            return match
-        finally:
-            session.close()
-
     @classmethod
     def get_all_player_matches(cls, player_id):
         session = DatabaseManager().get_session()
@@ -4078,12 +4022,12 @@ def searchResults(search, limit = SEARCH_LIMIT):
     finally:
         session.close()
 
-def getPredictedLineup(opponent_id, matchday):
+def getPredictedLineup(opponent_id, currDate):
     session = DatabaseManager().get_session()
     try:
         team = Teams.get_team_by_id(opponent_id)
         league = LeagueTeams.get_league_by_team(team.id)
-        matches = Matches.get_team_last_5_matches_from_matchday(team.id, matchday)
+        matches = Matches.get_team_last_5_matches(team.id, currDate)
 
         if len(matches) == 0:
             bestLineup = None
@@ -4160,9 +4104,8 @@ def getPredictedLineup(opponent_id, matchday):
     finally:
         session.close()
 
-def getProposedLineup(team_id, opponent_id, comp_id):
-    matchday = League.get_league_by_id(comp_id).current_matchday
-    predictedLineup = getPredictedLineup(opponent_id, matchday)
+def getProposedLineup(team_id, opponent_id, comp_id, currDate):
+    predictedLineup = getPredictedLineup(opponent_id, currDate)
 
     attackingScore = 0
     defendingScore = 0

@@ -788,7 +788,7 @@ class MatchdayPreview():
             )
 
         else:
-            last5 = Matches.get_team_last_5_matches_from_matchday(self.opponent.id, self.matchday)
+            last5 = Matches.get_team_last_5_matches(self.opponent.id, Game.get_game_date(self.manager_id))
             opponentPosition = self.opponentData.position
             suffix = getSuffix(opponentPosition)
 
@@ -833,7 +833,7 @@ class MatchdayPreview():
 
         self.title_3 = "Proposed Lineup"
 
-        proposedLineup = getProposedLineup(self.parent.team.id, self.opponent.id, self.parent.league.id)
+        proposedLineup = getProposedLineup(self.parent.team.id, self.opponent.id, self.parent.league.id, Game.get_game_date(self.parent.manager.id))
 
         self.playersFrame = ctk.CTkFrame(self.frame, fg_color = TKINTER_BACKGROUND, width = 400, height = 250)
         self.playersFrame.place(relx = 0.035, rely = 0.55, anchor = "nw")

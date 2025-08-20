@@ -1,9 +1,9 @@
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from settings import *
-import uuid
+import uuid, datetime
 
 Base = declarative_base()
 
@@ -36,6 +36,7 @@ class Game(Base):
     manager_id = Column(String(256), nullable = False)
     first_name = Column(String(128), nullable = False)
     last_name = Column(String(128), nullable = False)
+    curr_date = Column(DateTime, nullable = False, default = datetime.datetime(2025, 8, 15))
 
     @classmethod
     def add_game(cls, manager_id, first_name, last_name):
@@ -44,7 +45,8 @@ class Game(Base):
             new_game = Game(
                 manager_id = manager_id,
                 first_name = first_name,
-                last_name = last_name)
+                last_name = last_name
+            )
 
             session.add(new_game)
             session.commit()
@@ -73,5 +75,25 @@ class Game(Base):
         try:
             games = session.query(Game).all()
             return games if games else None
+        finally:
+            session.close()
+
+    @classmethod
+    def get_game_date(cls, manager_id):
+        session = GamesDatabaseManager().get_session()
+        try:
+            game = session.query(Game).filter(Game.manager_id == manager_id).first()
+            return game.curr_date if game else None
+        finally:
+            session.close()
+    
+    @classmethod
+    def increment_game_date(cls, manager_id, days):
+        session = GamesDatabaseManager().get_session()
+        try:
+            game = session.query(Game).filter(Game.manager_id == manager_id).first()
+            if game:
+                game.curr_date += datetime.timedelta(days = days)
+                session.commit()
         finally:
             session.close()

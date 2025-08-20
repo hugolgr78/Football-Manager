@@ -4,6 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 from PIL import Image
 from utils.util_functions import *
+import datetime
 
 from tabs.hub import Hub
 from tabs.inbox import Inbox
@@ -57,6 +58,7 @@ class MainMenu(ctk.CTkFrame):
         canvas.place(x = 245, y = 0, anchor = "nw")
 
         self.createTabs()
+        self.addDate()
 
     def createTabs(self):
 
@@ -118,6 +120,32 @@ class MainMenu(ctk.CTkFrame):
         if index == 1 and self.tabs[self.activeButton] and not self.emailsAdded: 
             self.emailsAdded = True
             self.tabs[self.activeButton].addEmails()
+
+    def addDate(self):
+        currDate = Game.get_game_date(self.manager_id)
+
+        day, text = self.format_datetime_split(currDate)
+
+        ctk.CTkLabel(self.tabsFrame, text = day, font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.855, anchor = "w")
+        ctk.CTkLabel(self.tabsFrame, text = text, font = (APP_FONT_BOLD, 20), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.89, anchor = "w")
+
+        self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Continue >>", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = APP_BLUE, corner_radius = 10, height = 50, width = 127, hover_color = APP_BLUE, command = self.moveDate)
+        self.continueButton.place(relx = 0.32, rely = 0.99, anchor = "sw")
+
+    def moveDate(self):
+        pass
+
+    def format_datetime_split(self, dt):
+        # Day with correct suffix (st, nd, rd, th)
+        day = dt.day
+        if 10 <= day % 100 <= 20:
+            suffix = "th"
+        else:
+            suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+        
+        day_of_week = dt.strftime("%A")                     # e.g. "Wednesday"
+        rest = dt.strftime(f"{day}{suffix} %B %Y")          # e.g. "20th August 2025"
+        return day_of_week, rest
 
     def resetMenu(self):
         

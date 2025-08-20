@@ -2099,15 +2099,6 @@ class League(Base):
             session.close()
         
     @classmethod
-    def get_league_by_year(cls, year):
-        session = DatabaseManager().get_session()
-        try:
-            league = session.query(League).filter(League.year == year).first()
-            return league
-        finally:
-            session.close()
-        
-    @classmethod
     def update_current_matchday(cls, league_id):
         session = DatabaseManager().get_session()
         try:
@@ -2456,12 +2447,13 @@ class Emails(Base):
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban"), nullable = False)
     matchday = Column(Integer)
+    date = Column(DateTime, nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))
     ban_length = Column(Integer)
     comp_id = Column(String(128))
 
     @classmethod
-    def add_email(cls, email_type, matchday, player_id, ban_length, comp_id):
+    def add_email(cls, email_type, matchday, player_id, ban_length, comp_id, date):
         session = DatabaseManager().get_session()
         try:
             new_email = Emails(
@@ -2469,7 +2461,8 @@ class Emails(Base):
                 matchday = matchday,
                 player_id = player_id,
                 ban_length = ban_length,
-                comp_id = comp_id
+                comp_id = comp_id,
+                date = date,
             )
 
             session.add(new_email)
@@ -2494,7 +2487,8 @@ class Emails(Base):
                     "matchday": email[1],
                     "player_id": email[2],
                     "ban_length": email[3],
-                    "comp_id": email[4]
+                    "comp_id": email[4],
+                    "date": email[5]
                 }
                 for email in emails
             ]

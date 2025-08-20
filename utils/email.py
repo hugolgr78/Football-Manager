@@ -14,7 +14,7 @@ from PIL import Image
 import io
 
 class EmailFrame(ctk.CTkFrame):
-    def __init__(self, parent, manager_id, email_type, matchday, player_id, ban_length, comp_id, emailFrame, parentTab):
+    def __init__(self, parent, manager_id, email_type, matchday, player_id, ban_length, comp_id, date, emailFrame, parentTab):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 260, height = 50)
         self.pack(fill = "both", padx = 10, pady = 5)
 
@@ -25,6 +25,7 @@ class EmailFrame(ctk.CTkFrame):
         self.player_id = player_id
         self.ban_length = ban_length
         self.comp_id = comp_id
+        self.day, self.date, self.time = format_datetime_split(date)
         self.emailFrame = emailFrame
         self.parentTab = parentTab
 
@@ -53,11 +54,13 @@ class EmailFrame(ctk.CTkFrame):
         self.configure(fg_color = DARK_GREY)
         self.subjectLabel.configure(fg_color = DARK_GREY)
         self.senderLabel.configure(fg_color = DARK_GREY)
-    
+        self.timeLabel.configure(fg_color = DARK_GREY)
+
     def onFrameLeave(self):
         self.configure(fg_color = TKINTER_BACKGROUND)
         self.subjectLabel.configure(fg_color = TKINTER_BACKGROUND)
         self.senderLabel.configure(fg_color = TKINTER_BACKGROUND)
+        self.timeLabel.configure(fg_color = TKINTER_BACKGROUND)
 
     def displayEmailInfo(self):
 
@@ -87,11 +90,15 @@ class EmailFrame(ctk.CTkFrame):
         self.senderLabel = ctk.CTkLabel(self, text = sender, font = (APP_FONT, 10), height = 8, fg_color = TKINTER_BACKGROUND)
         self.senderLabel.place(relx = 0.05, rely = 0.7, anchor = "w")
 
+        self.timeLabel = ctk.CTkLabel(self, text = self.time, font = (APP_FONT, 10), height = 8, fg_color = TKINTER_BACKGROUND)
+        self.timeLabel.place(relx = 0.95, rely = 0.7, anchor = "e")
+
         self.subjectLabel.bind("<Enter>", lambda event: self.onFrameHover())
         self.subjectLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
         self.senderLabel.bind("<Enter>", lambda event: self.onFrameHover())
         self.senderLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
-
+        self.timeLabel.bind("<Enter>", lambda event: self.onFrameHover())
+        self.timeLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
 class Welcome():
     def __init__(self, parent):
 

@@ -921,13 +921,11 @@ class Matches(Base):
     score_away = Column(Integer, nullable = False, default = 0)
     matchday = Column(Integer, nullable = False)
     date = Column(DateTime, nullable = False)
-    time = Column(String(128), nullable = False)
 
     @classmethod
     def add_match(cls, league_id, home_id, away_id, referee_id, matchday, date):
         session = DatabaseManager().get_session()
         try:
-            times = ["12:30", "13:00", "14:00", "15:00", "17:00", "19:00", "20:00"]
 
             new_match = Matches(
                 league_id = league_id,
@@ -936,7 +934,6 @@ class Matches(Base):
                 referee_id = referee_id,
                 matchday = matchday,
                 date = date,
-                time = random.choices(times, k = 1)[0],
             )
 
             session.add(new_match)
@@ -1172,7 +1169,7 @@ class Matches(Base):
             matches = session.query(Matches).filter(
                 Matches.league_id == league_id,
                 Matches.matchday == matchday
-            ).order_by(Matches.time).all()  # Sort by time
+            ).order_by(Matches.date).all()
             return matches
         finally:
             session.close()
@@ -2071,6 +2068,27 @@ class League(Base):
 
                 current = saturday + datetime.timedelta(days = 7)
 
+            # --- Allowed kickoff times (strings) ---
+            time_slots = ["12:30", "13:00", "14:00", "15:00", "17:00", "19:00", "20:00"]
+
+            def assign_times_for_day(games):
+                """Assign random kickoff times as strings, respecting 90-min constraint by overlapping if needed."""
+                assigned_times = []
+
+                for game in games:
+                    chosen_time = random.choice(time_slots)
+                    t_obj = datetime.datetime.strptime(chosen_time, "%H:%M")
+
+                    # Check against already assigned times
+                    for at in assigned_times:
+                        at_obj = datetime.datetime.strptime(at, "%H:%M")
+                        if abs((t_obj - at_obj).total_seconds()) < 90 * 60:
+                            chosen_time = at  # overlap with conflicting match
+                            break
+
+                    assigned_times.append(chosen_time)
+                    yield game, chosen_time  # game is tuple (home_id, away_id), time is string
+
             # --- Add matches to the database ---
             for i, (matchday, (saturday, sunday)) in enumerate(zip(schedule, matchdays_dates)):
                 assigned_referees = set()
@@ -2079,7 +2097,8 @@ class League(Base):
                 sat_games = matchday[:half]
                 sun_games = matchday[half:]
 
-                for home_id, away_id in sat_games:
+                # --- Assign Saturday games ---
+                for (home_id, away_id), kickoff_time in assign_times_for_day(sat_games):
                     available_referees = [
                         referee.id for referee in session.query(Referees).all()
                         if referee.id not in assigned_referees
@@ -2090,9 +2109,12 @@ class League(Base):
                     referee_id = random.choice(available_referees)
                     assigned_referees.add(referee_id)
 
-                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1, saturday)
+                    # Combine date and time into a datetime object
+                    kickoff_datetime = datetime.datetime.combine(saturday, datetime.datetime.strptime(kickoff_time, "%H:%M").time())
+                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1, kickoff_datetime)
 
-                for home_id, away_id in sun_games:
+                # --- Assign Sunday games ---
+                for (home_id, away_id), kickoff_time in assign_times_for_day(sun_games):
                     available_referees = [
                         referee.id for referee in session.query(Referees).all()
                         if referee.id not in assigned_referees
@@ -2103,7 +2125,8 @@ class League(Base):
                     referee_id = random.choice(available_referees)
                     assigned_referees.add(referee_id)
 
-                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1, sunday)
+                    kickoff_datetime = datetime.datetime.combine(sunday, datetime.datetime.strptime(kickoff_time, "%H:%M").time())
+                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1, kickoff_datetime)
 
                 updateProgress(None)
 

@@ -434,5 +434,7 @@ def format_datetime_split(dt):
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
     
     day_of_week = dt.strftime("%A")                     # e.g. "Wednesday"
-    rest = dt.strftime(f"{day}{suffix} %B %Y")          # e.g. "20th August 2025"
-    return day_of_week, rest
+    date_str = dt.strftime(f"{day}{suffix} %B %Y")      # e.g. "20th August 2025"
+    time_str = dt.strftime("%H:%M")                     # e.g. "14:30"
+    
+    return day_of_week, date_str, time_str

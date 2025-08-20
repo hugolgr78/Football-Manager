@@ -124,10 +124,10 @@ class MainMenu(ctk.CTkFrame):
     def addDate(self):
         currDate = Game.get_game_date(self.manager_id)
 
-        day, text = format_datetime_split(currDate)
+        day, text, time = format_datetime_split(currDate)
 
-        ctk.CTkLabel(self.tabsFrame, text = day, font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.855, anchor = "w")
-        ctk.CTkLabel(self.tabsFrame, text = text, font = (APP_FONT_BOLD, 20), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.89, anchor = "w")
+        ctk.CTkLabel(self.tabsFrame, text = day, font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.86, anchor = "w")
+        ctk.CTkLabel(self.tabsFrame, text = f"{text} {time}", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.89, anchor = "w")
 
         self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Continue >>", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = APP_BLUE, corner_radius = 10, height = 50, width = 127, hover_color = APP_BLUE, command = self.moveDate)
         self.continueButton.place(relx = 0.32, rely = 0.99, anchor = "sw")

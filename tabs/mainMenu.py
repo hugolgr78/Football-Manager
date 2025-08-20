@@ -124,7 +124,7 @@ class MainMenu(ctk.CTkFrame):
     def addDate(self):
         currDate = Game.get_game_date(self.manager_id)
 
-        day, text = self.format_datetime_split(currDate)
+        day, text = format_datetime_split(currDate)
 
         ctk.CTkLabel(self.tabsFrame, text = day, font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.855, anchor = "w")
         ctk.CTkLabel(self.tabsFrame, text = text, font = (APP_FONT_BOLD, 20), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.89, anchor = "w")
@@ -134,18 +134,6 @@ class MainMenu(ctk.CTkFrame):
 
     def moveDate(self):
         pass
-
-    def format_datetime_split(self, dt):
-        # Day with correct suffix (st, nd, rd, th)
-        day = dt.day
-        if 10 <= day % 100 <= 20:
-            suffix = "th"
-        else:
-            suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
-        
-        day_of_week = dt.strftime("%A")                     # e.g. "Wednesday"
-        rest = dt.strftime(f"{day}{suffix} %B %Y")          # e.g. "20th August 2025"
-        return day_of_week, rest
 
     def resetMenu(self):
         

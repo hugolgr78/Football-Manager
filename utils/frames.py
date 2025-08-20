@@ -48,10 +48,16 @@ class MatchFrame(ctk.CTkFrame):
         self.logo = TeamLogo(self, src, self.awayTeam if self.home else self.homeTeam, TKINTER_BACKGROUND, 0.05, 0.5, "center", self.parentTab)
         self.logo.getImageLabel().bind("<Enter>", lambda event: self.onFrameHover())
 
-        self.oponent = ctk.CTkLabel(self, text = self.awayTeam.name if self.home else self.homeTeam.name, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
-        self.oponent.place(relx = 0.1, rely = 0.5, anchor = "w")
+        self.oponent = ctk.CTkLabel(self, text = self.awayTeam.name if self.home else self.homeTeam.name, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15), height = 0)
+        self.oponent.place(relx = 0.1, rely = 0.35, anchor = "w")
         self.oponent.bind("<Enter>", lambda event: self.onFrameHover()) 
         self.oponent.bind("<Button-1>", lambda event: self.displayMatchInfo())
+
+        _, dateText = format_datetime_split(self.match.date)
+        self.date = ctk.CTkLabel(self, text = dateText, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 12), height = 0)
+        self.date.place(relx = 0.1, rely = 0.65, anchor = "w")
+        self.date.bind("<Enter>", lambda event: self.onFrameHover())
+        self.date.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
         self.leagueName = ctk.CTkLabel(self, text = self.parent.league.name, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
         self.leagueName.place(relx = 0.45, rely = 0.5, anchor = "center")
@@ -103,6 +109,7 @@ class MatchFrame(ctk.CTkFrame):
         self.leagueName.configure(fg_color = DARK_GREY)
         self.time.configure(fg_color = DARK_GREY)
         self.location.configure(fg_color = DARK_GREY)
+        self.date.configure(fg_color = DARK_GREY)
 
         if self.played:
             self.score.configure(fg_color = DARK_GREY)
@@ -115,6 +122,7 @@ class MatchFrame(ctk.CTkFrame):
         self.leagueName.configure(fg_color = TKINTER_BACKGROUND)
         self.time.configure(fg_color = TKINTER_BACKGROUND)
         self.location.configure(fg_color = TKINTER_BACKGROUND)
+        self.date.configure(fg_color = TKINTER_BACKGROUND)
 
         if self.played:
             self.score.configure(fg_color = TKINTER_BACKGROUND)
@@ -185,7 +193,7 @@ class MatchFrame(ctk.CTkFrame):
                 self.eventsAndLineupsFrame.place(relx = 0.5, rely = 0.203, anchor = "n")
                 self.eventsAndLineupsFrame.pack_propagate(False)
         else:
-            self.eventsAndLineupsFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 350, corner_radius = 10)
+            self.eventsAndLineupsFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 450, corner_radius = 10)
             self.eventsAndLineupsFrame.place(relx = 0.5, rely = 0.203, anchor = "n")
             self.eventsAndLineupsFrame.pack_propagate(False)
 

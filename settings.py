@@ -1,3 +1,5 @@
+import datetime
+
 APP_SIZE = (1200, 700)
 DARK_GREY = "#3b3b3b"
 TKINTER_BACKGROUND = "#2b2b2b"
@@ -29,6 +31,14 @@ APP_FONT = "Arial"
 APP_FONT_BOLD = "Arial Bold"
 
 TABLE_COLOURS = ["#C0392B", "#27AE60", "#2980B9", "#8E44AD", "#D35400", "#16A085", "#F39C12", "#E74C3C", "#3498DB", "#9B59B6", "#2ECC71", "#E67E22", "#1ABC9C", "#F1C40F", "#E74C3C", "#2980B9", "#8E44AD", "#27AE60", "#C0392B", "#D35400", "#9B59B6", "#2ECC71", "#E67E22", "#16A085"]
+
+LEAGUE_NAME = "Eclipse League"
+FIRST_YEAR = 2024
+NUM_TEAMS = 20
+SEASON_START_DATE = datetime.date(2025, 8, 16)
+
+TOTAL_STEPS = 400
+PROGRESS = 0
 
 Europe = [
     "Albania", "Andorra", "Austria", "Belgium", 

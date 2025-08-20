@@ -1,5 +1,5 @@
-import re
-from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float
+import re, datetime
+from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
 from sqlalchemy.orm import sessionmaker, aliased, scoped_session
@@ -12,13 +12,6 @@ from settings import *
 from utils.util_functions import *
 
 Base = declarative_base()
-
-LEAGUE_NAME = "Eclipse League"
-FIRST_YEAR = 2024
-NUM_TEAMS = 20
-
-TOTAL_STEPS = 400
-PROGRESS = 0
 
 progressBar = None
 progressLabel = None
@@ -923,14 +916,15 @@ class Matches(Base):
     league_id = Column(String(128), ForeignKey('leagues.id'))
     home_id = Column(String(128), ForeignKey('teams.id'))
     away_id = Column(String(128), ForeignKey('teams.id'))
-    time = Column(String(128), nullable = False)
     referee_id = Column(String(128), ForeignKey('referees.id'))
     score_home = Column(Integer, nullable = False, default = 0)
     score_away = Column(Integer, nullable = False, default = 0)
     matchday = Column(Integer, nullable = False)
+    date = Column(DateTime, nullable = False)
+    time = Column(String(128), nullable = False)
 
     @classmethod
-    def add_match(cls, league_id, home_id, away_id, referee_id, matchday):
+    def add_match(cls, league_id, home_id, away_id, referee_id, matchday, date):
         session = DatabaseManager().get_session()
         try:
             times = ["12:30", "13:00", "14:00", "15:00", "17:00", "19:00", "20:00"]
@@ -939,9 +933,10 @@ class Matches(Base):
                 league_id = league_id,
                 home_id = home_id,
                 away_id = away_id,
-                time = random.choices(times, k = 1)[0],
                 referee_id = referee_id,
-                matchday = matchday
+                matchday = matchday,
+                date = date,
+                time = random.choices(times, k = 1)[0],
             )
 
             session.add(new_match)
@@ -2039,7 +2034,7 @@ class League(Base):
         try:
             schedule = []
 
-            # Generate the first round of matches
+            # --- Generate the first round of matches ---
             num_teams = len(team_ids)
             for round in range(num_teams - 1):
                 round_matches = []
@@ -2055,14 +2050,36 @@ class League(Base):
 
             random.shuffle(schedule)
 
+            # --- Second round (reverse fixtures) ---
             second_round = [[(away, home) for home, away in round] for round in schedule]
             random.shuffle(second_round)
             schedule.extend(second_round)
 
-            # Add matches to the database
-            for i, matchday in enumerate(schedule):
-                assigned_referees = set()  # Keep track of referees assigned for this matchday
-                for home_id, away_id in matchday:
+            # --- Generate weekend dates for 38 matchdays ---
+            start_date = SEASON_START_DATE
+            matchdays_dates = []
+            current = start_date
+
+            while len(matchdays_dates) < 38:
+                saturday = current + datetime.timedelta(days = (5 - current.weekday()) % 7)
+                sunday = saturday + datetime.timedelta(days = 1)
+
+                # Skip Christmas week (Dec 24 - Jan 1)
+                if not (datetime.date(saturday.year, 12, 24) <= saturday <= datetime.date(saturday.year, 12, 31) or
+                        datetime.date(sunday.year, 1, 1) == sunday):
+                    matchdays_dates.append((saturday, sunday))
+
+                current = saturday + datetime.timedelta(days = 7)
+
+            # --- Add matches to the database ---
+            for i, (matchday, (saturday, sunday)) in enumerate(zip(schedule, matchdays_dates)):
+                assigned_referees = set()
+                random.shuffle(matchday)  # Shuffle order so Sat/Sun split is fair
+                half = len(matchday) // 2
+                sat_games = matchday[:half]
+                sun_games = matchday[half:]
+
+                for home_id, away_id in sat_games:
                     available_referees = [
                         referee.id for referee in session.query(Referees).all()
                         if referee.id not in assigned_referees
@@ -2073,9 +2090,23 @@ class League(Base):
                     referee_id = random.choice(available_referees)
                     assigned_referees.add(referee_id)
 
-                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1)
+                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1, saturday)
+
+                for home_id, away_id in sun_games:
+                    available_referees = [
+                        referee.id for referee in session.query(Referees).all()
+                        if referee.id not in assigned_referees
+                    ]
+                    if not available_referees:
+                        raise ValueError("Not enough referees to cover all matches for this matchday.")
+
+                    referee_id = random.choice(available_referees)
+                    assigned_referees.add(referee_id)
+
+                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1, sunday)
 
                 updateProgress(None)
+
         except Exception as e:
             session.rollback()
             raise e

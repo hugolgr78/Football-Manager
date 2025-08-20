@@ -424,3 +424,15 @@ def expected_finish(team_name: str, team_scores: list) -> int:
     
     # Team not found
     return None
+
+def format_datetime_split(dt):
+    # Day with correct suffix (st, nd, rd, th)
+    day = dt.day
+    if 10 <= day % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    
+    day_of_week = dt.strftime("%A")                     # e.g. "Wednesday"
+    rest = dt.strftime(f"{day}{suffix} %B %Y")          # e.g. "20th August 2025"
+    return day_of_week, rest

@@ -28,12 +28,7 @@ class SettingsTab(ctk.CTkFrame):
             if menu:
                 from startMenu import StartMenu
 
-                # Create an engine and a session
-                engine = create_engine("sqlite:///data/games.db" )
-                SessionLocal = sessionmaker(autocommit = False, autoflush = False, bind = engine)
-                session = SessionLocal()
-
-                self.loginMenu = StartMenu(self.parent.parent, session)
+                self.loginMenu = StartMenu(self.parent.parent)
                 self.parent.destroy()
             else:
                 self.parent.quit()

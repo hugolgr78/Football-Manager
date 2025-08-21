@@ -58,6 +58,10 @@ class MainMenu(ctk.CTkFrame):
         canvas = ctk.CTkCanvas(self, width = 5, height = 1000, bg = APP_BLUE, bd = 0, highlightthickness = 0)
         canvas.place(x = 245, y = 0, anchor = "nw")
 
+        self.dayLabel = None
+        self.timeLabel = None
+        self.continueButton = None
+
         self.createTabs()
         self.addDate()
 
@@ -118,8 +122,13 @@ class MainMenu(ctk.CTkFrame):
         self.tabs[self.activeButton].place(x = 200, y = 0, anchor = "nw")
 
     def addDate(self):
-        currDate = Game.get_game_date(self.manager_id)
 
+        if self.dayLabel:
+            self.dayLabel.destroy()
+            self.timeLabel.destroy()
+            self.continueButton.destroy()
+
+        currDate = Game.get_game_date(self.manager_id)
         day, text, time = format_datetime_split(currDate)
 
         self.dayLabel = ctk.CTkLabel(self.tabsFrame, text = day, font = (APP_FONT, 13), text_color = "white", fg_color = TKINTER_BACKGROUND)
@@ -127,7 +136,6 @@ class MainMenu(ctk.CTkFrame):
         self.timeLabel = ctk.CTkLabel(self.tabsFrame, text = f"{text} {time}", font = (APP_FONT_BOLD, 13), text_color = "white", fg_color = TKINTER_BACKGROUND)
         self.timeLabel.place(relx = 0.03, rely = 0.89, anchor = "w")
 
-        currDate = Game.get_game_date(self.manager_id)
         gameTime = Matches.check_if_game_time(self.team.id, currDate)
 
         if not gameTime:
@@ -136,6 +144,9 @@ class MainMenu(ctk.CTkFrame):
         else:
             self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Matchday >>", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = PIE_RED, corner_radius = 10, height = 50, width = 127, hover_color = PIE_RED, command = lambda: self.changeTab(4))
             self.continueButton.place(relx = 0.32, rely = 0.99, anchor = "sw")
+
+            if self.tabs[4]:
+                self.tabs[4].turnSubsOn()
 
     def moveDate(self):
         self.currDate = Game.get_game_date(self.manager_id)
@@ -151,7 +162,8 @@ class MainMenu(ctk.CTkFrame):
         self.currDate += timeInBetween
 
         Game.increment_game_date(self.manager_id, timeInBetween)
-        self.resetMenu()
+        self.resetTabs(0, 1, 5, 6)
+        self.addDate()
 
         # TODO: 
         # new email system:
@@ -171,3 +183,13 @@ class MainMenu(ctk.CTkFrame):
 
         self.tabsFrame.destroy()
         self.initUI()
+
+    def resetTabs(self, *tab_indices):
+        for i in tab_indices:
+            if self.tabs[i]:
+                self.tabs[i].destroy()
+                self.tabs[i] = None
+
+        if self.activeButton in tab_indices:
+            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self)
+            self.tabs[self.activeButton].place(x = 200, y = 0, anchor = "nw")

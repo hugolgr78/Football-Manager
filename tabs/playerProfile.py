@@ -149,11 +149,10 @@ class Profile(ctk.CTkFrame):
 
         playerBans = PlayerBans.get_bans_for_player(self.player.id)
 
-        if not playerBans:
-            ctk.CTkLabel(self, text = f"{self.player.first_name} {self.player.last_name}", font = (APP_FONT_BOLD, 40), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.12, anchor = "w")
-
         for ban in playerBans:
             if ban.ban_type == "injury":
+                self.injured = True
+
                 currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
                 injuryTime = ban.injury - currDate
                 months = injuryTime.days // 30
@@ -173,6 +172,9 @@ class Profile(ctk.CTkFrame):
             else:
                 self.suspended = True
                 self.susBan = ban
+
+        if not self.injured:
+            ctk.CTkLabel(self, text = f"{self.player.first_name} {self.player.last_name}", font = (APP_FONT_BOLD, 40), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.12, anchor = "w")
 
         teamLogo = Image.open(io.BytesIO(self.parent.team.logo))
         teamLogo.thumbnail((150, 150))

@@ -2512,11 +2512,8 @@ class Emails(Base):
                 emails.append(("matchday_preview", match.matchday, None, None, league.league_id, preview_email_date))
 
                 # Create review email (next Monday at 8am)
-                days_ahead = (0 - match.date.weekday() + 7) % 7  # 0 = Monday
-                if days_ahead == 0:  # if already Monday, move to next one
-                    days_ahead = 7
-
-                review_email_date = (match.date + datetime.timedelta(days = days_ahead)).replace(hour = 8, minute = 0, second = 0, microsecond = 0)
+                email_date = get_next_monday(match.date)
+                review_email_date = email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0)
                 emails.append(("matchday_review", match.matchday, None, None, league.league_id, review_email_date))
 
             cls.batch_add_emails(emails)

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from settings import *
 import random
 import math
@@ -446,3 +447,7 @@ def format_datetime_split(dt):
     time_str = dt.strftime("%H:%M")                     # e.g. "14:30"
     
     return day_of_week, date_str, time_str
+
+def get_next_monday(date):
+    days_ahead = (0 - date.weekday() + 7) % 7
+    return date + timedelta(days = days_ahead)

@@ -40,8 +40,21 @@ class Inbox(ctk.CTkFrame):
     def addEmails(self):
         emails = Emails.get_all_emails(Game.get_game_date(self.manager_id))
 
+        leagueMatchday = self.league.current_matchday
+        firstReviewEmail = None
+
         for email in emails:
             self.addEmail(email.email_type, email.matchday, email.player_id, email.ban_length, email.comp_id, email.date)
+
+            if email.email_type == "matchday_review" and not firstReviewEmail:
+                firstReviewEmail = email
+        
+        # If the matchday review email is sent out, update the league matchday and save the team histories.
+        if firstReviewEmail and firstReviewEmail.matchday == leagueMatchday:
+            for team in LeagueTeams.get_teams_by_league(self.league.id):
+                TeamHistory.add_team(self.currentMatchDay, team.team_id, team.position, team.points)
+
+            League.update_current_matchday(self.league.id)
 
     def addEmail(self, email_type, matchday = None, player_id = None, ban_length = None, comp_id = None, date = None):
         EmailFrame(self.emailsFrame, self.manager_id, email_type, matchday, player_id, ban_length, comp_id, date, self.emailDataFrame, self)

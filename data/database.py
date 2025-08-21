@@ -2603,6 +2603,16 @@ class Emails(Base):
         finally:
             session.close()
 
+    @classmethod
+    def check_email_sent(cls, email_type, matchday, curr_date):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.email_type == email_type, Emails.matchday == matchday, Emails.date <= curr_date).first()
+            return email is not None
+        finally:
+            session.close()
+
+
 class PlayerBans(Base):
     __tablename__ = 'player_bans'
 

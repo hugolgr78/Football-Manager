@@ -100,6 +100,9 @@ class Lineup(ctk.CTkFrame):
         self.substitutePlayers = []
         self.subCounter = 0
 
+        self.currDate = Game.get_game_date(self.manager_id)
+        self.gameTime = Matches.check_if_game_time(self.team.id, self.currDate)
+
         self.positionsCopy = POSITION_CODES.copy()
 
         self.addFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 340, height = 50, corner_radius = 10)
@@ -168,6 +171,11 @@ class Lineup(ctk.CTkFrame):
 
         self.proposedLineupButton = ctk.CTkButton(self.settingsFrame, text = "Proposed Lineup", font = (APP_FONT, 15), text_color = "white", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 200, command = self.proposedLineup)
         self.proposedLineupButton.place(relx = 0.5, rely = 0.97, anchor = "s")
+
+        canChooseProposed = Emails.check_email_sent("matchday_preview", self.matchday, self.currDate)
+
+        if not canChooseProposed:
+            self.proposedLineupButton.configure(state = "disabled")
 
     def getDropdownValues(self):
         self.positionsCopy = {}
@@ -360,7 +368,7 @@ class Lineup(ctk.CTkFrame):
                 col = count % players_per_row
                 sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self.parent, self.league.id, row, col, self.starRatings[player.id], self.checkSubstitute)
 
-                if importing and playersCount == 11:
+                if importing and playersCount == 11 and self.gameTime:
                     sub_frame.showCheckBox()
 
                 count += 1

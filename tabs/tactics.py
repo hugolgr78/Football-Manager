@@ -83,6 +83,13 @@ class Tactics(ctk.CTkFrame):
 
         self.tabs[self.activeButton].pack(expand = True, fill = "both")
 
+    def turnSubsOn(self):
+        if getattr(self, 'lineupTab', None):
+            try:
+                self.lineupTab.turnSubsOn()
+            except Exception:
+                pass
+
 class Lineup(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
@@ -100,8 +107,7 @@ class Lineup(ctk.CTkFrame):
         self.substitutePlayers = []
         self.subCounter = 0
 
-        self.currDate = Game.get_game_date(self.manager_id)
-        self.gameTime = Matches.check_if_game_time(self.team.id, self.currDate)
+        self.gameTime = Matches.check_if_game_time(self.team.id, Game.get_game_date(self.manager_id))
 
         self.positionsCopy = POSITION_CODES.copy()
 
@@ -171,11 +177,6 @@ class Lineup(ctk.CTkFrame):
 
         self.proposedLineupButton = ctk.CTkButton(self.settingsFrame, text = "Proposed Lineup", font = (APP_FONT, 15), text_color = "white", fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 200, command = self.proposedLineup)
         self.proposedLineupButton.place(relx = 0.5, rely = 0.97, anchor = "s")
-
-        canChooseProposed = Emails.check_email_sent("matchday_preview", self.matchday, self.currDate)
-
-        if not canChooseProposed:
-            self.proposedLineupButton.configure(state = "disabled")
 
     def getDropdownValues(self):
         self.positionsCopy = {}
@@ -387,6 +388,16 @@ class Lineup(ctk.CTkFrame):
                         child.hideCheckBox()
                         child.uncheckCheckBox()
 
+    def turnSubsOn(self):
+        self.gameTime = True
+        
+        if self.lineupPitch.get_counter() == 11:
+            for frame in self.substituteFrame.winfo_children():
+                for child in frame.winfo_children():
+                    if isinstance(child, SubstitutePlayer):
+                        child.uncheckCheckBox()
+                        child.showCheckBox() 
+
     def choosePlayer(self, selected_position):
         self.selected_position = selected_position
         self.dropDown.configure(state = "disabled")
@@ -539,6 +550,14 @@ class Lineup(ctk.CTkFrame):
     def lineupSettings(self):
         self.settingsFrame.place(relx = 0.5, rely = 0.4, anchor = "center")
         self.settingsFrame.lift()
+
+        currDate = Game.get_game_date(self.manager_id)
+        canChooseProposed = Emails.check_email_sent("matchday_preview", self.matchday, currDate)
+
+        if not canChooseProposed:
+            self.proposedLineupButton.configure(state = "disabled")
+        else:
+            self.proposedLineupButton.configure(state = "normal")
 
         lineupNames = SavedLineups.get_all_lineup_names()
         self.loadBox.set("Choose Lineup")

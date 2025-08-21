@@ -47,12 +47,20 @@ def get_fan_message(fan_reaction):
 
 def get_player_ban(ban_type):
     if ban_type == "injury":
-        ban = random.randint(1, 15)
-    else: # red card
-        ban = random.randint(1,3)
+        # Range: 14 days to ~180 days
+        min_days = 14
+        max_days = 180  
 
-    return ban
+        # Bias toward smaller durations by squaring a uniform random
+        r = random.random() ** 2   # 0..1, but skewed toward 0
+        days = min_days + int(r * (max_days - min_days))
 
+        return datetime.timedelta(days = days)
+
+    else:  # red card
+        games = random.randint(1, 3)
+        return games
+    
 def get_morale_change(match_result, player_rating, goal_difference):
     # Base morale change based on match result
     if match_result == "win":

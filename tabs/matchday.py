@@ -1530,9 +1530,9 @@ class MatchDay(ctk.CTkFrame):
 
         for frame in self.otherMatchesFrame.winfo_children():
             if frame.matchInstance:
-                frame.matchInstance.saveDataAuto()
+                frame.matchInstance.saveData()
 
-        self.matchFrame.matchInstance.saveDataAuto("home" if self.home else "away")
+        self.matchFrame.matchInstance.saveData("home" if self.home else "away")
 
         LeagueTeams.update_team_positions(self.league.id)
         Game.increment_game_date(Managers.get_all_user_managers()[0].id, timedelta(hours = 2))

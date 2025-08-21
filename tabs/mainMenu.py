@@ -187,6 +187,10 @@ class MainMenu(ctk.CTkFrame):
         # TODO: 
         
         # make needed changes to matchday - games already played show a score, games to be played show a time, games being played as normal. Only have match instances for games being played
+        # change date at the end of matchday by 2h
+        # schedule tab changes
+        # add small date under the time in matchday for days that are not today (Sun 17th for example)
+        # change injury email (how long the player is out)
         # check ticket to ensure everything is done
 
     def resetMenu(self):
@@ -207,3 +211,9 @@ class MainMenu(ctk.CTkFrame):
         if self.activeButton in tab_indices:
             self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self)
             self.tabs[self.activeButton].place(x = 200, y = 0, anchor = "nw")
+
+        for frame in self.overlappingProfiles:
+            if frame.winfo_exists():
+                frame.place_forget()
+
+        self.overlappingProfiles = []

@@ -1543,7 +1543,18 @@ class MatchDayMatchFrame(ctk.CTkFrame):
 
         self.score = "0 - 0"
 
-        self.matchInstance = Match(self.match)
+        currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
+        self.played = Matches.check_game_played(match, currDate)
+
+        if currDate + timedelta(hours = 2) < match.date:
+            self.laterGame = True
+        else:
+            self.laterGame = False
+
+        if not self.played and not self.laterGame:
+            self.matchInstance = Match(self.match)
+        else:
+            self.matchInstance = None
 
         self.addFrame()
 
@@ -1584,7 +1595,14 @@ class MatchDayMatchFrame(ctk.CTkFrame):
         awayLogo = ctk.CTkImage(srcAway, None, (srcAway.width, srcAway.height))
         ctk.CTkLabel(self, image = awayLogo, text = "", fg_color = self.fgColor).place(relx = 0.7, rely = 0.5, anchor = "center")
 
-        self.scoreLabel = ctk.CTkLabel(self, text = f"0 - 0", font = (APP_FONT_BOLD, scoreSize), fg_color = self.fgColor)
+        if not self.played and not self.laterGame:
+            self.scoreLabel = ctk.CTkLabel(self, text = f"0 - 0", font = (APP_FONT_BOLD, scoreSize), fg_color = self.fgColor)
+        elif self.played:
+            self.scoreLabel = ctk.CTkLabel(self, text = f"{self.match.score_home} - {self.match.score_away}", font = (APP_FONT_BOLD, scoreSize), fg_color = self.fgColor)
+        else:
+            _, _, time = format_datetime_split(self.match.date)
+            self.scoreLabel = ctk.CTkLabel(self, text = time, font = (APP_FONT_BOLD, scoreSize), fg_color = self.fgColor)
+
         self.scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
 
         if self.packFrame:
@@ -1595,6 +1613,9 @@ class MatchDayMatchFrame(ctk.CTkFrame):
             self.halfTimeLabel = ctk.CTkLabel(self, text = "HT", font = (APP_FONT, 20), fg_color = self.fgColor)
             self.fullTimeLabel = ctk.CTkLabel(self, text = "FT", font = (APP_FONT, 20), fg_color = self.fgColor)
             self.labelY = 0.7
+
+        if self.played:
+            self.FTLabel(place = True)
 
     def HTLabel(self, place = True):
         if place:

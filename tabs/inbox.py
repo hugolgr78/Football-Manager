@@ -52,7 +52,7 @@ class Inbox(ctk.CTkFrame):
         # If the matchday review email is sent out, update the league matchday and save the team histories.
         if firstReviewEmail and firstReviewEmail.matchday == leagueMatchday:
             for team in LeagueTeams.get_teams_by_league(self.league.id):
-                TeamHistory.add_team(self.currentMatchDay, team.team_id, team.position, team.points)
+                TeamHistory.add_team(leagueMatchday, team.team_id, team.position, team.points)
 
             League.update_current_matchday(self.league.id)
 

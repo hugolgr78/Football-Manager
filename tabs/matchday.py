@@ -126,9 +126,11 @@ class MatchDay(ctk.CTkFrame):
 
             else:
                 frame = MatchDayMatchFrame(self.otherMatchesFrame, match, TKINTER_BACKGROUND, 60, 300)
-                frame.matchInstance.createTeamLineup(match.home_id, True)
-                frame.matchInstance.createTeamLineup(match.away_id, False)
-                frame.matchInstance.generateScore()
+
+                if frame.matchInstance:
+                    frame.matchInstance.createTeamLineup(match.home_id, True)
+                    frame.matchInstance.createTeamLineup(match.away_id, False)
+                    frame.matchInstance.generateScore()
 
     def addTime(self):
         self.timeLabel = ctk.CTkLabel(self.timeFrame, text = "00:00", font = (APP_FONT_BOLD, 50), fg_color = TKINTER_BACKGROUND)
@@ -220,8 +222,9 @@ class MatchDay(ctk.CTkFrame):
 
                 # reset all the score labels as they were before HT
                 for frame in self.otherMatchesFrame.winfo_children():
-                    frame.HTLabel(place = False)
-                    frame.matchInstance.halfTime = False
+                    if frame.matchInstance:
+                        frame.HTLabel(place = False)
+                        frame.matchInstance.halfTime = False
 
                 self.matchFrame.HTLabel(place = False)
                 self.matchFrame.matchInstance.halfTime = False
@@ -250,31 +253,32 @@ class MatchDay(ctk.CTkFrame):
                 self.matchFrame.matchInstance.halfTime = True
                 self.maxExtraTimeHalf = 0
                 for frame in self.otherMatchesFrame.winfo_children():
-                    frame.matchInstance.halfTime = True
-                    eventsExtraTime = 0
-                    maxMinute = 0
-                    firstHalfEvents = 0
-                    combined_events = {**frame.matchInstance.homeEvents, **frame.matchInstance.awayEvents}
-                    for event_time, event_details in list(combined_events.items()):
-                        minute = int(event_time.split(":")[0])
-                        if event_details["extra"] and minute < 90: # first half extra time events
-                            eventsExtraTime += 1
-                            
-                            if minute + 1 > maxMinute:
-                                maxMinute = minute + 1
+                    if frame.matchInstance:
+                        frame.matchInstance.halfTime = True
+                        eventsExtraTime = 0
+                        maxMinute = 0
+                        firstHalfEvents = 0
+                        combined_events = {**frame.matchInstance.homeEvents, **frame.matchInstance.awayEvents}
+                        for event_time, event_details in list(combined_events.items()):
+                            minute = int(event_time.split(":")[0])
+                            if event_details["extra"] and minute < 90: # first half extra time events
+                                eventsExtraTime += 1
+                                
+                                if minute + 1 > maxMinute:
+                                    maxMinute = minute + 1
 
-                        elif minute < 45 and event_details["type"] != "substitution":
-                            firstHalfEvents += 1
+                            elif minute < 45 and event_details["type"] != "substitution":
+                                firstHalfEvents += 1
 
-                    if maxMinute - 45 < firstHalfEvents:
-                        extraTime = min(firstHalfEvents, 5)
-                    else:
-                        extraTime = maxMinute - 45
+                        if maxMinute - 45 < firstHalfEvents:
+                            extraTime = min(firstHalfEvents, 5)
+                        else:
+                            extraTime = maxMinute - 45
 
-                    if extraTime > self.maxExtraTimeHalf:
-                        self.maxExtraTimeHalf = extraTime
+                        if extraTime > self.maxExtraTimeHalf:
+                            self.maxExtraTimeHalf = extraTime
 
-                    frame.matchInstance.extraTimeHalf = extraTime
+                        frame.matchInstance.extraTimeHalf = extraTime
 
                 eventsExtraTime = 0
                 maxMinute = 0
@@ -317,7 +321,7 @@ class MatchDay(ctk.CTkFrame):
 
                     ## Add HT labels if they are not already there
                     for frame in self.otherMatchesFrame.winfo_children():
-                        if not frame.halfTimeLabel.winfo_ismapped():
+                        if not frame.halfTimeLabel.winfo_ismapped() and frame.matchInstance:
                             frame.HTLabel()
 
                     if not self.matchFrame.halfTimeLabel.winfo_ismapped():
@@ -336,31 +340,32 @@ class MatchDay(ctk.CTkFrame):
                 self.maxExtraTimeFull = 0
 
                 for frame in self.otherMatchesFrame.winfo_children():
-                    frame.matchInstance.fullTime = True
-                    eventsExtraTime = 0
-                    maxMinute = 0
-                    secondHalfEvents = 0
-                    combined_events = {**frame.matchInstance.homeEvents, **frame.matchInstance.awayEvents}
-                    for event_time, event_details in list(combined_events.items()):
-                        minute = int(event_time.split(":")[0])
-                        if event_details["extra"] and minute > 90: # second half extra time events
-                            eventsExtraTime += 1
-                            
-                            if minute + 1 > maxMinute:
-                                maxMinute = minute + 1
+                    if frame.matchInstance:
+                        frame.matchInstance.fullTime = True
+                        eventsExtraTime = 0
+                        maxMinute = 0
+                        secondHalfEvents = 0
+                        combined_events = {**frame.matchInstance.homeEvents, **frame.matchInstance.awayEvents}
+                        for event_time, event_details in list(combined_events.items()):
+                            minute = int(event_time.split(":")[0])
+                            if event_details["extra"] and minute > 90: # second half extra time events
+                                eventsExtraTime += 1
+                                
+                                if minute + 1 > maxMinute:
+                                    maxMinute = minute + 1
 
-                        elif minute > 45 and not event_details["extra"] and event_details["type"] != "substitution":
-                            secondHalfEvents += 1
+                            elif minute > 45 and not event_details["extra"] and event_details["type"] != "substitution":
+                                secondHalfEvents += 1
 
-                    if maxMinute - 90 < secondHalfEvents:
-                        extraTime = min(secondHalfEvents, 5)
-                    else:
-                        extraTime = maxMinute - 90
+                        if maxMinute - 90 < secondHalfEvents:
+                            extraTime = min(secondHalfEvents, 5)
+                        else:
+                            extraTime = maxMinute - 90
 
-                    if extraTime > self.maxExtraTimeFull:
-                        self.maxExtraTimeFull = extraTime
+                        if extraTime > self.maxExtraTimeFull:
+                            self.maxExtraTimeFull = extraTime
 
-                    frame.matchInstance.extraTimeFull = extraTime
+                        frame.matchInstance.extraTimeFull = extraTime
 
                 eventsExtraTime = 0
                 maxMinute = 0
@@ -403,7 +408,7 @@ class MatchDay(ctk.CTkFrame):
                     self.fullTimeEnded = True
 
                     for frame in self.otherMatchesFrame.winfo_children():
-                        if not frame.fullTimeLabel.winfo_ismapped():
+                        if not frame.fullTimeLabel.winfo_ismapped() and frame.matchInstance:
                             frame.FTLabel()
 
                     if not self.matchFrame.fullTimeLabel.winfo_ismapped():
@@ -426,6 +431,9 @@ class MatchDay(ctk.CTkFrame):
 
             ## ----------- other matches ------------ 
             for frame in self.otherMatchesFrame.winfo_children():
+                
+                if not frame.matchInstance:
+                    continue
 
                 if minutes == 45 + frame.matchInstance.extraTimeHalf and self.halfTime and seconds == 0:
                     frame.HTLabel()
@@ -1519,118 +1527,16 @@ class MatchDay(ctk.CTkFrame):
             return sum(1 for e in events.values() if e["player"] == player_id and e["type"] in group)
 
     def endSimulation(self):
-        # Build progress UI
-        self.progressFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, height = 200, width = 500, corner_radius = 15, border_width = 2, border_color = APP_BLUE)
-        self.progressFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
 
-        self.progressLabel = ctk.CTkLabel(self.progressFrame, text = "Saving data...", font = (APP_FONT_BOLD, 30), bg_color = TKINTER_BACKGROUND)
-        self.progressLabel.place(relx = 0.5, rely = 0.2, anchor = "center")
+        for frame in self.otherMatchesFrame.winfo_children():
+            if frame.matchInstance:
+                frame.matchInstance.saveDataAuto()
 
-        self.progressBar = ctk.CTkSlider(
-            self.progressFrame,
-            fg_color = GREY_BACKGROUND,
-            bg_color = TKINTER_BACKGROUND,
-            corner_radius = 10,
-            width = 400,
-            height = 50,
-            orientation = "horizontal",
-            from_ = 0,
-            to = 100,
-            state = "disabled",
-            button_length = 0,
-            button_color = APP_BLUE,
-            progress_color = APP_BLUE,
-            border_width = 0,
-            border_color = GREY_BACKGROUND
-        )
+        self.matchFrame.matchInstance.saveDataAuto("home" if self.home else "away")
 
-        self.progressBar.place(relx = 0.5, rely = 0.52, anchor = "center")
-        self.progressBar.set(0)
-        # Ensure slider can be updated programmatically while saving
-        try:
-            self.progressBar.configure(state="normal")
-        except Exception:
-            pass
+        LeagueTeams.update_team_positions(self.league.id)
+        Game.increment_game_date(Managers.get_all_user_managers()[0].id, timedelta(hours = 2))
 
-        self.percentageLabel = ctk.CTkLabel(self.progressFrame, text = "0%", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND)
-        self.percentageLabel.place(relx = 0.5, rely = 0.76, anchor = "center")
-
-        ctk.CTkLabel(self.progressFrame, text = "This might take a few minutes", font = (APP_FONT, 10), bg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.9, anchor = "center")
-
-        self.progressFrame.update_idletasks()
-
-        # We'll aggregate ticks from all match.saveData calls (other matches run in threads).
-        per_match_total = 10
-        other_frames = self.otherMatchesFrame.winfo_children()
-        total_matches = len(other_frames) + 1
-        overall_total_ticks = per_match_total * total_matches if total_matches > 0 else per_match_total
-        # Align slider numeric domain to total tick count for direct updates
-
-        self.progressBar.configure(number_of_steps = overall_total_ticks)
-        self.progressBar.configure(from_ = 0, to = overall_total_ticks)
-
-        import threading as _threading
-        _counter = {"count": 0}
-        _lock = _threading.Lock()
-
-        def _make_progress_callback():
-            def _cb(step, total):
-                try:
-                    with _lock:
-                        _counter["count"] += 1
-                        cnt = _counter["count"]
-                    pct = int(cnt / overall_total_ticks * 100)
-                    if pct > 100:
-                        pct = 100
-
-                    # Use raw tick count to set slider position (slider range is 0..overall_total_ticks)
-                    def _update_ui(raw_cnt = cnt, percent = pct):
-
-                        self.progressBar.set(raw_cnt)
-                        self.percentageLabel.configure(text = f"{percent}%")
-                        self.progressFrame.update_idletasks()
-
-                    self.after(0, _update_ui)
-                except Exception:
-                    import traceback as _tb
-                    _tb.print_exc()
-            return _cb
-
-        progress_cb = _make_progress_callback()
-
-        # Submit all saves to a thread pool (including the managing match) so the main
-        # Tkinter thread remains responsive and can process `after` callbacks.
-        executor = concurrent.futures.ThreadPoolExecutor()
-        futures = [executor.submit(frame.matchInstance.saveData, progress_cb, per_match_total) for frame in other_frames]
-        futures.append(executor.submit(self.matchFrame.matchInstance.saveData, progress_cb, per_match_total, "home" if self.home else "away"))
-
-        # Background thread to wait for completion and finalize (so we don't block the UI)
-        def _wait_and_finalize(futs, exec):
-            try:
-                concurrent.futures.wait(futs)
-            except Exception:
-                import traceback as _tb
-                _tb.print_exc()
-
-            # Finalize on the main thread
-            def _finalize():
-                try:
-                    # Ensure UI reaches completion
-                    self.progressBar.set(overall_total_ticks)
-                    self.percentageLabel.configure(text = "100%")
-                    self.progressBar.configure(state = "disabled")
-
-                    self.pack_forget()
-                    self.update_idletasks()
-                    self.parent.resetMenu()
-                finally:
-                    # Try to shutdown executor
-                    try:
-                        exec.shutdown(wait = False)
-                    except Exception:
-                        pass
-
-            self.after(0, _finalize)
-
-        bg = threading.Thread(target = _wait_and_finalize, args = (futures, executor), daemon = True)
-        bg.start()
+        self.pack_forget()
+        self.update_idletasks()
+        self.parent.resetMenu()

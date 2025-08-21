@@ -2052,24 +2052,11 @@ class League(Base):
                 current = saturday + datetime.timedelta(days = 7)
 
             # --- Allowed kickoff times (strings) ---
-            time_slots = ["12:30", "13:00", "14:00", "15:00", "17:00", "19:00", "20:00"]
+            time_slots = ["12:00", "15:00", "18:00", "21:00"]
 
             def assign_times_for_day(games):
-                """Assign random kickoff times as strings, respecting 90-min constraint by overlapping if needed."""
-                assigned_times = []
-
                 for game in games:
                     chosen_time = random.choice(time_slots)
-                    t_obj = datetime.datetime.strptime(chosen_time, "%H:%M")
-
-                    # Check against already assigned times
-                    for at in assigned_times:
-                        at_obj = datetime.datetime.strptime(at, "%H:%M")
-                        if abs((t_obj - at_obj).total_seconds()) < 90 * 60:
-                            chosen_time = at  # overlap with conflicting match
-                            break
-
-                    assigned_times.append(chosen_time)
                     yield game, chosen_time  # game is tuple (home_id, away_id), time is string
 
             # --- Add matches to the database ---

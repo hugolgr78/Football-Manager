@@ -201,18 +201,13 @@ class Lineup(ctk.CTkFrame):
 
         if not loaded and not auto:
 
-            lastMatchday = self.league.current_matchday - 1
+            self.lastTeamMatch = Matches.get_team_last_match(self.team.id, Game.get_game_date(self.manager_id))
 
-            if lastMatchday == 0:
+            if not self.lastTeamMatch:
                 self.addSubstitutePlayers()
                 return
             
-            self.matchdayMatches = Matches.get_matchday_for_league(self.league.id, lastMatchday)
-
-            for match in self.matchdayMatches:
-                if match.home_id == self.team.id or match.away_id == self.team.id:
-                    self.lastTeamMatch = match
-                    self.lineup = TeamLineup.get_lineup_by_match_and_team(match.id, self.team.id)
+            self.lineup = TeamLineup.get_lineup_by_match_and_team(self.lastTeamMatch.id, self.team.id)
         else:
             self.lineup = loaded if loaded else auto
 

@@ -4384,7 +4384,7 @@ def getSubstitutes(teamID, lineup, compID):
     if len(goalkeepers) > 0:
         substitutes.append(goalkeepers[0].id)
     else:
-        getYouthPlayer(teamID, "Goalkeeper", substitutes)
+        substitutes.append(getYouthPlayer(teamID, "Goalkeeper", substitutes))
 
     # Add 2 defenders to substitutes
     defender_count = 0

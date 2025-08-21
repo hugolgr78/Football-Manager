@@ -164,20 +164,27 @@ class MainMenu(ctk.CTkFrame):
 
         # Run simulations concurrently so multiple matches can be processed at the same time.
         if matchesToSim:
-            with ThreadPoolExecutor(max_workers = len(matchesToSim)) as ex:
-                futures = [ex.submit(Match, game, auto=True) for game in matchesToSim]
-                matches = []
+            # Phase 1: create all Match objects
+            matches = []
+            for game in matchesToSim:
+                try:
+                    match = Match(game, auto=True)  # init only
+                    matches.append(match)
+                except Exception:
+                    # swallow individual match errors to avoid stopping other simulations
+                    pass
+
+            # Phase 2: run startGame in parallel with ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers = len(matches)) as ex:
+                futures = [ex.submit(match.startGame) for match in matches]
+
+                # Phase 3: wait for all to finish
                 for fut in as_completed(futures):
                     try:
-                        match = fut.result()   # this is the Match object
-                        matches.append(match)
+                        fut.result()  # propagate errors if you want
                     except Exception:
-                        # swallow individual match errors to avoid stopping other simulations
+                        # swallow individual game errors
                         pass
-
-            # Wait for all inner match threads to finish
-            for match in matches:
-                match.join()
 
         self.currDate += timeInBetween
         Game.increment_game_date(self.manager_id, timeInBetween)

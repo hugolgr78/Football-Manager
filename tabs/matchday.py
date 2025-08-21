@@ -1620,13 +1620,6 @@ class MatchDay(ctk.CTkFrame):
                     self.percentageLabel.configure(text = "100%")
                     self.progressBar.configure(state = "disabled")
 
-                    LeagueTeams.update_team_positions(self.league.id)
-                    
-                    for team in LeagueTeams.get_teams_by_league(self.league.id):
-                        TeamHistory.add_team(self.currentMatchDay, team.team_id, team.position, team.points)
-
-                    League.update_current_matchday(self.league.id)
-
                     self.pack_forget()
                     self.update_idletasks()
                     self.parent.resetMenu()

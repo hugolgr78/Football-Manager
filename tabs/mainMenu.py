@@ -185,13 +185,8 @@ class MainMenu(ctk.CTkFrame):
         self.addDate()
 
         # TODO: 
-        # new email system:
-            # for suspensions and injuries, add them after the game to the db and they will be loaded the next monday.
         
-        # simulate any games inbetween the times
-        # make needed changes to match for banned players and emails
         # make needed changes to matchday - games already played show a score, games to be played show a time, games being played as normal. Only have match instances for games being played
-        # update the league matchday on the monday (could be done when the review email is sent out)
         # check ticket to ensure everything is done
 
     def resetMenu(self):

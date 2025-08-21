@@ -866,10 +866,12 @@ class Match():
                         ban = get_player_ban(event["type"], Game.get_game_date(self.manager_id))
                         PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
+                        currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
+                        emailDate = currDate + timedelta(days = 1)
                         if managing_team == "home" and event["type"] == "injury":
-                            Emails.add_email("player_injury", None, player_id, ban, self.match.league_id)
+                            Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
                         elif managing_team == "home" and event["type"] == "red_card":
-                            Emails.add_email("player_ban", None, player_id, ban, self.match.league_id)
+                            Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
 
                     elif event["type"] == "yellow_card":
                         events_to_add.append((self.match.id, "yellow_card", minute, player_id))
@@ -909,10 +911,12 @@ class Match():
                         ban = get_player_ban(event["type"], Game.get_game_date(self.manager_id))
                         PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
+                        currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
+                        emailDate = currDate + timedelta(days = 1)
                         if managing_team == "away" and event["type"] == "injury":
-                            Emails.add_email("player_injury", None, player_id, ban, self.match.league_id)
+                            Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
                         elif managing_team == "away" and event["type"] == "red_card":
-                            Emails.add_email("player_ban", None, player_id, ban, self.match.league_id)
+                            Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
 
                     elif event["type"] == "yellow_card":
                         events_to_add.append((self.match.id, "yellow_card", minute, player_id))
@@ -1029,9 +1033,9 @@ class Match():
 
                 futures.append(safe_submit(Players.batch_update_morales, morales_to_update))
 
-                # Wait for all submitted tasks to complete before leaving the
-                # executor context.
+                # Wait for all submitted tasks to complete before leaving the executor context.
                 concurrent.futures.wait(futures)
+                LeagueTeams.update_team_positions(self.league.league_id)
 
                 tick()
         finally:

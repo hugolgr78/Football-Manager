@@ -429,8 +429,8 @@ class Players(Base):
             specific_positions = {
                 "goalkeeper": ["GK"],
                 "defender": ["RB", "CB", "LB"],
-                "midfielder": ["DM", "CM", "RM", "LM"],
-                "forward": ["LW", "CF", "RW", "AM"]
+                "midfielder": ["DM", "CM", "RM", "LM", "AM"],
+                "forward": ["LW", "CF", "RW"]
             }
 
             required_code = POSITION_CODES[required_position]
@@ -960,6 +960,18 @@ class Matches(Base):
                 ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
                 Matches.date > curr_date
             ).order_by(Matches.date.asc()).first()
+            return match
+        finally:
+            session.close()
+
+    @classmethod
+    def get_match_by_team_and_date(cls, team_id, date):
+        session = DatabaseManager().get_session()
+        try:
+            match = session.query(Matches).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                Matches.date == date
+            ).first()
             return match
         finally:
             session.close()

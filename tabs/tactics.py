@@ -26,7 +26,14 @@ class Tactics(ctk.CTkFrame):
         self.leagueID = LeagueTeams.get_league_by_team(self.team.id).league_id
         self.league = League.get_league_by_id(self.leagueID)
         self.matchday = League.get_league_by_id(self.leagueID).current_matchday
-        self.nextmatch = Matches.get_team_next_match(self.team.id, Game.get_game_date(self.manager_id))
+
+
+        gameTime = Matches.check_if_game_time(self.team.id, Game.get_game_date(self.manager_id))
+        if gameTime:
+            self.nextmatch = Matches.get_match_by_team_and_date(self.team.id, Game.get_game_date(self.manager_id))
+        else:
+            self.nextmatch = Matches.get_team_next_match(self.team.id, Game.get_game_date(self.manager_id))
+            
         self.opponent = Teams.get_team_by_id(self.nextmatch.away_id if self.nextmatch.home_id == self.team.id else self.nextmatch.home_id)
 
         self.lineupTab = Lineup(self, self.manager_id)

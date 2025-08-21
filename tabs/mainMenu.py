@@ -164,7 +164,7 @@ class MainMenu(ctk.CTkFrame):
 
         # Run simulations concurrently so multiple matches can be processed at the same time.
         if matchesToSim:
-            with ThreadPoolExecutor(max_workers=len(matchesToSim)) as ex:
+            with ThreadPoolExecutor(max_workers = len(matchesToSim)) as ex:
                 futures = [ex.submit(Match, game, auto=True) for game in matchesToSim]
                 matches = []
                 for fut in as_completed(futures):
@@ -185,9 +185,11 @@ class MainMenu(ctk.CTkFrame):
         self.addDate()
 
         # TODO: 
-        
-        # make needed changes to matchday - games already played show a score, games to be played show a time, games being played as normal. Only have match instances for games being played
-        # change date at the end of matchday by 2h
+
+        # investigate crash and fix
+        # investigate why some matches are not saved
+        # change the current matchday frame
+        # critical problem: league matchday and tema positions wont be updated if the inbox tab isnt loaded
         # schedule tab changes
         # add small date under the time in matchday for days that are not today (Sun 17th for example)
         # change injury email (how long the player is out)

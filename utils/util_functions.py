@@ -45,7 +45,7 @@ def get_fan_message(fan_reaction):
     """Return a fan reaction message based on the given fan reaction."""
     return FAN_MESSAGES.get(fan_reaction, "The fans aren't sure how to react.")
 
-def get_player_ban(ban_type):
+def get_player_ban(ban_type, curr_date):
     if ban_type == "injury":
         # Range: 14 days to ~180 days
         min_days = 14
@@ -55,7 +55,7 @@ def get_player_ban(ban_type):
         r = random.random() ** 2   # 0..1, but skewed toward 0
         days = min_days + int(r * (max_days - min_days))
 
-        return datetime.timedelta(days = days)
+        return curr_date + datetime.timedelta(days = days)
 
     else:  # red card
         games = random.randint(1, 3)

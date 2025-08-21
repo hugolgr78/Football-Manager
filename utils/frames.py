@@ -74,8 +74,8 @@ class MatchFrame(ctk.CTkFrame):
         self.location.bind("<Enter>", lambda event: self.onFrameHover())
         self.location.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
-        if self.parent.league.current_matchday > self.match.matchday:
-            self.played = True
+        self.played = Matches.check_game_played(self.match, Game.get_game_date(Managers.get_all_user_managers()[0].id))
+        if self.played:
 
             text = f"{self.match.score_home} - {self.match.score_away}" if self.home else f"{self.match.score_away} - {self.match.score_home}"
             self.score = ctk.CTkLabel(self, text = text, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
@@ -309,7 +309,7 @@ class MatchdayFrame(ctk.CTkFrame):
         self.rely = rely
         self.anchor = anchor
         
-        ctk.CTkLabel(self, text = f"Matchday {self.matchdayNum}", fg_color = fgColor, font = (APP_FONT_BOLD, 30)).place(relx = 0.5, rely = 0.02, anchor = "center")
+        ctk.CTkLabel(self, text = f"Matchday {self.matchdayNum}", fg_color = fgColor, font = (APP_FONT_BOLD, 30)).place(relx = 0.5, rely = 0.05, anchor = "center")
 
         startY = 0.17
         gap = 0.075
@@ -346,7 +346,7 @@ class MatchdayFrame(ctk.CTkFrame):
             awayLogo = TeamLogo(self, awaySrc, awayTeam, fgColor, 0.6, startY + gap * index, "center", self.parentTab)
             ctk.CTkLabel(self, text = awayTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
 
-            if self.currentMatchday > self.matchdayNum:
+            if Matches.check_game_played(match, Game.get_game_date(Managers.get_all_user_managers()[0].id)):
                 MatchProfileLink(self, match, f"{match.score_home} - {match.score_away}", "white", 0.5, startY + gap * index, "center", fgColor, self.parentTab, 20, APP_FONT_BOLD)
             else:
                 _, _, time = format_datetime_split(match.date)

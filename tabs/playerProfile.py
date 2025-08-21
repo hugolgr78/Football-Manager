@@ -1,7 +1,7 @@
 import customtkinter as ctk
 import tkinter.font as tkFont
 from settings import *
-from data.database import Matches, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players
+from data.database import Matches, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players, Managers
 from data.gamesDatabase import *
 from PIL import Image
 import io
@@ -154,7 +154,11 @@ class Profile(ctk.CTkFrame):
 
         for ban in playerBans:
             if ban.ban_type == "injury":
-                injuryLabel = ctk.CTkLabel(self, text = f"Expected return in {ban.ban_length} matchday(s)", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND)
+                currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
+                injuryTime = ban.injury - currDate
+                months = injuryTime.days // 30
+                remainingDays = injuryTime.days % 30
+                injuryLabel = ctk.CTkLabel(self, text = f"Expected return: {months} M, {remainingDays} D", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND)
 
                 src = Image.open("Images/injury.png")
                 src.thumbnail((35, 35))
@@ -228,7 +232,7 @@ class Profile(ctk.CTkFrame):
         ctk.CTkLabel(self.statsFrame, text = "Eclipse League stats: ", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.03, rely = 0.5, anchor = "w")
         
         if self.suspended:
-            src = Image.open(f"Images/redCard_{self.susBan.ban_length}.png")
+            src = Image.open(f"Images/redCard_{self.susBan.suspension}.png")
             src.thumbnail((35, 35))
             img = ctk.CTkImage(src, None, (src.width, src.height))
             ctk.CTkLabel(self.statsFrame, image = img, text = "").place(relx = 0.98, rely = 0.5, anchor = "e")

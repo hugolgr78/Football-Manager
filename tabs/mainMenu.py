@@ -159,6 +159,9 @@ class MainMenu(ctk.CTkFrame):
 
         matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
 
+        timeInBetween = stopDate - self.currDate
+        PlayerBans.reduce_injuries(timeInBetween, stopDate)
+
         # Run simulations concurrently so multiple matches can be processed at the same time.
         if matchesToSim:
             with ThreadPoolExecutor(max_workers=len(matchesToSim)) as ex:
@@ -176,11 +179,7 @@ class MainMenu(ctk.CTkFrame):
             for match in matches:
                 match.join()
 
-        # Calculate the timedelta and advance currDate
-        timeInBetween = stopDate - self.currDate
-        PlayerBans.reduce_injuries(timeInBetween)
         self.currDate += timeInBetween
-
         Game.increment_game_date(self.manager_id, timeInBetween)
         self.resetTabs(0, 1, 5, 6)
         self.addDate()

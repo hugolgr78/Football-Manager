@@ -24,7 +24,6 @@ class MainMenu(ctk.CTkFrame):
 
         self.parent = parent
         self.manager_id = manager_id
-        self.stateIndex = Game.get_game_state(self.manager_id)
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
 
         self.initUI()
@@ -140,9 +139,11 @@ class MainMenu(ctk.CTkFrame):
 
     def moveDate(self):
         self.currDate = Game.get_game_date(self.manager_id)
-        self.nextMatch = Matches.get_team_next_match(self.team.id, self.currDate)
-        self.nextEmail = Emails.get_next_email(self.currDate)
-        stopDate = self.nextEmail.date if self.nextEmail.date < self.nextMatch.date else self.nextMatch.date
+
+        dates = []
+        dates.append(Matches.get_team_next_match(self.team.id, self.currDate).date)
+        dates.append(Emails.get_next_email(self.currDate).date)
+        stopDate = min(dates)
 
         # Calculate the timedelta and advance currDate
         timeInBetween = stopDate - self.currDate

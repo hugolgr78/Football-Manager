@@ -38,7 +38,7 @@ class Inbox(ctk.CTkFrame):
         self.addEmails()
 
     def addEmails(self):
-        emails = reversed(Emails.get_all_emails(Game.get_game_date(self.manager_id)))
+        emails = Emails.get_all_emails(Game.get_game_date(self.manager_id))
 
         for email in emails:
             self.addEmail(email.email_type, email.matchday, email.player_id, email.ban_length, email.comp_id, email.date)

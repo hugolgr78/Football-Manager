@@ -141,26 +141,8 @@ class MainMenu(ctk.CTkFrame):
     def moveDate(self):
         self.currDate = Game.get_game_date(self.manager_id)
         self.nextMatch = Matches.get_team_next_match(self.team.id, self.currDate)
-
-        state = STATES[self.stateIndex]
-
-        if state == "preview":
-            stopDate = self.nextMatch.date - datetime.timedelta(days = 2)
-            stopDate = stopDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0)
-        elif state == "matchday":
-            stopDate = self.nextMatch.date
-        elif state == "review":
-
-            gameTime = Matches.check_if_game_time(self.team.id, self.currDate)
-
-            if gameTime:
-                return
-
-            weekday = self.nextMatch.date.weekday()
-            days_until_monday = (7 - weekday) % 7
-            stopDate = (self.nextMatch.date + datetime.timedelta(days = days_until_monday)).replace(
-                hour = 8, minute = 0, second = 0, microsecond = 0
-            )
+        self.nextEmail = Emails.get_next_email(self.currDate)
+        stopDate = self.nextEmail.date if self.nextEmail.date < self.nextMatch.date else self.nextMatch.date
 
         # Calculate the timedelta and advance currDate
         timeInBetween = stopDate - self.currDate
@@ -168,10 +150,6 @@ class MainMenu(ctk.CTkFrame):
         self.currDate += timeInBetween
 
         Game.increment_game_date(self.manager_id, timeInBetween)
-        Game.update_game_state(self.manager_id, self.stateIndex)
-
-        # Move to next state cyclically
-        self.stateIndex = (self.stateIndex + 1) % len(STATES)
         self.resetMenu()
 
         # TODO: 
@@ -184,6 +162,7 @@ class MainMenu(ctk.CTkFrame):
         # simulate any games inbetween the times
         # make needed changes to match for banned players and emails
         # make needed changes to matchday - games already played show a score, games to be played show a time, games being played as normal. Only have match instances for games being played
+        # check ticket to ensure everything is done
 
     def resetMenu(self):
         

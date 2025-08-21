@@ -104,6 +104,7 @@ class Managers(Base):
                 Referees.add_referees()
                 updateProgress(3)
                 League.add_league(LEAGUE_NAME, FIRST_YEAR, 0, 3)
+                Emails.add_emails(managerID)
                 updateProgress(None)
 
             return managerID
@@ -2016,9 +2017,12 @@ class League(Base):
                 saturday = current + datetime.timedelta(days = (5 - current.weekday()) % 7)
                 sunday = saturday + datetime.timedelta(days = 1)
 
+                sat_date = saturday.date()
+                sun_date = sunday.date()
+
                 # Skip Christmas week (Dec 24 - Jan 1)
-                if not (datetime.date(saturday.year, 12, 24) <= saturday <= datetime.date(saturday.year, 12, 31) or
-                        datetime.date(sunday.year, 1, 1) == sunday):
+                if not (datetime.date(sat_date.year, 12, 24) <= sat_date <= datetime.date(sat_date.year, 12, 31) or
+                        sun_date == datetime.date(sun_date.year, 1, 1)):
                     matchdays_dates.append((saturday, sunday))
 
                 current = saturday + datetime.timedelta(days = 7)
@@ -2464,6 +2468,38 @@ class Emails(Base):
     comp_id = Column(String(128))
 
     @classmethod
+    def add_emails(cls, manager_id):
+        session = DatabaseManager().get_session()
+        try:
+            emails = []
+
+            # Add welcome email at season start
+            welcome_email_date = SEASON_START_DATE
+            emails.append(("welcome", None, None, None, None, welcome_email_date))
+
+            team = session.query(Teams).filter(Teams.manager_id == manager_id).first()
+            matches = Matches.get_all_matches_by_team(team.id)
+
+            league = LeagueTeams.get_league_by_team(team.id)
+
+            for match in matches:
+                # Create preview email (2 days before at 8am)
+                preview_email_date = (match.date - datetime.timedelta(days = 2)).replace(hour = 8, minute = 0, second = 0, microsecond = 0)
+                emails.append(("matchday_preview", match.matchday, None, None, league.league_id, preview_email_date))
+
+                # Create review email (next Monday at 8am)
+                days_ahead = (0 - match.date.weekday() + 7) % 7  # 0 = Monday
+                if days_ahead == 0:  # if already Monday, move to next one
+                    days_ahead = 7
+
+                review_email_date = (match.date + datetime.timedelta(days = days_ahead)).replace(hour = 8, minute = 0, second = 0, microsecond = 0)
+                emails.append(("matchday_review", match.matchday, None, None, league.league_id, review_email_date))
+
+            cls.batch_add_emails(emails)
+        finally:
+            session.close()
+
+    @classmethod
     def add_email(cls, email_type, matchday, player_id, ban_length, comp_id, date):
         session = DatabaseManager().get_session()
         try:
@@ -2556,7 +2592,16 @@ class Emails(Base):
             emails = session.query(Emails).filter(Emails.date <= curr_date).order_by(Emails.date.desc()).all()
             return emails
         finally:
-            session.close()      
+            session.close()  
+
+    @classmethod
+    def get_next_email(cls, curr_date):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.date > curr_date).order_by(Emails.date.asc()).first()
+            return email
+        finally:
+            session.close()
 
 class PlayerBans(Base):
     __tablename__ = 'player_bans'

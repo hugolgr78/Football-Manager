@@ -686,7 +686,7 @@ class MatchdayPreview():
 
         self.subject = f"{self.opponent.name} preview"
         self.sender = "Name, Assistant Manager"
-        self.subjectFontSize = 20 if len(self.subject) < 25 else 15
+        self.subjectFontSize = 20 if len(self.subject) < 20 else 15
 
     def openEmail(self):
         for widget in self.frame.winfo_children():

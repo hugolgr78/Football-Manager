@@ -4396,7 +4396,7 @@ def getSubstitutes(teamID, lineup, compID):
     if defender_count != 2:
         for _ in range(2 - defender_count):
             specific_position = random.choice(DEFENSIVE_POSITIONS)
-            getYouthPlayer(teamID, specific_position, substitutes)
+            substitutes.append(getYouthPlayer(teamID, specific_position, substitutes))
 
     # Add 2 midfielders to substitutes
     midfielder_count = 0
@@ -4408,7 +4408,7 @@ def getSubstitutes(teamID, lineup, compID):
     if midfielder_count != 2:
         for _ in range(2 - midfielder_count):
             specific_position = random.choice(MIDFIELD_POSITIONS)
-            getYouthPlayer(teamID, specific_position, substitutes)
+            substitutes.append(getYouthPlayer(teamID, specific_position, substitutes))
 
     # Add 2 attackers to substitutes
     attacker_count = 0
@@ -4420,6 +4420,6 @@ def getSubstitutes(teamID, lineup, compID):
     if attacker_count != 2:
         for _ in range(2 - attacker_count):
             specific_position = random.choice(ATTACKING_POSITIONS)
-            getYouthPlayer(teamID, specific_position, substitutes)
+            substitutes.append(getYouthPlayer(teamID, specific_position, substitutes))
     
     return substitutes

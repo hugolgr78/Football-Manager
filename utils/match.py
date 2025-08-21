@@ -1,15 +1,16 @@
+import threading, time
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
 from utils.score import Score
-from collections import defaultdict
 import concurrent.futures
 from utils.util_functions import *
 
 class Match():
-    def __init__(self, match):
+    def __init__(self, match, auto = False):
 
         self.match = match
+        self.auto = auto
 
         self.homeTeam = Teams.get_team_by_id(self.match.home_id)
         self.awayTeam = Teams.get_team_by_id(self.match.away_id)
@@ -48,6 +49,14 @@ class Match():
         self.extraTimeFull = 0
         self.halfTime = False
         self.fullTime = False
+
+        if self.auto:
+            self.seconds = 0
+            self.minutes = 0
+            self.createTeamLineup(self.homeTeam.id, True)
+            self.createTeamLineup(self.awayTeam.id, False)
+            self.generateScore()
+            self.startGame()
 
     def createTeamLineup(self, teamID, home):
         opponentID = self.match.away_id if home else self.match.home_id
@@ -140,8 +149,6 @@ class Match():
             else:
                 self.add_events(self.awayEvents, self.awaySubs, "substitution", self.awayInjury)
 
-    # teamMatch diagnostics removed
-
     def checkSubsitutionTime(self, time, events):
         # This function is here because i want the substitution after an injury to always be a minute after, so if there are any events at that time, add 5 mins to that event and check
         for event_time, _ in events.items():
@@ -228,7 +235,7 @@ class Match():
         time = minute + ":" + second
 
         return time, extra
-
+    
     def add_events(self, events_dict, num_events, event_type, injury = None, managing_team = False):
         new_events = []
         injurySub = False
@@ -259,6 +266,31 @@ class Match():
         for time, event in new_events:
             events_dict[time] = event
     
+    def startGame(self):
+        self.timerThread_running = True
+        self.timerThread = threading.Thread(target = self.gameLoop)
+        self.timerThread.daemon = True
+        self.timerThread.start()
+
+    def gameLoop(self):
+        while self.timerThread_running:
+
+            if self.seconds == 59:
+                self.minutes += 1
+                self.seconds = 0
+            else:
+                self.seconds += 1
+
+            if self.minutes == 90 and self.seconds == 0:
+                self.timerThread_running = False
+                print("Match ended")
+
+            # time.sleep(1 / 10000)
+
+    def join(self):
+        if self.timerThread:
+            self.timerThread.join()
+
     def getEventPlayer(self, event, home, time, teamMatch = None, managing_team = False):
 
         if home:

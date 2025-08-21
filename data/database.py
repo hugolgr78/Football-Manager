@@ -1170,6 +1170,18 @@ class Matches(Base):
         finally:
             session.close()
 
+    @classmethod
+    def get_matches_time_frame(cls, start, end):
+        session = DatabaseManager().get_session()
+        try:
+            matches = session.query(Matches).filter(
+                Matches.date >= start,
+                Matches.date < end
+            ).order_by(Matches.date.asc()).all()
+            return matches
+        finally:
+            session.close()
+
 class TeamLineup(Base):
     __tablename__ = 'team_lineup'
     
@@ -2611,7 +2623,6 @@ class Emails(Base):
             return email is not None
         finally:
             session.close()
-
 
 class PlayerBans(Base):
     __tablename__ = 'player_bans'

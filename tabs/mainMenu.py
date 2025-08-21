@@ -4,7 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 from PIL import Image
 from utils.util_functions import *
-import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tabs.hub import Hub
 from tabs.inbox import Inbox
@@ -16,6 +16,7 @@ from tabs.leagueProfile import LeagueProfile
 from tabs.managerProfile import ManagerProfile
 from tabs.search import Search
 from tabs.settingsTab import SettingsTab
+from utils.match import Match
 
 class MainMenu(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
@@ -156,6 +157,25 @@ class MainMenu(ctk.CTkFrame):
         dates.append(Emails.get_next_email(self.currDate).date)
         stopDate = min(dates)
 
+        matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
+
+        # Run simulations concurrently so multiple matches can be processed at the same time.
+        if matchesToSim:
+            with ThreadPoolExecutor(max_workers=len(matchesToSim)) as ex:
+                futures = [ex.submit(Match, game, auto=True) for game in matchesToSim]
+                matches = []
+                for fut in as_completed(futures):
+                    try:
+                        match = fut.result()   # this is the Match object
+                        matches.append(match)
+                    except Exception:
+                        # swallow individual match errors to avoid stopping other simulations
+                        pass
+
+            # Wait for all inner match threads to finish
+            for match in matches:
+                match.join()
+
         # Calculate the timedelta and advance currDate
         timeInBetween = stopDate - self.currDate
         PlayerBans.reduce_injuries(timeInBetween)
@@ -169,7 +189,6 @@ class MainMenu(ctk.CTkFrame):
         # new email system:
             # for suspensions and injuries, add them after the game to the db and they will be loaded the next monday.
         
-        # ensure tactics matchday button only works if gameTime
         # simulate any games inbetween the times
         # make needed changes to match for banned players and emails
         # make needed changes to matchday - games already played show a score, games to be played show a time, games being played as normal. Only have match instances for games being played

@@ -1182,6 +1182,18 @@ class Matches(Base):
         finally:
             session.close()
 
+    @classmethod
+    def check_game_played(cls, match, curr_date):
+        session = DatabaseManager().get_session()
+        try:
+            played = session.query(Matches).filter(
+                Matches.id == match.id,
+                Matches.date < curr_date
+            ).first()
+            return played is not None
+        finally:
+            session.close()
+
 class TeamLineup(Base):
     __tablename__ = 'team_lineup'
     
@@ -2716,13 +2728,13 @@ class PlayerBans(Base):
             session.close()
 
     @classmethod
-    def reduce_injuries(cls, time):
+    def reduce_injuries(cls, time, stopDate):
         session = DatabaseManager().get_session()
         try:
             bans = session.query(PlayerBans).filter(PlayerBans.ban_type == "injury").all()
 
             for ban in bans:
-                if ban.injury <= time:
+                if ban.injury <= stopDate:
                     session.delete(ban)
                 else:
                     ban.injury -= time

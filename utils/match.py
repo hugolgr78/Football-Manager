@@ -363,11 +363,6 @@ class Match():
                             self.getEventPlayer(event_details, False, event_time)
                             self.awayProcessedEvents[event_time] = event_details
 
-            # if self.minutes == 90 and self.seconds == 0:
-            #     self.timerThread_running = False
-
-            # time.sleep(1 / 10000)
-
     def join(self):
         if self.timerThread:
             self.timerThread.join()
@@ -868,7 +863,7 @@ class Match():
                         events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
                     elif event["type"] in ("injury", "red_card"):
                         events_to_add.append((self.match.id, event["type"], minute, player_id))
-                        ban = get_player_ban(event["type"])
+                        ban = get_player_ban(event["type"], Game.get_game_date(self.manager_id))
                         PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
                         if managing_team == "home" and event["type"] == "injury":
@@ -911,7 +906,7 @@ class Match():
                         events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
                     elif event["type"] in ("injury", "red_card"):
                         events_to_add.append((self.match.id, event["type"], minute, player_id))
-                        ban = get_player_ban(event["type"])
+                        ban = get_player_ban(event["type"], Game.get_game_date(self.manager_id))
                         PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
                         if managing_team == "away" and event["type"] == "injury":
@@ -1123,7 +1118,7 @@ class Match():
                     events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
                 elif event["type"] in ("injury", "red_card"):
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
-                    ban = get_player_ban(event["type"])
+                    ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
                     PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
                 elif event["type"] == "yellow_card":
@@ -1161,7 +1156,7 @@ class Match():
                     events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
                 elif event["type"] in ("injury", "red_card"):
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
-                    ban = get_player_ban(event["type"])
+                    ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
                     PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
                 elif event["type"] == "yellow_card":
@@ -1274,6 +1269,7 @@ class Match():
 
             concurrent.futures.wait(futures)
 
+        LeagueTeams.update_team_positions(self.league.league_id)
         self.timerThread_running = False
 
     def getGameTime(self, playerID, events):

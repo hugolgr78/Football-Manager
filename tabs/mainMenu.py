@@ -155,8 +155,6 @@ class MainMenu(ctk.CTkFrame):
 
         # TODO: 
         # new email system:
-            # when creating DB, add welcome, preview and review emails with correct dates (two days b4 at 8am, monday after matchday at 8am)
-            # then when loading inbox, add the emails that are before the game current date
             # for suspensions and injuries, add them after the game to the db and they will be loaded the next monday.
         
         # ensure tactics matchday button only works if gameTime

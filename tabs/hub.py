@@ -75,7 +75,12 @@ class nextMatch(ctk.CTkFrame):
         ctk.CTkLabel(self, text = "VS", font = (APP_FONT_BOLD, 40), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
         currDate = Game.get_game_date(self.manager_id)
-        nextMatch = Matches.get_team_next_match(self.parent.team.id, currDate)
+        gameTime = Matches.check_if_game_time(self.parent.team.id, currDate)
+
+        if gameTime:
+            nextMatch = Matches.get_match_by_team_and_date(self.parent.team.id, currDate)
+        else:
+            nextMatch = Matches.get_team_next_match(self.parent.team.id, currDate)
 
         if not nextMatch:
             ctk.CTkLabel(self, text = "No upcoming matches", font = (APP_FONT_BOLD, 20), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")

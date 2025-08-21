@@ -795,7 +795,7 @@ class MatchdayPreview():
             )
 
         else:
-            last5 = Matches.get_team_last_5_matches(self.opponent.id, Game.get_game_date(self.manager_id))
+            last5 = Matches.get_team_last_5_matches(self.opponent.id, Game.get_game_date(Managers.get_all_user_managers()[0].id))
             opponentPosition = self.opponentData.position
             suffix = getSuffix(opponentPosition)
 

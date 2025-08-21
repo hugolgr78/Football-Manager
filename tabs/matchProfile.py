@@ -559,7 +559,7 @@ class MatchProfile(ctk.CTkFrame):
             numAssists = len([event for event in self.homeEvents if event.player_id == player.player_id and event.event_type == "assist"])
             numPenaltiesSaved = len([event for event in self.homeEvents if event.player_id == player.player_id and event.event_type == "penalty_saved"])
 
-            if subbed_on and subbed_off:
+            if (subbed_on and subbed_off) or (not player.start_position and not player.end_position):
                 continue 
             
             if not subbed_on:
@@ -586,7 +586,10 @@ class MatchProfile(ctk.CTkFrame):
                 src = Image.open("Images/subbed_on_wb.png")
                 src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
-                self.homeEndLineupPitch.addIcon("Sub", img, player.end_position, 1)
+
+                # Check the player finished the game
+                if player.end_position:
+                    self.homeEndLineupPitch.addIcon("Sub", img, player.end_position, 1)
             
             if yellow_carded and red_carded:
                 src = Image.open("Images/yellowCard_wb.png")
@@ -731,7 +734,7 @@ class MatchProfile(ctk.CTkFrame):
             numAssists = len([event for event in self.awayEvents if event.player_id == player.player_id and event.event_type == "assist"])
             numPenaltiesSaved = len([event for event in self.awayEvents if event.player_id == player.player_id and event.event_type == "penalty_saved"])
 
-            if subbed_on and subbed_off:
+            if (subbed_on and subbed_off) or (not player.start_position and not player.end_position):
                 continue
         
             if not subbed_on:

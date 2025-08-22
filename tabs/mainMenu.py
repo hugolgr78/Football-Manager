@@ -193,10 +193,8 @@ class MainMenu(ctk.CTkFrame):
 
         # TODO: 
 
-        # investigate crash and fix
-        # investigate why some matches are not saved
-        # change the current matchday frame
-        # critical problem: league matchday and tema positions wont be updated if the inbox tab isnt loaded
+        # test for crash and fixed? error
+        # critical problem: league matchday and team positions wont be updated if the inbox tab isnt loaded. Can load the inbox as well as the hub to fix, or find a better solution (check every monday if there was a league matchday the weekend before).
         # schedule tab changes
         # add small date under the time in matchday for days that are not today (Sun 17th for example)
         # change injury email (how long the player is out)

@@ -6,6 +6,19 @@ from data.gamesDatabase import GamesDatabaseManager
 import shutil
 import os
 import glob
+import logging
+import sys
+
+# Create a dedicated handler for the utils.match logger so DEBUG records show
+match_logger = logging.getLogger("utils.match")
+if not any(isinstance(h, logging.StreamHandler) for h in match_logger.handlers):
+    match_handler = logging.StreamHandler(sys.stdout)
+    match_handler.setLevel(logging.DEBUG)
+    match_handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s"))
+    match_logger.addHandler(match_handler)
+match_logger.setLevel(logging.DEBUG)
+# Prevent duplicate propagation to root handlers
+match_logger.propagate = False
 
 def backup_all_databases(data_dir, backup_dir):
     """Backup all .db files in the data directory"""
@@ -19,12 +32,8 @@ def backup_all_databases(data_dir, backup_dir):
         # Get the filename without extension
         db_name = os.path.splitext(os.path.basename(db_path))[0]
         backup_path = os.path.join(backup_dir, f"{db_name}.db")
-        
-        try:
-            shutil.copy2(db_path, backup_path)
-            print(f"Database backed up: {db_name}.db -> {backup_path}")
-        except Exception as e:
-            print(f"Failed to backup {db_name}.db: {e}")
+    
+        shutil.copy2(db_path, backup_path)
 
 class FootballManager(ctk.CTk):
     def __init__(self):

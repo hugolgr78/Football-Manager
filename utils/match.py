@@ -56,13 +56,13 @@ class Match():
             self.createTeamLineup(self.homeTeam.id, True)
             self.createTeamLineup(self.awayTeam.id, False)
             self.generateScore()
-            self.startGame()
+            # self.startGame()
 
     def createTeamLineup(self, teamID, home):
         opponentID = self.match.away_id if home else self.match.home_id
         lineup = getProposedLineup(teamID, opponentID, self.league.league_id, Game.get_game_date(Managers.get_all_user_managers()[0].id))
         substitutes = getSubstitutes(teamID, lineup, self.league.league_id)
-
+        
         if home:
             self.homeCurrentLineup = lineup
             self.homeCurrentSubs = substitutes
@@ -745,18 +745,29 @@ class Match():
 
     def saveData(self, managing_team = None):
 
-        try:
-            self.returnWinner()
+        logger = logging.getLogger(__name__)
 
+        try:
+            logger.debug(f"saveData START: match_id={self.match.id} auto={self.auto} managing_team={managing_team}")
+
+            self.returnWinner()
+            logger.debug(f"Winner resolved: {self.winner.id if self.winner else None}")
+
+            logger.debug(f"Reducing suspensions for home={self.homeTeam.id} away={self.awayTeam.id} league={self.match.league_id}")
             PlayerBans.reduce_suspensions_for_team(self.homeTeam.id, self.match.league_id)
             PlayerBans.reduce_suspensions_for_team(self.awayTeam.id, self.match.league_id)
 
+            logger.debug("Calculating player ratings for home and away teams")
             self.getPlayerRatings(self.homeTeam, self.homeFinalLineup, self.homeCurrentLineup, self.homeProcessedEvents)
             self.getPlayerRatings(self.awayTeam, self.awayFinalLineup, self.awayCurrentLineup, self.awayProcessedEvents)
 
             homeManager = Managers.get_manager_by_id(self.homeTeam.manager_id)
             awayManager = Managers.get_manager_by_id(self.awayTeam.manager_id)
 
+            # debug counts
+            logger.debug(f"Processed events counts: home={len(self.homeProcessedEvents)} away={len(self.awayProcessedEvents)}")
+
+            logger.debug("Submitting DB update tasks to ThreadPoolExecutor")
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures = []
 
@@ -814,16 +825,19 @@ class Match():
                     if event["type"] == "goal":
                         events_to_add.append((self.match.id, "goal", minute, player_id))
                         events_to_add.append((self.match.id, "assist", minute, assister_id))
+                        logger.debug(f"Home goal event queued: match={self.match.id} player={player_id} minute={minute}")
                     elif event["type"] == "penalty_miss":
                         goalkeeper_id = self.awayCurrentLineup["Goalkeeper"]
                         events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
                         events_to_add.append((self.match.id, "penalty_saved", minute, goalkeeper_id))
+                        logger.debug(f"Home penalty miss queued: match={self.match.id} player={player_id} minute={minute}")
                     elif event["type"] == "substitution":
                         events_to_add.append((self.match.id, "sub_off", minute, player_off_id))
                         events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
                     elif event["type"] in ("injury", "red_card"):
                         events_to_add.append((self.match.id, event["type"], minute, player_id))
                         ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
+                        logger.debug(f"Computed ban length={ban} for player={player_id} type={event['type']}")
                         PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
                         currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
@@ -858,16 +872,19 @@ class Match():
                     if event["type"] == "goal":
                         events_to_add.append((self.match.id, "goal", minute, player_id))
                         events_to_add.append((self.match.id, "assist", minute, assister_id))
+                        logger.debug(f"Away goal event queued: match={self.match.id} player={player_id} minute={minute}")
                     elif event["type"] == "penalty_miss":
                         goalkeeper_id = self.homeCurrentLineup["Goalkeeper"]
                         events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
                         events_to_add.append((self.match.id, "penalty_saved", minute, goalkeeper_id))
+                        logger.debug(f"Away penalty miss queued: match={self.match.id} player={player_id} minute={minute}")
                     elif event["type"] == "substitution":
                         events_to_add.append((self.match.id, "sub_off", minute, player_off_id))
                         events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
                     elif event["type"] in ("injury", "red_card"):
                         events_to_add.append((self.match.id, event["type"], minute, player_id))
                         ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
+                        logger.debug(f"Computed ban length={ban} for player={player_id} type={event['type']}")
                         PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
 
                         currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
@@ -888,9 +905,11 @@ class Match():
                 if self.awayCleanSheet:
                     events_to_add.append((self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"]))
 
+                logger.debug(f"Submitting {len(events_to_add)} match events for insertion")
                 futures.append(executor.submit(MatchEvents.batch_add_events, events_to_add))
 
                 # Matches update
+                logger.debug(f"Submitting match score update: {self.score.getScore()[0]} -> {self.score.getScore()[1]}")
                 futures.append(executor.submit(Matches.update_score, self.match.id, self.score.getScore()[0], self.score.getScore()[1]))
 
                 # Lineups and morales
@@ -964,26 +983,24 @@ class Match():
 
                     morales_to_update.append((playerID, moraleChange))
 
-                futures.append(executor.submit(TeamLineup.batch_add_lineups, lineups_to_add))
-
-                homePlayers = Players.get_all_players_by_team(self.homeTeam.id, youths = False)
-                awayPlayers = Players.get_all_players_by_team(self.awayTeam.id, youths = False)
-
-                # Players that did not play
-                final_lineup_players = [p for _, p in self.homeFinalLineup]
-                for player in homePlayers:
-                    if player.id not in self.homeCurrentLineup.values() and player.id not in final_lineup_players:
-                        morales_to_update.append((player.id, get_morale_decrease_role(player)))
-
-                final_lineup_players = [p for _, p in self.awayFinalLineup]
-                for player in awayPlayers:
-                    if player.id not in self.awayCurrentLineup.values() and player.id not in final_lineup_players:
-                        morales_to_update.append((player.id, get_morale_decrease_role(player)))
-
+                # submit morales update
                 futures.append(executor.submit(Players.batch_update_morales, morales_to_update))
 
-                concurrent.futures.wait(futures)
+                # extra debug: how many rating entries we will store
+                logger.debug(f"Ratings stored: home={len(self.homeRatings)} away={len(self.awayRatings)}")
 
+                # debug total DB tasks
+                logger.debug(f"Total DB tasks submitted: {len(futures)}")
+
+                logger.debug(f"Submitting {len(lineups_to_add)} lineups for insertion")
+                futures.append(executor.submit(TeamLineup.batch_add_lineups, lineups_to_add))
+
+                logger.debug(f"Submitting {len(morales_to_update)} morale updates")
+
+                concurrent.futures.wait(futures)
+                logger.debug("All DB futures completed")
+        except Exception as e:
+            logger.error(f"Exception in saveData: {str(e)}", exc_info=True)
         finally:
             # ensure we always update positions even if threaded ops had issues
             LeagueTeams.update_team_positions(self.league.league_id)

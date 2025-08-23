@@ -201,9 +201,8 @@ class MainMenu(ctk.CTkFrame):
 
         # TODO: 
 
-        # schedule tab changes
         # inbox tab changes
-        # birthdays and age increases
+        # birthdays and age increases (email, with ability to raise player morale)
         # check ticket to ensure everything is done
 
     def resetMenu(self):

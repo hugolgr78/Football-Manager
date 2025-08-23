@@ -1024,7 +1024,7 @@ class Matches(Base):
         try:
             matches = session.query(Matches).filter(
                 (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.date > curr_date
+                Matches.date >= curr_date
             ).order_by(Matches.date.asc()).limit(5).all()
             return matches
         finally:
@@ -1683,7 +1683,7 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def check_yellow_card_ban(cls, player_id, comp_id, ban_threshold):
+    def check_yellow_card_ban(cls, player_id, comp_id, ban_threshold, currDate):
         session = DatabaseManager().get_session()
         try:
             yellow_cards = session.query(MatchEvents).join(Matches).filter(
@@ -1696,15 +1696,25 @@ class MatchEvents(Base):
                 red_card_ban = session.query(PlayerBans).filter(
                     PlayerBans.player_id == player_id,
                     PlayerBans.ban_type == "red_card",
-                    PlayerBans.ban_length > 0
+                    PlayerBans.suspension > 0
                 ).first()
 
+                # If a player hit the threshold and got a red in the same game, increase their red card ban by 1.
                 if red_card_ban:
-                    red_card_ban.ban_length += 1
+                    red_card_ban.suspension += 1
+                    date = (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0)
+                    email = Emails.get_email_by_type_and_date("player_ban", date)
+                    Emails.increment_ban(email.id)
                     session.commit()
                 else:
                     PlayerBans.add_player_ban(player_id, comp_id, ban_length = 1, ban_type = "yellow_cards")
-                    Emails.add_email("player_ban", None, player_id, 1, comp_id)
+
+                    player_team = Teams.get_team_by_id(Players.get_player_by_id(player_id).team_id)
+                    user_manager = True if Managers.get_manager_by_id(player_team.manager_id).user == 1 else False
+
+                    if user_manager:
+                        date = (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0)
+                        Emails.add_email("player_ban", None, player_id, 1, comp_id, date)
         finally:
             session.close()
 
@@ -2633,7 +2643,30 @@ class Emails(Base):
             raise e
         finally:
             session.close()
-    
+
+    @classmethod
+    def increment_ban(cls, email_id):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.id == email_id).first()
+            if email and email.ban_length is not None:
+                email.ban_length += 1
+                session.commit()
+                return email
+            else:
+                return None
+        finally:
+            session.close()
+
+    @classmethod 
+    def get_email_by_type_and_date(cls, type, date):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.email_type == type, Emails.date == date).first()
+            return email
+        finally:
+            session.close()
+
     @classmethod
     def get_email_by_id(cls, id):
         session = DatabaseManager().get_session()

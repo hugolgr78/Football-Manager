@@ -14,18 +14,19 @@ from PIL import Image
 import io
 
 class EmailFrame(ctk.CTkFrame):
-    def __init__(self, parent, manager_id, email_type, matchday, player_id, ban_length, comp_id, date, emailFrame, parentTab):
+    def __init__(self, parent, manager_id, email, emailFrame, parentTab):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 260, height = 50)
         self.pack(fill = "both", padx = 10, pady = 5)
 
         self.parent = parent
         self.manager_id = manager_id
-        self.email_type = email_type
-        self.matchday = matchday
-        self.player_id = player_id
-        self.ban_length = ban_length
-        self.comp_id = comp_id
-        self.day, self.date, self.time = format_datetime_split(date)
+        self.email_type = email.email_type
+        self.matchday = email.matchday if hasattr(email, 'matchday') else None
+        self.player_id = email.player_id if hasattr(email, 'player_id') else None
+        self.ban_length = email.ban_length if hasattr(email, 'ban_length') else None
+        self.comp_id = email.comp_id if hasattr(email, 'comp_id') else None
+        self.fullDate = email.date
+        self.day, self.date, self.time = format_datetime_split(self.fullDate)
         self.emailFrame = emailFrame
         self.parentTab = parentTab
 
@@ -939,7 +940,10 @@ class PlayerInjury():
             fontSize = 15
         )
 
-        self.emailText_1 = f"We expect him to be out for at least {self.parent.ban_length} match(es)."
+        injuryTime = datetime.datetime.strptime(self.parent.ban_length, "%Y-%m-%d %H:%M:%S") - self.parent.fullDate
+        months = injuryTime.days // 30
+        remainingDays = injuryTime.days % 30
+        self.emailText_1 = f"We expect him to be out for at least {months} M and {remainingDays} D."
 
         self.emailText_2 = "Name, Assistant Manager"
 

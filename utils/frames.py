@@ -1600,14 +1600,21 @@ class MatchDayMatchFrame(ctk.CTkFrame):
         elif self.played:
             self.scoreLabel = ctk.CTkLabel(self, text = f"{self.match.score_home} - {self.match.score_away}", font = (APP_FONT_BOLD, scoreSize), fg_color = self.fgColor)
         else:
-            _, _, time = format_datetime_split(self.match.date)
+            day, text, time = format_datetime_split(self.match.date)
             self.scoreLabel = ctk.CTkLabel(self, text = time, font = (APP_FONT_BOLD, scoreSize), fg_color = self.fgColor)
+            dateLabel = ctk.CTkLabel(self, text = f"{day[:3]} {text.split(" ")[0]}", font = (APP_FONT, 10), fg_color = self.fgColor, height = 0)
+            dateLabel.place(relx = 0.5, rely = 0.8, anchor = "center")
 
         self.scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
 
         if self.packFrame:
             self.halfTimeLabel = ctk.CTkLabel(self, text = "HT", font = (APP_FONT, 10), fg_color = self.fgColor)
             self.fullTimeLabel = ctk.CTkLabel(self, text = "FT", font = (APP_FONT, 10), fg_color = self.fgColor)
+
+            if not self.played and not self.laterGame:
+                self.liveLabel = ctk.CTkLabel(self, text = "LIVE", font = (APP_FONT, 10), fg_color = self.fgColor)
+                self.liveLabel.place(relx = 0.5, rely = 0.8, anchor = "center")
+
             self.labelY = 0.8
         else:
             self.halfTimeLabel = ctk.CTkLabel(self, text = "HT", font = (APP_FONT, 20), fg_color = self.fgColor)
@@ -1620,14 +1627,26 @@ class MatchDayMatchFrame(ctk.CTkFrame):
     def HTLabel(self, place = True):
         if place:
             self.halfTimeLabel.place(relx = 0.5, rely = self.labelY, anchor = "center")
+
+            if hasattr(self, "liveLabel"):
+                self.liveLabel.place_forget()
         else:
             self.halfTimeLabel.place_forget()
+
+            if hasattr(self, "liveLabel"):
+                self.liveLabel.place(relx = 0.5, rely = self.labelY, anchor = "center")
     
     def FTLabel(self, place = True):
         if place:
             self.fullTimeLabel.place(relx = 0.5, rely = self.labelY, anchor = "center")
+
+            if hasattr(self, "liveLabel"):
+                self.liveLabel.place_forget()
         else:
             self.fullTimeLabel.place_forget()
+
+            if hasattr(self, "liveLabel"):
+                self.liveLabel.place(relx = 0.5, rely = self.labelY, anchor = "center")
 
     def updateScoreLabel(self, home = True, textAdd = None):
         if home:

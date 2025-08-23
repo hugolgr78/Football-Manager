@@ -847,7 +847,7 @@ class Match():
                             Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
                     elif event["type"] == "yellow_card":
                         events_to_add.append((self.match.id, "yellow_card", minute, player_id))
-                        MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, 5)
+                        MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, 5, Game.get_game_date(Managers.get_all_user_managers()[0].id))
                     else:
                         events_to_add.append((self.match.id, event["type"], minute, player_id))
 
@@ -894,7 +894,7 @@ class Match():
                             Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
                     elif event["type"] == "yellow_card":
                         events_to_add.append((self.match.id, "yellow_card", minute, player_id))
-                        MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, 5)
+                        MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, 5, Game.get_game_date(Managers.get_all_user_managers()[0].id))
                     else:
                         events_to_add.append((self.match.id, event["type"], minute, player_id))
 

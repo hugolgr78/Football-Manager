@@ -56,7 +56,7 @@ def get_player_ban(ban_type, curr_date):
         r = random.random() ** 2   # 0..1, but skewed toward 0
         days = min_days + int(r * (max_days - min_days))
 
-        return curr_date + datetime.timedelta(days = days)
+        return (curr_date + datetime.timedelta(days = days)).replace(hour = 0, minute = 0, second = 0, microsecond = 0)
 
     else:  # red card
         games = random.randint(1, 3)

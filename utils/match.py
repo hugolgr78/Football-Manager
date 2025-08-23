@@ -888,9 +888,9 @@ class Match():
 
                         currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
                         emailDate = currDate + timedelta(days = 1)
-                        if managing_team == "home" and event["type"] == "injury":
+                        if managing_team == "away" and event["type"] == "injury":
                             Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
-                        elif managing_team == "home" and event["type"] == "red_card":
+                        elif managing_team == "away" and event["type"] == "red_card":
                             Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
                     elif event["type"] == "yellow_card":
                         events_to_add.append((self.match.id, "yellow_card", minute, player_id))

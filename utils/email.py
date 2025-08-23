@@ -23,7 +23,8 @@ class EmailFrame(ctk.CTkFrame):
         self.email_type = email.email_type
         self.matchday = email.matchday if hasattr(email, 'matchday') else None
         self.player_id = email.player_id if hasattr(email, 'player_id') else None
-        self.ban_length = email.ban_length if hasattr(email, 'ban_length') else None
+        self.suspension = email.suspension if hasattr(email, 'suspension') else None
+        self.injury = email.injury if hasattr(email, 'injury') else None
         self.comp_id = email.comp_id if hasattr(email, 'comp_id') else None
         self.fullDate = email.date
         self.day, self.date, self.time = format_datetime_split(self.fullDate)
@@ -940,7 +941,7 @@ class PlayerInjury():
             fontSize = 15
         )
 
-        injuryTime = datetime.datetime.strptime(self.parent.ban_length, "%Y-%m-%d %H:%M:%S") - self.parent.fullDate
+        injuryTime = self.parent.injury - self.parent.fullDate
         months = injuryTime.days // 30
         remainingDays = injuryTime.days % 30
         self.emailText_1 = f"We expect him to be out for at least {months} M and {remainingDays} D."
@@ -991,7 +992,7 @@ class PlayerBan():
             self.frame,
             self.parent.manager_id,
             f"{competition.name}",
-            f"He will miss {self.parent.ban_length} match(es) in the ",
+            f"He will miss {self.parent.suspension} match(es) in the ",
             ".",
             240,
             30,

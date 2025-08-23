@@ -2562,7 +2562,8 @@ class Emails(Base):
     matchday = Column(Integer)
     date = Column(DateTime, nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))
-    ban_length = Column(Integer)
+    suspension = Column(Integer)
+    injury = Column(DateTime)
     comp_id = Column(String(128))
 
     @classmethod
@@ -2602,10 +2603,16 @@ class Emails(Base):
                 email_type = email_type,
                 matchday = matchday,
                 player_id = player_id,
-                ban_length = ban_length,
                 comp_id = comp_id,
                 date = date,
             )
+
+            if email_type == "player_ban":
+                new_email.suspension = ban_length
+                new_email.injury = None
+            elif email_type == "player_injury":
+                new_email.injury = ban_length
+                new_email.suspension = None
 
             session.add(new_email)
             session.commit()
@@ -2621,21 +2628,30 @@ class Emails(Base):
     def batch_add_emails(cls, emails):
         session = DatabaseManager().get_session()
         try:
-            # Create a list of dictionaries representing each email
-            email_dicts = [
-                {
-                    "id": str(uuid.uuid4()),
-                    "email_type": email[0],
-                    "matchday": email[1],
-                    "player_id": email[2],
-                    "ban_length": email[3],
-                    "comp_id": email[4],
-                    "date": email[5]
-                }
-                for email in emails
-            ]
+            # Prepare list of dicts for bulk insert
+            email_dicts = []
+            for email in emails:
+                email_type = email[0]
+                matchday = email[1]
+                player_id = email[2]
+                ban_length = email[3]  # assuming 4th element is ban/injury length
+                comp_id = email[4]
+                date = email[5]
 
-            # Use session.execute with an insert statement
+                email_dict = {
+                    "id": str(uuid.uuid4()),
+                    "email_type": email_type,
+                    "matchday": matchday,
+                    "player_id": player_id,
+                    "comp_id": comp_id,
+                    "date": date,
+                    "suspension": ban_length if email_type == "player_ban" else None,
+                    "injury": ban_length if email_type == "player_injury" else None
+                }
+
+                email_dicts.append(email_dict)
+
+            # Bulk insert using session.execute
             session.execute(insert(Emails), email_dicts)
             session.commit()
         except Exception as e:
@@ -2649,8 +2665,8 @@ class Emails(Base):
         session = DatabaseManager().get_session()
         try:
             email = session.query(Emails).filter(Emails.id == email_id).first()
-            if email and email.ban_length is not None:
-                email.ban_length += 1
+            if email and email.suspension is not None:
+                email.suspension += 1
                 session.commit()
                 return email
             else:

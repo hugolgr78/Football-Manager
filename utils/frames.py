@@ -539,11 +539,10 @@ class PlayerFrame(ctk.CTkFrame):
 
                 ctk.CTkLabel(self.statFrame, text = f"{potmAwards}", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
             case "Form":
-                leagueTeams = LeagueTeams.get_league_by_team(self.player.team_id)
                 last5 = Matches.get_team_last_5_matches(self.player.team_id, Game.get_game_date(Managers.get_all_user_managers()[0].id))
 
                 imageNames = []
-                for match in reversed(last5):
+                for match in last5:
                     lineup = TeamLineup.get_lineup_by_match(match.id)
                     playerIDs = [player.player_id for player in lineup]
 
@@ -564,9 +563,9 @@ class PlayerFrame(ctk.CTkFrame):
 
                 for i, imageName in enumerate(imageNames):
                     src = Image.open(f"Images/{imageName}.png")
-                    src.thumbnail((20, 20))
+                    src.thumbnail((18, 18))
                     img = ctk.CTkImage(src, None, (src.width, src.height))
-                    ctk.CTkLabel(self.statFrame, image = img, text = "").place(relx = 0.9 - i * 0.22, rely = 0.5, anchor = "center")
+                    ctk.CTkLabel(self.statFrame, image = img, text = "").place(relx = 0.9 - i * 0.18, rely = 0.5, anchor = "center")
 
         for widget in self.statFrame.winfo_children():
             widget.bind("<Enter>", lambda event: self.onFrameHover())
@@ -1693,10 +1692,10 @@ class FormGraph(ctk.CTkCanvas):
 
         self.last5Events = []
 
-        self.draw_axes()
-
         self.leagueTeams = LeagueTeams.get_league_by_team(self.player.team_id)
         self.last5 = Matches.get_team_last_5_matches(self.player.team_id, Game.get_game_date(Managers.get_all_user_managers()[0].id))
+
+        self.draw_axes()
 
         self.last5Events = []
         
@@ -1716,7 +1715,7 @@ class FormGraph(ctk.CTkCanvas):
         # Check if player played in any of the 5 matches and collect ratings
         played_any = False
         self.ratings = []
-        for match in self.last5:
+        for match in reversed(self.last5):
             lineup = TeamLineup.get_lineup_by_match(match.id)
             playerIDs = [player.player_id for player in lineup]
             if self.player.id in playerIDs:
@@ -1733,8 +1732,8 @@ class FormGraph(ctk.CTkCanvas):
         max_rating = max(self.ratings)
         # Ensure minimum scale of 5 for better visibility
         scale_max = max(max_rating + 1, 5)
-        
-        for i, match in enumerate(self.last5):
+
+        for i, match in enumerate(reversed(self.last5)):
             lineup = TeamLineup.get_lineup_by_match(match.id)
             playerIDs = [player.player_id for player in lineup]
             self.last5Events.append(MatchEvents.get_events_by_match_and_player(match.id, self.player.id))

@@ -163,15 +163,14 @@ class MainMenu(ctk.CTkFrame):
         PlayerBans.reduce_injuries(timeInBetween, stopDate)
 
         # Run simulations concurrently so multiple matches can be processed at the same time.
+        matches = []
         if matchesToSim:
             # Phase 1: create all Match objects
-            matches = []
             for game in matchesToSim:
                 try:
-                    match = Match(game, auto=True)  # init only
+                    match = Match(game, auto = True)  # init only
                     matches.append(match)
                 except Exception:
-                    # swallow individual match errors to avoid stopping other simulations
                     pass
 
             # Phase 2: run startGame in parallel with ThreadPoolExecutor
@@ -181,19 +180,27 @@ class MainMenu(ctk.CTkFrame):
                 # Phase 3: wait for all to finish
                 for fut in as_completed(futures):
                     try:
-                        fut.result()  # propagate errors if you want
+                        fut.result()
                     except Exception:
-                        # swallow individual game errors
                         pass
 
         self.currDate += timeInBetween
         Game.increment_game_date(self.manager_id, timeInBetween)
+
+        leagueIDs = list({match.league.league_id for match in matches})
+        for id_ in leagueIDs:
+            if League.check_all_matches_complete(id_, self.currDate):
+                for team in LeagueTeams.get_teams_by_league(id_):
+                    matchday = League.get_current_matchday(id_)
+                    TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
+
+                League.update_current_matchday(id_)
+
         self.resetTabs(0, 1, 5, 6)
         self.addDate()
 
         # TODO: 
 
-        # test for crash and fixed? error
         # critical problem: league matchday and team positions wont be updated if the inbox tab isnt loaded. Can load the inbox as well as the hub to fix, or find a better solution (check every monday if there was a league matchday the weekend before).
         # schedule tab changes
         # add small date under the time in matchday for days that are not today (Sun 17th for example)

@@ -1206,6 +1206,24 @@ class Matches(Base):
         finally:
             session.close()
 
+    @classmethod
+    def finished_matchday(cls, curr_date, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            saturday = curr_date - timedelta(days = (curr_date.weekday() - 5) % 7 + 2)  # last Sat
+            sunday   = saturday + timedelta(days = 1)
+
+            # Query matches that happened on Sat or Sun for this league
+            finished = session.query(Matches).filter(
+                Matches.league_id == league_id,
+                Matches.date >= saturday,
+                Matches.date <= sunday
+            ).first()
+
+            return finished is not None
+        finally:
+            session.close()
+
 class TeamLineup(Base):
     __tablename__ = 'team_lineup'
     
@@ -2148,6 +2166,53 @@ class League(Base):
                 return None
         finally:
             session.close()
+
+    @classmethod
+    def get_all_leagues(cls):
+        session = DatabaseManager().get_session()
+        try:
+            leagues = session.query(League).all()
+            return leagues
+        finally:
+            session.close()
+
+    @classmethod
+    def check_all_matches_complete(cls, league_id, currDate):
+        session = DatabaseManager().get_session()
+        try:
+            league = session.query(League).filter(League.id == league_id).first()
+            if not league:
+                return False
+
+            matchday = league.current_matchday
+
+            # Step 2: get all matches for this matchday
+            matches = session.query(Matches).filter(
+                Matches.league_id == league_id,
+                Matches.matchday == matchday
+            ).all()
+
+            if not matches:
+                return False  # no matches found (shouldn't normally happen)
+
+            # Step 3: check if all match dates are before currDate
+            all_complete = all(m.date < currDate for m in matches)
+
+            return all_complete
+        finally:
+            session.close()
+
+    @classmethod
+    def get_current_matchday(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            league = session.query(League).filter(League.id == league_id).first()
+            if league:
+                return league.current_matchday
+            return None
+        finally:
+            session.close()
+
 
 class LeagueTeams(Base):
     __tablename__ = 'league_teams'
@@ -4218,6 +4283,7 @@ def getPredictedLineup(opponent_id, currDate):
 
 def getProposedLineup(team_id, opponent_id, comp_id, currDate):
     predictedLineup = getPredictedLineup(opponent_id, currDate)
+    team = Teams.get_team_by_id(team_id)
 
     attackingScore = 0
     defendingScore = 0
@@ -4384,7 +4450,7 @@ def getSubstitutes(teamID, lineup, compID):
     if len(goalkeepers) > 0:
         substitutes.append(goalkeepers[0].id)
     else:
-        substitutes.append(getYouthPlayer(teamID, "Goalkeeper", substitutes))
+        substitutes.append(getYouthPlayer(teamID, "Goalkeeper", compID, substitutes))
 
     # Add 2 defenders to substitutes
     defender_count = 0
@@ -4396,7 +4462,7 @@ def getSubstitutes(teamID, lineup, compID):
     if defender_count != 2:
         for _ in range(2 - defender_count):
             specific_position = random.choice(DEFENSIVE_POSITIONS)
-            substitutes.append(getYouthPlayer(teamID, specific_position, substitutes))
+            substitutes.append(getYouthPlayer(teamID, specific_position, compID, substitutes))
 
     # Add 2 midfielders to substitutes
     midfielder_count = 0
@@ -4408,7 +4474,7 @@ def getSubstitutes(teamID, lineup, compID):
     if midfielder_count != 2:
         for _ in range(2 - midfielder_count):
             specific_position = random.choice(MIDFIELD_POSITIONS)
-            substitutes.append(getYouthPlayer(teamID, specific_position, substitutes))
+            substitutes.append(getYouthPlayer(teamID, specific_position, compID, substitutes))
 
     # Add 2 attackers to substitutes
     attacker_count = 0
@@ -4420,6 +4486,6 @@ def getSubstitutes(teamID, lineup, compID):
     if attacker_count != 2:
         for _ in range(2 - attacker_count):
             specific_position = random.choice(ATTACKING_POSITIONS)
-            substitutes.append(getYouthPlayer(teamID, specific_position, substitutes))
+            substitutes.append(getYouthPlayer(teamID, specific_position, compID, substitutes))
     
     return substitutes

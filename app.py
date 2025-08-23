@@ -9,16 +9,23 @@ import glob
 import logging
 import sys
 
-# Create a dedicated handler for the utils.match logger so DEBUG records show
-match_logger = logging.getLogger("utils.match")
-if not any(isinstance(h, logging.StreamHandler) for h in match_logger.handlers):
-    match_handler = logging.StreamHandler(sys.stdout)
-    match_handler.setLevel(logging.DEBUG)
-    match_handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s"))
-    match_logger.addHandler(match_handler)
-match_logger.setLevel(logging.DEBUG)
-# Prevent duplicate propagation to root handlers
-match_logger.propagate = False
+# Enable debug mode if "debug" is passed as a command-line argument
+DEBUG_MODE = len(sys.argv) > 1 and sys.argv[1].lower() == "debug"
+
+if DEBUG_MODE:
+    # Create a dedicated handler for the utils.match logger so DEBUG records show
+    match_logger = logging.getLogger("utils.match")
+    if not any(isinstance(h, logging.StreamHandler) for h in match_logger.handlers):
+        match_handler = logging.StreamHandler(sys.stdout)
+        match_handler.setLevel(logging.DEBUG)
+        match_handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s"))
+        match_logger.addHandler(match_handler)
+    match_logger.setLevel(logging.DEBUG)
+    # Prevent duplicate propagation to root handlers
+    match_logger.propagate = False
+else:
+    # Silence the logger if not in debug mode
+    logging.getLogger("utils.match").setLevel(logging.CRITICAL)
 
 def backup_all_databases(data_dir, backup_dir):
     """Backup all .db files in the data directory"""

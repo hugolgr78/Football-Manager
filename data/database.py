@@ -1034,7 +1034,7 @@ class Matches(Base):
     def get_team_last_5_matches(cls, team_id, curr_date):
         session = DatabaseManager().get_session()
         try:
-            matches = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
+            matches = session.query(Matches).filter(
                 (Matches.home_id == team_id) | (Matches.away_id == team_id),
                 Matches.date < curr_date
             ).order_by(Matches.date.desc()).limit(5).all()

@@ -284,7 +284,7 @@ RED_CARD_CHANCES = {
     'forward': 0.8
 }
 
-INJURY_CHANCE = 0.1 # chance for a team to get an injury in a match
+INJURY_CHANCE = 1 # chance for a team to get an injury in a match
 
 MATCHDAY_SUBS = 7
 MAX_SUBS = 5

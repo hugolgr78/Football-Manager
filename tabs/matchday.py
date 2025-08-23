@@ -1536,6 +1536,14 @@ class MatchDay(ctk.CTkFrame):
 
         LeagueTeams.update_team_positions(self.league.id)
         Game.increment_game_date(Managers.get_all_user_managers()[0].id, timedelta(hours = 2))
+        currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
+
+        if League.check_all_matches_complete(self.league.id, currDate):
+            for team in LeagueTeams.get_teams_by_league(self.league.id):
+                matchday = League.get_current_matchday(self.league.id)
+                TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
+
+            League.update_current_matchday(self.league.id)
 
         self.pack_forget()
         self.update_idletasks()

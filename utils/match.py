@@ -56,7 +56,6 @@ class Match():
             self.createTeamLineup(self.homeTeam.id, True)
             self.createTeamLineup(self.awayTeam.id, False)
             self.generateScore()
-            # self.startGame()
 
     def createTeamLineup(self, teamID, home):
         opponentID = self.match.away_id if home else self.match.home_id
@@ -1000,7 +999,7 @@ class Match():
                 concurrent.futures.wait(futures)
                 logger.debug("All DB futures completed")
         except Exception as e:
-            logger.error(f"Exception in saveData: {str(e)}", exc_info=True)
+            logger.error(f"Exception in saveData: {str(e)}", exc_info = True)
         finally:
             # ensure we always update positions even if threaded ops had issues
             LeagueTeams.update_team_positions(self.league.league_id)

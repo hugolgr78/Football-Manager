@@ -194,17 +194,15 @@ class MainMenu(ctk.CTkFrame):
                     matchday = League.get_current_matchday(id_)
                     TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
 
-                League.update_current_matchday(id_)
+                League.update_current_matchday(id_)   
 
         self.resetTabs(0, 1, 5, 6)
         self.addDate()
 
         # TODO: 
 
-        # critical problem: league matchday and team positions wont be updated if the inbox tab isnt loaded. Can load the inbox as well as the hub to fix, or find a better solution (check every monday if there was a league matchday the weekend before).
-        # schedule tab changes
-        # add small date under the time in matchday for days that are not today (Sun 17th for example)
         # change injury email (how long the player is out)
+        # schedule tab changes
         # check ticket to ensure everything is done
 
     def resetMenu(self):

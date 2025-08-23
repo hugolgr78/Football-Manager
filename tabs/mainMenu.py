@@ -196,13 +196,14 @@ class MainMenu(ctk.CTkFrame):
 
                 League.update_current_matchday(id_)   
 
-        self.resetTabs(0, 1, 5, 6)
+        self.resetTabs(0, 1, 3, 5, 6)
         self.addDate()
 
         # TODO: 
 
-        # change injury email (how long the player is out)
         # schedule tab changes
+        # inbox tab changes
+        # birthdays and age increases
         # check ticket to ensure everything is done
 
     def resetMenu(self):

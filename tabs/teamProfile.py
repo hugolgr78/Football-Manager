@@ -5,7 +5,7 @@ from data.gamesDatabase import *
 from PIL import Image
 import io
 
-from utils.frames import MatchFrame, PlayerFrame, next5Matches, TrophiesFrame
+from utils.frames import MatchFrame, PlayerFrame, next5Matches, TrophiesFrame, CalendarFrame
 from utils.managerProfileLink import ManagerProfileLink
 from utils.util_functions import *
 
@@ -215,10 +215,10 @@ class Schedule(ctk.CTkFrame):
         self.matchesFrame = ctk.CTkScrollableFrame(self, fg_color = TKINTER_BACKGROUND, width = 650, height = 590, corner_radius = 0)
         self.matchesFrame.place(relx = 0.01, rely = 0.05, anchor = "nw")
 
-        self.calendarFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 670, height = 590, corner_radius = 15)
-
         self.matchInfoFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 280, height = 560, corner_radius = 15)
         self.matchInfoFrame.place(relx = 0.98, rely = 0.05, anchor = "ne")
+
+        self.calendarFrame = CalendarFrame(self, self.matches, self, self.parent.parentTab, self.matchInfoFrame, self.team.id)
 
         self.switchButton = ctk.CTkButton(self, text = "List", fg_color = GREY_BACKGROUND, command = self.switchFrames, width = 280, height = 15)
         self.switchButton.place(relx = 0.98, rely = 0.985, anchor = "se")

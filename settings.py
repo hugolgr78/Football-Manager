@@ -288,6 +288,7 @@ INJURY_CHANCE = 0.1 # chance for a team to get an injury in a match
 
 MATCHDAY_SUBS = 7
 MAX_SUBS = 5
+YELLOW_THRESHOLD = 1
 
 SHOUTS = ["Encourage", "Praise", "Focus", "Berate"]
 

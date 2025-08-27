@@ -184,6 +184,8 @@ class MainMenu(ctk.CTkFrame):
                     except Exception:
                         pass
 
+        update_ages(self.currDate, stopDate)
+
         self.currDate += timeInBetween
         Game.increment_game_date(self.manager_id, timeInBetween)
 

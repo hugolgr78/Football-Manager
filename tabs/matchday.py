@@ -680,7 +680,8 @@ class MatchDay(ctk.CTkFrame):
                                     self.updateLineup,
                                     self.substitutesFrame,
                                     self.swapLineupPositions,
-                                    self.caStars[playerID]
+                                    self.caStars[playerID],
+                                    xDisabled = True
                                 )
                 
                     # Check if there are any players available who can play in the injured player's position
@@ -688,13 +689,12 @@ class MatchDay(ctk.CTkFrame):
 
                     # If no subs can play the injured player's position, then the position is free to everyone
                     hasPosssibleSubs = any(
-                        injured_position_code in Players.get_player_by_id(player_id).specific_positions.split(", ")
+                        injured_position_code in Players.get_player_by_id(player_id).specific_positions.split(",")
                         for player_id in self.teamSubstitutes
                     )
 
                     if not hasPosssibleSubs:
                         self.freePositions.append(self.injuredPosition) 
-
                 else:
                     self.freePositions.append(self.injuredPosition)
             else:
@@ -712,7 +712,8 @@ class MatchDay(ctk.CTkFrame):
                                 self.updateLineup,
                                 self.substitutesFrame,
                                 self.swapLineupPositions,
-                                self.caStars[playerID]
+                                self.caStars[playerID],
+                                xDisabled = True
                             )
                 
                 if subbed_on:
@@ -756,6 +757,10 @@ class MatchDay(ctk.CTkFrame):
                 self.confirmButton.configure(state = "disabled")
 
         self.addSubstitutePlayers()
+
+        for frame in self.lineupPitch.winfo_children():
+            if isinstance(frame, LineupPlayerFrame):
+                frame.removeButton.configure(state = "enabled")
     
     def addSubstitutePlayers(self):
         for widget in self.substitutesFrame.winfo_children():

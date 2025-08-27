@@ -2613,8 +2613,9 @@ class Emails(Base):
                     else:
                         raise
 
-                birthday_email = ("player_birthday", None, player.id, None, None, email_date)
-                emails.append(birthday_email)
+                if email_date >= SEASON_START_DATE:
+                    birthday_email = ("player_birthday", None, player.id, None, None, email_date)
+                    emails.append(birthday_email)
 
             cls.batch_add_emails(emails)
         finally:
@@ -4612,7 +4613,6 @@ def update_ages(start_date, end_date):
                     correct_age = calculate_age(person.date_of_birth, end)
                     if person.age < correct_age:
                         person.age = correct_age
-                        print(f"Updated age for {person.last_name} ({cls_table.__name__}) to {person.age}")
 
         # Update all relevant tables
         for table in [Players, Managers, Referees]:

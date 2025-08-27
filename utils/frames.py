@@ -1539,7 +1539,7 @@ class FootballPitchMatchDay(FootballPitchVertical):
         super().place_forget()
 
 class LineupPlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions, caStars):
+    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions, caStars, xDisabled = False):
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -1569,16 +1569,19 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.positionLabel = ctk.CTkLabel(self, text = positionCode, font = (APP_FONT, 10), height = 0, fg_color = fgColor)
         self.positionLabel.place(relx = 0.05, rely = 0.03, anchor = "nw")
 
-        self.firstName = ctk.CTkLabel(self, text = self.player.first_name, font = (APP_FONT, 10), height = 10, fg_color = fgColor)
+        self.firstName = ctk.CTkLabel(self, text = self.player.first_name, font = (APP_FONT, 10), height = 0, width = 0, fg_color = fgColor)
         self.firstName.place(relx = 0.5, rely = 0.35, anchor = "center")
-        self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 12), fg_color = fgColor, height = 1)
+        self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 12), fg_color = fgColor, height = 0, width = 0)
         self.lastName.place(relx = 0.5, rely = 0.6, anchor = "center")
 
         self.removeButton = ctk.CTkButton(self, text = "X", font = (APP_FONT, 10), width = 0, height = 0, fg_color = fgColor, hover_color = CLOSE_RED, corner_radius = 0, command = self.remove)
-        self.removeButton.place(relx = 0.97, rely = 0.03, anchor = "ne")
+        self.removeButton.place(relx = 0.95, rely = 0.03, anchor = "ne")
 
-        self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 60, height = 15, corner_radius = 0)
-        self.caFrame.place(relx = 0.5, rely = 0.97, anchor = "s")
+        if xDisabled:
+            self.removeButton.configure(state = "disabled")
+
+        self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 55, height = 13, corner_radius = 0)
+        self.caFrame.place(relx = 0.5, rely = 0.95, anchor = "s")
 
         imageNames = star_images(self.caStars)
 

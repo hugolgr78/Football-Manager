@@ -1,5 +1,5 @@
 import re, datetime
-from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime
+from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
 from sqlalchemy.orm import sessionmaker, aliased, scoped_session
@@ -370,7 +370,7 @@ class Players(Base):
     number = Column(Integer, nullable = False)
     position = Column(Enum("goalkeeper", "defender", "midfielder", "forward"), nullable = False)
     specific_positions = Column(String(128), nullable = False)
-    date_of_birth = Column(String(128), nullable = False)
+    date_of_birth = Column(Date, nullable = False)
     age = Column(Integer, nullable = False)
     nationality = Column(String(128), nullable = False)
     flag = Column(BLOB)
@@ -415,7 +415,7 @@ class Players(Base):
                 potential_ability = playerPA,
                 number = random.randint(1, 99),
                 position = position,
-                date_of_birth = str(date_of_birth),
+                date_of_birth = date_of_birth,
                 age = 2024 - date_of_birth.year,
                 nationality = country,
                 flag = flag,
@@ -517,7 +517,7 @@ class Players(Base):
                         last_name = faker.last_name(),
                         number = player_number,
                         position = overall_position,
-                        date_of_birth = str(date_of_birth),
+                        date_of_birth = date_of_birth,
                         age = 2024 - date_of_birth.year,
                         nationality = country,
                         flag = flag,
@@ -555,7 +555,7 @@ class Players(Base):
                         last_name = faker.last_name(),
                         number = player_number,
                         position = overall_position,
-                        date_of_birth = str(date_of_birth),
+                        date_of_birth = date_of_birth,
                         age = 2024 - date_of_birth.year,
                         nationality = country,
                         flag = flag,
@@ -2558,13 +2558,14 @@ class Emails(Base):
     __tablename__ = 'emails'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban"), nullable = False)
+    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday"), nullable = False)
     matchday = Column(Integer)
     date = Column(DateTime, nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))
     suspension = Column(Integer)
     injury = Column(DateTime)
     comp_id = Column(String(128))
+    action_complete = Column(Boolean, default = False)
 
     @classmethod
     def add_emails(cls, manager_id):
@@ -2590,6 +2591,30 @@ class Emails(Base):
                 email_date = get_next_monday(match.date)
                 review_email_date = email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0)
                 emails.append(("matchday_review", match.matchday, None, None, league.league_id, review_email_date))
+
+            players = Players.get_all_players_by_team(team.id, youths = False)
+
+            # curr_year = Game.get_game_date(Managers.get_all_user_managers()[0].id).year
+            curr_year = SEASON_START_DATE.year
+
+            for player in players:
+                dob = player.date_of_birth
+
+                email_date = datetime.datetime(dob.year, dob.month, dob.day, 8)
+
+                target_year = curr_year + 1 if dob.month < 8 else curr_year
+
+                # handle Feb 29 -> Feb 28 if not a leap year
+                try:
+                    email_date = email_date.replace(year = target_year)
+                except ValueError:
+                    if dob.month == 2 and dob.day == 29:
+                        email_date = datetime.datetime(target_year, 2, 28, 8)
+                    else:
+                        raise
+
+                birthday_email = ("player_birthday", None, player.id, None, None, email_date)
+                emails.append(birthday_email)
 
             cls.batch_add_emails(emails)
         finally:
@@ -2743,6 +2768,17 @@ class Emails(Base):
         try:
             email = session.query(Emails).filter(Emails.email_type == email_type, Emails.matchday == matchday, Emails.date <= curr_date).first()
             return email is not None
+        finally:
+            session.close()
+
+    @classmethod
+    def update_action(cls, email_id):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.id == email_id).first()
+            if email:
+                email.action_complete = True
+                session.commit()
         finally:
             session.close()
 

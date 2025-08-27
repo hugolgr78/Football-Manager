@@ -1,5 +1,5 @@
 import re, datetime
-from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date
+from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
 from sqlalchemy.orm import sessionmaker, aliased, scoped_session
@@ -58,7 +58,7 @@ class Managers(Base):
     games_lost = Column(Integer, default = 0)
     trophies = Column(Integer, default = 0)
     user = Column(Boolean, nullable = False)
-    date_of_birth = Column(String(128), nullable = False)
+    date_of_birth = Column(Date, nullable = False)
     age = Column(Integer, nullable = False)
 
     @classmethod
@@ -2439,7 +2439,7 @@ class Referees(Base):
     flag = Column(BLOB)
     nationality = Column(String(128), nullable = False)
     age = Column(Integer, nullable = False)
-    date_of_birth = Column(String(128), nullable = False)
+    date_of_birth = Column(Date, nullable = False)
 
     @classmethod
     def add_referee(cls):
@@ -2461,7 +2461,7 @@ class Referees(Base):
                 flag = flag,
                 nationality = country,
                 age = 2024 - date_of_birth.year,
-                date_of_birth = str(date_of_birth)
+                date_of_birth = date_of_birth
             )
 
             session.add(new_referee)
@@ -2495,7 +2495,7 @@ class Referees(Base):
                     flag = flag,
                     nationality = country,
                     age = 2024 - date_of_birth.year,
-                    date_of_birth = str(date_of_birth)
+                    date_of_birth = date_of_birth
                 )
 
                 session.add(new_referee)
@@ -4574,3 +4574,47 @@ def getSubstitutes(teamID, lineup, compID):
             substitutes.append(getYouthPlayer(teamID, specific_position, compID, substitutes))
     
     return substitutes
+
+def update_ages(start_date, end_date):
+    session = DatabaseManager().get_session()
+    try:
+        # Ensure we work with date objects (if datetimes were passed)
+        start = start_date.date() if hasattr(start_date, 'date') else start_date
+        end = end_date.date() if hasattr(end_date, 'date') else end_date
+
+        # Build set of (month, day) pairs in [start, end) (exclusive end)
+        curr = start
+        md_pairs = set()
+        while True:
+            md_pairs.add((curr.month, curr.day))
+            if curr == end:
+                break
+            curr = curr + datetime.timedelta(days = 1)
+
+        def get_conditions(cls_table):
+            return [
+                and_(
+                    extract('month', cls_table.date_of_birth) == m,
+                    extract('day', cls_table.date_of_birth) == d
+                )
+                for (m, d) in md_pairs
+            ]
+
+        # Helper to update a table
+        def update_table(cls_table):
+            conditions = get_conditions(cls_table)
+            if conditions:
+                people = session.query(cls_table).filter(or_(*conditions)).all()
+                for person in people:
+                    correct_age = calculate_age(person.date_of_birth, end)
+                    if person.age < correct_age:
+                        person.age = correct_age
+                        print(f"Updated age for {person.last_name} ({cls_table.__name__}) to {person.age}")
+
+        # Update all relevant tables
+        for table in [Players, Managers, Referees]:
+            update_table(table)
+
+        session.commit()
+    finally:
+        session.close()

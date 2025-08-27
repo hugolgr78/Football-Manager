@@ -451,3 +451,6 @@ def format_datetime_split(dt):
 def get_next_monday(date):
     days_ahead = (0 - date.weekday() + 7) % 7
     return date + timedelta(days = days_ahead)
+
+def calculate_age(dob, today):
+    return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))

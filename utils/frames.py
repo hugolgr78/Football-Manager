@@ -1575,9 +1575,9 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.lastName.place(relx = 0.5, rely = 0.6, anchor = "center")
 
         self.removeButton = ctk.CTkButton(self, text = "X", font = (APP_FONT, 10), width = 0, height = 0, fg_color = fgColor, hover_color = CLOSE_RED, corner_radius = 0, command = self.remove)
-        self.removeButton.place(relx = 0.97, rely = 0.02, anchor = "ne")
+        self.removeButton.place(relx = 0.97, rely = 0.03, anchor = "ne")
 
-        self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 65, height = 15, corner_radius = 0)
+        self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 60, height = 15, corner_radius = 0)
         self.caFrame.place(relx = 0.5, rely = 0.97, anchor = "s")
 
         imageNames = star_images(self.caStars)

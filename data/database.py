@@ -3981,19 +3981,22 @@ class StatsManager:
         # slow_items = [(k, v) for k, v in functions.items() if k in slow_stats]
 
         # Run fast stats in parallel
-        with ThreadPoolExecutor() as executor:
-            future_to_stat = {
-                executor.submit(stat_func, leagueTeams, league_id): stat_name
-                for stat_name, stat_func in fast_items
-            }
-            stat_results = {}
-            for future in as_completed(future_to_stat):
-                stat_name = future_to_stat[future]
-                try:
-                    results = future.result()
-                    stat_results[stat_name] = results
-                except Exception:
-                    stat_results[stat_name] = None
+        try:
+            with ThreadPoolExecutor() as executor:
+                future_to_stat = {
+                    executor.submit(stat_func, leagueTeams, league_id): stat_name
+                    for stat_name, stat_func in fast_items
+                }
+                stat_results = {}
+                for future in as_completed(future_to_stat):
+                    stat_name = future_to_stat[future]
+                    try:
+                        results = future.result()
+                        stat_results[stat_name] = results
+                    except Exception:
+                        stat_results[stat_name] = None
+        except Exception as e:
+            print(e)
 
         # # Run slow stats (each in its own thread, but sequentially after fast stats)
         # for stat_name, stat_func in slow_items:

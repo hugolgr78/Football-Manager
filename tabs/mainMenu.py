@@ -175,14 +175,19 @@ class MainMenu(ctk.CTkFrame):
 
             # Phase 2: run startGame in parallel with ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers = len(matches)) as ex:
-                futures = [ex.submit(match.startGame) for match in matches]
+                # submit a wrapper that starts the match thread and then joins it
+                def _run_and_join(m):
+                    m.startGame()
+                    m.join()
+                
+                futures = [ex.submit(_run_and_join, match) for match in matches]
 
                 # Phase 3: wait for all to finish
                 for fut in as_completed(futures):
                     try:
                         fut.result()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        print(e)
 
         update_ages(self.currDate, stopDate)
 
@@ -191,6 +196,7 @@ class MainMenu(ctk.CTkFrame):
 
         leagueIDs = list({match.league.league_id for match in matches})
         for id_ in leagueIDs:
+            LeagueTeams.update_team_positions(id_)
             if League.check_all_matches_complete(id_, self.currDate):
                 for team in LeagueTeams.get_teams_by_league(id_):
                     matchday = League.get_current_matchday(id_)
@@ -200,12 +206,7 @@ class MainMenu(ctk.CTkFrame):
 
         self.resetTabs(0, 1, 2, 3, 5, 6)
         self.addDate()
-
-        # TODO: 
-
-        # birthdays and age increases (email, with ability to raise player morale, can be added at db creation)
-        # check ticket to ensure everything is done
-
+        
     def resetMenu(self):
         
         for tab in self.tabs:

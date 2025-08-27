@@ -1692,29 +1692,17 @@ class MatchEvents(Base):
                 Matches.league_id == comp_id
             ).count()
 
+            yellow_cards += 1
+
             if yellow_cards and yellow_cards % ban_threshold == 0:
-                red_card_ban = session.query(PlayerBans).filter(
-                    PlayerBans.player_id == player_id,
-                    PlayerBans.ban_type == "red_card",
-                    PlayerBans.suspension > 0
-                ).first()
+                PlayerBans.add_player_ban(player_id, comp_id, 1, "yellow_cards", currDate)
 
-                # If a player hit the threshold and got a red in the same game, increase their red card ban by 1.
-                if red_card_ban:
-                    red_card_ban.suspension += 1
+                player_team = Teams.get_team_by_id(Players.get_player_by_id(player_id).team_id)
+                user_manager = Managers.get_manager_by_id(player_team.manager_id).user
+
+                if user_manager:
                     date = (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0)
-                    email = Emails.get_email_by_type_and_date("player_ban", date)
-                    Emails.increment_ban(email.id)
-                    session.commit()
-                else:
-                    PlayerBans.add_player_ban(player_id, comp_id, ban_length = 1, ban_type = "yellow_cards")
-
-                    player_team = Teams.get_team_by_id(Players.get_player_by_id(player_id).team_id)
-                    user_manager = True if Managers.get_manager_by_id(player_team.manager_id).user == 1 else False
-
-                    if user_manager:
-                        date = (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0)
-                        Emails.add_email("player_ban", None, player_id, 1, comp_id, date)
+                    Emails.add_email("player_ban", None, player_id, 1, comp_id, date)
         finally:
             session.close()
 
@@ -2687,16 +2675,19 @@ class Emails(Base):
             session.close()
 
     @classmethod
-    def increment_ban(cls, email_id):
+    def increment_ban(cls, email_id, num):
         session = DatabaseManager().get_session()
         try:
             email = session.query(Emails).filter(Emails.id == email_id).first()
             if email and email.suspension is not None:
-                email.suspension += 1
+                email.suspension += num
                 session.commit()
                 return email
             else:
                 return None
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
             session.close()
 
@@ -2794,26 +2785,53 @@ class PlayerBans(Base):
     ban_type = Column(Enum("red_card", "injury", "yellow_cards"), nullable = False)
 
     @classmethod
-    def add_player_ban(cls, player_id, competition_id, ban_length, ban_type):
+    def add_player_ban(cls, player_id, competition_id, ban_length, ban_type, currDate):
         session = DatabaseManager().get_session()
         try:
-            new_ban = PlayerBans(
-                player_id = player_id,
-                competition_id = competition_id,
-                ban_type = ban_type
+
+            # If the player got a yellow card accumulation ban in the same game, add to the suspension. 
+            existing_ban = (
+                session.query(PlayerBans)
+                .filter_by(player_id = player_id, competition_id = competition_id)
+                .first()
             )
 
-            if ban_type == "red_card" or ban_type == "yellow_cards":
-                new_ban.suspension = ban_length
-                new_ban.injury = None
-            elif ban_type == "injury":
-                new_ban.injury = ban_length
-                new_ban.suspension = None
+            # This only happens if the player gets a yellow accu and a red card in the same game
+            if existing_ban and existing_ban.ban_type == "yellow_cards":
 
-            session.add(new_ban)
-            session.commit()
+                player_team = Teams.get_team_by_id(Players.get_player_by_id(player_id).team_id)
+                user_manager = Managers.get_manager_by_id(player_team.manager_id).user
 
-            return new_ban
+                if user_manager:
+                    date = (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0)
+                    email = Emails.get_email_by_type_and_date("player_ban", date)
+                    Emails.increment_ban(email.id, ban_length)
+                
+                existing_ban = session.merge(existing_ban)
+                existing_ban.suspension += ban_length
+                existing_ban.ban_type = "red_card"
+
+                session.commit()
+                return False, existing_ban
+            else:
+
+                new_ban = PlayerBans(
+                    player_id = player_id,
+                    competition_id = competition_id,
+                    ban_type = ban_type
+                )
+
+                if ban_type == "red_card" or ban_type == "yellow_cards":
+                    new_ban.suspension = ban_length
+                    new_ban.injury = None
+                elif ban_type == "injury":
+                    new_ban.injury = ban_length
+                    new_ban.suspension = None
+
+                session.add(new_ban)
+                session.commit()
+
+                return True, new_ban
         except Exception as e:
             session.rollback()
             raise e

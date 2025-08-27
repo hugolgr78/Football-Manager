@@ -148,8 +148,6 @@ class Match():
             else:
                 self.add_events(self.awayEvents, self.awaySubs, "substitution", self.awayInjury)
 
-        self.homeEvents["2:2"] = {"type": "yellow_card", "extra": False}
-
     def checkSubsitutionTime(self, time, events):
         # This function is here because i want the substitution after an injury to always be a minute after, so if there are any events at that time, add 5 mins to that event and check
         for event_time, _ in events.items():
@@ -747,6 +745,7 @@ class Match():
         logger = logging.getLogger(__name__)
 
         try:
+            currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
             logger.debug(f"saveData START: match_id={self.match.id} auto={self.auto} managing_team={managing_team}")
 
             self.returnWinner()
@@ -837,14 +836,15 @@ class Match():
                         events_to_add.append((self.match.id, event["type"], minute, player_id))
                         ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
                         logger.debug(f"Computed ban length={ban} for player={player_id} type={event['type']}")
-                        PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
+                        sendEmail, _ = PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate)
 
-                        currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
-                        emailDate = currDate + timedelta(days = 1)
-                        if managing_team == "home" and event["type"] == "injury":
-                            Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
-                        elif managing_team == "home" and event["type"] == "red_card":
-                            Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                        if sendEmail:
+                            emailDate = currDate + timedelta(days = 1)
+                            if managing_team == "home" and event["type"] == "injury":
+                                Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                            elif managing_team == "home" and event["type"] == "red_card":
+                                Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+
                     elif event["type"] == "yellow_card":
                         events_to_add.append((self.match.id, "yellow_card", minute, player_id))
                         MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, YELLOW_THRESHOLD, Game.get_game_date(Managers.get_all_user_managers()[0].id))
@@ -884,14 +884,15 @@ class Match():
                         events_to_add.append((self.match.id, event["type"], minute, player_id))
                         ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
                         logger.debug(f"Computed ban length={ban} for player={player_id} type={event['type']}")
-                        PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"])
+                        sendEmail, _ = PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate)
 
-                        currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
-                        emailDate = currDate + timedelta(days = 1)
-                        if managing_team == "away" and event["type"] == "injury":
-                            Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
-                        elif managing_team == "away" and event["type"] == "red_card":
-                            Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                        if sendEmail:
+                            emailDate = currDate + timedelta(days = 1)
+                            if managing_team == "away" and event["type"] == "injury":
+                                Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                            elif managing_team == "away" and event["type"] == "red_card":
+                                Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                                
                     elif event["type"] == "yellow_card":
                         events_to_add.append((self.match.id, "yellow_card", minute, player_id))
                         MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, YELLOW_THRESHOLD, Game.get_game_date(Managers.get_all_user_managers()[0].id))

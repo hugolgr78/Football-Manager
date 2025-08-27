@@ -40,7 +40,18 @@ class Inbox(ctk.CTkFrame):
     def addEmails(self):
         emails = Emails.get_all_emails(Game.get_game_date(self.manager_id))
 
+        currentDate = ""
         for email in emails:
+
+            _, date, _ = format_datetime_split(email.date)
+            if date != currentDate:
+                currentDate = date
+
+                frame = ctk.CTkFrame(self.emailsFrame, fg_color = TKINTER_BACKGROUND, width = 260, height = 50)
+                frame.pack(fill = "both", padx = 10, pady = 5)
+
+                ctk.CTkLabel(frame, text = date, font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0, rely = 0.5, anchor = "w")
+
             self.addEmail(email)
 
     def addEmail(self, email):

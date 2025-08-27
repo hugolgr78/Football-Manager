@@ -9,7 +9,6 @@ from utils.playerProfileLink import *
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 from utils.matchProfileLink import MatchProfileLink
-from utils.frames import FootballPitchMatchDay
 from PIL import Image
 import io
 
@@ -20,12 +19,14 @@ class EmailFrame(ctk.CTkFrame):
 
         self.parent = parent
         self.manager_id = manager_id
+        self.email_id = email.id
         self.email_type = email.email_type
         self.matchday = email.matchday if hasattr(email, 'matchday') else None
         self.player_id = email.player_id if hasattr(email, 'player_id') else None
         self.suspension = email.suspension if hasattr(email, 'suspension') else None
         self.injury = email.injury if hasattr(email, 'injury') else None
         self.comp_id = email.comp_id if hasattr(email, 'comp_id') else None
+        self.actioned = email.action_complete
         self.fullDate = email.date
         self.day, self.date, self.time = format_datetime_split(self.fullDate)
         self.emailFrame = emailFrame
@@ -75,7 +76,7 @@ class EmailFrame(ctk.CTkFrame):
         self.emailOpen = True
 
         for emailFrame in self.parent.winfo_children():
-            if emailFrame != self:
+            if emailFrame != self and isinstance(emailFrame, EmailFrame):
                 emailFrame.configure(border_color = TKINTER_BACKGROUND, border_width = 0)
                 emailFrame.canvas.place(relx = 0.5, rely = 0.9, anchor = "center")
                 emailFrame.emailOpen = False
@@ -1002,6 +1003,59 @@ class PlayerBan():
 
         self.emailText_1 = "Name, Assistant Manager"
 
+class PlayerBirthday():
+    def __init__(self, parent):
+
+        self.parent = parent
+        self.frame = self.parent.emailFrame
+
+        self.subject = f"{self.parent.player.last_name} birthday"
+        self.sender = "Name, Assistant Manager"
+        self.subjectFontSize = 20
+
+    def openEmail(self):
+        for widget in self.frame.winfo_children():
+            widget.place_forget()
+
+        self.setUpEmail()
+
+        self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
+        self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        self.emailFrame_1.place(relx = 0.05, rely = 0.1, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.131, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.18, anchor = "w")
+
+        self.button = ctk.CTkButton(self.frame, text = "Send Birthday Wishes", font = (APP_FONT_BOLD, 15), command = lambda: self.sendBirthdayWish(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
+        self.button.place(relx = 0.95, rely = 0.95, anchor = "se")
+
+        if self.parent.actioned:
+            self.button.configure(state = "disabled")
+
+    def setUpEmail(self):
+
+        self.emailFrame_1 = PlayerProfileLabel(
+            self.frame,
+            self.parent.player,
+            f"{self.parent.player.first_name} {self.parent.player.last_name}",
+            "I am pleased to inform you that today is ",
+            "'s birthday.",
+            240,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
+        )
+
+        self.emailText_1 = f"Feel free to wish him a happy birthday!"
+        self.emailText_2 = "Name, Assistant Manager"
+
+    def sendBirthdayWish(self):
+        Players.update_morale(self.parent.player.id, 10)
+        self.button.configure(state = "disabled")
+
+        Emails.update_action(self.parent.email_id)
+
 EMAIL_CLASSES = {
     "welcome": Welcome,
     "matchday_review": MatchdayReview,
@@ -1010,5 +1064,6 @@ EMAIL_CLASSES = {
     "season_review": SeasonReview,
     "season_preview": SeasonPreview,
     "player_injury": PlayerInjury,
-    "player_ban": PlayerBan
+    "player_ban": PlayerBan,
+    "player_birthday": PlayerBirthday
 }

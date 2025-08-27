@@ -196,13 +196,12 @@ class MainMenu(ctk.CTkFrame):
 
                 League.update_current_matchday(id_)   
 
-        self.resetTabs(0, 1, 3, 5, 6)
+        self.resetTabs(0, 1, 2, 3, 5, 6)
         self.addDate()
 
         # TODO: 
 
-        # inbox tab changes
-        # birthdays and age increases (email, with ability to raise player morale)
+        # birthdays and age increases (email, with ability to raise player morale, can be added at db creation)
         # check ticket to ensure everything is done
 
     def resetMenu(self):

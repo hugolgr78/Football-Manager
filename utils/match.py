@@ -711,8 +711,6 @@ class Match():
 
     def getRating(self, venue, rating, ratingsDict, events, playerID, position, oppositionEvents, oppositionGoals, i):
 
-        defender_positions = ["Right Back", "Left Back", "Center Back", "Center Back Right", "Center Back Left"]
-
         scorerFlag = False
         for _, event in events.items():
             if event["player"] == playerID:
@@ -725,7 +723,7 @@ class Match():
                 rating += random.choice(ASSIST_RATINGS)
         
         if not scorerFlag:
-            if position == "Goalkeeper" or position in defender_positions:
+            if position == "Goalkeeper" or position in DEFENSIVE_POSITIONS:
                 if oppositionGoals <= 1:
                     rating += random.choice(DEFENDER_GOALS_1)
                 elif oppositionGoals <= 3:
@@ -1001,9 +999,6 @@ class Match():
         except Exception as e:
             logger.error(f"Exception in saveData: {str(e)}", exc_info = True)
         finally:
-            # ensure we always update positions even if threaded ops had issues
-            LeagueTeams.update_team_positions(self.league.league_id)
-
             if self.auto:
                 self.timerThread_running = False
 

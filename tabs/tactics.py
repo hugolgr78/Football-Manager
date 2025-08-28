@@ -588,60 +588,13 @@ class Lineup(ctk.CTkFrame):
             self.settingsFrame.place_forget()
             self.reset(addSubs = False)
 
-            lineupPositions = lineupName.split(" ")[0]
-
-            lineup = {}
-            defNums, midNums, _ = map(int, lineupPositions.split("-"))
-
-            goalkeepers = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "goalkeeper"]
-            defenders = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "defender"]
-            midfielders = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "midfielder"]
-            attackers = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "forward"]
-
-            lineup["Goalkeeper"] = goalkeepers[0]
-
-            # defenders
-            self.choosePlayers(FORMATIONS_POSITIONS[lineupName][1:defNums + 1], defenders, lineup)
-
-            # midfielders
-            self.choosePlayers(FORMATIONS_POSITIONS[lineupName][defNums + 1:defNums + midNums + 1], midfielders, lineup)
-
-            # attackers
-            self.choosePlayers(FORMATIONS_POSITIONS[lineupName][defNums + midNums + 1:], attackers, lineup)
+            lineupPositions = FORMATIONS_POSITIONS[lineupName]
+            players = [Players.get_player_by_id(playerID) for playerID in self.players if not PlayerBans.check_bans_for_player(playerID, self.league.id)]
+            sortedPlayers = sorted(players, key = effective_ability, reverse = True)
+            _, _, lineup = score_formation(sortedPlayers, lineupPositions, self.team.id, self.leagueID)
+            lineup = {position: Players.get_player_by_id(pid) for position, pid in lineup.items()}
 
             self.importLineup(auto = lineup)
-
-    def choosePlayers(self, position_names, players, lineup):
-
-        position_options = defaultdict(list)
-
-        for position in position_names:
-            position_options[position] = []
-            for player in players:
-                if POSITION_CODES[position] in player.specific_positions:
-                    position_options[position].append(player)
-
-        assigned_players = set()
-
-        while position_options != {}:
-            sorted_positions = sorted(position_options.keys(), key = lambda pos: len(position_options[pos]))
-
-            position = sorted_positions[0]
-            available_players = [p for p in position_options[position] if p not in assigned_players]
-            
-            # Step 3: Prioritize by role (star > first_team > rotation)
-            best_fit = next((p for p in available_players if p.player_role == "Star Player"), None) or \
-                    next((p for p in available_players if p.player_role == "First Team"), None) or \
-                    next((p for p in available_players if p.player_role == "Rotation"), None)
-
-            if not best_fit:
-                best_fit = available_players[0]
-
-            lineup[position] = best_fit
-            assigned_players.add(best_fit)
-
-            # Remove empty position entries
-            del position_options[position]
 
     def proposedLineup(self):
         

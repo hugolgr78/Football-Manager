@@ -97,6 +97,9 @@ class Tactics(ctk.CTkFrame):
             except Exception:
                 pass
 
+    def showSettings(self):
+        self.lineupTab.lineupSettings()
+
 class Lineup(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 

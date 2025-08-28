@@ -97,6 +97,13 @@ class Tactics(ctk.CTkFrame):
             except Exception:
                 pass
 
+    def loadAnalysis(self):
+        self.tabs[1] = Analysis(self, self.manager_id)
+        self.tabs[1].pack(expand = True, fill = "both")
+
+    def activateProposed(self, lineup):
+        self.lineupTab.proposedLineup(lineup = lineup)
+
 class Lineup(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
@@ -293,15 +300,6 @@ class Lineup(ctk.CTkFrame):
                 if not PlayerBans.check_bans_for_player(player.id, self.league.id):
                     playersForPosition.append(playerID)
 
-            if position in DEFENSIVE_POSITIONS:
-                overallPosition = "defender"
-            elif position in MIDFIELD_POSITIONS:
-                overallPosition = "midfielder"
-            elif position in ATTACKING_POSITIONS:
-                overallPosition = "forward"
-            else:
-                overallPosition = "goalkeeper"
-
             if POSITION_CODES[position] in POSITIONS_MAX.keys():
                 maxPlayers = POSITIONS_MAX[POSITION_CODES[position]]
             else:
@@ -310,26 +308,23 @@ class Lineup(ctk.CTkFrame):
             if len(playersForPosition) < maxPlayers:
                 youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
                 youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth.id not in self.players]
+                youthForPosition.sort(key = effective_ability, reverse = True)
 
                 if len(youthForPosition) > 0:
                     self.players.append(youthForPosition[0].id)
-                else:
-                    newYouth = Players.add_youth_player(self.team.id, overallPosition, position)
-                    self.players.append(newYouth)
 
-                if position == "Goalkeeper":
-                    newYouth = Players.add_youth_player(self.team.id, overallPosition, position)
-                    self.players.append(newYouth)
+                # If we had no keepers, add a second youth to give the player a substitute keeper
+                if position == "Goalkeeper" and len(youthForPosition) > 1:
+                    self.players.append(youthForPosition[1].id)
 
             elif position == "Goalkeeper" and len(playersForPosition) == 1:
+                # If we only have one keeper, attempt to get a youth player to act as a sub
                 youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
                 youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth.id not in self.players]
+                youthForPosition.sort(key = effective_ability, reverse = True)
 
                 if len(youthForPosition) > 0:
                     self.players.append(youthForPosition[0].id)
-                else:
-                    newYouth = Players.add_youth_player(self.team.id, overallPosition, position)
-                    self.players.append(newYouth)
 
     def addSubstitutePlayers(self, importing = False, playersCount = None):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)
@@ -600,64 +595,18 @@ class Lineup(ctk.CTkFrame):
             self.settingsFrame.place_forget()
             self.reset(addSubs = False)
 
-            lineupPositions = lineupName.split(" ")[0]
-
-            lineup = {}
-            defNums, midNums, _ = map(int, lineupPositions.split("-"))
-
-            goalkeepers = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "goalkeeper"]
-            defenders = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "defender"]
-            midfielders = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "midfielder"]
-            attackers = [Players.get_player_by_id(playerID) for playerID in self.players if Players.get_player_by_id(playerID).position == "forward"]
-
-            lineup["Goalkeeper"] = goalkeepers[0]
-
-            # defenders
-            self.choosePlayers(FORMATIONS_POSITIONS[lineupName][1:defNums + 1], defenders, lineup)
-
-            # midfielders
-            self.choosePlayers(FORMATIONS_POSITIONS[lineupName][defNums + 1:defNums + midNums + 1], midfielders, lineup)
-
-            # attackers
-            self.choosePlayers(FORMATIONS_POSITIONS[lineupName][defNums + midNums + 1:], attackers, lineup)
+            lineupPositions = FORMATIONS_POSITIONS[lineupName]
+            players = [Players.get_player_by_id(playerID) for playerID in self.players if not PlayerBans.check_bans_for_player(playerID, self.league.id)]
+            sortedPlayers = sorted(players, key = effective_ability, reverse = True)
+            _, _, lineup = score_formation(sortedPlayers, lineupPositions, self.team.id, self.leagueID)
+            lineup = {position: Players.get_player_by_id(pid) for position, pid in lineup.items()}
 
             self.importLineup(auto = lineup)
 
-    def choosePlayers(self, position_names, players, lineup):
-
-        position_options = defaultdict(list)
-
-        for position in position_names:
-            position_options[position] = []
-            for player in players:
-                if POSITION_CODES[position] in player.specific_positions:
-                    position_options[position].append(player)
-
-        assigned_players = set()
-
-        while position_options != {}:
-            sorted_positions = sorted(position_options.keys(), key = lambda pos: len(position_options[pos]))
-
-            position = sorted_positions[0]
-            available_players = [p for p in position_options[position] if p not in assigned_players]
+    def proposedLineup(self, lineup = None):
+        if lineup is None:
+            lineup = getProposedLineup(self.team.id, self.opponent.id, self.league.id, Game.get_game_date(self.manager_id))
             
-            # Step 3: Prioritize by role (star > first_team > rotation)
-            best_fit = next((p for p in available_players if p.player_role == "Star Player"), None) or \
-                    next((p for p in available_players if p.player_role == "First Team"), None) or \
-                    next((p for p in available_players if p.player_role == "Rotation"), None)
-
-            if not best_fit:
-                best_fit = available_players[0]
-
-            lineup[position] = best_fit
-            assigned_players.add(best_fit)
-
-            # Remove empty position entries
-            del position_options[position]
-
-    def proposedLineup(self):
-        
-        lineup = getProposedLineup(self.team.id, self.opponent.id, self.league.id, Game.get_game_date(self.manager_id))
         lineup = {position: Players.get_player_by_id(pid) for position, pid in lineup.items()}
         self.settingsFrame.place_forget()
         self.reset(addSubs = False)
@@ -678,8 +627,15 @@ class Analysis(ctk.CTkFrame):
         self.oppLastMatch = Matches.get_team_last_match(self.opponent.id, Game.get_game_date(self.manager_id))
         self.oppLast5Matches = Matches.get_team_last_5_matches(self.opponent.id, Game.get_game_date(self.manager_id))
 
+        currDate = Game.get_game_date(self.manager_id)
+        canSeeAnaylsis = Emails.check_email_sent("matchday_preview", self.matchday, currDate)
+
         if not self.oppLastMatch:
             ctk.CTkLabel(self, text = "No analysis available for this team.", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+            return
+        
+        if not canSeeAnaylsis:
+            ctk.CTkLabel(self, text = "Analysis will be available 2 days before the game.", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
             return
 
         canvas = ctk.CTkCanvas(self, width = 5, height = 770, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
@@ -774,7 +730,7 @@ class Analysis(ctk.CTkFrame):
     def last5Form(self):
         ctk.CTkLabel(self.last5FormFrame, text = "Last games", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
 
-        for i, match in enumerate(reversed(self.oppLast5Matches)):
+        for i, match in enumerate(self.oppLast5Matches):
             frame = ctk.CTkFrame(self.last5FormFrame, fg_color = DARK_GREY, width = 90, height = 120)
             frame.place(relx = 0.005 + i * 0.2, rely = 0.25, anchor = "nw")
 

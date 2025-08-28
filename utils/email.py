@@ -31,6 +31,7 @@ class EmailFrame(ctk.CTkFrame):
         self.day, self.date, self.time = format_datetime_split(self.fullDate)
         self.emailFrame = emailFrame
         self.parentTab = parentTab
+        self.mainMenu = self.parentTab.parent
 
         self.emailOpen = False
 
@@ -712,9 +713,21 @@ class MatchdayPreview():
         if self.matchday != 1:
             self.emailText_5 = ctk.CTkLabel(self.frame, text = "For more information, you can open your analysis tab by going to Tactics -> Analysis", font = (APP_FONT, 15), justify = "left", text_color = "white")
             self.emailText_5.place(relx = 0.05, rely = 0.428, anchor = "nw")
+            
+            self.analysisButton = ctk.CTkButton(self.frame, text = "Go to Analysis", font = (APP_FONT_BOLD, 15), command = lambda: self.goToAnalysis(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
+            self.analysisButton.place(relx = 0.95, rely = 0.88, anchor = "se")
         
         ctk.CTkLabel(self.frame, text = self.title_3, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.5, anchor = "nw")
         ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.95, anchor = "nw")
+
+        match = Matches.get_team_matchday_match(self.parent.team.id, self.parent.league.id, self.matchday)
+        matchPassed = True if Game.get_game_date(self.parent.manager.id) > match.date else False
+
+        self.tacticsButton = ctk.CTkButton(self.frame, text = "Select Lineup", font = (APP_FONT_BOLD, 15), command = lambda: self.gotToTactics(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
+        self.tacticsButton.place(relx = 0.95, rely = 0.95, anchor = "se")
+        
+        if matchPassed:
+            self.tacticsButton.configure(state = "disabled")
 
     def setUpEmail(self):
 
@@ -843,13 +856,13 @@ class MatchdayPreview():
 
         self.title_3 = "Proposed Lineup"
 
-        proposedLineup = getProposedLineup(self.parent.team.id, self.opponent.id, self.parent.league.id, Game.get_game_date(self.parent.manager.id))
+        self.proposedLineup = getProposedLineup(self.parent.team.id, self.opponent.id, self.parent.league.id, Game.get_game_date(self.parent.manager.id))
 
         self.playersFrame = ctk.CTkFrame(self.frame, fg_color = TKINTER_BACKGROUND, width = 400, height = 250)
         self.playersFrame.place(relx = 0.035, rely = 0.55, anchor = "nw")
         self.playersFrame.pack_propagate(False)
 
-        for position, playerID in proposedLineup.items():
+        for position, playerID in self.proposedLineup.items():
             player = Players.get_player_by_id(playerID)
 
             frame = ctk.CTkFrame(self.playersFrame, fg_color = TKINTER_BACKGROUND, width = 150, height = 20)
@@ -861,6 +874,16 @@ class MatchdayPreview():
         self.emailText_4 = (
             "Name, Assistant Manager"
         )
+
+    def gotToTactics(self):
+        self.parent.mainMenu.changeTab(4)
+        self.parent.mainMenu.update_idletasks()
+        self.parent.mainMenu.tabs[4].changeTab(0)
+        self.parent.mainMenu.tabs[4].activateProposed(self.proposedLineup)
+
+    def goToAnalysis(self):
+        self.parent.mainMenu.changeTab(4)
+        self.parent.mainMenu.tabs[4].changeTab(1)
 
 class PlayerGamesIssue():
     def __init__(self, parent):
@@ -1030,7 +1053,10 @@ class PlayerBirthday():
         self.button = ctk.CTkButton(self.frame, text = "Send Birthday Wishes", font = (APP_FONT_BOLD, 15), command = lambda: self.sendBirthdayWish(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
         self.button.place(relx = 0.95, rely = 0.95, anchor = "se")
 
-        if self.parent.actioned:
+        _, currDate, _ = format_datetime_split(Game.get_game_date(self.parent.manager.id))
+        today = True if currDate == self.parent.date else False
+
+        if self.parent.actioned or not today:
             self.button.configure(state = "disabled")
 
     def setUpEmail(self):

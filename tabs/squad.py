@@ -17,10 +17,12 @@ class Squad(ctk.CTkFrame):
         self.playerInjured = False
         self.currentStat = "Current ability"
         self.playerFrames = []
+        self.youthFrames = []
+        self.youthsAdded = False
 
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.leagueId = LeagueTeams.get_league_by_team(self.team.id).league_id
-        self.players = Players.get_all_players_by_team(self.team.id)
+        self.players = Players.get_all_players_by_team(self.team.id, youths = False)
 
         self.titleFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 100, corner_radius = 0)
         self.titleFrame.pack(expand = True, fill = "both", padx = 10, pady = 10)
@@ -65,21 +67,50 @@ class Squad(ctk.CTkFrame):
         self.playersFrame = ctk.CTkScrollableFrame(self, fg_color = TKINTER_BACKGROUND, width = 982, height = 580, corner_radius = 0)
         self.playersFrame.pack(expand = True, fill = "both", padx = (0, 20))
 
+        self.youthsButton = ctk.CTkButton(self, text = "Youth Team", command = self.changeTeam, fg_color = DARK_GREY, hover_color = DARK_GREY, font = (APP_FONT, 15), corner_radius = 10, width = 120, height = 30)
+        self.youthsButton.place(relx = 0.95, rely = 0.02, anchor = "ne")
+
         self.addPlayers()
 
-    def addPlayers(self, replace = False):
-
-        if replace:
-            for widget in self.winfo_children():
-                widget.destroy()
+    def addPlayers(self):
 
         caStarRatings = Players.get_players_star_ratings(self.players, self.leagueId)
         paStarRatings = Players.get_players_star_ratings(self.players, self.leagueId, CA = False)
 
         for player in self.players:
-            if player.player_role != "Youth Team":
-                frame = PlayerFrame(self, self.manager_id, player, self.playersFrame, caStarRatings[player.id], paStarRatings[player.id], talkFunction = self.talkToPlayer)
-                self.playerFrames.append(frame)
+            frame = PlayerFrame(self, self.manager_id, player, self.playersFrame, caStarRatings[player.id], paStarRatings[player.id], talkFunction = self.talkToPlayer)
+            self.playerFrames.append(frame)
+
+    def changeTeam(self):
+
+        if self.youthsButton.cget("text") == "Youth Team":
+            self.youthsButton.configure(text = "First Team")
+
+            for frame in self.playerFrames:
+                frame.pack_forget()
+
+            if not self.youthsAdded:
+                self.youthsAdded = True
+                self.youths = Players.get_all_youth_players(self.team.id)
+
+                caStarRatings = Players.get_players_star_ratings(self.youths, self.leagueId)   
+                paStarRatings = Players.get_players_star_ratings(self.youths, self.leagueId, CA = False)
+
+                for player in self.youths:
+                    frame = PlayerFrame(self, self.manager_id, player, self.playersFrame, caStarRatings[player.id], paStarRatings[player.id])
+                    self.youthFrames.append(frame)
+
+            else:
+                for frame in self.youthFrames:
+                    frame.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
+        else:
+            self.youthsButton.configure(text = "Youth Team")
+
+            for frame in self.youthFrames:
+                frame.pack_forget()
+
+            for frame in self.playerFrames:
+                frame.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
 
     def talkToPlayer(self, player):
 
@@ -278,5 +309,9 @@ class Squad(ctk.CTkFrame):
         self.currentStat = value
         
         for frame in self.playerFrames:
+            frame.stat = value
+            frame.addStat()
+        
+        for frame in self.youthFrames:
             frame.stat = value
             frame.addStat()

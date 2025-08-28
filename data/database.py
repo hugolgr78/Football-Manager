@@ -1,5 +1,5 @@
-import re
-from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float
+import re, datetime
+from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
 from sqlalchemy.orm import sessionmaker, aliased, scoped_session
@@ -12,13 +12,6 @@ from settings import *
 from utils.util_functions import *
 
 Base = declarative_base()
-
-LEAGUE_NAME = "Eclipse League"
-FIRST_YEAR = 2024
-NUM_TEAMS = 20
-
-TOTAL_STEPS = 1003
-PROGRESS = 0
 
 progressBar = None
 progressLabel = None
@@ -65,7 +58,7 @@ class Managers(Base):
     games_lost = Column(Integer, default = 0)
     trophies = Column(Integer, default = 0)
     user = Column(Boolean, nullable = False)
-    date_of_birth = Column(String(128), nullable = False)
+    date_of_birth = Column(Date, nullable = False)
     age = Column(Integer, nullable = False)
 
     @classmethod
@@ -111,6 +104,7 @@ class Managers(Base):
                 Referees.add_referees()
                 updateProgress(3)
                 League.add_league(LEAGUE_NAME, FIRST_YEAR, 0, 3)
+                Emails.add_emails(managerID)
                 updateProgress(None)
 
             return managerID
@@ -376,7 +370,7 @@ class Players(Base):
     number = Column(Integer, nullable = False)
     position = Column(Enum("goalkeeper", "defender", "midfielder", "forward"), nullable = False)
     specific_positions = Column(String(128), nullable = False)
-    date_of_birth = Column(String(128), nullable = False)
+    date_of_birth = Column(Date, nullable = False)
     age = Column(Integer, nullable = False)
     nationality = Column(String(128), nullable = False)
     flag = Column(BLOB)
@@ -421,7 +415,7 @@ class Players(Base):
                 potential_ability = playerPA,
                 number = random.randint(1, 99),
                 position = position,
-                date_of_birth = str(date_of_birth),
+                date_of_birth = date_of_birth,
                 age = 2024 - date_of_birth.year,
                 nationality = country,
                 flag = flag,
@@ -435,8 +429,8 @@ class Players(Base):
             specific_positions = {
                 "goalkeeper": ["GK"],
                 "defender": ["RB", "CB", "LB"],
-                "midfielder": ["DM", "CM", "RM", "LM"],
-                "forward": ["LW", "CF", "RW", "AM"]
+                "midfielder": ["DM", "CM", "RM", "LM", "AM"],
+                "forward": ["LW", "CF", "RW"]
             }
 
             required_code = POSITION_CODES[required_position]
@@ -523,7 +517,7 @@ class Players(Base):
                         last_name = faker.last_name(),
                         number = player_number,
                         position = overall_position,
-                        date_of_birth = str(date_of_birth),
+                        date_of_birth = date_of_birth,
                         age = 2024 - date_of_birth.year,
                         nationality = country,
                         flag = flag,
@@ -561,7 +555,7 @@ class Players(Base):
                         last_name = faker.last_name(),
                         number = player_number,
                         position = overall_position,
-                        date_of_birth = str(date_of_birth),
+                        date_of_birth = date_of_birth,
                         age = 2024 - date_of_birth.year,
                         nationality = country,
                         flag = flag,
@@ -742,23 +736,6 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def get_player_manager(cls, id):
-        session = DatabaseManager().get_session()
-        try:
-            player = cls.get_player_by_id(id)
-            if not player:
-                return None
-
-            team = Teams.get_team_by_id(player.team_id)
-            if not team:
-                return None
-
-            manager = Managers.get_manager_by_id(team.manager_id)
-            return manager
-        finally:
-            session.close()
-
-    @classmethod
     def update_age(cls, id, age):
         session = DatabaseManager().get_session()
         try:
@@ -923,25 +900,24 @@ class Matches(Base):
     league_id = Column(String(128), ForeignKey('leagues.id'))
     home_id = Column(String(128), ForeignKey('teams.id'))
     away_id = Column(String(128), ForeignKey('teams.id'))
-    time = Column(String(128), nullable = False)
     referee_id = Column(String(128), ForeignKey('referees.id'))
     score_home = Column(Integer, nullable = False, default = 0)
     score_away = Column(Integer, nullable = False, default = 0)
     matchday = Column(Integer, nullable = False)
+    date = Column(DateTime, nullable = False)
 
     @classmethod
-    def add_match(cls, league_id, home_id, away_id, referee_id, matchday):
+    def add_match(cls, league_id, home_id, away_id, referee_id, matchday, date):
         session = DatabaseManager().get_session()
         try:
-            times = ["12:30", "13:00", "14:00", "15:00", "17:00", "19:00", "20:00"]
 
             new_match = Matches(
                 league_id = league_id,
                 home_id = home_id,
                 away_id = away_id,
-                time = random.choices(times, k = 1)[0],
                 referee_id = referee_id,
-                matchday = matchday
+                matchday = matchday,
+                date = date,
             )
 
             session.add(new_match)
@@ -977,13 +953,24 @@ class Matches(Base):
             session.close()
         
     @classmethod
-    def get_team_next_match(cls, team_id, league_id):
+    def get_team_next_match(cls, team_id, curr_date):
         session = DatabaseManager().get_session()
         try:
-            current_matchday = session.query(League).filter(League.id == league_id).first().current_matchday
             match = session.query(Matches).filter(
-                (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday == current_matchday
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                Matches.date > curr_date
+            ).order_by(Matches.date.asc()).first()
+            return match
+        finally:
+            session.close()
+
+    @classmethod
+    def get_match_by_team_and_date(cls, team_id, date):
+        session = DatabaseManager().get_session()
+        try:
+            match = session.query(Matches).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                Matches.date == date
             ).first()
             return match
         finally:
@@ -1006,76 +993,51 @@ class Matches(Base):
     def get_team_first_match(cls, team_id):
         session = DatabaseManager().get_session()
         try:
-            match = session.query(Matches).filter(
-                (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday == 1
-            ).first()
+            # Return the earliest match for the team by date
+            match = (
+                session.query(Matches)
+                .filter((Matches.home_id == team_id) | (Matches.away_id == team_id))
+                .order_by(Matches.date.asc())
+                .first()
+            )
             return match
         finally:
             session.close()
 
     @classmethod
-    def get_team_last_match(cls, team_id, league_id):
+    def get_team_last_match(cls, team_id, curr_date):
         session = DatabaseManager().get_session()
         try:
-            current_matchday = session.query(League).filter(League.id == league_id).first().current_matchday
-            match = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
+            match = session.query(Matches).join(
+                TeamLineup, TeamLineup.match_id == Matches.id
+            ).filter(
                 (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday == current_matchday - 1
-            ).first()
+                Matches.date < curr_date
+            ).order_by(Matches.date.desc()).first()  # Get the latest previous match
             return match
         finally:
             session.close()
 
     @classmethod
-    def get_team_last_match_from_matchday(cls, team_id, matchday):
+    def get_team_next_5_matches(cls, team_id, curr_date):
         session = DatabaseManager().get_session()
         try:
-            match = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
-                (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday == matchday - 1
-            ).first()
-            return match
-        finally:
-            session.close()
-
-    @classmethod
-    def get_team_next_5_matches(cls, team_id, league_id):
-        session = DatabaseManager().get_session()
-        try:
-            current_matchday = session.query(League).filter(League.id == league_id).first().current_matchday
             matches = session.query(Matches).filter(
                 (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday >= current_matchday,
-                Matches.matchday < current_matchday + 5
-            ).all()
+                Matches.date >= curr_date
+            ).order_by(Matches.date.asc()).limit(5).all()
             return matches
         finally:
             session.close()
 
     @classmethod
-    def get_team_last_5_matches(cls, team_id, league_id):
+    def get_team_last_5_matches(cls, team_id, curr_date):
         session = DatabaseManager().get_session()
         try:
-            current_matchday = session.query(League).filter(League.id == league_id).first().current_matchday
-            matches = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
+            matches = session.query(Matches).filter(
                 (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday >= current_matchday - 5,
-                Matches.matchday < current_matchday
-            ).all()
-            return matches
-        finally:
-            session.close()
-
-    @classmethod
-    def get_team_last_5_matches_from_matchday(cls, team_id, matchday):
-        session = DatabaseManager().get_session()
-        try:
-            matches = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
-                (Matches.home_id == team_id) | (Matches.away_id == team_id),
-                Matches.matchday >= matchday - 5,
-                Matches.matchday < matchday
-            ).all()
+                Matches.date < curr_date
+            ).order_by(Matches.date.desc()).limit(5).all()
             return matches
         finally:
             session.close()
@@ -1169,7 +1131,6 @@ class Matches(Base):
         finally:
             session.close()
 
-
     @classmethod
     def get_matchday_for_league(cls, league_id, matchday):
         session = DatabaseManager().get_session()
@@ -1177,7 +1138,7 @@ class Matches(Base):
             matches = session.query(Matches).filter(
                 Matches.league_id == league_id,
                 Matches.matchday == matchday
-            ).order_by(Matches.time).all()  # Sort by time
+            ).order_by(Matches.date).all()
             return matches
         finally:
             session.close()
@@ -1195,19 +1156,6 @@ class Matches(Base):
             session.close()
         
     @classmethod
-    def get_last_encounter_from_matchday(cls, team_1, team_2, matchday):
-        session = DatabaseManager().get_session()
-        try:
-            match = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
-                ((Matches.home_id == team_1) & (Matches.away_id == team_2)) |
-                ((Matches.home_id == team_2) & (Matches.away_id == team_1)),
-                Matches.matchday < matchday
-            ).order_by(Matches.matchday.desc()).first()
-            return match
-        finally:
-            session.close()
-
-    @classmethod
     def get_all_player_matches(cls, player_id):
         session = DatabaseManager().get_session()
         try:
@@ -1219,6 +1167,60 @@ class Matches(Base):
                 .all()
             )
             return matches
+        finally:
+            session.close()
+
+    @classmethod
+    def check_if_game_time(cls, team_id, game_time):
+        session = DatabaseManager().get_session()
+        try:
+            match = session.query(Matches).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                Matches.date == game_time
+            ).order_by(Matches.date.asc()).first()
+            return match is not None
+        finally:
+            session.close()
+
+    @classmethod
+    def get_matches_time_frame(cls, start, end):
+        session = DatabaseManager().get_session()
+        try:
+            matches = session.query(Matches).filter(
+                Matches.date >= start,
+                Matches.date < end
+            ).order_by(Matches.date.asc()).all()
+            return matches
+        finally:
+            session.close()
+
+    @classmethod
+    def check_game_played(cls, match, curr_date):
+        session = DatabaseManager().get_session()
+        try:
+            played = session.query(Matches).filter(
+                Matches.id == match.id,
+                Matches.date < curr_date
+            ).first()
+            return played is not None
+        finally:
+            session.close()
+
+    @classmethod
+    def finished_matchday(cls, curr_date, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            saturday = curr_date - timedelta(days = (curr_date.weekday() - 5) % 7 + 2)  # last Sat
+            sunday   = saturday + timedelta(days = 1)
+
+            # Query matches that happened on Sat or Sun for this league
+            finished = session.query(Matches).filter(
+                Matches.league_id == league_id,
+                Matches.date >= saturday,
+                Matches.date <= sunday
+            ).first()
+
+            return finished is not None
         finally:
             session.close()
 
@@ -1681,7 +1683,7 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def check_yellow_card_ban(cls, player_id, comp_id, ban_threshold):
+    def check_yellow_card_ban(cls, player_id, comp_id, ban_threshold, currDate):
         session = DatabaseManager().get_session()
         try:
             yellow_cards = session.query(MatchEvents).join(Matches).filter(
@@ -1690,19 +1692,17 @@ class MatchEvents(Base):
                 Matches.league_id == comp_id
             ).count()
 
-            if yellow_cards and yellow_cards % ban_threshold == 0:
-                red_card_ban = session.query(PlayerBans).filter(
-                    PlayerBans.player_id == player_id,
-                    PlayerBans.ban_type == "red_card",
-                    PlayerBans.ban_length > 0
-                ).first()
+            yellow_cards += 1
 
-                if red_card_ban:
-                    red_card_ban.ban_length += 1
-                    session.commit()
-                else:
-                    PlayerBans.add_player_ban(player_id, comp_id, ban_length = 1, ban_type = "yellow_cards")
-                    Emails.add_email("player_ban", None, player_id, 1, comp_id)
+            if yellow_cards and yellow_cards % ban_threshold == 0:
+                PlayerBans.add_player_ban(player_id, comp_id, 1, "yellow_cards", currDate)
+
+                player_team = Teams.get_team_by_id(Players.get_player_by_id(player_id).team_id)
+                user_manager = Managers.get_manager_by_id(player_team.manager_id).user
+
+                if user_manager:
+                    date = (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0)
+                    Emails.add_email("player_ban", None, player_id, 1, comp_id, date)
         finally:
             session.close()
 
@@ -2039,7 +2039,7 @@ class League(Base):
         try:
             schedule = []
 
-            # Generate the first round of matches
+            # --- Generate the first round of matches ---
             num_teams = len(team_ids)
             for round in range(num_teams - 1):
                 round_matches = []
@@ -2055,14 +2055,48 @@ class League(Base):
 
             random.shuffle(schedule)
 
+            # --- Second round (reverse fixtures) ---
             second_round = [[(away, home) for home, away in round] for round in schedule]
             random.shuffle(second_round)
             schedule.extend(second_round)
 
-            # Add matches to the database
-            for i, matchday in enumerate(schedule):
-                assigned_referees = set()  # Keep track of referees assigned for this matchday
-                for home_id, away_id in matchday:
+            # --- Generate weekend dates for 38 matchdays ---
+            start_date = SEASON_START_DATE
+            matchdays_dates = []
+            current = start_date
+
+            while len(matchdays_dates) < 38:
+                saturday = current + datetime.timedelta(days = (5 - current.weekday()) % 7)
+                sunday = saturday + datetime.timedelta(days = 1)
+
+                sat_date = saturday.date()
+                sun_date = sunday.date()
+
+                # Skip Christmas week (Dec 24 - Jan 1)
+                if not (datetime.date(sat_date.year, 12, 24) <= sat_date <= datetime.date(sat_date.year, 12, 31) or
+                        sun_date == datetime.date(sun_date.year, 1, 1)):
+                    matchdays_dates.append((saturday, sunday))
+
+                current = saturday + datetime.timedelta(days = 7)
+
+            # --- Allowed kickoff times (strings) ---
+            time_slots = ["12:00", "15:00", "18:00", "21:00"]
+
+            def assign_times_for_day(games):
+                for game in games:
+                    chosen_time = random.choice(time_slots)
+                    yield game, chosen_time  # game is tuple (home_id, away_id), time is string
+
+            # --- Add matches to the database ---
+            for i, (matchday, (saturday, sunday)) in enumerate(zip(schedule, matchdays_dates)):
+                assigned_referees = set()
+                random.shuffle(matchday)  # Shuffle order so Sat/Sun split is fair
+                half = len(matchday) // 2
+                sat_games = matchday[:half]
+                sun_games = matchday[half:]
+
+                # --- Assign Saturday games ---
+                for (home_id, away_id), kickoff_time in assign_times_for_day(sat_games):
                     available_referees = [
                         referee.id for referee in session.query(Referees).all()
                         if referee.id not in assigned_referees
@@ -2073,9 +2107,27 @@ class League(Base):
                     referee_id = random.choice(available_referees)
                     assigned_referees.add(referee_id)
 
-                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1)
+                    # Combine date and time into a datetime object
+                    kickoff_datetime = datetime.datetime.combine(saturday, datetime.datetime.strptime(kickoff_time, "%H:%M").time())
+                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1, kickoff_datetime)
+
+                # --- Assign Sunday games ---
+                for (home_id, away_id), kickoff_time in assign_times_for_day(sun_games):
+                    available_referees = [
+                        referee.id for referee in session.query(Referees).all()
+                        if referee.id not in assigned_referees
+                    ]
+                    if not available_referees:
+                        raise ValueError("Not enough referees to cover all matches for this matchday.")
+
+                    referee_id = random.choice(available_referees)
+                    assigned_referees.add(referee_id)
+
+                    kickoff_datetime = datetime.datetime.combine(sunday, datetime.datetime.strptime(kickoff_time, "%H:%M").time())
+                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1, kickoff_datetime)
 
                 updateProgress(None)
+
         except Exception as e:
             session.rollback()
             raise e
@@ -2101,15 +2153,6 @@ class League(Base):
             session.close()
         
     @classmethod
-    def get_league_by_year(cls, year):
-        session = DatabaseManager().get_session()
-        try:
-            league = session.query(League).filter(League.year == year).first()
-            return league
-        finally:
-            session.close()
-        
-    @classmethod
     def update_current_matchday(cls, league_id):
         session = DatabaseManager().get_session()
         try:
@@ -2121,6 +2164,53 @@ class League(Base):
                 return None
         finally:
             session.close()
+
+    @classmethod
+    def get_all_leagues(cls):
+        session = DatabaseManager().get_session()
+        try:
+            leagues = session.query(League).all()
+            return leagues
+        finally:
+            session.close()
+
+    @classmethod
+    def check_all_matches_complete(cls, league_id, currDate):
+        session = DatabaseManager().get_session()
+        try:
+            league = session.query(League).filter(League.id == league_id).first()
+            if not league:
+                return False
+
+            matchday = league.current_matchday
+
+            # Step 2: get all matches for this matchday
+            matches = session.query(Matches).filter(
+                Matches.league_id == league_id,
+                Matches.matchday == matchday
+            ).all()
+
+            if not matches:
+                return False  # no matches found (shouldn't normally happen)
+
+            # Step 3: check if all match dates are before currDate
+            all_complete = all(m.date < currDate for m in matches)
+
+            return all_complete
+        finally:
+            session.close()
+
+    @classmethod
+    def get_current_matchday(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            league = session.query(League).filter(League.id == league_id).first()
+            if league:
+                return league.current_matchday
+            return None
+        finally:
+            session.close()
+
 
 class LeagueTeams(Base):
     __tablename__ = 'league_teams'
@@ -2337,7 +2427,7 @@ class Referees(Base):
     flag = Column(BLOB)
     nationality = Column(String(128), nullable = False)
     age = Column(Integer, nullable = False)
-    date_of_birth = Column(String(128), nullable = False)
+    date_of_birth = Column(Date, nullable = False)
 
     @classmethod
     def add_referee(cls):
@@ -2359,7 +2449,7 @@ class Referees(Base):
                 flag = flag,
                 nationality = country,
                 age = 2024 - date_of_birth.year,
-                date_of_birth = str(date_of_birth)
+                date_of_birth = date_of_birth
             )
 
             session.add(new_referee)
@@ -2393,7 +2483,7 @@ class Referees(Base):
                     flag = flag,
                     nationality = country,
                     age = 2024 - date_of_birth.year,
-                    date_of_birth = str(date_of_birth)
+                    date_of_birth = date_of_birth
                 )
 
                 session.add(new_referee)
@@ -2456,23 +2546,87 @@ class Emails(Base):
     __tablename__ = 'emails'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban"), nullable = False)
+    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday"), nullable = False)
     matchday = Column(Integer)
+    date = Column(DateTime, nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))
-    ban_length = Column(Integer)
+    suspension = Column(Integer)
+    injury = Column(DateTime)
     comp_id = Column(String(128))
+    action_complete = Column(Boolean, default = False)
 
     @classmethod
-    def add_email(cls, email_type, matchday, player_id, ban_length, comp_id):
+    def add_emails(cls, manager_id):
+        session = DatabaseManager().get_session()
+        try:
+            emails = []
+
+            # Add welcome email at season start
+            welcome_email_date = SEASON_START_DATE
+            emails.append(("welcome", None, None, None, None, welcome_email_date))
+
+            team = session.query(Teams).filter(Teams.manager_id == manager_id).first()
+            matches = Matches.get_all_matches_by_team(team.id)
+
+            league = LeagueTeams.get_league_by_team(team.id)
+
+            for match in matches:
+                # Create preview email (2 days before at 8am)
+                preview_email_date = (match.date - datetime.timedelta(days = 2)).replace(hour = 8, minute = 0, second = 0, microsecond = 0)
+                emails.append(("matchday_preview", match.matchday, None, None, league.league_id, preview_email_date))
+
+                # Create review email (next Monday at 8am)
+                email_date = get_next_monday(match.date)
+                review_email_date = email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0)
+                emails.append(("matchday_review", match.matchday, None, None, league.league_id, review_email_date))
+
+            players = Players.get_all_players_by_team(team.id, youths = False)
+
+            # curr_year = Game.get_game_date(Managers.get_all_user_managers()[0].id).year
+            curr_year = SEASON_START_DATE.year
+
+            for player in players:
+                dob = player.date_of_birth
+
+                email_date = datetime.datetime(dob.year, dob.month, dob.day, 8)
+
+                target_year = curr_year + 1 if dob.month < 8 else curr_year
+
+                # handle Feb 29 -> Feb 28 if not a leap year
+                try:
+                    email_date = email_date.replace(year = target_year)
+                except ValueError:
+                    if dob.month == 2 and dob.day == 29:
+                        email_date = datetime.datetime(target_year, 2, 28, 8)
+                    else:
+                        raise
+
+                if email_date >= SEASON_START_DATE:
+                    birthday_email = ("player_birthday", None, player.id, None, None, email_date)
+                    emails.append(birthday_email)
+
+            cls.batch_add_emails(emails)
+        finally:
+            session.close()
+
+    @classmethod
+    def add_email(cls, email_type, matchday, player_id, ban_length, comp_id, date):
         session = DatabaseManager().get_session()
         try:
             new_email = Emails(
                 email_type = email_type,
                 matchday = matchday,
                 player_id = player_id,
-                ban_length = ban_length,
-                comp_id = comp_id
+                comp_id = comp_id,
+                date = date,
             )
+
+            if email_type == "player_ban":
+                new_email.suspension = ban_length
+                new_email.injury = None
+            elif email_type == "player_injury":
+                new_email.injury = ban_length
+                new_email.suspension = None
 
             session.add(new_email)
             session.commit()
@@ -2488,20 +2642,30 @@ class Emails(Base):
     def batch_add_emails(cls, emails):
         session = DatabaseManager().get_session()
         try:
-            # Create a list of dictionaries representing each email
-            email_dicts = [
-                {
-                    "id": str(uuid.uuid4()),
-                    "email_type": email[0],
-                    "matchday": email[1],
-                    "player_id": email[2],
-                    "ban_length": email[3],
-                    "comp_id": email[4]
-                }
-                for email in emails
-            ]
+            # Prepare list of dicts for bulk insert
+            email_dicts = []
+            for email in emails:
+                email_type = email[0]
+                matchday = email[1]
+                player_id = email[2]
+                ban_length = email[3]  # assuming 4th element is ban/injury length
+                comp_id = email[4]
+                date = email[5]
 
-            # Use session.execute with an insert statement
+                email_dict = {
+                    "id": str(uuid.uuid4()),
+                    "email_type": email_type,
+                    "matchday": matchday,
+                    "player_id": player_id,
+                    "comp_id": comp_id,
+                    "date": date,
+                    "suspension": ban_length if email_type == "player_ban" else None,
+                    "injury": ban_length if email_type == "player_injury" else None
+                }
+
+                email_dicts.append(email_dict)
+
+            # Bulk insert using session.execute
             session.execute(insert(Emails), email_dicts)
             session.commit()
         except Exception as e:
@@ -2509,7 +2673,33 @@ class Emails(Base):
             raise e
         finally:
             session.close()
-    
+
+    @classmethod
+    def increment_ban(cls, email_id, num):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.id == email_id).first()
+            if email and email.suspension is not None:
+                email.suspension += num
+                session.commit()
+                return email
+            else:
+                return None
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod 
+    def get_email_by_type_and_date(cls, type, date):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.email_type == type, Emails.date == date).first()
+            return email
+        finally:
+            session.close()
+
     @classmethod
     def get_email_by_id(cls, id):
         session = DatabaseManager().get_session()
@@ -2547,13 +2737,42 @@ class Emails(Base):
             session.close()
     
     @classmethod
-    def get_all_emails(cls):
+    def get_all_emails(cls, curr_date):
         session = DatabaseManager().get_session()
         try:
-            emails = session.query(Emails).all()
+            emails = session.query(Emails).filter(Emails.date <= curr_date).order_by(Emails.date.desc()).all()
             return emails
         finally:
-            session.close()      
+            session.close()  
+
+    @classmethod
+    def get_next_email(cls, curr_date):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.date > curr_date).order_by(Emails.date.asc()).first()
+            return email
+        finally:
+            session.close()
+
+    @classmethod
+    def check_email_sent(cls, email_type, matchday, curr_date):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.email_type == email_type, Emails.matchday == matchday, Emails.date <= curr_date).first()
+            return email is not None
+        finally:
+            session.close()
+
+    @classmethod
+    def update_action(cls, email_id):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.id == email_id).first()
+            if email:
+                email.action_complete = True
+                session.commit()
+        finally:
+            session.close()
 
 class PlayerBans(Base):
     __tablename__ = 'player_bans'
@@ -2561,24 +2780,58 @@ class PlayerBans(Base):
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     player_id = Column(String(128), ForeignKey('players.id'))
     competition_id = Column(String(128))
-    ban_length = Column(Integer, nullable = False)
+    suspension = Column(Integer)
+    injury = Column(DateTime)
     ban_type = Column(Enum("red_card", "injury", "yellow_cards"), nullable = False)
 
     @classmethod
-    def add_player_ban(cls, player_id, competition_id, ban_length, ban_type):
+    def add_player_ban(cls, player_id, competition_id, ban_length, ban_type, currDate):
         session = DatabaseManager().get_session()
         try:
-            new_ban = PlayerBans(
-                player_id = player_id,
-                competition_id = competition_id,
-                ban_length = ban_length,
-                ban_type = ban_type
+
+            # If the player got a yellow card accumulation ban in the same game, add to the suspension. 
+            existing_ban = (
+                session.query(PlayerBans)
+                .filter_by(player_id = player_id, competition_id = competition_id)
+                .first()
             )
 
-            session.add(new_ban)
-            session.commit()
+            # This only happens if the player gets a yellow accu and a red card in the same game
+            if existing_ban and existing_ban.ban_type == "yellow_cards":
 
-            return new_ban
+                player_team = Teams.get_team_by_id(Players.get_player_by_id(player_id).team_id)
+                user_manager = Managers.get_manager_by_id(player_team.manager_id).user
+
+                if user_manager:
+                    date = (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0)
+                    email = Emails.get_email_by_type_and_date("player_ban", date)
+                    Emails.increment_ban(email.id, ban_length)
+                
+                existing_ban = session.merge(existing_ban)
+                existing_ban.suspension += ban_length
+                existing_ban.ban_type = "red_card"
+
+                session.commit()
+                return False, existing_ban
+            else:
+
+                new_ban = PlayerBans(
+                    player_id = player_id,
+                    competition_id = competition_id,
+                    ban_type = ban_type
+                )
+
+                if ban_type == "red_card" or ban_type == "yellow_cards":
+                    new_ban.suspension = ban_length
+                    new_ban.injury = None
+                elif ban_type == "injury":
+                    new_ban.injury = ban_length
+                    new_ban.suspension = None
+
+                session.add(new_ban)
+                session.commit()
+
+                return True, new_ban
         except Exception as e:
             session.rollback()
             raise e
@@ -2589,19 +2842,26 @@ class PlayerBans(Base):
     def batch_add_bans(cls, bans):
         session = DatabaseManager().get_session()
         try:
-            # Create a list of dictionaries representing each ban
-            ban_dicts = [
-                {
-                    "id": str(uuid.uuid4()),
-                    "player_id": ban[0],
-                    "competition_id": ban[1],
-                    "ban_length": ban[2],
-                    "ban_type": ban[3]
-                }
-                for ban in bans
-            ]
+            ban_dicts = []
+            for ban in bans:
+                player_id, competition_id, ban_length, ban_type = ban
 
-            # Use session.execute with an insert statement
+                entry = {
+                    "id": str(uuid.uuid4()),
+                    "player_id": player_id,
+                    "competition_id": competition_id,
+                    "ban_type": ban_type,
+                }
+
+                if ban_type in ("red_card", "yellow_cards"):
+                    entry["suspension"] = ban_length
+                    entry["injury"] = None
+                elif ban_type == "injury":
+                    entry["injury"] = ban_length
+                    entry["suspension"] = None
+
+                ban_dicts.append(entry)
+
             session.execute(insert(PlayerBans), ban_dicts)
             session.commit()
         except Exception as e:
@@ -2611,19 +2871,38 @@ class PlayerBans(Base):
             session.close()
 
     @classmethod
-    def reduce_all_player_bans_for_team(cls, team_id, competition_id):
+    def reduce_suspensions_for_team(cls, team_id, competition_id):
         session = DatabaseManager().get_session()
         try:
             bans = session.query(PlayerBans).join(Players).filter(Players.team_id == team_id).all()
 
             for ban in bans:
-                if ban.ban_type == "injury":
-                    ban.ban_length -= 1
-                elif ban.competition_id == competition_id:
-                    ban.ban_length -= 1
+                if ban.competition_id == competition_id and ban.ban_type in ["red_card", "yellow_cards"]:
+                    ban.suspension -= 1
 
-                if ban.ban_length == 0:
+                if ban.suspension == 0:
                     session.delete(ban)
+
+            session.commit()
+
+            return bans
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def reduce_injuries(cls, time, stopDate):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).filter(PlayerBans.ban_type == "injury").all()
+
+            for ban in bans:
+                if ban.injury <= stopDate:
+                    session.delete(ban)
+                else:
+                    ban.injury -= time
 
             session.commit()
 
@@ -3721,19 +4000,22 @@ class StatsManager:
         # slow_items = [(k, v) for k, v in functions.items() if k in slow_stats]
 
         # Run fast stats in parallel
-        with ThreadPoolExecutor() as executor:
-            future_to_stat = {
-                executor.submit(stat_func, leagueTeams, league_id): stat_name
-                for stat_name, stat_func in fast_items
-            }
-            stat_results = {}
-            for future in as_completed(future_to_stat):
-                stat_name = future_to_stat[future]
-                try:
-                    results = future.result()
-                    stat_results[stat_name] = results
-                except Exception:
-                    stat_results[stat_name] = None
+        try:
+            with ThreadPoolExecutor() as executor:
+                future_to_stat = {
+                    executor.submit(stat_func, leagueTeams, league_id): stat_name
+                    for stat_name, stat_func in fast_items
+                }
+                stat_results = {}
+                for future in as_completed(future_to_stat):
+                    stat_name = future_to_stat[future]
+                    try:
+                        results = future.result()
+                        stat_results[stat_name] = results
+                    except Exception:
+                        stat_results[stat_name] = None
+        except Exception as e:
+            print(e)
 
         # # Run slow stats (each in its own thread, but sequentially after fast stats)
         # for stat_name, stat_func in slow_items:
@@ -4024,12 +4306,12 @@ def searchResults(search, limit = SEARCH_LIMIT):
     finally:
         session.close()
 
-def getPredictedLineup(opponent_id, matchday):
+def getPredictedLineup(opponent_id, currDate):
     session = DatabaseManager().get_session()
     try:
         team = Teams.get_team_by_id(opponent_id)
         league = LeagueTeams.get_league_by_team(team.id)
-        matches = Matches.get_team_last_5_matches_from_matchday(team.id, matchday)
+        matches = Matches.get_team_last_5_matches(team.id, currDate)
 
         if len(matches) == 0:
             bestLineup = None
@@ -4106,9 +4388,9 @@ def getPredictedLineup(opponent_id, matchday):
     finally:
         session.close()
 
-def getProposedLineup(team_id, opponent_id, comp_id):
-    matchday = League.get_league_by_id(comp_id).current_matchday
-    predictedLineup = getPredictedLineup(opponent_id, matchday)
+def getProposedLineup(team_id, opponent_id, comp_id, currDate):
+    predictedLineup = getPredictedLineup(opponent_id, currDate)
+    team = Teams.get_team_by_id(team_id)
 
     attackingScore = 0
     defendingScore = 0
@@ -4215,7 +4497,27 @@ def score_formation(sortedPlayers, positions, teamID, compID):
             lineup[pos] = youthID
             used.add(youthID)
         else:
-            chosen = candidates[0]  # best available (sortedPlayers is already by ability)
+            # Find candidates that are "specialists" for this position, given the rest of the lineup
+            specialists = []
+            for p in candidates:
+                playable_positions = p.specific_positions.split(",")
+                
+                other_positions = [
+                    pos_code for pos_code in playable_positions
+                    if pos_code != POSITION_CODES[pos] 
+                    and pos_code in [POSITION_CODES[x] for x in ordered_positions if x not in lineup]
+                ]
+                
+                # If any other position this player can play is still unassigned, they're "flexible"
+                if not any(other_pos in [POSITION_CODES[x] for x in ordered_positions if x not in lineup] for other_pos in other_positions):
+                    specialists.append(p)
+
+            # If there are specialists, pick the best one; otherwise, pick the best overall
+            if specialists:
+                chosen = specialists[0]
+            else:
+                chosen = candidates[0]
+
             lineup[pos] = chosen.id
             used.add(chosen.id)
 
@@ -4275,7 +4577,7 @@ def getSubstitutes(teamID, lineup, compID):
     if len(goalkeepers) > 0:
         substitutes.append(goalkeepers[0].id)
     else:
-        getYouthPlayer(teamID, "Goalkeeper", substitutes)
+        substitutes.append(getYouthPlayer(teamID, "Goalkeeper", compID, substitutes))
 
     # Add 2 defenders to substitutes
     defender_count = 0
@@ -4287,7 +4589,7 @@ def getSubstitutes(teamID, lineup, compID):
     if defender_count != 2:
         for _ in range(2 - defender_count):
             specific_position = random.choice(DEFENSIVE_POSITIONS)
-            getYouthPlayer(teamID, specific_position, substitutes)
+            substitutes.append(getYouthPlayer(teamID, specific_position, compID, substitutes))
 
     # Add 2 midfielders to substitutes
     midfielder_count = 0
@@ -4299,7 +4601,7 @@ def getSubstitutes(teamID, lineup, compID):
     if midfielder_count != 2:
         for _ in range(2 - midfielder_count):
             specific_position = random.choice(MIDFIELD_POSITIONS)
-            getYouthPlayer(teamID, specific_position, substitutes)
+            substitutes.append(getYouthPlayer(teamID, specific_position, compID, substitutes))
 
     # Add 2 attackers to substitutes
     attacker_count = 0
@@ -4311,6 +4613,49 @@ def getSubstitutes(teamID, lineup, compID):
     if attacker_count != 2:
         for _ in range(2 - attacker_count):
             specific_position = random.choice(ATTACKING_POSITIONS)
-            getYouthPlayer(teamID, specific_position, substitutes)
+            substitutes.append(getYouthPlayer(teamID, specific_position, compID, substitutes))
     
     return substitutes
+
+def update_ages(start_date, end_date):
+    session = DatabaseManager().get_session()
+    try:
+        # Ensure we work with date objects (if datetimes were passed)
+        start = start_date.date() if hasattr(start_date, 'date') else start_date
+        end = end_date.date() if hasattr(end_date, 'date') else end_date
+
+        # Build set of (month, day) pairs in [start, end) (exclusive end)
+        curr = start
+        md_pairs = set()
+        while True:
+            md_pairs.add((curr.month, curr.day))
+            if curr == end:
+                break
+            curr = curr + datetime.timedelta(days = 1)
+
+        def get_conditions(cls_table):
+            return [
+                and_(
+                    extract('month', cls_table.date_of_birth) == m,
+                    extract('day', cls_table.date_of_birth) == d
+                )
+                for (m, d) in md_pairs
+            ]
+
+        # Helper to update a table
+        def update_table(cls_table):
+            conditions = get_conditions(cls_table)
+            if conditions:
+                people = session.query(cls_table).filter(or_(*conditions)).all()
+                for person in people:
+                    correct_age = calculate_age(person.date_of_birth, end)
+                    if person.age < correct_age:
+                        person.age = correct_age
+
+        # Update all relevant tables
+        for table in [Players, Managers, Referees]:
+            update_table(table)
+
+        session.commit()
+    finally:
+        session.close()

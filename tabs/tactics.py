@@ -15,14 +15,26 @@ from collections import defaultdict
 import io
 
 class Tactics(ctk.CTkFrame):
-    def __init__(self, parent, manager_id):
+    def __init__(self, parent):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
-        self.manager_id = manager_id
+        self.manager_id = Managers.get_all_user_managers()[0].id
         self.parent = parent
         self.selected_position = None
 
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        self.leagueID = LeagueTeams.get_league_by_team(self.team.id).league_id
+        self.league = League.get_league_by_id(self.leagueID)
+        self.matchday = League.get_league_by_id(self.leagueID).current_matchday
+
+
+        gameTime = Matches.check_if_game_time(self.team.id, Game.get_game_date(self.manager_id))
+        if gameTime:
+            self.nextmatch = Matches.get_match_by_team_and_date(self.team.id, Game.get_game_date(self.manager_id))
+        else:
+            self.nextmatch = Matches.get_team_next_match(self.team.id, Game.get_game_date(self.manager_id))
+            
+        self.opponent = Teams.get_team_by_id(self.nextmatch.away_id if self.nextmatch.home_id == self.team.id else self.nextmatch.home_id)
 
         self.lineupTab = Lineup(self, self.manager_id)
         self.analysis = None
@@ -78,26 +90,31 @@ class Tactics(ctk.CTkFrame):
 
         self.tabs[self.activeButton].pack(expand = True, fill = "both")
 
+    def turnSubsOn(self):
+        if getattr(self, 'lineupTab', None):
+            try:
+                self.lineupTab.turnSubsOn()
+            except Exception:
+                pass
+
 class Lineup(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
-        self.manager_id = manager_id
         self.parent = parent
+        self.manager_id = manager_id
         self.mainMenu = self.parent.parent
         self.team = self.parent.team
-        self.leagueID = LeagueTeams.get_league_by_team(self.team.id).league_id
-
-        self.matchday = League.get_league_by_id(self.leagueID).current_matchday
-        self.nextmatch = Matches.get_team_next_match(self.team.id, self.leagueID)
-        self.opponent = Teams.get_team_by_id(self.nextmatch.away_id if self.nextmatch.home_id == self.team.id else self.nextmatch.home_id)
-
-        self.players = Players.get_all_players_by_team(self.team.id)
-        self.starRatings = Players.get_players_star_ratings(self.players, self.leagueID)
+        self.leagueID = self.parent.leagueID
+        self.matchday = self.parent.matchday
+        self.nextmatch = self.parent.nextmatch
+        self.opponent = self.parent.opponent
 
         self.selectedLineup = {}
         self.substitutePlayers = []
         self.subCounter = 0
+
+        self.gameTime = Matches.check_if_game_time(self.team.id, Game.get_game_date(self.manager_id))
 
         self.positionsCopy = POSITION_CODES.copy()
 
@@ -186,20 +203,18 @@ class Lineup(ctk.CTkFrame):
         self.players = [player.id for player in Players.get_all_players_by_team(self.team.id, youths = False)]
         self.checkPositionsForYouth()
 
+        playerData = [Players.get_player_by_id(player_id) for player_id in self.players]
+        self.starRatings = Players.get_players_star_ratings(playerData, self.leagueID)
+
         if not loaded and not auto:
 
-            lastMatchday = self.league.current_matchday - 1
+            self.lastTeamMatch = Matches.get_team_last_match(self.team.id, Game.get_game_date(self.manager_id))
 
-            if lastMatchday == 0:
+            if not self.lastTeamMatch:
                 self.addSubstitutePlayers()
                 return
             
-            self.matchdayMatches = Matches.get_matchday_for_league(self.league.id, lastMatchday)
-
-            for match in self.matchdayMatches:
-                if match.home_id == self.team.id or match.away_id == self.team.id:
-                    self.lastTeamMatch = match
-                    self.lineup = TeamLineup.get_lineup_by_match_and_team(match.id, self.team.id)
+            self.lineup = TeamLineup.get_lineup_by_match_and_team(self.lastTeamMatch.id, self.team.id)
         else:
             self.lineup = loaded if loaded else auto
 
@@ -356,7 +371,7 @@ class Lineup(ctk.CTkFrame):
                 col = count % players_per_row
                 sub_frame = SubstitutePlayer(frame, GREY_BACKGROUND, 100, 100, player, self.parent, self.league.id, row, col, self.starRatings[player.id], self.checkSubstitute)
 
-                if importing and playersCount == 11:
+                if importing and playersCount == 11 and self.gameTime:
                     sub_frame.showCheckBox()
 
                 count += 1
@@ -374,6 +389,16 @@ class Lineup(ctk.CTkFrame):
                     if isinstance(child, SubstitutePlayer):
                         child.hideCheckBox()
                         child.uncheckCheckBox()
+
+    def turnSubsOn(self):
+        self.gameTime = True
+        
+        if self.lineupPitch.get_counter() == 11:
+            for frame in self.substituteFrame.winfo_children():
+                for child in frame.winfo_children():
+                    if isinstance(child, SubstitutePlayer):
+                        child.uncheckCheckBox()
+                        child.showCheckBox() 
 
     def choosePlayer(self, selected_position):
         self.selected_position = selected_position
@@ -528,6 +553,14 @@ class Lineup(ctk.CTkFrame):
         self.settingsFrame.place(relx = 0.5, rely = 0.4, anchor = "center")
         self.settingsFrame.lift()
 
+        currDate = Game.get_game_date(self.manager_id)
+        canChooseProposed = Emails.check_email_sent("matchday_preview", self.matchday, currDate)
+
+        if not canChooseProposed:
+            self.proposedLineupButton.configure(state = "disabled")
+        else:
+            self.proposedLineupButton.configure(state = "normal")
+
         lineupNames = SavedLineups.get_all_lineup_names()
         self.loadBox.set("Choose Lineup")
         self.loadBox.configure(values = lineupNames)
@@ -624,7 +657,7 @@ class Lineup(ctk.CTkFrame):
 
     def proposedLineup(self):
         
-        lineup = getProposedLineup(self.team.id, self.opponent.id, self.league.id)
+        lineup = getProposedLineup(self.team.id, self.opponent.id, self.league.id, Game.get_game_date(self.manager_id))
         lineup = {position: Players.get_player_by_id(pid) for position, pid in lineup.items()}
         self.settingsFrame.place_forget()
         self.reset(addSubs = False)
@@ -642,8 +675,8 @@ class Analysis(ctk.CTkFrame):
         self.opponent = self.parent.opponent
         self.league = self.parent.league
 
-        self.oppLastMatch = Matches.get_team_last_match(self.opponent.id, self.league.league_id)
-        self.oppLast5Matches = Matches.get_team_last_5_matches(self.opponent.id, self.league.league_id)
+        self.oppLastMatch = Matches.get_team_last_match(self.opponent.id, Game.get_game_date(self.manager_id))
+        self.oppLast5Matches = Matches.get_team_last_5_matches(self.opponent.id, Game.get_game_date(self.manager_id))
 
         if not self.oppLastMatch:
             ctk.CTkLabel(self, text = "No analysis available for this team.", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
@@ -807,7 +840,7 @@ class Analysis(ctk.CTkFrame):
         ctk.CTkLabel(playersFrame, text = "Players", font = (APP_FONT_BOLD, 12), fg_color = GREY_BACKGROUND).pack(pady = 5, anchor = "center")
 
         lineupPitch = FootballPitchMatchDay(self.predictedLineupFrame, 340, 510, 0.99, 0.08, "ne", GREY_BACKGROUND, GREY_BACKGROUND)
-        lineup = getPredictedLineup(self.opponent.id, self.matchday)
+        lineup = getPredictedLineup(self.opponent.id, Game.get_game_date(self.manager_id))
         
         for position, playerID in lineup.items():
             player = Players.get_player_by_id(playerID)

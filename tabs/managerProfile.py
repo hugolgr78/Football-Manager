@@ -9,12 +9,16 @@ from utils.frames import WinRatePieChart, TrophiesFrame
 from utils.util_functions import *
 
 class ManagerProfile(ctk.CTkFrame):
-    def __init__(self, parent, manager_id, changeBackFunction = None):
+    def __init__(self, parent, manager_id = None, changeBackFunction = None):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.manager_id = manager_id
         self.changeBackFunction = changeBackFunction
+        
+        if not manager_id:
+            self.manager_id = Managers.get_all_user_managers()[0].id
+        else:
+            self.manager_id = manager_id
 
         self.manager = Managers.get_manager_by_id(self.manager_id)
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]

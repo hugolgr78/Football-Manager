@@ -2,19 +2,19 @@ import customtkinter as ctk
 import tkinter.font as tkFont
 from settings import *
 from data.database import *
+from data.gamesDatabase import Game
 from PIL import Image
 import io
-from tabs.teamProfile import TeamProfile
 from utils.frames import LeagueTableScrollable, next5Matches
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 
 class Hub(ctk.CTkFrame):
-    def __init__(self, parent, manager_id):
+    def __init__(self, parent):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.manager_id = manager_id
+        self.manager_id = Managers.get_all_user_managers()[0].id
 
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.league = LeagueTeams.get_league_by_team(self.team.id)
@@ -41,14 +41,6 @@ class Hub(ctk.CTkFrame):
 
         canvas = ctk.CTkCanvas(self, width = 5, height = 800, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(x = 830, y = 250, anchor = "nw")
-
-    def openClubProfile(self, team):
-    
-        for widget in self.winfo_children():
-            widget.place_forget()
-        
-        self.profile = TeamProfile(self.parent, team.manager_id, self.changeBack)
-        self.profile.place(x = 200, y = 0, anchor = "nw")
 
     def changeBack(self):
 
@@ -82,7 +74,17 @@ class nextMatch(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = "VS", font = (APP_FONT_BOLD, 40), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
-        nextMatch = Matches.get_team_next_match(self.parent.team.id, self.parent.league.league_id)
+        currDate = Game.get_game_date(self.manager_id)
+        gameTime = Matches.check_if_game_time(self.parent.team.id, currDate)
+
+        if gameTime:
+            nextMatch = Matches.get_match_by_team_and_date(self.parent.team.id, currDate)
+        else:
+            nextMatch = Matches.get_team_next_match(self.parent.team.id, currDate)
+
+        if not nextMatch:
+            ctk.CTkLabel(self, text = "No upcoming matches", font = (APP_FONT_BOLD, 20), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+            return
 
         homeTeam = Teams.get_team_by_id(nextMatch.home_id)
         awayTeam = Teams.get_team_by_id(nextMatch.away_id) 

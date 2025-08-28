@@ -750,7 +750,8 @@ class PlayerFrame(ctk.CTkFrame):
         self.moraleSlider.bind("<Enter>", lambda event: self.onSliderHover())
         self.moraleSlider.bind("<Leave>", lambda event: self.onSliderLeave())
 
-        if self.teamSquad:
+        self.talkButton = None
+        if self.teamSquad and talkFunction:
             src = Image.open("Images/conversation.png")
             src.thumbnail((30, 30))
             talkImage = ctk.CTkImage(src, None, (src.width, src.height))
@@ -770,7 +771,7 @@ class PlayerFrame(ctk.CTkFrame):
         for widget in self.statFrame.winfo_children():
             widget.configure(fg_color = DARK_GREY)
 
-        if self.teamSquad:
+        if self.teamSquad and self.talkButton:
             self.talkButton.configure(fg_color = DARK_GREY)
 
     def onSliderHover(self):
@@ -795,7 +796,7 @@ class PlayerFrame(ctk.CTkFrame):
         for widget in self.statFrame.winfo_children():
             widget.configure(fg_color = TKINTER_BACKGROUND)
 
-        if self.teamSquad:
+        if self.teamSquad and self.talkButton:
             self.talkButton.configure(fg_color = TKINTER_BACKGROUND)
 
     def disableTalkButton(self):

@@ -983,6 +983,21 @@ class Match():
 
                     morales_to_update.append((playerID, moraleChange))
 
+                homePlayers = Players.get_all_players_by_team(self.homeTeam.id, youths = False)
+                awayPlayers = Players.get_all_players_by_team(self.awayTeam.id, youths = False)
+
+                for player in homePlayers:
+                    final_ids = {pl_id for _, pl_id in self.homeFinalLineup}
+
+                    if player.id not in self.homeCurrentLineup.values() and player.id not in final_ids and not PlayerBans.check_bans_for_player(player.id, self.league.league_id):
+                        morales_to_update.append((player.id, get_morale_decrease_role(player)))
+
+                for player in awayPlayers:
+                    final_ids = {pl_id for _, pl_id in self.awayFinalLineup}
+
+                    if player.id not in self.awayCurrentLineup.values() and player.id not in final_ids and not PlayerBans.check_bans_for_player(player.id, self.league.league_id):
+                        morales_to_update.append((player.id, get_morale_decrease_role(player)))
+
                 # submit morales update
                 futures.append(executor.submit(Players.batch_update_morales, morales_to_update))
 

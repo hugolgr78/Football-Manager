@@ -4499,6 +4499,10 @@ def score_formation(sortedPlayers, positions, teamID, compID):
         
         if not candidates:
             youthID = getYouthPlayer(teamID, pos, compID, lineup.values())
+
+            if not youthID:
+                return -1, {}
+
             lineup[pos] = youthID
             used.add(youthID)
         else:
@@ -4573,7 +4577,8 @@ def getSubstitutes(teamID, lineup, compID):
     if len(goalkeepers) > 0:
         substitutes.append(goalkeepers[0].id)
     else:
-        substitutes.append(getYouthPlayer(teamID, "Goalkeeper", compID, substitutes))
+        youthID = getYouthPlayer(teamID, "Goalkeeper", compID, substitutes)
+        substitutes.append(youthID) if youthID else None
 
     # Add 2 defenders to substitutes
     defender_count = 0
@@ -4585,7 +4590,8 @@ def getSubstitutes(teamID, lineup, compID):
     if defender_count != 2:
         for _ in range(2 - defender_count):
             specific_position = random.choice(DEFENSIVE_POSITIONS)
-            substitutes.append(getYouthPlayer(teamID, specific_position, compID, substitutes))
+            youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
+            substitutes.append(youthID) if youthID else None
 
     # Add 2 midfielders to substitutes
     midfielder_count = 0
@@ -4597,7 +4603,8 @@ def getSubstitutes(teamID, lineup, compID):
     if midfielder_count != 2:
         for _ in range(2 - midfielder_count):
             specific_position = random.choice(MIDFIELD_POSITIONS)
-            substitutes.append(getYouthPlayer(teamID, specific_position, compID, substitutes))
+            youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
+            substitutes.append(youthID) if youthID else None
 
     # Add 2 attackers to substitutes
     attacker_count = 0
@@ -4609,8 +4616,20 @@ def getSubstitutes(teamID, lineup, compID):
     if attacker_count != 2:
         for _ in range(2 - attacker_count):
             specific_position = random.choice(ATTACKING_POSITIONS)
-            substitutes.append(getYouthPlayer(teamID, specific_position, compID, substitutes))
-    
+            youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
+            substitutes.append(youthID) if youthID else None
+
+    # If there are any None left in substitute, fill the rest up with the best remaining players:
+    players = defenders + midfielders + attackers
+    players.sort(key = effective_ability, reverse = True)
+
+    for player in players:
+        if None not in substitutes:
+            break
+        
+        if player.id not in substitutes:
+            substitutes[substitutes.index(None)] = player.id
+
     return substitutes
 
 def update_ages(start_date, end_date):

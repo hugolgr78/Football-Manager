@@ -41,5 +41,4 @@ Here are some screenshots from the project:
 - ![League profile](Images/Screenshots/league_profile.png)
 - ![League graphs](Images/Screenshots/league_graphs.png)
 - ![Player profile](Images/Screenshots/player_profile.png)
-- ![Macth screen 1](Images/Screenshots/before_match.png)
-- ![Match screen 2](Images/Screenshots/after_match.png)
+- ![Match screen 1](Images/Screenshots/in_game.png)

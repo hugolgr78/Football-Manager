@@ -820,10 +820,22 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def get_all_youngsters(cls, team_id):
+    def get_all_youth_players(cls, team_id):
         session = DatabaseManager().get_session()
         try:
-            players = session.query(Players).filter(Players.team_id == team_id, Players.player_role == 'Youngster').all()
+            position_order = case(
+                [
+                    (Players.position == 'goalkeeper', 1),
+                    (Players.position == 'defender', 2),
+                    (Players.position == 'midfielder', 3),
+                    (Players.position == 'forward', 4),
+                ],
+                else_ = 5
+            )
+
+            query = session.query(Players).filter(Players.team_id == team_id, Players.player_role == 'Youth Team')
+            players = query.order_by(position_order).all()
+            
             return players
         finally:
             session.close()
@@ -4626,7 +4638,7 @@ def getSubstitutes(teamID, lineup, compID):
     for player in players:
         if None not in substitutes:
             break
-        
+
         if player.id not in substitutes:
             substitutes[substitutes.index(None)] = player.id
 

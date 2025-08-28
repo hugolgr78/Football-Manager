@@ -4497,7 +4497,27 @@ def score_formation(sortedPlayers, positions, teamID, compID):
             lineup[pos] = youthID
             used.add(youthID)
         else:
-            chosen = candidates[0]  # best available (sortedPlayers is already by ability)
+            # Find candidates that are "specialists" for this position, given the rest of the lineup
+            specialists = []
+            for p in candidates:
+                playable_positions = p.specific_positions.split(",")
+                
+                other_positions = [
+                    pos_code for pos_code in playable_positions
+                    if pos_code != POSITION_CODES[pos] 
+                    and pos_code in [POSITION_CODES[x] for x in ordered_positions if x not in lineup]
+                ]
+                
+                # If any other position this player can play is still unassigned, they're "flexible"
+                if not any(other_pos in [POSITION_CODES[x] for x in ordered_positions if x not in lineup] for other_pos in other_positions):
+                    specialists.append(p)
+
+            # If there are specialists, pick the best one; otherwise, pick the best overall
+            if specialists:
+                chosen = specialists[0]
+            else:
+                chosen = candidates[0]
+
             lineup[pos] = chosen.id
             used.add(chosen.id)
 

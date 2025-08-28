@@ -231,3 +231,12 @@ class MainMenu(ctk.CTkFrame):
                 frame.place_forget()
 
         self.overlappingProfiles = []
+
+        # Reset only the analysis tab in the tactics
+        if self.tabs[4]:
+            if self.tabs[4].tabs[1]:
+                self.tabs[4].tabs[1].destroy()
+                self.tabs[4].tabs[1] = None
+
+            if self.tabs[4].activeButton == 1:
+                self.tabs[4].loadAnalysis()

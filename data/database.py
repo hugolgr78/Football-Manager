@@ -390,70 +390,59 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def add_youth_player(cls, team_id, position, required_position):
-        session = DatabaseManager().get_session()
-        try:
-            role = "Youth Team"
-            selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
-            _, countryWeights = COUNTRIES[selectedContinent]
-            country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
+    def add_youth_player(cls, team_id, position, required_code):
+        role = "Youth Team"
+        selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
+        _, countryWeights = COUNTRIES[selectedContinent]
+        country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
 
-            with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
-                flag = file.read()
+        with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
+            flag = file.read()
 
-            faker = Faker()
-            date_of_birth = faker.date_of_birth(minimum_age = 15, maximum_age = 17)
-            playerCA = generate_youth_player_level()
-            playerPA = calculate_potential_ability(2024 - date_of_birth.year, playerCA)
+        faker = Faker()
+        date_of_birth = faker.date_of_birth(minimum_age = 15, maximum_age = 17)
+        playerCA = generate_youth_player_level()
+        playerPA = calculate_potential_ability(2024 - date_of_birth.year, playerCA)
 
-            new_player = Players(
-                id = str(uuid.uuid4()),
-                team_id = team_id,
-                first_name = faker.first_name_male(),
-                last_name = faker.last_name(),
-                current_ability = playerCA,
-                potential_ability = playerPA,
-                number = random.randint(1, 99),
-                position = position,
-                date_of_birth = date_of_birth,
-                age = 2024 - date_of_birth.year,
-                nationality = country,
-                flag = flag,
-                player_role = role,
-            )
+        new_player = Players(
+            id = str(uuid.uuid4()),
+            team_id = team_id,
+            first_name = faker.first_name_male(),
+            last_name = faker.last_name(),
+            current_ability = playerCA,
+            potential_ability = playerPA,
+            number = random.randint(1, 99),
+            position = position,
+            date_of_birth = date_of_birth,
+            age = 2024 - date_of_birth.year,
+            nationality = country,
+            flag = flag,
+            player_role = role,
+        )
 
-            existing_numbers = {player.number for player in Players.get_all_players_by_team(team_id)}
-            while new_player.number in existing_numbers:
-                new_player.number = random.randint(1, 99)
+        existing_numbers = {player.number for player in Players.get_all_players_by_team(team_id)}
+        while new_player.number in existing_numbers:
+            new_player.number = random.randint(1, 99)
 
-            specific_positions = {
-                "goalkeeper": ["GK"],
-                "defender": ["RB", "CB", "LB"],
-                "midfielder": ["DM", "CM", "RM", "LM", "AM"],
-                "forward": ["LW", "CF", "RW"]
-            }
+        specific_positions = {
+            "goalkeeper": ["GK"],
+            "defender": ["RB", "CB", "LB"],
+            "midfielder": ["DM", "CM", "RM", "LM", "AM"],
+            "forward": ["LW", "CF", "RW"]
+        }
 
-            required_code = POSITION_CODES[required_position]
-            player_positions = [required_code]
+        player_positions = [required_code]
 
-            if position in specific_positions:
-                other_positions = specific_positions[position]
-                other_positions.remove(required_code)
-                if len(other_positions) > 0:
-                    num_other_positions = random.randint(1, len(other_positions))
-                    player_positions.extend(random.sample(other_positions, num_other_positions))
+        if position in specific_positions:
+            other_positions = specific_positions[position]
+            other_positions.remove(required_code)
+            if len(other_positions) > 0:
+                num_other_positions = random.randint(1, len(other_positions))
+                player_positions.extend(random.sample(other_positions, num_other_positions))
 
-            new_player.specific_positions = ','.join(player_positions)
+        new_player.specific_positions = ','.join(player_positions)
 
-            session.add(new_player)
-            session.commit()
-
-            return new_player.id
-        except Exception as e:
-            session.rollback()
-            raise e
-        finally:
-            session.close()
+        return new_player
 
     @classmethod
     def add_players(cls, team_id):
@@ -622,7 +611,41 @@ class Players(Base):
                     else:
                         player.player_role = "Rotation"
 
-            # Add all players to session
+            # Create the youth team for the team
+            base_youths = 30 + random.randint(0, 5)
+
+            # 1) Ensure at least one youth for each specific position
+            for overall_position, specific_pos_list in specific_positions.items():
+                for specific_pos in specific_pos_list:
+                    all_players.append(Players.add_youth_player(team_id, overall_position, specific_pos))
+
+            # 2) Ensure at least base_positions youths for each overall position
+            for overall_position, minimum in base_positions.items():
+                curr_count = session.query(Players).filter(
+                    Players.team_id == team_id,
+                    Players.position == overall_position,
+                    Players.player_role == 'Youth Team'
+                ).count()
+
+                while curr_count < minimum:
+                    specific_pos = random.choice(specific_positions[overall_position])
+                    all_players.append(Players.add_youth_player(team_id, overall_position, specific_pos))
+                    curr_count += 1
+
+            # 3) Fill remaining youths up to base_youths
+            curr_total_youths = session.query(Players).filter(
+                Players.team_id == team_id,
+                Players.player_role == 'Youth Team'
+            ).count()
+
+            remaining = base_youths - curr_total_youths
+            overall_list = list(specific_positions.keys())
+            overall_weights = [0.4, 0.3, 0.2, 0.1]
+            for _ in range(remaining if remaining > 0 else 0):
+                overall_position = random.choices(overall_list, weights = overall_weights, k = 1)[0]
+                specific_pos = random.choice(specific_positions[overall_position])
+                all_players.append(Players.add_youth_player(team_id, overall_position, specific_pos))
+
             for player in all_players:
                 session.add(player)
 
@@ -4390,7 +4413,6 @@ def getPredictedLineup(opponent_id, currDate):
 
 def getProposedLineup(team_id, opponent_id, comp_id, currDate):
     predictedLineup = getPredictedLineup(opponent_id, currDate)
-    team = Teams.get_team_by_id(team_id)
 
     attackingScore = 0
     defendingScore = 0
@@ -4534,24 +4556,15 @@ def score_formation(sortedPlayers, positions, teamID, compID):
 
 def getYouthPlayer(teamID, position, compID, players):
     youthPlayers = PlayerBans.get_all_non_banned_youth_players_for_comp(teamID, compID)
+    available_youths = []
 
     if youthPlayers:
         for player in youthPlayers:
             if POSITION_CODES[position] in player.specific_positions and player.id not in players:
-                return player.id
-            
-    if position in DEFENSIVE_POSITIONS:
-        overallPosition = "defender"
-    elif position in MIDFIELD_POSITIONS:
-        overallPosition = "midfielder"
-    elif position in ATTACKING_POSITIONS:
-        overallPosition = "forward"
-    else:
-        overallPosition = "goalkeeper"
-            
-    # list empty or no player found with the specific position
-    newYouth = Players.add_youth_player(teamID, overallPosition, position)
-    return newYouth
+                available_youths.append(player.id)
+
+    available_youths.sort(key = effective_ability, reverse = True)
+    return available_youths[0] if available_youths else None
 
 def effective_ability(p):
     multiplier = 0.75 + (p.morale / 100.0) * 0.5

@@ -20,7 +20,7 @@ class Squad(ctk.CTkFrame):
 
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.leagueId = LeagueTeams.get_league_by_team(self.team.id).league_id
-        self.players = Players.get_all_players_by_team(self.team.id)
+        self.players = Players.get_all_players_by_team(self.team.id, youths = False)
 
         self.titleFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 100, corner_radius = 0)
         self.titleFrame.pack(expand = True, fill = "both", padx = 10, pady = 10)
@@ -77,9 +77,8 @@ class Squad(ctk.CTkFrame):
         paStarRatings = Players.get_players_star_ratings(self.players, self.leagueId, CA = False)
 
         for player in self.players:
-            if player.player_role != "Youth Team":
-                frame = PlayerFrame(self, self.manager_id, player, self.playersFrame, caStarRatings[player.id], paStarRatings[player.id], talkFunction = self.talkToPlayer)
-                self.playerFrames.append(frame)
+            frame = PlayerFrame(self, self.manager_id, player, self.playersFrame, caStarRatings[player.id], paStarRatings[player.id], talkFunction = self.talkToPlayer)
+            self.playerFrames.append(frame)
 
     def talkToPlayer(self, player):
 

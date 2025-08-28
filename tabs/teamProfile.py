@@ -127,7 +127,7 @@ class Profile(ctk.CTkFrame):
         ctk.CTkLabel(self, text = f"Manager: ", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.2, anchor = "w")
         self.managerLink = ManagerProfileLink(self, self.parent.manager_id, f"{self.parent.manager.first_name} {self.parent.manager.last_name}", "white", 0.69, 0.2, "w", TKINTER_BACKGROUND, self.parent)
 
-        self.players = Players.get_all_players_by_team(self.parent.team.id)
+        self.players = Players.get_all_players_by_team(self.parent.team.id, youths = False)
         ctk.CTkLabel(self, text = f"Average Age: {round(sum(player.age for player in self.players) / len(self.players))}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.6, rely = 0.25, anchor = "w")
 
         self.trophiesFrame = TrophiesFrame(self, self.parent.team.id, GREY_BACKGROUND, 460, 360, 15, 0.02, 0.4, "nw")
@@ -146,7 +146,7 @@ class Squad(ctk.CTkFrame):
         self.playerFrames = []
         self.currentStat = "Current ability"
 
-        self.players = Players.get_all_players_by_team(self.parent.team.id)
+        self.players = Players.get_all_players_by_team(self.parent.team.id, youths = False)
 
         self.infoFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 40, corner_radius = 0)
         self.infoFrame.pack()
@@ -186,9 +186,8 @@ class Squad(ctk.CTkFrame):
         paStarRatings = Players.get_players_star_ratings(self.players, self.parent.leagueId, CA = False)
 
         for player in self.players:
-            if player.player_role != "Youth Team":
-                frame = PlayerFrame(self.parent, self.manager_id, player, self.playersFrame, caStarRatings[player.id], paStarRatings[player.id], teamSquad = False)
-                self.playerFrames.append(frame)
+            frame = PlayerFrame(self.parent, self.manager_id, player, self.playersFrame, caStarRatings[player.id], paStarRatings[player.id], teamSquad = False)
+            self.playerFrames.append(frame)
 
     def changeStat(self, value):
 

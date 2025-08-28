@@ -97,6 +97,10 @@ class Tactics(ctk.CTkFrame):
             except Exception:
                 pass
 
+    def loadAnalysis(self):
+        self.tabs[1] = Analysis(self, self.manager_id)
+        self.tabs[1].pack(expand = True, fill = "both")
+
     def activateProposed(self, lineup):
         self.lineupTab.proposedLineup(lineup = lineup)
 
@@ -623,8 +627,15 @@ class Analysis(ctk.CTkFrame):
         self.oppLastMatch = Matches.get_team_last_match(self.opponent.id, Game.get_game_date(self.manager_id))
         self.oppLast5Matches = Matches.get_team_last_5_matches(self.opponent.id, Game.get_game_date(self.manager_id))
 
+        currDate = Game.get_game_date(self.manager_id)
+        canSeeAnaylsis = Emails.check_email_sent("matchday_preview", self.matchday, currDate)
+
         if not self.oppLastMatch:
             ctk.CTkLabel(self, text = "No analysis available for this team.", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+            return
+        
+        if not canSeeAnaylsis:
+            ctk.CTkLabel(self, text = "Analysis will be available 2 days before the game.", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
             return
 
         canvas = ctk.CTkCanvas(self, width = 5, height = 770, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
@@ -719,7 +730,7 @@ class Analysis(ctk.CTkFrame):
     def last5Form(self):
         ctk.CTkLabel(self.last5FormFrame, text = "Last games", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
 
-        for i, match in enumerate(reversed(self.oppLast5Matches)):
+        for i, match in enumerate(self.oppLast5Matches):
             frame = ctk.CTkFrame(self.last5FormFrame, fg_color = DARK_GREY, width = 90, height = 120)
             frame.place(relx = 0.005 + i * 0.2, rely = 0.25, anchor = "nw")
 

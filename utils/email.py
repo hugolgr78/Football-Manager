@@ -720,9 +720,14 @@ class MatchdayPreview():
         ctk.CTkLabel(self.frame, text = self.title_3, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.5, anchor = "nw")
         ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.95, anchor = "nw")
 
+        match = Matches.get_team_matchday_match(self.parent.team.id, self.parent.league.id, self.matchday)
+        matchPassed = True if Game.get_game_date(self.parent.manager.id) > match.date else False
+
         self.tacticsButton = ctk.CTkButton(self.frame, text = "Select Lineup", font = (APP_FONT_BOLD, 15), command = lambda: self.gotToTactics(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
         self.tacticsButton.place(relx = 0.95, rely = 0.95, anchor = "se")
-
+        
+        if matchPassed:
+            self.tacticsButton.configure(state = "disabled")
 
     def setUpEmail(self):
 
@@ -1048,7 +1053,10 @@ class PlayerBirthday():
         self.button = ctk.CTkButton(self.frame, text = "Send Birthday Wishes", font = (APP_FONT_BOLD, 15), command = lambda: self.sendBirthdayWish(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
         self.button.place(relx = 0.95, rely = 0.95, anchor = "se")
 
-        if self.parent.actioned:
+        _, currDate, _ = format_datetime_split(Game.get_game_date(self.parent.manager.id))
+        today = True if currDate == self.parent.date else False
+
+        if self.parent.actioned or not today:
             self.button.configure(state = "disabled")
 
     def setUpEmail(self):

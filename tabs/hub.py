@@ -118,13 +118,10 @@ class PlayerMorale(ctk.CTkScrollableFrame):
             for widget in self.winfo_children():
                 widget.destroy()
 
-        players = Players.get_all_players_by_team(self.parent.team.id)
+        players = Players.get_all_players_by_team(self.parent.team.id, youths = False)
 
         for player in players:
             morale = player.morale
-
-            if player.player_role == "Youth Team":
-                continue
 
             if morale > 75:
                 src = "Images/morale_happy.png"

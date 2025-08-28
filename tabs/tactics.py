@@ -293,15 +293,6 @@ class Lineup(ctk.CTkFrame):
                 if not PlayerBans.check_bans_for_player(player.id, self.league.id):
                     playersForPosition.append(playerID)
 
-            if position in DEFENSIVE_POSITIONS:
-                overallPosition = "defender"
-            elif position in MIDFIELD_POSITIONS:
-                overallPosition = "midfielder"
-            elif position in ATTACKING_POSITIONS:
-                overallPosition = "forward"
-            else:
-                overallPosition = "goalkeeper"
-
             if POSITION_CODES[position] in POSITIONS_MAX.keys():
                 maxPlayers = POSITIONS_MAX[POSITION_CODES[position]]
             else:
@@ -310,26 +301,23 @@ class Lineup(ctk.CTkFrame):
             if len(playersForPosition) < maxPlayers:
                 youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
                 youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth.id not in self.players]
+                youthForPosition.sort(key = effective_ability, reverse = True)
 
                 if len(youthForPosition) > 0:
                     self.players.append(youthForPosition[0].id)
-                else:
-                    newYouth = Players.add_youth_player(self.team.id, overallPosition, position)
-                    self.players.append(newYouth)
 
-                if position == "Goalkeeper":
-                    newYouth = Players.add_youth_player(self.team.id, overallPosition, position)
-                    self.players.append(newYouth)
+                # If we had no keepers, add a second youth to give the player a substitute keeper
+                if position == "Goalkeeper" and len(youthForPosition) > 1:
+                    self.players.append(youthForPosition[1].id)
 
             elif position == "Goalkeeper" and len(playersForPosition) == 1:
+                # If we only have one keeper, attempt to get a youth player to act as a sub
                 youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
                 youthForPosition = [youth for youth in youths if POSITION_CODES[position] in youth.specific_positions.split(",") and youth.id not in self.players]
+                youthForPosition.sort(key = effective_ability, reverse = True)
 
                 if len(youthForPosition) > 0:
                     self.players.append(youthForPosition[0].id)
-                else:
-                    newYouth = Players.add_youth_player(self.team.id, overallPosition, position)
-                    self.players.append(newYouth)
 
     def addSubstitutePlayers(self, importing = False, playersCount = None):
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)

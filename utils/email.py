@@ -720,7 +720,7 @@ class MatchdayPreview():
         ctk.CTkLabel(self.frame, text = self.title_3, font = (APP_FONT_BOLD, 20), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.5, anchor = "nw")
         ctk.CTkLabel(self.frame, text = self.emailText_4, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.95, anchor = "nw")
 
-        self.tacticsButton = ctk.CTkButton(self.frame, text = "Go to Tactics", font = (APP_FONT_BOLD, 15), command = lambda: self.gotToTactics(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
+        self.tacticsButton = ctk.CTkButton(self.frame, text = "Select Lineup", font = (APP_FONT_BOLD, 15), command = lambda: self.gotToTactics(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
         self.tacticsButton.place(relx = 0.95, rely = 0.95, anchor = "se")
 
 
@@ -851,13 +851,13 @@ class MatchdayPreview():
 
         self.title_3 = "Proposed Lineup"
 
-        proposedLineup = getProposedLineup(self.parent.team.id, self.opponent.id, self.parent.league.id, Game.get_game_date(self.parent.manager.id))
+        self.proposedLineup = getProposedLineup(self.parent.team.id, self.opponent.id, self.parent.league.id, Game.get_game_date(self.parent.manager.id))
 
         self.playersFrame = ctk.CTkFrame(self.frame, fg_color = TKINTER_BACKGROUND, width = 400, height = 250)
         self.playersFrame.place(relx = 0.035, rely = 0.55, anchor = "nw")
         self.playersFrame.pack_propagate(False)
 
-        for position, playerID in proposedLineup.items():
+        for position, playerID in self.proposedLineup.items():
             player = Players.get_player_by_id(playerID)
 
             frame = ctk.CTkFrame(self.playersFrame, fg_color = TKINTER_BACKGROUND, width = 150, height = 20)
@@ -872,8 +872,9 @@ class MatchdayPreview():
 
     def gotToTactics(self):
         self.parent.mainMenu.changeTab(4)
+        self.parent.mainMenu.update_idletasks()
         self.parent.mainMenu.tabs[4].changeTab(0)
-        self.parent.mainMenu.tabs[4].showSettings()
+        self.parent.mainMenu.tabs[4].activateProposed(self.proposedLineup)
 
     def goToAnalysis(self):
         self.parent.mainMenu.changeTab(4)

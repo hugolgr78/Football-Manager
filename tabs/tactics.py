@@ -97,8 +97,8 @@ class Tactics(ctk.CTkFrame):
             except Exception:
                 pass
 
-    def showSettings(self):
-        self.lineupTab.lineupSettings()
+    def activateProposed(self, lineup):
+        self.lineupTab.proposedLineup(lineup = lineup)
 
 class Lineup(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
@@ -599,9 +599,10 @@ class Lineup(ctk.CTkFrame):
 
             self.importLineup(auto = lineup)
 
-    def proposedLineup(self):
-        
-        lineup = getProposedLineup(self.team.id, self.opponent.id, self.league.id, Game.get_game_date(self.manager_id))
+    def proposedLineup(self, lineup = None):
+        if lineup is None:
+            lineup = getProposedLineup(self.team.id, self.opponent.id, self.league.id, Game.get_game_date(self.manager_id))
+            
         lineup = {position: Players.get_player_by_id(pid) for position, pid in lineup.items()}
         self.settingsFrame.place_forget()
         self.reset(addSubs = False)

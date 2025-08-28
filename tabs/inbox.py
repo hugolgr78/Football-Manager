@@ -6,11 +6,11 @@ from utils.email import *
 from utils.util_functions import *
 
 class Inbox(ctk.CTkFrame):
-    def __init__(self, parent, manager_id):
+    def __init__(self, parent):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.manager_id = manager_id
+        self.manager_id = Managers.get_all_user_managers()[0].id
 
         self.emailsToAdd = {}
 
@@ -35,40 +35,27 @@ class Inbox(ctk.CTkFrame):
         canvas = ctk.CTkCanvas(self, width = 370, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(x = 0, y = 65, anchor = "w")
 
-        self.saveEmails()
-
-    def saveEmails(self):
-        emails = Emails.get_all_emails()
-
-        if not emails:
-            self.saveEmail("welcome")
-            self.saveEmail("matchday_preview", matchday = 1)
-
-            return
-
-        current_matchday = self.league.current_matchday
-        addedEmails = []
-
-        # Add emails
-        for matchday in range(current_matchday, 0, -1):
-            if matchday <= 38:
-                if not Emails.get_email_by_matchday_and_type(matchday, "matchday_preview"):
-                    addedEmails.append(["matchday_preview", matchday])
-            if matchday > 1:
-                if not Emails.get_email_by_matchday_and_type(matchday - 1, "matchday_review"):
-                    addedEmails.append(["matchday_review", matchday - 1])
-
-        for email in reversed(addedEmails):
-            self.saveEmail(email[0], matchday = email[1])
+        self.addEmails()
 
     def addEmails(self):
-        emails = reversed(Emails.get_all_emails())
+        emails = Emails.get_all_emails(Game.get_game_date(self.manager_id))
 
+        currentDate = ""
         for email in emails:
-            self.addEmail(email.email_type, email.matchday, email.player_id, email.ban_length, email.comp_id)
 
-    def addEmail(self, email_type, matchday = None, player_id = None, ban_length = None, comp_id = None):
-        EmailFrame(self.emailsFrame, self.manager_id, email_type, matchday, player_id, ban_length, comp_id, self.emailDataFrame, self)
+            _, date, _ = format_datetime_split(email.date)
+            if date != currentDate:
+                currentDate = date
 
-    def saveEmail(self, email_type, matchday = None, player_id = None, ban_length = None, comp_id = None):
-        Emails.add_email(email_type, matchday, player_id, ban_length, comp_id)
+                frame = ctk.CTkFrame(self.emailsFrame, fg_color = TKINTER_BACKGROUND, width = 260, height = 50)
+                frame.pack(fill = "both", padx = 10, pady = 5)
+
+                ctk.CTkLabel(frame, text = date, font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0, rely = 0.5, anchor = "w")
+
+            self.addEmail(email)
+
+    def addEmail(self, email):
+        EmailFrame(self.emailsFrame, self.manager_id, email, self.emailDataFrame, self)
+
+    def saveEmail(self, email_type, matchday = None, player_id = None, ban_length = None, comp_id = None, date = None):
+        Emails.add_email(email_type, matchday, player_id, ban_length, comp_id, date)

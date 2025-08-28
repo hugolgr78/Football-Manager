@@ -12,7 +12,7 @@ from utils.util_functions import getSuffix
 TOTAL_STEPS = 1003
 
 class StartMenu(ctk.CTkFrame):
-    def __init__(self, parent, session):
+    def __init__(self, parent):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND)
         self.pack(fill = "both", expand = True)
         
@@ -24,7 +24,6 @@ class StartMenu(ctk.CTkFrame):
         self.last_selected_country = None
         self.selectedTeam = None
         self.last_selected_team = None
-        self.session = session
         self.chosenManager = None
 
         self.createFrame = None
@@ -45,7 +44,7 @@ class StartMenu(ctk.CTkFrame):
 
         ctk.CTkLabel(self.chooseFrame, text = "Choose a Manager", font = (APP_FONT, 20), bg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.1, anchor = "nw")
 
-        managers = Game.get_all_games(self.session)
+        managers = Game.get_all_games()
         self.dropDown = ctk.CTkComboBox(
             self.chooseFrame,
             font = (APP_FONT, 15),
@@ -145,7 +144,6 @@ class StartMenu(ctk.CTkFrame):
 
             manager = Managers.get_manager_by_name(first_name, last_name)
             managedTeam = Teams.get_teams_by_manager(manager.id)
-            league = LeagueTeams.get_league_by_team(managedTeam[0].id)
 
             self.chosenManagerID = manager.id
 
@@ -396,7 +394,7 @@ class StartMenu(ctk.CTkFrame):
         self.db_manager.set_database(f"{self.first_name}{self.last_name}", create_tables = True)
         self.chosenManagerID = Managers.add_manager(self.first_name, self.last_name, self.selectedCountry, self.dob, True, self.selectedTeam)
 
-        Game.add_game(self.session, self.chosenManagerID, self.first_name,self.last_name, f"sqlite:///data/{self.first_name}{self.last_name}.db")
+        Game.add_game(self.chosenManagerID, self.first_name,self.last_name)
 
         self.startGame()
 

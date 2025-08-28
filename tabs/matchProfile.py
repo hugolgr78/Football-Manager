@@ -8,7 +8,6 @@ from utils.frames import FootballPitchMatchDay, TeamLogo
 from data.database import Teams, MatchEvents, TeamLineup
 from utils.refereeProfileLink import RefereeProfileLink
 import io
-import itertools
 
 class MatchProfile(ctk.CTkFrame):
     def __init__(self, parent, match, parentTab, changeBackFunction = None):
@@ -560,7 +559,7 @@ class MatchProfile(ctk.CTkFrame):
             numAssists = len([event for event in self.homeEvents if event.player_id == player.player_id and event.event_type == "assist"])
             numPenaltiesSaved = len([event for event in self.homeEvents if event.player_id == player.player_id and event.event_type == "penalty_saved"])
 
-            if subbed_on and subbed_off:
+            if (subbed_on and subbed_off) or (not player.start_position and not player.end_position):
                 continue 
             
             if not subbed_on:
@@ -587,7 +586,10 @@ class MatchProfile(ctk.CTkFrame):
                 src = Image.open("Images/subbed_on_wb.png")
                 src.thumbnail(self.imageSize)
                 img = ImageTk.PhotoImage(src)
-                self.homeEndLineupPitch.addIcon("Sub", img, player.end_position, 1)
+
+                # Check the player finished the game
+                if player.end_position:
+                    self.homeEndLineupPitch.addIcon("Sub", img, player.end_position, 1)
             
             if yellow_carded and red_carded:
                 src = Image.open("Images/yellowCard_wb.png")
@@ -732,7 +734,7 @@ class MatchProfile(ctk.CTkFrame):
             numAssists = len([event for event in self.awayEvents if event.player_id == player.player_id and event.event_type == "assist"])
             numPenaltiesSaved = len([event for event in self.awayEvents if event.player_id == player.player_id and event.event_type == "penalty_saved"])
 
-            if subbed_on and subbed_off:
+            if (subbed_on and subbed_off) or (not player.start_position and not player.end_position):
                 continue
         
             if not subbed_on:
@@ -915,7 +917,9 @@ class MatchProfile(ctk.CTkFrame):
         src.thumbnail((20, 20))
         img = ctk.CTkImage(src, None, (src.width, src.height))
         ctk.CTkLabel(frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
-        ctk.CTkLabel(frame, text = f"Date, {self.match.time}", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
+
+        day, dateText, time = format_datetime_split(self.match.date)
+        ctk.CTkLabel(frame, text = f"{day} {dateText}, {time}", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
 
         frame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
         frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))

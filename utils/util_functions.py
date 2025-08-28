@@ -1,3 +1,4 @@
+from datetime import timedelta
 from settings import *
 import random
 import math
@@ -45,14 +46,22 @@ def get_fan_message(fan_reaction):
     """Return a fan reaction message based on the given fan reaction."""
     return FAN_MESSAGES.get(fan_reaction, "The fans aren't sure how to react.")
 
-def get_player_ban(ban_type):
+def get_player_ban(ban_type, curr_date):
     if ban_type == "injury":
-        ban = random.randint(1, 15)
-    else: # red card
-        ban = random.randint(1,3)
+        # Range: 14 days to ~180 days
+        min_days = 14
+        max_days = 180  
 
-    return ban
+        # Bias toward smaller durations by squaring a uniform random
+        r = random.random() ** 2   # 0..1, but skewed toward 0
+        days = min_days + int(r * (max_days - min_days))
 
+        return (curr_date + datetime.timedelta(days = days)).replace(hour = 0, minute = 0, second = 0, microsecond = 0)
+
+    else:  # red card
+        games = random.randint(1, 3)
+        return games
+    
 def get_morale_change(match_result, player_rating, goal_difference):
     # Base morale change based on match result
     if match_result == "win":
@@ -424,3 +433,24 @@ def expected_finish(team_name: str, team_scores: list) -> int:
     
     # Team not found
     return None
+
+def format_datetime_split(dt):
+    # Day with correct suffix (st, nd, rd, th)
+    day = dt.day
+    if 10 <= day % 100 <= 20:
+        suffix = "th"
+    else:
+        suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    
+    day_of_week = dt.strftime("%A")                     # e.g. "Wednesday"
+    date_str = dt.strftime(f"{day}{suffix} %B %Y")      # e.g. "20th August 2025"
+    time_str = dt.strftime("%H:%M")                     # e.g. "14:30"
+    
+    return day_of_week, date_str, time_str
+
+def get_next_monday(date):
+    days_ahead = (0 - date.weekday() + 7) % 7
+    return date + timedelta(days = days_ahead)
+
+def calculate_age(dob, today):
+    return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))

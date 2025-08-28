@@ -5,25 +5,29 @@ from data.gamesDatabase import *
 from PIL import Image
 import io
 
-from utils.frames import MatchFrame, PlayerFrame, next5Matches, TrophiesFrame
+from utils.frames import MatchFrame, PlayerFrame, next5Matches, TrophiesFrame, CalendarFrame
 from utils.managerProfileLink import ManagerProfileLink
 from utils.util_functions import *
 
 class TeamProfile(ctk.CTkFrame):
-    def __init__(self, parent, manager_id, parentTab = None, changeBackFunction = None):
+    def __init__(self, parent, manager_id = None, parentTab = None, changeBackFunction = None):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.manager_id = manager_id
         self.changeBackFunction = changeBackFunction
+
+        if not manager_id:
+            self.manager_id = Managers.get_all_user_managers()[0].id
+        else:
+            self.manager_id = manager_id
 
         if not parentTab:
             self.parentTab = self.parent
         else:
             self.parentTab = parentTab
 
-        self.manager = Managers.get_manager_by_id(manager_id)
-        self.team = Teams.get_teams_by_manager(manager_id)[0]
+        self.manager = Managers.get_manager_by_id(self.manager_id)
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.leagueData = LeagueTeams.get_league_by_team(self.team.id)
         self.leagueId = self.leagueData.league_id
 
@@ -209,16 +213,43 @@ class Schedule(ctk.CTkFrame):
         self.league = League.get_league_by_id(self.matches[0].league_id)
 
         self.matchesFrame = ctk.CTkScrollableFrame(self, fg_color = TKINTER_BACKGROUND, width = 650, height = 590, corner_radius = 0)
-        self.matchesFrame.place(relx = 0.02, rely = 0.05, anchor = "nw")
+        self.matchesFrame.place(relx = 0.01, rely = 0.05, anchor = "nw")
 
-        self.matchInfoFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 280, height = 590, corner_radius = 15)
+        self.matchInfoFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 280, height = 560, corner_radius = 15)
         self.matchInfoFrame.place(relx = 0.98, rely = 0.05, anchor = "ne")
+
+        self.calendarFrame = CalendarFrame(self, self.matches, self, self.parent.parentTab, self.matchInfoFrame, self.team.id)
+
+        self.switchButton = ctk.CTkButton(self, text = "List", fg_color = GREY_BACKGROUND, command = self.switchFrames, width = 280, height = 15)
+        self.switchButton.place(relx = 0.98, rely = 0.985, anchor = "se")
 
         self.frames = []
 
+        currentMonth = ""
         for match in self.matches:
+
+            _, text, _ = format_datetime_split(match.date)
+            month = text.split(" ")[1]
+
+            if month != currentMonth:
+                currentMonth = month
+                frame = ctk.CTkFrame(self.matchesFrame, fg_color = TKINTER_BACKGROUND, width = 640, height = 50, corner_radius = 0)
+                frame.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
+
+                ctk.CTkLabel(frame, text = month, font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0, rely = 0.5, anchor = "w")
+
             frame = MatchFrame(self, self.manager_id, match, self.matchesFrame, self.matchInfoFrame, self.parent.parentTab)
             self.frames.append(frame)
+            
+    def switchFrames(self):
+        if self.matchesFrame.winfo_ismapped():
+            self.matchesFrame.place_forget()
+            self.calendarFrame.place(relx = 0.01, rely = 0.05, anchor = "nw")
+            self.switchButton.configure(text = "List")
+        else:
+            self.calendarFrame.place_forget()
+            self.matchesFrame.place(relx = 0.01, rely = 0.05, anchor = "nw")
+            self.switchButton.configure(text = "Calendar")
 
 class History(ctk.CTkScrollableFrame):
     def __init__(self, parent, manager_id):

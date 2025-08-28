@@ -4,11 +4,11 @@ from data.database import Matches, searchResults, Teams, LeagueTeams, League, Pl
 from utils.util_functions import getSuffix
 
 class Search(ctk.CTkFrame):
-    def __init__(self, parent, manager_id):
+    def __init__(self, parent):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.manager_id = manager_id
+        self.manager_id = Managers.get_all_user_managers()[0].id
         self.manager_Team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.team_league_id = LeagueTeams.get_team_by_id(self.manager_Team.id).league_id
 
@@ -155,7 +155,7 @@ class Search(ctk.CTkFrame):
         else:
             from tabs.teamProfile import TeamProfile
 
-            self.profile = TeamProfile(self, team.manager_id, parentTab = self, changeBackFunction = self.changeBack)
+            self.profile = TeamProfile(self, manager_id = team.manager_id, parentTab = self, changeBackFunction = self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
             self.parent.overlappingProfiles.append(self.profile)
 
@@ -172,7 +172,7 @@ class Search(ctk.CTkFrame):
 
         manager = Managers.get_manager_by_id(manager_id)
         if manager.user != 1:
-            self.profile = ManagerProfile(self, manager_id, changeBackFunction = self.changeBack)
+            self.profile = ManagerProfile(self, manager_id = manager_id, changeBackFunction = self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
             self.parent.overlappingProfiles.append(self.profile)
         else:
@@ -182,7 +182,7 @@ class Search(ctk.CTkFrame):
         from tabs.leagueProfile import LeagueProfile
 
         if league_id != self.team_league_id:
-            self.profile = LeagueProfile(self, league_id, changeBackFunction = self.changeBack)
+            self.profile = LeagueProfile(self, league_id = league_id, changeBackFunction = self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
             self.parent.overlappingProfiles.append(self.profile)
         else:

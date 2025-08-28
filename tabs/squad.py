@@ -7,18 +7,18 @@ from utils.frames import PlayerFrame
 from utils.util_functions import *
 
 class Squad(ctk.CTkFrame):
-    def __init__(self, parent, manager_id):
+    def __init__(self, parent):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
-        self.manager_id = manager_id
+        self.manager_id = Managers.get_all_user_managers()[0].id
 
         self.talkedTo = []
         self.playerInjured = False
         self.currentStat = "Current ability"
         self.playerFrames = []
 
-        self.team = Teams.get_teams_by_manager(manager_id)[0]
+        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.leagueId = LeagueTeams.get_league_by_team(self.team.id).league_id
         self.players = Players.get_all_players_by_team(self.team.id)
 
@@ -138,9 +138,7 @@ class Squad(ctk.CTkFrame):
         lastMatchData.place(relx = 0.5, rely = 0.36, anchor = "n")
 
         team = Teams.get_team_by_id(player.team_id)
-        league = LeagueTeams.get_league_by_team(team.id)
-
-        lastMatch = Matches.get_team_last_match(team.id, league.league_id)
+        lastMatch = Matches.get_team_last_match(team.id, Game.get_game_date(self.manager_id))
 
         if not lastMatch:
             ctk.CTkLabel(lastMatchData, text = "Did not play", font = (APP_FONT, 13), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.15, anchor = "w")   

@@ -29,7 +29,7 @@ class ManagerProfileLink(ctk.CTkLabel):
         manager = Managers.get_manager_by_id(self.manager_id)
 
         if manager.user != 1:
-            self.profile = ManagerProfile(self.tab, self.manager_id, self.changeBack)
+            self.profile = ManagerProfile(self.tab, manager_id = self.manager_id, changeBackFunction = self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
 
             self.tab.parent.parent.overlappingProfiles.append(self.profile)

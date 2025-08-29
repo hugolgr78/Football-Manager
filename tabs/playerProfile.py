@@ -212,14 +212,17 @@ class Profile(ctk.CTkFrame):
         canvas = ctk.CTkCanvas(self, width = 1000, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = 0.5, rely = 0.4, anchor = "center")
 
-        self.footballPitch = FootballPitchPlayerPos(self, 400, 250, 0.2, 0.65, "center", TKINTER_BACKGROUND)
+        self.footballPitch = FootballPitchPlayerPos(self, 435, 250, 0.04, 0.43, "nw", TKINTER_BACKGROUND)
         positions = self.player.specific_positions.split(",")
         self.footballPitch.add_player_positions(positions)
 
-        ctk.CTkLabel(self, text = self.player.position.capitalize(), font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.45, anchor = "center")
+        # ctk.CTkLabel(self, text = self.player.position.capitalize(), font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.45, anchor = "center")
+
+        self.attributesFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 350, height = 50, corner_radius = 15)
+        self.attributesFrame.place(relx = 0.04, rely = 0.84, anchor = "sw")
 
         self.formFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 520, height = 250, corner_radius = 15)
-        self.formFrame.place(relx = 0.67, rely = 0.63, anchor = "center")
+        self.formFrame.place(relx = 0.67, rely = 0.43, anchor = "n")
         ctk.CTkLabel(self.formFrame, text = "Form", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.1, anchor = "center")
 
         FormGraph(self.formFrame, self.player, 520, 250, 0.5, 0.6, "center", GREY_BACKGROUND)
@@ -228,6 +231,7 @@ class Profile(ctk.CTkFrame):
         self.statsFrame.place(relx = 0.04, rely = 0.85, anchor = "nw")
 
         self.addStats()
+        self.addAttr()
 
     def addStats(self):
 
@@ -269,6 +273,66 @@ class Profile(ctk.CTkFrame):
                 stat = str(round(stat, 2))
 
             ctk.CTkLabel(self.statsFrame, text = stat, font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = relx_position, rely = 0.7, anchor = "center")
+
+    def addAttr(self):
+        morale = self.player.morale
+
+        if morale > 75:
+            src = "Images/morale_happy.png"
+        elif morale > 25:
+            src = "Images/morale_neutral.png"
+        else:
+            src = "Images/morale_angry.png"
+
+        image = Image.open(src)
+        image.thumbnail((25, 25))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        ctk.CTkLabel(self.attributesFrame, image = ctk_image, text = "", fg_color = TKINTER_BACKGROUND).place(relx = 0, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(self.attributesFrame, text = f"{morale}%", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.5, anchor = "w")
+
+        fitness = self.player.fitness
+
+        if fitness > 75:
+            src = "Images/fitness_good.png"
+        elif fitness > 25:
+            src = "Images/fitness_ok.png"
+        else:
+            src = "Images/fitness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((25, 25))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        ctk.CTkLabel(self.attributesFrame, image = ctk_image, text = "", fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(self.attributesFrame, text = f"{fitness}%", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.4, rely = 0.5, anchor = "w")
+
+        sharpness = self.player.sharpness
+
+        if sharpness > 75:
+            src = "Images/sharpness_good.png"
+        elif sharpness > 25:
+            src = "Images/sharpness_ok.png"
+        else:
+            src = "Images/sharpness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((25, 25))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        ctk.CTkLabel(self.attributesFrame, image = ctk_image, text = "", fg_color = TKINTER_BACKGROUND).place(relx = 0.6, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(self.attributesFrame, text = f"{sharpness}%", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.7, rely = 0.5, anchor = "w")
+
+        canvas = ctk.CTkCanvas(self.attributesFrame, width = 5, height = 40, bg = GREY_BACKGROUND, highlightthickness = 0, bd = 0)
+
+        canvasX = 0.85 if self.player.position == "goalkeeper" else 0.84
+        canvas.place(relx = canvasX, rely = 0.5, anchor = "center")
+
+        positionCodes = {
+            "goalkeeper": "GK",
+            "defender": "DEF",
+            "midfielder": "MID",
+            "forward": "FWD"
+        }
+
+        ctk.CTkLabel(self.attributesFrame, text = positionCodes[self.player.position], font = (APP_FONT_BOLD, 18), fg_color = TKINTER_BACKGROUND).place(relx = 0.94, rely = 0.5, anchor = "center")
 
 class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):

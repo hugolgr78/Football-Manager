@@ -375,6 +375,8 @@ class Players(Base):
     nationality = Column(String(128), nullable = False)
     flag = Column(BLOB)
     morale = Column(Integer, nullable = False, default = 50)
+    fitness = Column(Integer, nullable = False, default = 100)
+    sharpness = Column(Integer, nullable = False, default = 50)
     player_role = Column(Enum("Star Player", "Backup", "Rotation", "First Team", "Youth Team"), nullable = False)
 
     @classmethod

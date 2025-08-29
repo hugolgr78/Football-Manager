@@ -1821,6 +1821,32 @@ class SubstitutePlayer(ctk.CTkFrame):
 
         PlayerProfileLink(self, player, self.player.last_name, textColor, 0.5, 0.65, "center", fgColor, parentTab, 15, APP_FONT_BOLD, ingame = ingame, ingameFunction = ingameFunction)
 
+        fitness = self.player.fitness
+        if fitness > 75:
+            src = "Images/fitness_good.png"
+        elif fitness > 25:
+            src = "Images/fitness_ok.png"
+        else:
+            src = "Images/fitness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((15, 15))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        ctk.CTkLabel(self, image = ctk_image, text = "", fg_color = fgColor, height = 0, width = 0).place(relx = 0.95, rely = 0.05, anchor = "ne")
+
+        sharpness = self.player.sharpness
+        if sharpness > 75:
+            src = "Images/sharpness_good.png"
+        elif sharpness > 25:
+            src = "Images/sharpness_ok.png"
+        else:
+            src = "Images/sharpness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((15, 15))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        ctk.CTkLabel(self, image = ctk_image, text = "", fg_color = fgColor, height = 0, width = 0).place(relx = 0.95, rely = 0.23, anchor = "ne")
+
         if checkBoxFunction is not None:
             self.checkBox = ctk.CTkCheckBox(self, text = "", fg_color = GREY, checkbox_height = 10, checkbox_width = 80, border_width = 1, border_color = GREY)
             self.checkBox.configure(command = lambda: checkBoxFunction(self.checkBox, player))

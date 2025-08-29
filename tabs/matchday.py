@@ -1564,15 +1564,14 @@ class MatchDay(ctk.CTkFrame):
                     continue
 
                 matchesToCheck = MATCHES_ROLES[player.player_role]
-                matches = Matches.get_all_matches_by_team(team.id)
+                matches = Matches.get_all_played_matches_by_team(team.id, currDate)
+                matches = [m for m in matches if not TeamLineup.check_player_availability(player.id, m.id)]
 
                 if len(matches) < matchesToCheck:
                     continue
 
-                print(player.player_role)
                 last_matches = matches[-matchesToCheck:]  # last n matches
                 avg_minutes = sum(MatchEvents.get_player_game_time(player.id, match.id) for match in last_matches) / matchesToCheck
-                print(player.last_name, avg_minutes)
 
                 if player_gametime(avg_minutes, player):
                     Players.reduce_morale_to_25(player.id)

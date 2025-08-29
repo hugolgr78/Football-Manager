@@ -479,7 +479,7 @@ EVENT_GROUPS = {
 }
 
 MATCHES_ROLES = {
-    "Star Player": 5,
+    "Star Player": 1,
     "First Team": 7,
     "Rotation": 10
 }

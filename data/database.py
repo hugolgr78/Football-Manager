@@ -911,6 +911,17 @@ class Players(Base):
         finally:
             session.close()
 
+    @classmethod
+    def reduce_morale_to_25(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            player = session.query(Players).filter(Players.id == player_id).first()
+            if player:
+                player.morale = min(25, player.morale)
+                session.commit()
+        finally:
+            session.close()
+
 class Matches(Base):
     __tablename__ = 'matches'
     
@@ -1250,7 +1261,8 @@ class TeamLineup(Base):
     player_id = Column(String(128), ForeignKey('players.id'))
     start_position = Column(String(128))
     end_position = Column(String(128))
-    rating = Column(Integer, nullable = False, default = 0)
+    rating = Column(Integer)
+    reason = Column(String(256))
 
     @classmethod
     def batch_add_lineups(cls, lineups):
@@ -1264,7 +1276,8 @@ class TeamLineup(Base):
                     "player_id": lineup[1],
                     "start_position": lineup[2],
                     "end_position": lineup[3],
-                    "rating": lineup[4]
+                    "rating": lineup[4],
+                    "reason": lineup[5]
                 }
                 for lineup in lineups
             ]
@@ -1279,7 +1292,7 @@ class TeamLineup(Base):
             session.close()
     
     @classmethod
-    def add_lineup_single(cls, match_id, player_id, start_position, end_position, rating):
+    def add_lineup_single(cls, match_id, player_id, start_position, end_position, rating, reason):
         session = DatabaseManager().get_session()
         try:
             new_player = TeamLineup(
@@ -1287,7 +1300,8 @@ class TeamLineup(Base):
                 player_id = player_id,
                 start_position = start_position,
                 end_position = end_position,
-                rating = rating
+                rating = rating,
+                reason = reason
             )
             session.add(new_player)
             session.commit()
@@ -1311,7 +1325,10 @@ class TeamLineup(Base):
     def get_lineup_by_match(cls, match_id):
         session = DatabaseManager().get_session()
         try:
-            players = session.query(TeamLineup).filter(TeamLineup.match_id == match_id).all()
+            players = session.query(TeamLineup).filter(
+                TeamLineup.match_id == match_id,
+                or_(TeamLineup.reason.is_(None), TeamLineup.reason == '')
+            ).all()
             return players
         finally:
             session.close()
@@ -1322,7 +1339,8 @@ class TeamLineup(Base):
         try:
             players = session.query(TeamLineup).join(Players).filter(
                 TeamLineup.match_id == match_id,
-                Players.team_id == team_id
+                Players.team_id == team_id,
+                or_(TeamLineup.reason.is_(None), TeamLineup.reason == '')
             ).order_by(
                 case(
                     [
@@ -1947,6 +1965,7 @@ class MatchEvents(Base):
     def get_player_game_time(cls, player_id, match_id):
         session = DatabaseManager().get_session()
         try:
+            game_time = 0
             sub_on_event = session.query(MatchEvents).filter(
                 MatchEvents.player_id == player_id,
                 MatchEvents.match_id == match_id,

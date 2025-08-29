@@ -916,9 +916,16 @@ class Players(Base):
         session = DatabaseManager().get_session()
         try:
             player = session.query(Players).filter(Players.id == player_id).first()
-            if player:
-                player.morale = min(25, player.morale)
-                session.commit()
+
+            if not player:
+                return False  # or raise Exception if you prefer strict handling
+
+            if player.morale <= 25:
+                return False
+
+            player.morale = 25
+            session.commit()
+            return True
         finally:
             session.close()
 
@@ -4770,4 +4777,11 @@ def check_player_games_happy(teams, currDate):
             avg_minutes = sum(MatchEvents.get_player_game_time(player.id, match.id) for match in last_matches) / matchesToCheck
 
             if player_gametime(avg_minutes, player):
-                Players.reduce_morale_to_25(player.id)
+                reduced = Players.reduce_morale_to_25(player.id)
+
+                user = Managers.get_all_user_managers()[0]
+                managed_team = Teams.get_teams_by_manager(user.id)[0]
+
+                if team.id == managed_team.id and reduced:
+                    email_date = currDate + timedelta(days = 1)
+                    Emails.add_email("player_games_issue", None, player.id, None, None, email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))

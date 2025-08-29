@@ -63,7 +63,7 @@ class PlayerProfile(ctk.CTkFrame):
         backButton = ctk.CTkButton(self.tabsFrame, text = "Back", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, corner_radius = 5, height = self.buttonHeight - 10, width = 100, hover_color = CLOSE_RED, command = lambda: self.changeBackFunction())
         backButton.place(relx = 0.94, rely = 0, anchor = "ne")
 
-        self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 150, corner_radius = 0, background_corner_colors = [TKINTER_BACKGROUND, TKINTER_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND])
+        self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 180, corner_radius = 0, background_corner_colors = [TKINTER_BACKGROUND, TKINTER_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND])
 
         src = Image.open("Images/information.png")
         src.thumbnail((20, 20))
@@ -92,26 +92,29 @@ class PlayerProfile(ctk.CTkFrame):
         self.tabs[self.activeButton].pack()
 
     def legend(self):
-        self.legendFrame.grid_columnconfigure((0, 1, 2, 3, 4, 5), weight = 0)
-        self.legendFrame.grid_rowconfigure((0, 2), weight = 0)
-        self.legendFrame.grid_rowconfigure((1, 3), weight = 1)
+        self.legendFrame.grid_rowconfigure((0, 1, 2, 3, 4, 5), weight = 0)
+        self.legendFrame.grid_columnconfigure((0, 2), weight = 0)
+        self.legendFrame.grid_columnconfigure((1, 3), weight = 1)
         self.legendFrame.grid_propagate(False)
 
-        ctk.CTkLabel(self.legendFrame, text = "Legend", font = (APP_FONT_BOLD, 18), fg_color = GREY_BACKGROUND).grid(row = 0, column = 0, columnspan = 6, pady = (5, 0))
+        ctk.CTkLabel(self.legendFrame, text = "Legend", font = (APP_FONT_BOLD, 18), fg_color = GREY_BACKGROUND).grid(row = 0, column = 0, columnspan = 4, pady = (5, 0))
 
         imageNames = ["played", "redCard", "yellowCard", "averageRating"]
-        iconNames = ["Played", "Red Cards", "Yellow Cards", "Average Rating"]
+        iconNames = ["Played", "Red Cards", "Yellow Cards", "Avg. Rating"]
 
         if self.player.position == "goalkeeper":
             imageNames.append("cleanSheet")
             iconNames.append("Clean Sheets")
             imageNames.append("saved_penalty")
-            iconNames.append("Saved Penalties")
+            iconNames.append("Saved Pens")
         else:
             imageNames.append("goal")
             iconNames.append("Goals")
             imageNames.append("assist")
             iconNames.append("Assists")
+
+        imageNames += ["morale_happy", "fitness_good", "sharpness_good"]
+        iconNames += ["Morale", "Fitness", "Sharpness"]
 
         # Image in columns 0 and 2, text in columns 1 and 3
         for i, (imageName, iconName) in enumerate(zip(imageNames, iconNames)):

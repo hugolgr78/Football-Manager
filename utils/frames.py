@@ -1581,16 +1581,40 @@ class LineupPlayerFrame(ctk.CTkFrame):
         if xDisabled:
             self.removeButton.configure(state = "disabled")
 
-        self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 55, height = 13, corner_radius = 0)
-        self.caFrame.place(relx = 0.5, rely = 0.95, anchor = "s")
+        self.attsFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 55, height = 13, corner_radius = 0)
+        self.attsFrame.place(relx = 0.5, rely = 0.95, anchor = "s")
 
-        imageNames = star_images(self.caStars)
+        src = Image.open(f"Images/star_full.png")
+        src.thumbnail((10, 10))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.attsFrame, image = img, text = "").place(relx = 0, rely = 0.3, anchor = "w")
+        ctk.CTkLabel(self.attsFrame, text = round(self.caStars, 1), font = (APP_FONT, 12), fg_color = fgColor, height = 0, width = 0).place(relx = 0.22, rely = 0.3, anchor = "w")
 
-        for i, imageName in enumerate(imageNames):
-            src = Image.open(f"Images/{imageName}.png")
-            src.thumbnail((10, 10))
-            img = ctk.CTkImage(src, None, (src.width, src.height))
-            ctk.CTkLabel(self.caFrame, image = img, text = "").place(relx = 0.12 + i * 0.18, rely = 0.3, anchor = "center")
+        fitness = self.player.fitness
+        if fitness > 75:
+            src = "Images/fitness_good.png"
+        elif fitness > 25:
+            src = "Images/fitness_ok.png"
+        else:
+            src = "Images/fitness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((10, 10))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        ctk.CTkLabel(self.attsFrame, image = ctk_image, text = "", fg_color = fgColor, height = 0, width = 0).place(relx = 0.58, rely = 0.4, anchor = "w")
+
+        sharpness = self.player.sharpness
+        if sharpness > 75:
+            src = "Images/sharpness_good.png"
+        elif sharpness > 25:
+            src = "Images/sharpness_ok.png"
+        else:
+            src = "Images/sharpness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((10, 10))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        ctk.CTkLabel(self.attsFrame, image = ctk_image, text = "", fg_color = fgColor, height = 0, width = 0).place(relx = 0.82, rely = 0.4, anchor = "w")
 
         self.bind("<Button-1>", self.start_drag)
         self.bind("<B1-Motion>", self.do_drag)
@@ -1602,7 +1626,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
                 child.bind("<B1-Motion>", self.do_drag)
                 child.bind("<ButtonRelease-1>", self.stop_drag)
 
-        for child in self.caFrame.winfo_children():
+        for child in self.attsFrame.winfo_children():
             child.bind("<Button-1>", self.start_drag)
             child.bind("<B1-Motion>", self.do_drag)
             child.bind("<ButtonRelease-1>", self.stop_drag)

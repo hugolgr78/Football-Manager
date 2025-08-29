@@ -1550,6 +1550,14 @@ class MatchDay(ctk.CTkFrame):
 
             League.update_current_matchday(self.league.id)
 
+        teams = [self.matchFrame.matchInstance.homeTeam, self.matchFrame.matchInstance.awayTeam]
+        for frame in self.otherMatchesFrame.winfo_children():
+            if frame.matchInstance:
+                teams.append(frame.matchInstance.homeTeam)
+                teams.append(frame.matchInstance.awayTeam)
+
+        check_player_games_happy(teams, currDate)
+
         self.pack_forget()
         self.update_idletasks()
         self.parent.resetMenu()

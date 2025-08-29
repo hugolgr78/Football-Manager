@@ -454,3 +454,16 @@ def get_next_monday(date):
 
 def calculate_age(dob, today):
     return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+def player_gametime(avg_minutes, player):
+
+    roles = {
+        "Star Player": 50,
+        "First Team": 30,
+        "Rotation": 20
+    }
+
+    if avg_minutes < roles[player.player_role]:
+        return True
+
+    return False

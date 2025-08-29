@@ -204,6 +204,13 @@ class MainMenu(ctk.CTkFrame):
 
                 League.update_current_matchday(id_)   
 
+        teams = []
+        for match in matches:
+            teams.append(match.homeTeam)
+            teams.append(match.awayTeam)
+
+        check_player_games_happy(teams, self.currDate)
+
         self.resetTabs(0, 1, 2, 3, 5, 6)
         self.addDate()
         

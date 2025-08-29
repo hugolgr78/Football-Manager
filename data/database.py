@@ -1128,6 +1128,18 @@ class Matches(Base):
             session.close()
 
     @classmethod
+    def get_all_played_matches_by_team(cls, team_id, currDate):
+        session = DatabaseManager().get_session()
+        try:
+            matches = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                Matches.date < currDate
+            ).distinct().all()
+            return matches
+        finally:
+            session.close()
+
+    @classmethod
     def get_all_matches_by_league(cls, league_id):
         session = DatabaseManager().get_session()
         try:
@@ -1327,7 +1339,7 @@ class TeamLineup(Base):
         try:
             players = session.query(TeamLineup).filter(
                 TeamLineup.match_id == match_id,
-                or_(TeamLineup.reason.is_(None), TeamLineup.reason == '')
+                TeamLineup.rating.isnot(None)
             ).all()
             return players
         finally:
@@ -1340,7 +1352,7 @@ class TeamLineup(Base):
             players = session.query(TeamLineup).join(Players).filter(
                 TeamLineup.match_id == match_id,
                 Players.team_id == team_id,
-                or_(TeamLineup.reason.is_(None), TeamLineup.reason == '')
+                TeamLineup.rating.isnot(None)
             ).order_by(
                 case(
                     [
@@ -1362,7 +1374,8 @@ class TeamLineup(Base):
         try:
             matches = session.query(TeamLineup).join(Matches).filter(
                 TeamLineup.player_id == player_id,
-                Matches.league_id == league_id
+                Matches.league_id == league_id,
+                TeamLineup.rating.isnot(None)
             ).count()
             return matches
         finally:
@@ -1374,7 +1387,8 @@ class TeamLineup(Base):
         try:
             rating = session.query(func.avg(TeamLineup.rating)).join(Matches).filter(
                 TeamLineup.player_id == player_id,
-                Matches.league_id == league_id
+                Matches.league_id == league_id,
+                TeamLineup.rating.isnot(None)
             ).scalar()
             return rating if rating else "N/A"
         finally:
@@ -1412,7 +1426,8 @@ class TeamLineup(Base):
             ).join(
                 MatchAlias, TeamLineup.match_id == MatchAlias.id
             ).filter(
-                MatchAlias.league_id == league_id
+                MatchAlias.league_id == league_id,
+                TeamLineup.rating.isnot(None)
             ).group_by(
                 TeamLineup.player_id,
                 PlayerAlias.first_name,
@@ -1431,7 +1446,8 @@ class TeamLineup(Base):
             rating = session.query(
                 TeamLineup
             ).filter(
-                TeamLineup.match_id == match_id
+                TeamLineup.match_id == match_id,
+                TeamLineup.rating.isnot(None)
             ).order_by(
                 TeamLineup.rating.desc()
             ).first()
@@ -1463,6 +1479,19 @@ class TeamLineup(Base):
             )
 
             return int(potm_count or 0)
+        finally:
+            session.close()
+
+    @classmethod
+    def check_player_availability(cls, player_id, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            availability = session.query(TeamLineup).filter(
+                TeamLineup.player_id == player_id,
+                TeamLineup.match_id == match_id,
+                TeamLineup.reason == "unavailable"
+            ).first()
+            return availability is not None
         finally:
             session.close()
 

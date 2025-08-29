@@ -478,6 +478,12 @@ EVENT_GROUPS = {
     "penalty_missed": ["penalty_missed"],
 }
 
+MATCHES_ROLES = {
+    "Star Player": 1,
+    "First Team": 7,
+    "Rotation": 10
+}
+
 from data.database import StatsManager
 
 STAT_FUNCTIONS = {

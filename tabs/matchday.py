@@ -1550,6 +1550,33 @@ class MatchDay(ctk.CTkFrame):
 
             League.update_current_matchday(self.league.id)
 
+        teams = [self.matchFrame.matchInstance.homeTeam, self.matchFrame.matchInstance.awayTeam]
+        for frame in self.otherMatchesFrame.winfo_children():
+            if frame.matchInstance:
+                teams.append(frame.matchInstance.homeTeam)
+                teams.append(frame.matchInstance.awayTeam)
+
+        for team in teams:
+            players = Players.get_all_players_by_team(team.id, youths = False)
+            for player in players:
+
+                if player.player_role == "Backup":
+                    continue
+
+                matchesToCheck = MATCHES_ROLES[player.player_role]
+                matches = Matches.get_all_matches_by_team(team.id)
+
+                if len(matches) < matchesToCheck:
+                    continue
+
+                print(player.player_role)
+                last_matches = matches[-matchesToCheck:]  # last n matches
+                avg_minutes = sum(MatchEvents.get_player_game_time(player.id, match.id) for match in last_matches) / matchesToCheck
+                print(player.last_name, avg_minutes)
+
+                if player_gametime(avg_minutes, player):
+                    Players.reduce_morale_to_25(player.id)
+
         self.pack_forget()
         self.update_idletasks()
         self.parent.resetMenu()

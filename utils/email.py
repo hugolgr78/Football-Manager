@@ -899,6 +899,45 @@ class PlayerGamesIssue():
         for widget in self.frame.winfo_children():
             widget.place_forget()
 
+        self.setUpEmail()
+
+        self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
+        self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        self.emailFrame_1.place(relx = 0.05, rely = 0.1, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.131, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.18, anchor = "w")
+
+        self.button = ctk.CTkButton(self.frame, text = "Action TBA", font = (APP_FONT_BOLD, 15), command = lambda: self.action(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
+        self.button.place(relx = 0.95, rely = 0.95, anchor = "se")
+
+        _, currDate, _ = format_datetime_split(Game.get_game_date(self.parent.manager.id))
+        today = True if currDate == self.parent.date else False
+
+        if self.parent.actioned or not today:
+            self.button.configure(state = "disabled")
+
+    def setUpEmail(self):
+
+        self.emailFrame_1 = PlayerProfileLabel(
+            self.frame,
+            self.parent.player,
+            f"{self.parent.player.first_name} {self.parent.player.last_name}",
+            "I wanted to inform you that ",
+            " is unhappy his game time.",
+            240,
+            30,
+            self.parent.parentTab,
+            fontSize = 15
+        )
+
+        self.emailText_1 = f"You will need to sort this out."
+        self.emailText_2 = "Name, Assistant Manager"
+
+    def action(self):
+        pass
+
 class SeasonReview():
     def __init__(self, parent):
 

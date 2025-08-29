@@ -911,6 +911,24 @@ class Players(Base):
         finally:
             session.close()
 
+    @classmethod
+    def reduce_morale_to_25(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            player = session.query(Players).filter(Players.id == player_id).first()
+
+            if not player:
+                return False  # or raise Exception if you prefer strict handling
+
+            if player.morale <= 25:
+                return False
+
+            player.morale = 25
+            session.commit()
+            return True
+        finally:
+            session.close()
+
 class Matches(Base):
     __tablename__ = 'matches'
     
@@ -1117,6 +1135,18 @@ class Matches(Base):
             session.close()
 
     @classmethod
+    def get_all_played_matches_by_team(cls, team_id, currDate):
+        session = DatabaseManager().get_session()
+        try:
+            matches = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                Matches.date < currDate
+            ).distinct().all()
+            return matches
+        finally:
+            session.close()
+
+    @classmethod
     def get_all_matches_by_league(cls, league_id):
         session = DatabaseManager().get_session()
         try:
@@ -1250,7 +1280,8 @@ class TeamLineup(Base):
     player_id = Column(String(128), ForeignKey('players.id'))
     start_position = Column(String(128))
     end_position = Column(String(128))
-    rating = Column(Integer, nullable = False, default = 0)
+    rating = Column(Integer)
+    reason = Column(String(256))
 
     @classmethod
     def batch_add_lineups(cls, lineups):
@@ -1264,7 +1295,8 @@ class TeamLineup(Base):
                     "player_id": lineup[1],
                     "start_position": lineup[2],
                     "end_position": lineup[3],
-                    "rating": lineup[4]
+                    "rating": lineup[4],
+                    "reason": lineup[5]
                 }
                 for lineup in lineups
             ]
@@ -1279,7 +1311,7 @@ class TeamLineup(Base):
             session.close()
     
     @classmethod
-    def add_lineup_single(cls, match_id, player_id, start_position, end_position, rating):
+    def add_lineup_single(cls, match_id, player_id, start_position, end_position, rating, reason):
         session = DatabaseManager().get_session()
         try:
             new_player = TeamLineup(
@@ -1287,7 +1319,8 @@ class TeamLineup(Base):
                 player_id = player_id,
                 start_position = start_position,
                 end_position = end_position,
-                rating = rating
+                rating = rating,
+                reason = reason
             )
             session.add(new_player)
             session.commit()
@@ -1311,7 +1344,10 @@ class TeamLineup(Base):
     def get_lineup_by_match(cls, match_id):
         session = DatabaseManager().get_session()
         try:
-            players = session.query(TeamLineup).filter(TeamLineup.match_id == match_id).all()
+            players = session.query(TeamLineup).filter(
+                TeamLineup.match_id == match_id,
+                TeamLineup.rating.isnot(None)
+            ).all()
             return players
         finally:
             session.close()
@@ -1322,7 +1358,8 @@ class TeamLineup(Base):
         try:
             players = session.query(TeamLineup).join(Players).filter(
                 TeamLineup.match_id == match_id,
-                Players.team_id == team_id
+                Players.team_id == team_id,
+                TeamLineup.rating.isnot(None)
             ).order_by(
                 case(
                     [
@@ -1344,7 +1381,8 @@ class TeamLineup(Base):
         try:
             matches = session.query(TeamLineup).join(Matches).filter(
                 TeamLineup.player_id == player_id,
-                Matches.league_id == league_id
+                Matches.league_id == league_id,
+                TeamLineup.rating.isnot(None)
             ).count()
             return matches
         finally:
@@ -1356,7 +1394,8 @@ class TeamLineup(Base):
         try:
             rating = session.query(func.avg(TeamLineup.rating)).join(Matches).filter(
                 TeamLineup.player_id == player_id,
-                Matches.league_id == league_id
+                Matches.league_id == league_id,
+                TeamLineup.rating.isnot(None)
             ).scalar()
             return rating if rating else "N/A"
         finally:
@@ -1394,7 +1433,8 @@ class TeamLineup(Base):
             ).join(
                 MatchAlias, TeamLineup.match_id == MatchAlias.id
             ).filter(
-                MatchAlias.league_id == league_id
+                MatchAlias.league_id == league_id,
+                TeamLineup.rating.isnot(None)
             ).group_by(
                 TeamLineup.player_id,
                 PlayerAlias.first_name,
@@ -1413,7 +1453,8 @@ class TeamLineup(Base):
             rating = session.query(
                 TeamLineup
             ).filter(
-                TeamLineup.match_id == match_id
+                TeamLineup.match_id == match_id,
+                TeamLineup.rating.isnot(None)
             ).order_by(
                 TeamLineup.rating.desc()
             ).first()
@@ -1445,6 +1486,32 @@ class TeamLineup(Base):
             )
 
             return int(potm_count or 0)
+        finally:
+            session.close()
+
+    @classmethod
+    def check_player_availability(cls, player_id, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            availability = session.query(TeamLineup).filter(
+                TeamLineup.player_id == player_id,
+                TeamLineup.match_id == match_id,
+                TeamLineup.reason == "unavailable"
+            ).first()
+            return availability is not None
+        finally:
+            session.close()
+
+    @classmethod
+    def check_player_benched(cls, player_id, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            availability = session.query(TeamLineup).filter(
+                TeamLineup.player_id == player_id,
+                TeamLineup.match_id == match_id,
+                TeamLineup.reason == "benched"
+            ).first()
+            return availability is not None
         finally:
             session.close()
 
@@ -1947,6 +2014,10 @@ class MatchEvents(Base):
     def get_player_game_time(cls, player_id, match_id):
         session = DatabaseManager().get_session()
         try:
+
+            if TeamLineup.check_player_benched(player_id, match_id):
+                return 0
+
             sub_on_event = session.query(MatchEvents).filter(
                 MatchEvents.player_id == player_id,
                 MatchEvents.match_id == match_id,
@@ -4686,3 +4757,31 @@ def update_ages(start_date, end_date):
         session.commit()
     finally:
         session.close()
+
+def check_player_games_happy(teams, currDate):
+    for team in teams:
+        players = Players.get_all_players_by_team(team.id, youths = False)
+        for player in players:
+
+            if player.player_role == "Backup":
+                continue
+
+            matchesToCheck = MATCHES_ROLES[player.player_role]
+            matches = Matches.get_all_played_matches_by_team(team.id, currDate)
+            matches = [m for m in matches if not TeamLineup.check_player_availability(player.id, m.id)]
+
+            if len(matches) < matchesToCheck:
+                continue
+
+            last_matches = matches[-matchesToCheck:]  # last n matches
+            avg_minutes = sum(MatchEvents.get_player_game_time(player.id, match.id) for match in last_matches) / matchesToCheck
+
+            if player_gametime(avg_minutes, player):
+                reduced = Players.reduce_morale_to_25(player.id)
+
+                user = Managers.get_all_user_managers()[0]
+                managed_team = Teams.get_teams_by_manager(user.id)[0]
+
+                if team.id == managed_team.id and reduced:
+                    email_date = currDate + timedelta(days = 1)
+                    Emails.add_email("player_games_issue", None, player.id, None, None, email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))

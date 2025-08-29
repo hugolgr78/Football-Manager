@@ -916,72 +916,168 @@ class Match():
                 lineups_to_add = []
                 morales_to_update = []
 
-                # Players that were substituted off
-                for (_, playerID) in self.homeFinalLineup:
-                    if playerID in self.homeStartLineup.values():
-                        start_position = list(self.homeStartLineup.keys())[list(self.homeStartLineup.values()).index(playerID)]
-                    else:
-                        start_position = None
+                homePlayers = Players.get_all_players_by_team(self.homeTeam.id, youths = False)
+                awayPlayers = Players.get_all_players_by_team(self.awayTeam.id, youths = False)
 
-                    lineups_to_add.append((self.match.id, playerID, start_position, None, self.homeRatings[playerID]))
+                for player in homePlayers:
+                    final_ids = {pl_id for _, pl_id in self.homeFinalLineup}
 
-                    if not self.getGameTime(playerID, self.homeProcessedEvents):
-                        player = Players.get_player_by_id(playerID)
-                        moraleChange = get_morale_decrease_role(player)
-                    else:
-                        moraleChange = get_morale_change("win" if self.winner == self.homeTeam else "draw" if self.winner == None else "loss", self.homeRatings[playerID], self.goalDiffHome)
+                    # Player was in final lineup (substituted off)
+                    if player.id in final_ids:
+                        if player.id in self.homeStartLineup.values():
+                            start_position = list(self.homeStartLineup.keys())[list(self.homeStartLineup.values()).index(player.id)]
+                        else:
+                            start_position = None
 
-                    morales_to_update.append((playerID, moraleChange))
+                        self.add_player_lineup(
+                            player=player,
+                            start_position=start_position,
+                            end_position=None,
+                            rating=self.homeRatings[player.id],
+                            reason=None,  # was selected
+                            morales_to_update=morales_to_update,
+                            lineups_to_add=lineups_to_add,
+                            processed_events=self.homeProcessedEvents,
+                            winner=self.winner,
+                            team=self.homeTeam,
+                            goal_diff=self.goalDiffHome
+                        )
 
-                # Players that finished the game
-                for end_position, playerID in self.homeCurrentLineup.items():
-                    if playerID in self.homeStartLineup.values():
-                        start_position = list(self.homeStartLineup.keys())[list(self.homeStartLineup.values()).index(playerID)]
-                    else:
-                        start_position = None
+                    # Player was in current lineup (finished on pitch)
+                    if player.id in self.homeCurrentLineup.values():
+                        if player.id in self.homeStartLineup.values():
+                            start_position = list(self.homeStartLineup.keys())[list(self.homeStartLineup.values()).index(player.id)]
+                        else:
+                            start_position = None
 
-                    lineups_to_add.append((self.match.id, playerID, start_position, end_position, self.homeRatings[playerID]))
+                        end_position = list(self.homeCurrentLineup.keys())[list(self.homeCurrentLineup.values()).index(player.id)]
 
-                    if not self.getGameTime(playerID, self.homeProcessedEvents):
-                        player = Players.get_player_by_id(playerID)
-                        moraleChange = get_morale_decrease_role(player)
-                    else:
-                        moraleChange = get_morale_change("win" if self.winner == self.homeTeam else "draw" if self.winner == None else "loss", self.homeRatings[playerID], self.goalDiffHome)
+                        self.add_player_lineup(
+                            player=player,
+                            start_position=start_position,
+                            end_position=end_position,
+                            rating=self.homeRatings[player.id],
+                            reason=None,  # was selected
+                            morales_to_update=morales_to_update,
+                            lineups_to_add=lineups_to_add,
+                            processed_events=self.homeProcessedEvents,
+                            winner=self.winner,
+                            team=self.homeTeam,
+                            goal_diff=self.goalDiffHome
+                        )
 
-                    morales_to_update.append((playerID, moraleChange))
+                    # Player not in final lineup OR current lineup
+                    if player.id not in self.homeCurrentLineup.values() and player.id not in final_ids:
+                        if not PlayerBans.check_bans_for_player(player.id, self.league.league_id):
+                            # Player benched
+                            self.add_player_lineup(
+                                player=player,
+                                start_position=None,
+                                end_position=None,
+                                rating=None,
+                                reason="benched",
+                                morales_to_update=morales_to_update,
+                                lineups_to_add=lineups_to_add,
+                                processed_events=self.homeProcessedEvents,
+                                winner=self.winner,
+                                team=self.homeTeam,
+                                goal_diff=self.goalDiffHome
+                            )
+                        else:
+                            # Player unavailable (injury, suspension, etc.)
+                            self.add_player_lineup(
+                                player=player,
+                                start_position=None,
+                                end_position=None,
+                                rating=None,
+                                reason="unavailable",
+                                morales_to_update=morales_to_update,
+                                lineups_to_add=lineups_to_add,
+                                processed_events=self.homeProcessedEvents,
+                                winner=self.winner,
+                                team=self.homeTeam,
+                                goal_diff=self.goalDiffHome
+                            )
 
-                # Away final lineup players
-                for (_, playerID) in self.awayFinalLineup:
-                    if playerID in self.awayStartLineup.values():
-                        start_position = list(self.awayStartLineup.keys())[list(self.awayStartLineup.values()).index(playerID)]
-                    else:
-                        start_position = None
+                for player in awayPlayers:
+                    final_ids = {pl_id for _, pl_id in self.awayFinalLineup}
 
-                    lineups_to_add.append((self.match.id, playerID, start_position, None, self.awayRatings[playerID]))
+                    # Player was in final lineup (substituted off)
+                    if player.id in final_ids:
+                        if player.id in self.awayStartLineup.values():
+                            start_position = list(self.awayStartLineup.keys())[list(self.awayStartLineup.values()).index(player.id)]
+                        else:
+                            start_position = None
 
-                    if not self.getGameTime(playerID, self.awayProcessedEvents):
-                        player = Players.get_player_by_id(playerID)
-                        moraleChange = get_morale_decrease_role(player)
-                    else:
-                        moraleChange = get_morale_change("win" if self.winner == self.awayTeam else "draw" if self.winner == None else "loss", self.awayRatings[playerID], self.goalDiffAway)
+                        self.add_player_lineup(
+                            player=player,
+                            start_position=start_position,
+                            end_position=None,
+                            rating=self.awayRatings[player.id],
+                            reason=None,  # was selected
+                            morales_to_update=morales_to_update,
+                            lineups_to_add=lineups_to_add,
+                            processed_events=self.awayProcessedEvents,
+                            winner=self.winner,
+                            team=self.awayTeam,
+                            goal_diff=self.goalDiffAway
+                        )
 
-                    morales_to_update.append((playerID, moraleChange))
+                    # Player was in current lineup (finished on pitch)
+                    if player.id in self.awayCurrentLineup.values():
+                        if player.id in self.awayStartLineup.values():
+                            start_position = list(self.awayStartLineup.keys())[list(self.awayStartLineup.values()).index(player.id)]
+                        else:
+                            start_position = None
 
-                for end_position, playerID in self.awayCurrentLineup.items():
-                    if playerID in self.awayStartLineup.values():
-                        start_position = list(self.awayStartLineup.keys())[list(self.awayStartLineup.values()).index(playerID)]
-                    else:
-                        start_position = None
+                        end_position = list(self.awayCurrentLineup.keys())[list(self.awayCurrentLineup.values()).index(player.id)]
 
-                    lineups_to_add.append((self.match.id, playerID, start_position, end_position, self.awayRatings[playerID]))
+                        self.add_player_lineup(
+                            player=player,
+                            start_position=start_position,
+                            end_position=end_position,
+                            rating=self.awayRatings[player.id],
+                            reason=None,  # was selected
+                            morales_to_update=morales_to_update,
+                            lineups_to_add=lineups_to_add,
+                            processed_events=self.awayProcessedEvents,
+                            winner=self.winner,
+                            team=self.awayTeam,
+                            goal_diff=self.goalDiffAway
+                        )
 
-                    if not self.getGameTime(playerID, self.awayProcessedEvents):
-                        player = Players.get_player_by_id(playerID)
-                        moraleChange = get_morale_decrease_role(player)
-                    else:
-                        moraleChange = get_morale_change("win" if self.winner == self.awayTeam else "draw" if self.winner == None else "loss", self.awayRatings[playerID], self.goalDiffAway)
-
-                    morales_to_update.append((playerID, moraleChange))
+                    # Player not in final lineup OR current lineup
+                    if player.id not in self.awayCurrentLineup.values() and player.id not in final_ids:
+                        if not PlayerBans.check_bans_for_player(player.id, self.league.league_id):
+                            # Player benched
+                            self.add_player_lineup(
+                                player=player,
+                                start_position=None,
+                                end_position=None,
+                                rating=None,
+                                reason="benched",
+                                morales_to_update=morales_to_update,
+                                lineups_to_add=lineups_to_add,
+                                processed_events=self.awayProcessedEvents,
+                                winner=self.winner,
+                                team=self.awayTeam,
+                                goal_diff=self.goalDiffAway
+                            )
+                        else:
+                            # Player unavailable (injury, suspension, etc.)
+                            self.add_player_lineup(
+                                player=player,
+                                start_position=None,
+                                end_position=None,
+                                rating=None,
+                                reason="unavailable",
+                                morales_to_update=morales_to_update,
+                                lineups_to_add=lineups_to_add,
+                                processed_events=self.awayProcessedEvents,
+                                winner=self.winner,
+                                team=self.awayTeam,
+                                goal_diff=self.goalDiffAway
+                            )
 
                 # submit morales update
                 futures.append(executor.submit(Players.batch_update_morales, morales_to_update))
@@ -1027,6 +1123,30 @@ class Match():
         else:
             # Player played the full 90 minutes
             return True
+
+    def add_player_lineup(self, player, start_position, end_position, rating, reason, morales_to_update, lineups_to_add, processed_events, winner, team, goal_diff):
+        """
+        Add player lineup entry and apply morale changes depending on reason.
+        """
+        lineups_to_add.append((self.match.id, player.id, start_position, end_position, rating, reason))
+
+        if reason is None:  # player played
+            if not self.getGameTime(player.id, processed_events):
+                # Played <20 minutes
+                full_player = Players.get_player_by_id(player.id)
+                moraleChange = get_morale_decrease_role(full_player)
+            else:
+                # Morale based on result & performance
+                result = "win" if winner == team else "draw" if winner is None else "loss"
+                moraleChange = get_morale_change(result, rating, goal_diff)
+
+            morales_to_update.append((player.id, moraleChange))
+
+        elif reason == "benched":
+            # Benched but available -> morale decrease by role
+            morales_to_update.append((player.id, get_morale_decrease_role(player)))
+
+        # reason == "unavailable": no morale change, just log the lineup entry
 
     def returnWinner(self):
         finalScore = self.score.getScore()

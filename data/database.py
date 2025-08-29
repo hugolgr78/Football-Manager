@@ -1495,6 +1495,19 @@ class TeamLineup(Base):
         finally:
             session.close()
 
+    @classmethod
+    def check_player_benched(cls, player_id, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            availability = session.query(TeamLineup).filter(
+                TeamLineup.player_id == player_id,
+                TeamLineup.match_id == match_id,
+                TeamLineup.reason == "benched"
+            ).first()
+            return availability is not None
+        finally:
+            session.close()
+
 class MatchEvents(Base):
     __tablename__ = 'match_events'
 
@@ -1994,7 +2007,10 @@ class MatchEvents(Base):
     def get_player_game_time(cls, player_id, match_id):
         session = DatabaseManager().get_session()
         try:
-            game_time = 0
+
+            if TeamLineup.check_player_benched(player_id, match_id):
+                return 0
+
             sub_on_event = session.query(MatchEvents).filter(
                 MatchEvents.player_id == player_id,
                 MatchEvents.match_id == match_id,
@@ -4734,3 +4750,24 @@ def update_ages(start_date, end_date):
         session.commit()
     finally:
         session.close()
+
+def check_player_games_happy(teams, currDate):
+    for team in teams:
+        players = Players.get_all_players_by_team(team.id, youths = False)
+        for player in players:
+
+            if player.player_role == "Backup":
+                continue
+
+            matchesToCheck = MATCHES_ROLES[player.player_role]
+            matches = Matches.get_all_played_matches_by_team(team.id, currDate)
+            matches = [m for m in matches if not TeamLineup.check_player_availability(player.id, m.id)]
+
+            if len(matches) < matchesToCheck:
+                continue
+
+            last_matches = matches[-matchesToCheck:]  # last n matches
+            avg_minutes = sum(MatchEvents.get_player_game_time(player.id, match.id) for match in last_matches) / matchesToCheck
+
+            if player_gametime(avg_minutes, player):
+                Players.reduce_morale_to_25(player.id)

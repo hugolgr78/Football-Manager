@@ -1556,25 +1556,7 @@ class MatchDay(ctk.CTkFrame):
                 teams.append(frame.matchInstance.homeTeam)
                 teams.append(frame.matchInstance.awayTeam)
 
-        for team in teams:
-            players = Players.get_all_players_by_team(team.id, youths = False)
-            for player in players:
-
-                if player.player_role == "Backup":
-                    continue
-
-                matchesToCheck = MATCHES_ROLES[player.player_role]
-                matches = Matches.get_all_played_matches_by_team(team.id, currDate)
-                matches = [m for m in matches if not TeamLineup.check_player_availability(player.id, m.id)]
-
-                if len(matches) < matchesToCheck:
-                    continue
-
-                last_matches = matches[-matchesToCheck:]  # last n matches
-                avg_minutes = sum(MatchEvents.get_player_game_time(player.id, match.id) for match in last_matches) / matchesToCheck
-
-                if player_gametime(avg_minutes, player):
-                    Players.reduce_morale_to_25(player.id)
+        check_player_games_happy(teams, currDate)
 
         self.pack_forget()
         self.update_idletasks()

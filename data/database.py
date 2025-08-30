@@ -931,6 +931,21 @@ class Players(Base):
         finally:
             session.close()
 
+    @classmethod
+    def batch_update_fitness(cls, fitness_data):
+        session = DatabaseManager().get_session()
+        try:
+            for player_id, fitness in fitness_data:
+                player = session.query(Players).filter(Players.id == player_id).first()
+                if player:
+                    player.fitness = fitness
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
 class Matches(Base):
     __tablename__ = 'matches'
     

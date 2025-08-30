@@ -702,7 +702,7 @@ class Match():
             playersFrame = teamMatch.homePlayersFrame if home else teamMatch.awayPlayersFrame
             frame = [f for f in playersFrame.winfo_children() if f.playerID == playerOffID][0]
             frame.removeFitness()
-            
+
             if not managing_team:
                 playerOn = Players.get_player_by_id(playerOnID)
                 if home:
@@ -948,6 +948,16 @@ class Match():
                 # Matches update
                 logger.debug(f"Submitting match score update: {self.score.getScore()[0]} -> {self.score.getScore()[1]}")
                 futures.append(executor.submit(Matches.update_score, self.match.id, self.score.getScore()[0], self.score.getScore()[1]))
+
+                # Players updates
+                fitness_to_update = []
+                for playerID, fitness in self.homeFitness.items():
+                    fitness_to_update.append((playerID, fitness))
+
+                for playerID, fitness in self.awayFitness.items():
+                    fitness_to_update.append((playerID, fitness))
+
+                futures.append(executor.submit(Players.batch_update_fitness, fitness_to_update))
 
                 # Lineups and morales
                 lineups_to_add = []

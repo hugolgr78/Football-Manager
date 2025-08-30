@@ -2309,9 +2309,31 @@ class InGamePlayerFrame(ctk.CTkFrame):
         image.thumbnail((20, 20))
         ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
 
-        ctk.CTkLabel(self, text = f"{self.player.first_name} {self.player.last_name}", font = (APP_FONT, 12), fg_color = fgColor, height = 0).place(relx = 0.05, rely = 0.5, anchor = "w")
+        self.nameLabel = ctk.CTkLabel(self, text = f"{self.player.first_name} {self.player.last_name}", font = (APP_FONT, 12), fg_color = fgColor, height = 0, text_color = "white")
+        self.nameLabel.place(relx = 0.05, rely = 0.5, anchor = "w")
 
         self.fitnessImage = ctk.CTkLabel(self, text = "", image = ctk_image)
         self.fitnessImage.place(relx = 0.9, rely = 0.5, anchor = "e")
         self.fitnessLabel = ctk.CTkLabel(self, text = f"{fitness}%", font = (APP_FONT, 12), fg_color = fgColor, height = 0)
         self.fitnessLabel.place(relx = 0.75, rely = 0.5, anchor = "e")
+
+    def updateFitness(self, fitness):
+        self.fitnessLabel.configure(text = f"{fitness}%")
+
+        if fitness > 75:
+            src = "Images/fitness_good.png"
+        elif fitness > 25:
+            src = "Images/fitness_ok.png"
+        else:
+            src = "Images/fitness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((20, 20))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        self.fitnessImage.configure(image = ctk_image)
+
+    def removeFitness(self):
+        self.fitnessImage.destroy()
+        self.fitnessLabel.destroy()
+
+        self.nameLabel.configure(text_color = GREY)

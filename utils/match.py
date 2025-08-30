@@ -51,6 +51,9 @@ class Match():
         self.halfTime = False
         self.fullTime = False
 
+        self.homeFitness = {}
+        self.awayFitness = {}
+
         if self.auto:
             self.seconds, self.minutes = 0, 0
             self.createTeamLineup(self.homeTeam.id, True)
@@ -66,10 +69,12 @@ class Match():
             self.homeCurrentLineup = lineup
             self.homeCurrentSubs = substitutes
             self.homeStartLineup = lineup.copy()
+            self.homeFitness = {playerID: Players.get_player_by_id(playerID).fitness for playerID in list(lineup.values()) + substitutes}
         else:
             self.awayCurrentLineup = lineup
             self.awayCurrentSubs = substitutes
             self.awayStartLineup = lineup.copy()
+            self.awayFitness = {playerID: Players.get_player_by_id(playerID).fitness for playerID in list(lineup.values()) + substitutes}
 
     def generateScore(self, teamMatch = False, home = False):
         self.score = Score(self.homeTeam, self.awayTeam, self.homeCurrentLineup, self.awayCurrentLineup)
@@ -280,6 +285,16 @@ class Match():
             else:
                 self.seconds += 1
 
+            total_seconds = self.minutes * 60 + self.seconds
+            if total_seconds % 90 == 0:
+                for playerID, fitness in self.homeFitness.items():
+                    if fitness > 0 and playerID in self.homeCurrentLineup.values():
+                        self.homeFitness[playerID] = fitness - 1
+
+                for playerID, fitness in self.awayFitness.items():
+                    if fitness > 0 and playerID in self.awayCurrentLineup.values():
+                        self.awayFitness[playerID] = fitness - 1
+
             # ----------- half time ------------
             if self.minutes == 45 and self.seconds == 0:
 
@@ -454,16 +469,22 @@ class Match():
             for _, processedEvent in processedEvents.items():
                 if processedEvent["type"] == "yellow_card" and processedEvent["player"] == playerID:
                     event["type"] = "red_card"
+
                     playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
                     lineup.pop(playerPosition)
                     finalLineup.append((playerPosition, playerID))
+
                     event["position"] = playerPosition
 
                     if teamMatch:
                         if home:
                             teamMatch.homeLineupPitch.removePlayer(playerPosition)
+                            frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerID][0]
+                            frame.removeFitness()
                         else:
                             teamMatch.awayLineupPitch.removePlayer(playerPosition)
+                            frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerID][0]
+                            frame.removeFitness()
 
         elif event["type"] == "red_card":
             redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
@@ -484,8 +505,12 @@ class Match():
             if teamMatch:
                 if home:
                     teamMatch.homeLineupPitch.removePlayer(playerPosition)
+                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerID][0]
+                    frame.removeFitness()
                 else:
                     teamMatch.awayLineupPitch.removePlayer(playerPosition)
+                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerID][0]
+                    frame.removeFitness()
 
             if playerPosition == "Goalkeeper" and not managing_team:
 
@@ -569,8 +594,12 @@ class Match():
             if teamMatch:
                 if home:
                     teamMatch.homeLineupPitch.removePlayer(playerPosition)
+                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == injuredPlayerID][0]
+                    frame.removeFitness()
                 else:
                     teamMatch.awayLineupPitch.removePlayer(playerPosition)
+                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == injuredPlayerID][0]
+                    frame.removeFitness()
 
             # find the substitution event for the injured player
             if not managing_team:
@@ -598,8 +627,12 @@ class Match():
             if teamMatch:
                 if home:
                     teamMatch.homeLineupPitch.removePlayer(playerPosition)
+                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerOffID][0]
+                    frame.removeFitness()
                 else:
                     teamMatch.awayLineupPitch.removePlayer(playerPosition)
+                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerOffID][0]
+                    frame.removeFitness()
 
             playerPosition = "Goalkeeper" if redCardKeeper else playerPosition
             self.findSubstitute(event, playerOffID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
@@ -666,6 +699,10 @@ class Match():
 
         if teamMatch:
             teamMatch.updateSubFrame(home, playerOnID, playerOffID)
+            playersFrame = teamMatch.homePlayersFrame if home else teamMatch.awayPlayersFrame
+            frame = [f for f in playersFrame.winfo_children() if f.playerID == playerOffID][0]
+            frame.removeFitness()
+            
             if not managing_team:
                 playerOn = Players.get_player_by_id(playerOnID)
                 if home:

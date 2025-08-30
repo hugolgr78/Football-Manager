@@ -285,6 +285,10 @@ class MatchDay(ctk.CTkFrame):
 
         self.matchFrame.matchInstance.generateScore(teamMatch = True, home = self.home)
 
+    def addPlayerFrame(self, frame, playerID):
+        frame = InGamePlayerFrame(frame, playerID, 220, 18, GREY_BACKGROUND)
+        return frame
+
     def updateSubFrame(self, home, playerOnID, playerOffID):
         playerOn = Players.get_player_by_id(playerOnID)
         playerOff = Players.get_player_by_id(playerOffID)

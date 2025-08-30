@@ -171,8 +171,8 @@ class MainMenu(ctk.CTkFrame):
                 try:
                     match = Match(game, auto = True)  # init only
                     matches.append(match)
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(e)
 
             # Phase 2: run startGame in parallel with ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers = len(matches)) as ex:

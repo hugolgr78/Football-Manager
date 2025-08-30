@@ -467,3 +467,15 @@ def player_gametime(avg_minutes, player):
         return True
 
     return False
+
+def getFitnessDrop(player):
+
+    position_ranges = {
+        "goalkeeper": (0.1, 0.35),
+        "defender": (0.4, 0.7),
+        "midfielder": (0.7, 1.1),
+        "forward": (0.7, 1.2)
+    }
+
+    # return a random float in the range for that position
+    return random.uniform(*position_ranges[player.position])

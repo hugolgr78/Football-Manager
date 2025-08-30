@@ -289,11 +289,11 @@ class Match():
             if total_seconds % 90 == 0:
                 for playerID, fitness in self.homeFitness.items():
                     if fitness > 0 and playerID in self.homeCurrentLineup.values():
-                        self.homeFitness[playerID] = fitness - 1
+                        self.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
 
                 for playerID, fitness in self.awayFitness.items():
                     if fitness > 0 and playerID in self.awayCurrentLineup.values():
-                        self.awayFitness[playerID] = fitness - 1
+                        self.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
 
             # ----------- half time ------------
             if self.minutes == 45 and self.seconds == 0:
@@ -952,10 +952,10 @@ class Match():
                 # Players updates
                 fitness_to_update = []
                 for playerID, fitness in self.homeFitness.items():
-                    fitness_to_update.append((playerID, fitness))
+                    fitness_to_update.append((playerID, round(fitness)))
 
                 for playerID, fitness in self.awayFitness.items():
-                    fitness_to_update.append((playerID, fitness))
+                    fitness_to_update.append((playerID, round(fitness)))
 
                 futures.append(executor.submit(Players.batch_update_fitness, fitness_to_update))
 

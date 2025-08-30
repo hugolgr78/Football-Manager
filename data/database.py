@@ -946,6 +946,33 @@ class Players(Base):
         finally:
             session.close()
 
+    @classmethod
+    def update_fitness(cls, time_in_between):
+        session = DatabaseManager().get_session()
+        try:
+            players = session.query(Players).all()
+            hours = int(time_in_between.total_seconds() // 3600)
+
+            if hours > 0:
+                recovery_rate_per_hour = 0.30 / 24  # ~1.25% of missing fitness each hour
+
+                for player in players:
+                    for _ in range(hours):
+                        missing = 100 - player.fitness
+
+                        if missing <= 0:
+                            break
+
+                        player.fitness += missing * recovery_rate_per_hour
+                        player.fitness = round(min(100, player.fitness))
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
 class Matches(Base):
     __tablename__ = 'matches'
     

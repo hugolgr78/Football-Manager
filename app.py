@@ -49,7 +49,13 @@ class FootballManager(ctk.CTk):
         backup_all_databases("data", "data/backups")
 
         db_manager = GamesDatabaseManager()
-        db_manager.set_database()
+
+        # If the games DB file doesn't exist, create it and its tables.
+        db_path = os.path.join("data", "games.db")
+        if not os.path.exists(db_path):
+            db_manager.set_database(create_tables = True)
+        else:
+            db_manager.set_database()
 
         # setup
         windll.shell32.SetCurrentProcessExplicitAppUserModelID('mycompany.myproduct.subproduct.version')

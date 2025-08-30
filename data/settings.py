@@ -1,3 +1,5 @@
+import datetime
+
 APP_SIZE = (1200, 700)
 DARK_GREY = "#3b3b3b"
 TKINTER_BACKGROUND = "#2b2b2b"
@@ -23,11 +25,22 @@ MORALE_RED = "#c90d11"
 INJURY_RED = "#ef4e42"
 
 APP_BLUE = "#443de1"
+POTM_BLUE = "#1e90ff"
 
 APP_FONT = "Arial"
 APP_FONT_BOLD = "Arial Bold"
 
 TABLE_COLOURS = ["#C0392B", "#27AE60", "#2980B9", "#8E44AD", "#D35400", "#16A085", "#F39C12", "#E74C3C", "#3498DB", "#9B59B6", "#2ECC71", "#E67E22", "#1ABC9C", "#F1C40F", "#E74C3C", "#2980B9", "#8E44AD", "#27AE60", "#C0392B", "#D35400", "#9B59B6", "#2ECC71", "#E67E22", "#16A085"]
+
+LEAGUE_NAME = "Eclipse League"
+FIRST_YEAR = 2024
+NUM_TEAMS = 20
+SEASON_START_DATE = datetime.datetime(2025, 8, 14, 7, 0, 0, 0)
+
+TOTAL_STEPS = 400
+PROGRESS = 0
+
+STATES = ["preview", "matchday", "review"]
 
 Europe = [
     "Albania", "Andorra", "Austria", "Belgium", 
@@ -102,6 +115,13 @@ POSITION_CODES = {
     "Striker Right": "CF",
 }
 
+POSITION_ORDER = {
+    "goalkeeper": 0,
+    "defender": 1,
+    "midfielder": 2,
+    "forward": 3
+}
+
 POSITIONS_PITCH_POSITIONS = {
     "Goalkeeper": (0.5, 0.9),  # Goalkeeper
     "Left Back": (0.15, 0.75),  # Left Back
@@ -125,6 +145,13 @@ POSITIONS_PITCH_POSITIONS = {
     "Center Forward": (0.5, 0.1),  # Center Forward
 }
 
+POSITIONS_MAX = {
+    "CB": 3,
+    "DM": 3,
+    "CM": 3,
+    "CF": 3
+}
+
 RELATED_POSITIONS = {
     "Central Midfielder": ["Central Midfielder Right", "Central Midfielder Left"],
     "Central Midfielder Right": ["Central Midfielder"],
@@ -135,22 +162,85 @@ RELATED_POSITIONS = {
 }
 
 FORMATIONS_CHANCES = {
-    "4-4-2": 0.2,
-    "4-3-3": 0.5,
-    "4-5-1": 0.1,
-    "3-4-3": 0.2,
+    "4-4-2 CM": 0.10,
+    "4-4-2 DM": 0.10,
+    "4-3-3 CM": 0.25,
+    "4-3-3 DM": 0.25,
+    "4-5-1 DM": 0.05,
+    "4-5-1 AM": 0.025,
+    "4-5-1 CM": 0.025,
+    "3-4-3": 0.15,
+    "3-5-2 CM": 0.04,
+    "3-5-2 AM": 0.04,
+    "5-3-2": 0.02,
+    "5-4-1": 0.02,
+    "4-2-4": 0.02,
 }
 
 FORMATIONS_POSITIONS = {
-    "4-4-2": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back", "Defensive Midfielder", "Central Midfielder", "Left Midfielder", "Right Midfielder", "Striker Left", "Striker Right"],
-    "4-3-3": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back", "Central Midfielder", "Left Midfielder", "Right Midfielder", "Left Winger", "Right Winger", "Center Forward"],
-    "4-5-1": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back", "Defensive Midfielder Right", "Defensive Midfielder Left", "Central Midfielder", "Left Midfielder", "Right Midfielder", "Center Forward"],
-    "3-4-3": ["Goalkeeper", "Right Back", "Center Back", "Left Back", "Defensive Midfielder", "Central Midfielder", "Left Midfielder", "Right Midfielder", "Left Winger", "Right Winger", "Center Forward"],
+    "4-4-2 CM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+              "Defensive Midfielder", "Central Midfielder", "Left Midfielder", "Right Midfielder",
+              "Striker Left", "Striker Right"],
+
+    "4-4-2 DM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+            "Defensive Midfielder Right",
+            "Left Midfielder", "Defensive Midfielder Left", "Right Midfielder",
+            "Striker Left", "Striker Right"],
+
+    "4-3-3 CM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+                 "Left Midfielder", "Central Midfielder", "Right Midfielder",
+                 "Left Winger", "Right Winger", "Center Forward"],
+
+    "4-3-3 DM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+                 "Defensive Midfielder Left", "Central Midfielder", "Defensive Midfielder Right",
+                 "Left Winger", "Right Winger", "Center Forward"],
+
+    "3-3-4": ["Goalkeeper", "Right Back", "Center Back", "Left Back",
+              "Defensive Midfielder", "Left Midfielder", "Right Midfielder",
+              "Left Winger", "Right Winger", "Striker Left", "Striker Right"],
+
+    "3-4-3": ["Goalkeeper", "Right Back", "Center Back", "Left Back",
+              "Defensive Midfielder", "Central Midfielder", "Left Midfielder", "Right Midfielder",
+              "Left Winger", "Right Winger", "Center Forward"],
+
+    "4-2-4": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+              "Defensive Midfielder Right", "Defensive Midfielder Left",
+              "Left Winger", "Right Winger", "Striker Left", "Striker Right"],
+
+    "4-5-1 DM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+              "Defensive Midfielder Right", "Defensive Midfielder Left", "Central Midfielder",
+              "Left Midfielder", "Right Midfielder", "Center Forward"],
+
+    "4-5-1 AM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+                "Defensive Midfielder Right", "Defensive Midfielder Left",
+                "Left Midfielder", "Attacking Midfielder", "Right Midfielder", "Center Forward"],
+
+    "4-5-1 CM": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back Left", "Left Back",
+                "Defensive Midfielder",
+                "Left Midfielder", "Central Midfielder Right", "Central Midfielder Left", "Right Midfielder",
+                "Center Forward"],
+
+    "3-5-2 CM": ["Goalkeeper", "Right Back", "Center Back", "Left Back",
+              "Left Midfielder", "Right Midfielder", "Defensive Midfielder",
+              "Central Midfielder Right", "Central Midfielder Left",
+              "Striker Left", "Striker Right"],
+
+    "3-5-2 AM": ["Goalkeeper", "Right Back", "Center Back", "Left Back",
+                "Left Midfielder", "Right Midfielder", "Defensive Midfielder", "Central Midfielder",
+                "Attacking Midfielder", "Striker Left", "Striker Right"],
+
+    "5-3-2": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back",
+              "Right Midfielder", "Central Midfielder", "Left Midfielder",
+              "Striker Left", "Striker Right"],
+
+    "5-4-1": ["Goalkeeper", "Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back",
+              "Left Midfielder", "Central Midfielder Right", "Central Midfielder Left", "Right Midfielder",
+              "Center Forward"],
 }
 
 DEFENSIVE_POSITIONS = ["Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back"]
-MIDFIELD_POSITIONS = ["Defensive Midfielder", "Central Midfielder", "Left Midfielder", "Right Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]
-ATTACKING_POSITIONS = ["Left Winger", "Right Winger", "Attacking Midfielder", "Striker Left", "Striker Right", "Center Forward"]
+MIDFIELD_POSITIONS = ["Defensive Midfielder", "Central Midfielder", "Central Midfielder Left", "Central Midfielder Right", "Left Midfielder", "Right Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left", "Attacking Midfielder"]
+ATTACKING_POSITIONS = ["Left Winger", "Right Winger", "Striker Left", "Striker Right", "Center Forward"]
 
 SCORER_CHANCES = {
     'defender': 0.05,
@@ -194,17 +284,18 @@ RED_CARD_CHANCES = {
     'forward': 0.8
 }
 
-INJURY_CHANCE = 0 # chance for a team to get an injury in a match
+INJURY_CHANCE = 0.1 # chance for a team to get an injury in a match
 
 MATCHDAY_SUBS = 7
 MAX_SUBS = 5
+YELLOW_THRESHOLD = 5
 
 SHOUTS = ["Encourage", "Praise", "Focus", "Berate"]
 
 OBJECTIVES = {
-    (200, 190): "fight for the title",
-    (189, 175): "finish in the top half",
-    (174, 162): "avoid relegation",
+    (1, 5): "fight for the title",
+    (6, 14): "finish in the top half",
+    (15, 20): "avoid relegation",
 }
 
 GOAL_RATINGS = [1.00, 1.03, 1.06, 1.09, 1.12, 1.15, 1.17, 1.20]
@@ -238,11 +329,11 @@ FAN_REACTIONS = {
 EXPECTATION_LEVELS = ["Clear Favorite", "Slight Favorite", "Even Match", "Slight Underdog", "Clear Underdog"]
 
 TEAM_EXPECTATIONS = {
-    range(9, 100): "Clear Favorite",   # Team is much stronger
-    range(5, 9): "Slight Favorite",    # Team is slightly stronger
-    range(-4, 5): "Even Match",        # Teams are evenly matched
-    range(-8, -4): "Slight Underdog",  # Team is slightly weaker
-    range(-100, -8): "Clear Underdog"  # Team is much weaker
+    range(10, 200): "Clear Favorite",   # Team is much stronger
+    range(5, 10): "Slight Favorite",    # Team is slightly stronger
+    range(-5, 5): "Even Match",        # Teams are evenly matched
+    range(-10, -5): "Slight Underdog",  # Team is slightly weaker
+    range(-200, -10): "Clear Underdog"  # Team is much weaker
 }
 
 RESULT_CATEGORIES = {
@@ -322,7 +413,7 @@ REACTION_TEXTS = [
     (lambda x: x == 2, "Very Happy"),
     (lambda x: x == 1, "Happy"),
     (lambda x: x == 0, "Content"),
-    (lambda x: x == -1, "Disappointed"),
+    (lambda x: x == -1, "Upset"),
     (lambda x: x <= -2, "Angry"),
 ]
 
@@ -360,6 +451,37 @@ PROMPT_REACTIONS = {
     "Neutral": {"win": 0, "draw": 1, "lose": 0},
     "Happy": {"win": 1, "draw": 0, "lose": -1},
     "Dissapointed": {"win": -1, "draw": 0, "lose": 1}
+}
+
+SEARCH_LIMIT = 12
+
+EVENTS_TO_ICONS = {
+    "substitution": "Sub",
+    "goal": "Goals",
+    "penalty_goal": "Goals",
+    "own_goal": "Goals",
+    "penalty_saved": "Goals",
+    "assist": "Assists",
+    "yellow_card": "Cards",
+    "red_card": "Cards",
+    "penalty_miss": "Missed Pens"
+}
+
+goal_group = ["goal", "penalty_goal", "own_goal", "penalty_saved"]
+card_group = ["yellow_card", "red_card"]
+
+EVENT_GROUPS = {
+    **{k: goal_group for k in goal_group},
+    **{k: card_group for k in card_group},
+    "assist": ["assist"],
+    "substitution": ["substitution"],
+    "penalty_missed": ["penalty_missed"],
+}
+
+MATCHES_ROLES = {
+    "Star Player": 5,
+    "First Team": 7,
+    "Rotation": 10
 }
 
 from data.database import StatsManager

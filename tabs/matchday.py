@@ -175,6 +175,17 @@ class MatchDay(ctk.CTkFrame):
             elif selection == "Players":
                 self.homeCurrFrame = self.homePlayersFrame
                 self.homePlayersFrame.place(relx = 0.02, rely = 0.06, anchor = "nw")
+                
+                for playerID in self.matchFrame.matchInstance.homeCurrentLineup.values():
+                    frame = [f for f in self.homePlayersFrame.winfo_children() if f.playerID == playerID]
+
+                    if len(frame) == 0:
+                        frame = InGamePlayerFrame(self.homePlayersFrame, playerID, 220, 20, GREY_BACKGROUND)
+                    else:
+                        frame = frame[0]
+                        fitness = self.matchFrame.matchInstance.homeFitness[playerID]
+                        frame.updateFitness(fitness)
+
             elif selection == "Stats":
                 self.homeCurrFrame = self.homeStatsFrame
                 self.homeStatsFrame.place(relx = 0.02, rely = 0.06, anchor = "nw")
@@ -187,6 +198,17 @@ class MatchDay(ctk.CTkFrame):
             elif selection == "Players":
                 self.awayCurrFrame = self.awayPlayersFrame
                 self.awayPlayersFrame.place(relx = 0.98, rely = 0.06, anchor = "ne")
+
+                for playerID in self.matchFrame.matchInstance.awayCurrentLineup.values():
+                    frame = [f for f in self.awayPlayersFrame.winfo_children() if f.playerID == playerID]
+
+                    if len(frame) == 0:
+                        frame = InGamePlayerFrame(self.awayPlayersFrame, playerID, 220, 20, GREY_BACKGROUND)
+                    else:
+                        frame = frame[0]
+                        fitness = self.matchFrame.matchInstance.awayFitness[playerID]
+                        frame.updateFitness(fitness)
+
             elif selection == "Stats":
                 self.awayCurrFrame = self.awayStatsFrame
                 self.awayStatsFrame.place(relx = 0.98, rely = 0.06, anchor = "ne")
@@ -208,11 +230,12 @@ class MatchDay(ctk.CTkFrame):
                     self.matchFrame.matchInstance.awayCurrentLineup = self.teamLineup
                     self.matchFrame.matchInstance.awayCurrentSubs = self.teamSubstitutes
                     self.matchFrame.matchInstance.awayStartLineup = self.teamLineup.copy()
+                    self.matchFrame.matchInstance.awayFitness = {playerID: Players.get_player_by_id(playerID).fitness for playerID in list(self.teamLineup.values()) + self.teamSubstitutes}
                 else:
                     self.matchFrame.matchInstance.homeCurrentLineup = self.teamLineup
                     self.matchFrame.matchInstance.homeCurrentSubs = self.teamSubstitutes
                     self.matchFrame.matchInstance.homeStartLineup = self.teamLineup.copy()
-
+                    self.matchFrame.matchInstance.homeFitness = {playerID: Players.get_player_by_id(playerID).fitness for playerID in list(self.teamLineup.values()) + self.teamSubstitutes}
             else:
                 frame = MatchDayMatchFrame(self.otherMatchesFrame, match, TKINTER_BACKGROUND, 60, 300)
 
@@ -330,6 +353,48 @@ class MatchDay(ctk.CTkFrame):
                 seconds = 0
             else:
                 seconds += 1
+
+            total_seconds = minutes * 60 + seconds
+            if total_seconds % 90 == 0:
+                for frame in self.otherMatchesFrame.winfo_children():
+                    if frame.matchInstance:
+                        for playerID, fitness in frame.matchInstance.homeFitness.items():
+                            if fitness > 0 and playerID in frame.matchInstance.homeCurrentLineup.values():
+                                frame.matchInstance.homeFitness[playerID] = fitness - 1
+
+                        for playerID, fitness in frame.matchInstance.awayFitness.items():
+                            if fitness > 0 and playerID in frame.matchInstance.awayCurrentLineup.values():
+                                frame.matchInstance.awayFitness[playerID] = fitness - 1
+
+                for playerID, fitness in self.matchFrame.matchInstance.homeFitness.items():
+                    if fitness > 0 and playerID in self.matchFrame.matchInstance.homeCurrentLineup.values():
+                        self.matchFrame.matchInstance.homeFitness[playerID] = fitness - 1
+
+                for playerID, fitness in self.matchFrame.matchInstance.awayFitness.items():
+                    if fitness > 0 and playerID in self.matchFrame.matchInstance.awayCurrentLineup.values():
+                        self.matchFrame.matchInstance.awayFitness[playerID] = fitness - 1
+
+                if self.homePlayersFrame.winfo_ismapped():
+                    for playerID in self.matchFrame.matchInstance.homeCurrentLineup.values():
+                        frame = [f for f in self.homePlayersFrame.winfo_children() if f.playerID == playerID]
+
+                        if len(frame) == 0:
+                            frame = InGamePlayerFrame(self.homePlayersFrame, playerID, 220, 20, GREY_BACKGROUND)
+                        else:
+                            frame = frame[0]
+                            fitness = self.matchFrame.matchInstance.homeFitness[playerID]
+                            frame.updateFitness(fitness)
+
+                if self.awayPlayersFrame.winfo_ismapped():
+                    for playerID in self.matchFrame.matchInstance.awayCurrentLineup.values():
+                        frame = [f for f in self.awayPlayersFrame.winfo_children() if f.playerID == playerID]
+
+                        if len(frame) == 0:
+                            frame = InGamePlayerFrame(self.awayPlayersFrame, playerID, 220, 20, GREY_BACKGROUND)
+                        else:
+                            frame = frame[0]
+                            fitness = self.matchFrame.matchInstance.awayFitness[playerID]
+                            frame.updateFitness(fitness)
 
             if minutes == self.lastShout + 10 and seconds == 0:
                 self.shoutsButton.configure(state = "normal")
@@ -837,11 +902,16 @@ class MatchDay(ctk.CTkFrame):
                 lineup = self.matchFrame.matchInstance.homeCurrentLineup if self.home else self.matchFrame.matchInstance.awayCurrentLineup
                 finalLineup = self.matchFrame.matchInstance.homeFinalLineup if self.home else self.matchFrame.matchInstance.awayFinalLineup
                 pitch = self.homeLineupPitch if self.home else self.awayLineupPitch
+                playersFrame = self.homePlayersFrame if self.home else self.awayPlayersFrame
 
                 pitch.removePlayer(self.injuredPosition)
                 lineup.pop(self.injuredPosition)
                 self.teamSubstitutes.append(self.injuredPlayer.id)
                 finalLineup.append((self.injuredPosition, self.injuredPlayer.id))
+
+                frame = [f for f in playersFrame.winfo_children() if f.playerID == self.injuredPlayer.id][0]
+                frame.removeFitness()
+
             else:
                 self.confirmButton.configure(state = "disabled")
 

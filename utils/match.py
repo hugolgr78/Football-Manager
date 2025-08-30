@@ -1,4 +1,4 @@
-import threading, time
+import threading
 import logging
 from settings import *
 from data.database import *
@@ -479,11 +479,23 @@ class Match():
                     if teamMatch:
                         if home:
                             teamMatch.homeLineupPitch.removePlayer(playerPosition)
-                            frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerID][0]
+                            frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerID]
+
+                            if len(frame) == 0:
+                                frame = teamMatch.addPlayerFrame(teamMatch.homePlayersFrame, playerID)
+                            else:
+                                frame = frame[0]
+
                             frame.removeFitness()
                         else:
                             teamMatch.awayLineupPitch.removePlayer(playerPosition)
-                            frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerID][0]
+                            frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerID]
+
+                            if len(frame) == 0:
+                                frame = teamMatch.addPlayerFrame(teamMatch.awayPlayersFrame, playerID)
+                            else:
+                                frame = frame[0]
+
                             frame.removeFitness()
 
         elif event["type"] == "red_card":
@@ -505,11 +517,23 @@ class Match():
             if teamMatch:
                 if home:
                     teamMatch.homeLineupPitch.removePlayer(playerPosition)
-                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerID][0]
+                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerID]
+
+                    if len(frame) == 0:
+                        frame = teamMatch.addPlayerFrame(teamMatch.homePlayersFrame, playerID)
+                    else:
+                        frame = frame[0]
+
                     frame.removeFitness()
                 else:
                     teamMatch.awayLineupPitch.removePlayer(playerPosition)
-                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerID][0]
+                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerID]
+
+                    if len(frame) == 0:
+                        frame = teamMatch.addPlayerFrame(teamMatch.awayPlayersFrame, playerID)
+                    else:
+                        frame = frame[0]
+
                     frame.removeFitness()
 
             if playerPosition == "Goalkeeper" and not managing_team:
@@ -594,11 +618,23 @@ class Match():
             if teamMatch:
                 if home:
                     teamMatch.homeLineupPitch.removePlayer(playerPosition)
-                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == injuredPlayerID][0]
+                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == injuredPlayerID]
+
+                    if len(frame) == 0:
+                        frame = teamMatch.addPlayerFrame(teamMatch.homePlayersFrame, injuredPlayerID)
+                    else:
+                        frame = frame[0]
+
                     frame.removeFitness()
                 else:
                     teamMatch.awayLineupPitch.removePlayer(playerPosition)
-                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == injuredPlayerID][0]
+                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == injuredPlayerID]
+
+                    if len(frame) == 0:
+                        frame = teamMatch.addPlayerFrame(teamMatch.awayPlayersFrame, injuredPlayerID)
+                    else:
+                        frame = frame[0]
+
                     frame.removeFitness()
 
             # find the substitution event for the injured player
@@ -627,11 +663,23 @@ class Match():
             if teamMatch:
                 if home:
                     teamMatch.homeLineupPitch.removePlayer(playerPosition)
-                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerOffID][0]
+                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerOffID]
+
+                    if len(frame) == 0:
+                        frame = teamMatch.addPlayerFrame(teamMatch.homePlayersFrame, playerOffID)
+                    else:
+                        frame = frame[0]
+
                     frame.removeFitness()
                 else:
                     teamMatch.awayLineupPitch.removePlayer(playerPosition)
-                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerOffID][0]
+                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerOffID]
+
+                    if len(frame) == 0:
+                        frame = teamMatch.addPlayerFrame(teamMatch.awayPlayersFrame, playerOffID)
+                    else:
+                        frame = frame[0]
+
                     frame.removeFitness()
 
             playerPosition = "Goalkeeper" if redCardKeeper else playerPosition
@@ -700,7 +748,13 @@ class Match():
         if teamMatch:
             teamMatch.updateSubFrame(home, playerOnID, playerOffID)
             playersFrame = teamMatch.homePlayersFrame if home else teamMatch.awayPlayersFrame
-            frame = [f for f in playersFrame.winfo_children() if f.playerID == playerOffID][0]
+            frame = [f for f in playersFrame.winfo_children() if f.playerID == playerOffID]
+
+            if len(frame) == 0:
+                frame = teamMatch.addPlayerFrame(playersFrame, playerOffID)
+            else:
+                frame = frame[0]
+
             frame.removeFitness()
 
             if not managing_team:
@@ -951,12 +1005,14 @@ class Match():
 
                 # Players updates
                 fitness_to_update = []
+                logger.debug("Preparing player fitness updates")
                 for playerID, fitness in self.homeFitness.items():
                     fitness_to_update.append((playerID, round(fitness)))
 
                 for playerID, fitness in self.awayFitness.items():
                     fitness_to_update.append((playerID, round(fitness)))
 
+                logger.debug(f"Submitting fitness updates for {len(fitness_to_update)} players")
                 futures.append(executor.submit(Players.batch_update_fitness, fitness_to_update))
 
                 # Lineups and morales

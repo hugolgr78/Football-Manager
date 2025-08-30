@@ -964,7 +964,9 @@ class Players(Base):
                             break
 
                         player.fitness += missing * recovery_rate_per_hour
-                        player.fitness = round(min(100, player.fitness))
+
+                    player.fitness = int(player.fitness + 1)
+                    player.fitness = min(100, player.fitness)
 
             session.commit()
         except Exception as e:

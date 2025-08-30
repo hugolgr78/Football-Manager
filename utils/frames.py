@@ -883,6 +883,39 @@ class PlayerFrame(ctk.CTkFrame):
                     src.thumbnail((18, 18))
                     img = ctk.CTkImage(src, None, (src.width, src.height))
                     ctk.CTkLabel(self.statFrame, image = img, text = "").place(relx = 0.9 - i * 0.18, rely = 0.5, anchor = "center")
+            case "Fitness":
+                player = Players.get_player_by_id(self.player.id)
+                fitness = player.fitness if player else 0
+                ctk.CTkLabel(self.statFrame, text = f"{fitness}%", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.7, rely = 0.5, anchor = "e")
+
+                if fitness > 75:
+                    src = "Images/fitness_good.png"
+                elif fitness > 25:
+                    src = "Images/fitness_ok.png"
+                else:
+                    src = "Images/fitness_bad.png"
+
+                image = Image.open(src)
+                image.thumbnail((20, 20))
+                ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+                ctk.CTkLabel(self.statFrame, image = ctk_image, text = "", fg_color = TKINTER_BACKGROUND).place(relx = 0.95, rely = 0.5, anchor = "e")
+            case "Match sharpness":
+                player = Players.get_player_by_id(self.player.id)
+                match_sharpness = player.sharpness if player else 0
+
+                ctk.CTkLabel(self.statFrame, text = f"{match_sharpness}%", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+                if match_sharpness > 75:
+                    src = "Images/sharpness_good.png"
+                elif match_sharpness > 25:
+                    src = "Images/sharpness_ok.png"
+                else:
+                    src = "Images/sharpness_bad.png"
+
+                image = Image.open(src)
+                image.thumbnail((20, 20))
+                ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+                ctk.CTkLabel(self.statFrame, image = ctk_image, text = "", fg_color = TKINTER_BACKGROUND).place(relx = 0.95, rely = 0.5, anchor = "e")
 
         for widget in self.statFrame.winfo_children():
             widget.bind("<Enter>", lambda event: self.onFrameHover())

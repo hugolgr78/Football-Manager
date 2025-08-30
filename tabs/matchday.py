@@ -160,7 +160,7 @@ class MatchDay(ctk.CTkFrame):
         lineup = self.matchFrame.matchInstance.homeCurrentLineup if frame == self.homePlayersFrame else self.matchFrame.matchInstance.awayCurrentLineup
 
         for playerID in lineup.values():
-            InGamePlayerFrame(frame, playerID, 220, 20, GREY_BACKGROUND)
+            InGamePlayerFrame(frame, playerID, 220, 18, GREY_BACKGROUND)
 
     def createStatsFrame(self, frame):
         pass
@@ -180,7 +180,7 @@ class MatchDay(ctk.CTkFrame):
                     frame = [f for f in self.homePlayersFrame.winfo_children() if f.playerID == playerID]
 
                     if len(frame) == 0:
-                        frame = InGamePlayerFrame(self.homePlayersFrame, playerID, 220, 20, GREY_BACKGROUND)
+                        frame = InGamePlayerFrame(self.homePlayersFrame, playerID, 220, 18, GREY_BACKGROUND)
                     else:
                         frame = frame[0]
                         fitness = self.matchFrame.matchInstance.homeFitness[playerID]
@@ -203,7 +203,7 @@ class MatchDay(ctk.CTkFrame):
                     frame = [f for f in self.awayPlayersFrame.winfo_children() if f.playerID == playerID]
 
                     if len(frame) == 0:
-                        frame = InGamePlayerFrame(self.awayPlayersFrame, playerID, 220, 20, GREY_BACKGROUND)
+                        frame = InGamePlayerFrame(self.awayPlayersFrame, playerID, 220, 18, GREY_BACKGROUND)
                     else:
                         frame = frame[0]
                         fitness = self.matchFrame.matchInstance.awayFitness[playerID]
@@ -360,26 +360,26 @@ class MatchDay(ctk.CTkFrame):
                     if frame.matchInstance:
                         for playerID, fitness in frame.matchInstance.homeFitness.items():
                             if fitness > 0 and playerID in frame.matchInstance.homeCurrentLineup.values():
-                                frame.matchInstance.homeFitness[playerID] = fitness - 1
+                                frame.matchInstance.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
 
                         for playerID, fitness in frame.matchInstance.awayFitness.items():
                             if fitness > 0 and playerID in frame.matchInstance.awayCurrentLineup.values():
-                                frame.matchInstance.awayFitness[playerID] = fitness - 1
+                                frame.matchInstance.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
 
                 for playerID, fitness in self.matchFrame.matchInstance.homeFitness.items():
                     if fitness > 0 and playerID in self.matchFrame.matchInstance.homeCurrentLineup.values():
-                        self.matchFrame.matchInstance.homeFitness[playerID] = fitness - 1
+                        self.matchFrame.matchInstance.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
 
                 for playerID, fitness in self.matchFrame.matchInstance.awayFitness.items():
                     if fitness > 0 and playerID in self.matchFrame.matchInstance.awayCurrentLineup.values():
-                        self.matchFrame.matchInstance.awayFitness[playerID] = fitness - 1
+                        self.matchFrame.matchInstance.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
 
                 if self.homePlayersFrame.winfo_ismapped():
                     for playerID in self.matchFrame.matchInstance.homeCurrentLineup.values():
                         frame = [f for f in self.homePlayersFrame.winfo_children() if f.playerID == playerID]
 
                         if len(frame) == 0:
-                            frame = InGamePlayerFrame(self.homePlayersFrame, playerID, 220, 20, GREY_BACKGROUND)
+                            frame = InGamePlayerFrame(self.homePlayersFrame, playerID, 220, 18, GREY_BACKGROUND)
                         else:
                             frame = frame[0]
                             fitness = self.matchFrame.matchInstance.homeFitness[playerID]
@@ -390,7 +390,7 @@ class MatchDay(ctk.CTkFrame):
                         frame = [f for f in self.awayPlayersFrame.winfo_children() if f.playerID == playerID]
 
                         if len(frame) == 0:
-                            frame = InGamePlayerFrame(self.awayPlayersFrame, playerID, 220, 20, GREY_BACKGROUND)
+                            frame = InGamePlayerFrame(self.awayPlayersFrame, playerID, 220, 18, GREY_BACKGROUND)
                         else:
                             frame = frame[0]
                             fitness = self.matchFrame.matchInstance.awayFitness[playerID]

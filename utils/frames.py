@@ -2290,7 +2290,7 @@ class PlayerMatchFrame(ctk.CTkFrame):
 class InGamePlayerFrame(ctk.CTkFrame):
     def __init__(self, parent, playerID, width, height, fgColor):
         super().__init__(parent, fg_color = fgColor, width = width, height = height)
-        self.pack(pady = 5)
+        self.pack(pady = 5, padx = 2)
 
         self.playerID = playerID
 
@@ -2313,12 +2313,12 @@ class InGamePlayerFrame(ctk.CTkFrame):
         self.nameLabel.place(relx = 0.05, rely = 0.5, anchor = "w")
 
         self.fitnessImage = ctk.CTkLabel(self, text = "", image = ctk_image)
-        self.fitnessImage.place(relx = 0.9, rely = 0.5, anchor = "e")
+        self.fitnessImage.place(relx = 0.95, rely = 0.5, anchor = "e")
         self.fitnessLabel = ctk.CTkLabel(self, text = f"{fitness}%", font = (APP_FONT, 12), fg_color = fgColor, height = 0)
-        self.fitnessLabel.place(relx = 0.75, rely = 0.5, anchor = "e")
+        self.fitnessLabel.place(relx = 0.8, rely = 0.5, anchor = "e")
 
     def updateFitness(self, fitness):
-        self.fitnessLabel.configure(text = f"{fitness}%")
+        self.fitnessLabel.configure(text = f"{round(fitness)}%")
 
         if fitness > 75:
             src = "Images/fitness_good.png"

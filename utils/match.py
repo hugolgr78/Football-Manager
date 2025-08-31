@@ -1222,16 +1222,16 @@ class Match():
 
         for time, event in events.items():
             if event["type"] == "sub_on" and event["player"] == playerID:
-                sub_on_time = int(time)
+                sub_on_time = int(time.split(":")[0])
 
             if event["type"] == "sub_off" and event["player"] == playerID:
-                sub_off_time = int(time)
+                sub_off_time = int(time.split(":")[0])
 
             if event["type"] == "red_card" and event["player"] == playerID:
-                red_card_time = int(time)
+                red_card_time = int(time.split(":")[0])
 
             if event["type"] == "injury" and event["player"] == playerID:
-                injury_time = int(time)
+                injury_time = int(time.split(":")[0])
 
         playedEnough = False
         game_time = 0

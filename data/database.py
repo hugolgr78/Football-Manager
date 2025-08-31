@@ -957,6 +957,10 @@ class Players(Base):
                 recovery_rate_per_hour = 0.30 / 24  # ~1.25% of missing fitness each hour
 
                 for player in players:
+
+                    if PlayerBans.get_player_injured(player.id):
+                        continue
+
                     for _ in range(hours):
                         missing = 100 - player.fitness
 
@@ -3069,6 +3073,21 @@ class PlayerBans(Base):
         try:
             bans = session.query(PlayerBans).join(Players).filter(Players.id == player_id).all()
             return bans if bans else []
+        finally:
+            session.close()
+
+    @classmethod
+    def get_player_injured(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).join(Players).filter(Players.id == player_id).all()
+            is_injured = False
+
+            for ban in bans:
+                if ban.ban_type == "injury":
+                    is_injured = True
+
+            return is_injured
         finally:
             session.close()
 

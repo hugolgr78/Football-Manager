@@ -162,6 +162,7 @@ class MainMenu(ctk.CTkFrame):
         timeInBetween = stopDate - self.currDate
         PlayerBans.reduce_injuries(timeInBetween, stopDate)
         Players.update_fitness(timeInBetween)
+        update_ages(self.currDate, stopDate)
 
         # Run simulations concurrently so multiple matches can be processed at the same time.
         matches = []
@@ -189,8 +190,6 @@ class MainMenu(ctk.CTkFrame):
                         fut.result()
                     except Exception as e:
                         print(e)
-
-        update_ages(self.currDate, stopDate)
 
         self.currDate += timeInBetween
         Game.increment_game_date(self.manager_id, timeInBetween)

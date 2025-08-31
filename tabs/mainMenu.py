@@ -161,7 +161,7 @@ class MainMenu(ctk.CTkFrame):
 
         timeInBetween = stopDate - self.currDate
         PlayerBans.reduce_injuries(timeInBetween, stopDate)
-        Players.update_fitness(timeInBetween)
+        Players.update_sharpness_and_fitness(timeInBetween)
         update_ages(self.currDate, stopDate)
 
         # Run simulations concurrently so multiple matches can be processed at the same time.

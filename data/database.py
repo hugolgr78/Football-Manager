@@ -789,6 +789,23 @@ class Players(Base):
             session.close()
 
     @classmethod
+    def batch_update_sharpnesses(cls, sharpnesses):
+        session = DatabaseManager().get_session()
+        try:
+            for sharpness in sharpnesses:
+                player = session.query(Players).filter(Players.id == sharpness[0]).first()
+                if player:
+                    player.sharpness += sharpness[1]
+                    player.sharpness = min(100, max(MIN_SHARPNESS, player.sharpness))
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def get_all_players_by_team(cls, team_id, youths = True):
         session = DatabaseManager().get_session()
         try:
@@ -947,30 +964,36 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def update_fitness(cls, time_in_between):
+    def update_sharpness_and_fitness(cls, time_in_between):
         session = DatabaseManager().get_session()
         try:
-            players = session.query(Players).all()
+            # Select only players who do NOT have an active injury ban
+            players = (
+                session.query(Players)
+                .outerjoin(PlayerBans, and_(PlayerBans.player_id == Players.id, PlayerBans.ban_type == 'injury'))
+                .filter(PlayerBans.id.is_(None))
+                .all()
+            )
             hours = int(time_in_between.total_seconds() // 3600)
 
             if hours > 0:
-                recovery_rate_per_hour = 0.30 / 24  # ~1.25% of missing fitness each hour
+                hourly_rate = DAILY_SHARPNESS_DECAY / 24.0
 
                 for player in players:
+                    # exponential decay formula
+                    decay_factor = (1 - hourly_rate) ** hours
+                    player.sharpness *= decay_factor
 
-                    if PlayerBans.get_player_injured(player.id):
-                        continue
+                    # clamp
+                    if player.sharpness < MIN_SHARPNESS:
+                        player.sharpness = MIN_SHARPNESS
 
-                    for _ in range(hours):
-                        missing = 100 - player.fitness
-
-                        if missing <= 0:
-                            break
-
-                        player.fitness += missing * recovery_rate_per_hour
-
-                    player.fitness = int(player.fitness + 1)
-                    player.fitness = min(100, player.fitness)
+                    # round at the very end
+                    player.sharpness = int(round(player.sharpness))
+                    
+                    recovery_factor = (1 - DAILY_FITNESS_RECOVERY_RATE) ** hours
+                    new_fitness = 100 - (100 - player.fitness) * recovery_factor
+                    player.fitness = int(math.ceil(min(100, new_fitness)))
 
             session.commit()
         except Exception as e:

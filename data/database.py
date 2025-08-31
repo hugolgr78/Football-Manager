@@ -967,33 +967,37 @@ class Players(Base):
     def update_sharpness_and_fitness(cls, time_in_between):
         session = DatabaseManager().get_session()
         try:
-            # Select only players who do NOT have an active injury ban
-            players = (
+            # Players eligible for fitness updates (exclude injury bans)
+            fitness_players = (
                 session.query(Players)
                 .outerjoin(PlayerBans, and_(PlayerBans.player_id == Players.id, PlayerBans.ban_type == 'injury'))
                 .filter(PlayerBans.id.is_(None))
                 .all()
             )
+
+            all_players = session.query(Players).all()
+            fitness_ids = {p.id for p in fitness_players}
+
             hours = int(time_in_between.total_seconds() // 3600)
 
             if hours > 0:
                 hourly_rate = DAILY_SHARPNESS_DECAY / 24.0
 
-                for player in players:
-                    # exponential decay formula
+                for player in all_players:
+                    # sharpness exponential decay
                     decay_factor = (1 - hourly_rate) ** hours
                     player.sharpness *= decay_factor
 
-                    # clamp
+                    # clamp and round sharpness
                     if player.sharpness < MIN_SHARPNESS:
                         player.sharpness = MIN_SHARPNESS
-
-                    # round at the very end
                     player.sharpness = int(round(player.sharpness))
-                    
-                    recovery_factor = (1 - DAILY_FITNESS_RECOVERY_RATE) ** hours
-                    new_fitness = 100 - (100 - player.fitness) * recovery_factor
-                    player.fitness = int(math.ceil(min(100, new_fitness)))
+
+                    # fitness recovery only for non-injured players
+                    if player.id in fitness_ids:
+                        recovery_factor = (1 - DAILY_FITNESS_RECOVERY_RATE) ** hours
+                        new_fitness = 100 - (100 - player.fitness) * recovery_factor
+                        player.fitness = int(math.ceil(min(100, new_fitness)))
 
             session.commit()
         except Exception as e:

@@ -1020,14 +1020,16 @@ class Match():
                 morales_to_update = []
                 sharpnesses_to_update = []
 
-                homePlayers = Players.get_all_players_by_team(self.homeTeam.id, youths = False)
-                awayPlayers = Players.get_all_players_by_team(self.awayTeam.id, youths = False)
+                homePlayers = Players.get_all_players_by_team(self.homeTeam.id)
+                awayPlayers = Players.get_all_players_by_team(self.awayTeam.id)
 
                 for player in homePlayers:
                     final_ids = {pl_id for _, pl_id in self.homeFinalLineup}
+                    playerAdded = False
 
                     # Player was in final lineup (substituted off)
                     if player.id in final_ids:
+                        playerAdded = True
                         if player.id in self.homeStartLineup.values():
                             start_position = list(self.homeStartLineup.keys())[list(self.homeStartLineup.values()).index(player.id)]
                         else:
@@ -1050,6 +1052,7 @@ class Match():
 
                     # Player was in current lineup (finished on pitch)
                     if player.id in self.homeCurrentLineup.values():
+                        playerAdded = True
                         if player.id in self.homeStartLineup.values():
                             start_position = list(self.homeStartLineup.keys())[list(self.homeStartLineup.values()).index(player.id)]
                         else:
@@ -1073,31 +1076,38 @@ class Match():
                         )
 
                     # Player not in final lineup OR current lineup
-                    if player.id not in self.homeCurrentLineup.values() and player.id not in final_ids:
-                        if not PlayerBans.check_bans_for_player(player.id, self.league.league_id):
-                            # Player benched
+                    if player.id not in self.homeCurrentLineup.values() and player.id not in final_ids and player.id in self.homeCurrentSubs:
+                        playerAdded = True
+                        
+                        # Player benched
+                        self.add_player_lineup(
+                            player=player,
+                            start_position=None,
+                            end_position=None,
+                            rating=None,
+                            reason="benched",
+                            morales_to_update=morales_to_update,
+                            lineups_to_add=lineups_to_add,
+                            sharpnesses_to_update=sharpnesses_to_update,
+                            processed_events=self.homeProcessedEvents,
+                            winner=self.winner,
+                            team=self.homeTeam,
+                            goal_diff=self.goalDiffHome
+                        )
+
+                        if player.player_role != "Youth Team" and not playerAdded:
+                            if PlayerBans.check_bans_for_player(player.id, self.league.league_id):
+                                # Player unavailable (injury, suspension, etc.)
+                                reason = "unavailable"
+                            else:
+                                reason = "not_in_squad"
+
                             self.add_player_lineup(
                                 player=player,
                                 start_position=None,
                                 end_position=None,
                                 rating=None,
-                                reason="benched",
-                                morales_to_update=morales_to_update,
-                                lineups_to_add=lineups_to_add,
-                                sharpnesses_to_update=sharpnesses_to_update,
-                                processed_events=self.homeProcessedEvents,
-                                winner=self.winner,
-                                team=self.homeTeam,
-                                goal_diff=self.goalDiffHome
-                            )
-                        else:
-                            # Player unavailable (injury, suspension, etc.)
-                            self.add_player_lineup(
-                                player=player,
-                                start_position=None,
-                                end_position=None,
-                                rating=None,
-                                reason="unavailable",
+                                reason=reason,
                                 morales_to_update=morales_to_update,
                                 lineups_to_add=lineups_to_add,
                                 sharpnesses_to_update=sharpnesses_to_update,
@@ -1109,9 +1119,11 @@ class Match():
 
                 for player in awayPlayers:
                     final_ids = {pl_id for _, pl_id in self.awayFinalLineup}
+                    playerAdded = False
 
                     # Player was in final lineup (substituted off)
                     if player.id in final_ids:
+                        playerAdded = True
                         if player.id in self.awayStartLineup.values():
                             start_position = list(self.awayStartLineup.keys())[list(self.awayStartLineup.values()).index(player.id)]
                         else:
@@ -1134,6 +1146,7 @@ class Match():
 
                     # Player was in current lineup (finished on pitch)
                     if player.id in self.awayCurrentLineup.values():
+                        playerAdded = True
                         if player.id in self.awayStartLineup.values():
                             start_position = list(self.awayStartLineup.keys())[list(self.awayStartLineup.values()).index(player.id)]
                         else:
@@ -1157,39 +1170,46 @@ class Match():
                         )
 
                     # Player not in final lineup OR current lineup
-                    if player.id not in self.awayCurrentLineup.values() and player.id not in final_ids:
-                        if not PlayerBans.check_bans_for_player(player.id, self.league.league_id):
-                            # Player benched
-                            self.add_player_lineup(
-                                player=player,
-                                start_position=None,
-                                end_position=None,
-                                rating=None,
-                                reason="benched",
-                                morales_to_update=morales_to_update,
-                                lineups_to_add=lineups_to_add,
-                                sharpnesses_to_update=sharpnesses_to_update,
-                                processed_events=self.awayProcessedEvents,
-                                winner=self.winner,
-                                team=self.awayTeam,
-                                goal_diff=self.goalDiffAway
-                            )
-                        else:
+                    if player.id not in self.awayCurrentLineup.values() and player.id not in final_ids and player.id in self.awayCurrentSubs:
+                        playerAdded = True
+                        
+                        # Player benched
+                        self.add_player_lineup(
+                            player=player,
+                            start_position=None,
+                            end_position=None,
+                            rating=None,
+                            reason="benched",
+                            morales_to_update=morales_to_update,
+                            lineups_to_add=lineups_to_add,
+                            sharpnesses_to_update=sharpnesses_to_update,
+                            processed_events=self.awayProcessedEvents,
+                            winner=self.winner,
+                            team=self.awayTeam,
+                            goal_diff=self.goalDiffAway
+                        )
+
+                    if player.player_role != "Youth Team" and not playerAdded:
+                        if PlayerBans.check_bans_for_player(player.id, self.league.league_id):
                             # Player unavailable (injury, suspension, etc.)
-                            self.add_player_lineup(
-                                player=player,
-                                start_position=None,
-                                end_position=None,
-                                rating=None,
-                                reason="unavailable",
-                                morales_to_update=morales_to_update,
-                                lineups_to_add=lineups_to_add,
-                                sharpnesses_to_update=sharpnesses_to_update,
-                                processed_events=self.awayProcessedEvents,
-                                winner=self.winner,
-                                team=self.awayTeam,
-                                goal_diff=self.goalDiffAway
-                            )
+                            reason = "unavailable"
+                        else:
+                            reason = "not_in_squad"
+
+                        self.add_player_lineup(
+                            player=player,
+                            start_position=None,
+                            end_position=None,
+                            rating=None,
+                            reason=reason,
+                            morales_to_update=morales_to_update,
+                            lineups_to_add=lineups_to_add,
+                            sharpnesses_to_update=sharpnesses_to_update,
+                            processed_events=self.awayProcessedEvents,
+                            winner=self.winner,
+                            team=self.awayTeam,
+                            goal_diff=self.goalDiffAway
+                        )
 
                 # submit morales update
                 futures.append(executor.submit(Players.batch_update_morales, morales_to_update))

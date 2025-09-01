@@ -1685,7 +1685,7 @@ class TeamLineup(Base):
             availability = session.query(TeamLineup).filter(
                 TeamLineup.player_id == player_id,
                 TeamLineup.match_id == match_id,
-                TeamLineup.reason == "benched"
+                TeamLineup.reason == "benched" or TeamLineup.reason == "not_in_squad"
             ).first()
             return availability is not None
         finally:
@@ -4797,34 +4797,10 @@ def score_formation(sortedPlayers, positions, teamID, compID):
     lineup = {}
     used = set()
 
-    # Pre-bucket players by role
-    role_to_players = {
-        "goalkeeper": [p for p in sortedPlayers if p.position == "goalkeeper"],
-        "defender":   [p for p in sortedPlayers if p.position == "defender"],
-        "midfielder": [p for p in sortedPlayers if p.position == "midfielder"],
-        "forward":    [p for p in sortedPlayers if p.position == "forward"],
-    }
-
-    # Map formation position names to a role
-    def get_role(pos):
-        if "Goalkeeper" in pos:
-            return "goalkeeper"
-        elif pos in DEFENSIVE_POSITIONS:
-            return "defender"
-        elif pos in MIDFIELD_POSITIONS:
-            return "midfielder"
-        elif pos in ATTACKING_POSITIONS:
-            return "forward"
-        return None
-
     # Count how many players can fill each slot
     position_candidates = {}
     for pos in positions:
-        role = get_role(pos)
-        if role is None:
-            position_candidates[pos] = []
-        else:
-            position_candidates[pos] = [p for p in role_to_players[role]]
+        position_candidates[pos] = [p for p in sortedPlayers if POSITION_CODES[pos] in p.specific_positions.split(",")]
 
     # Sort positions by "scarcity" (fewest candidates first)
     ordered_positions = sorted(positions, key = lambda pos: len(position_candidates[pos]))
@@ -4834,7 +4810,7 @@ def score_formation(sortedPlayers, positions, teamID, compID):
 
     # Assign players greedily starting with scarce positions
     for pos in ordered_positions:
-        candidates = [p for p in position_candidates[pos] if p.id not in used and POSITION_CODES[pos] in p.specific_positions.split(",")]
+        candidates = [p for p in position_candidates[pos] if p.id not in used]
         
         if not candidates:
             youthID = getYouthPlayer(teamID, pos, compID, lineup.values())
@@ -4860,7 +4836,7 @@ def score_formation(sortedPlayers, positions, teamID, compID):
                 if not any(other_pos in [POSITION_CODES[x] for x in ordered_positions if x not in lineup] for other_pos in other_positions):
                     specialists.append(p)
 
-            # If there are specialists, pick the best one; otherwise, pick the best overall
+            # If there are specialists, pick the best one; otherwise, pick the best overall (already sorted)
             if specialists:
                 chosen = specialists[0]
             else:

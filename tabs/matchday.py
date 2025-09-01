@@ -1723,4 +1723,12 @@ class MatchDay(ctk.CTkFrame):
 
         self.pack_forget()
         self.update_idletasks()
+        
+        # Force a save of the game.
+        try:
+            db = DatabaseManager()
+            db.commit_copy()
+        except Exception as Ex:
+            print(f"Error occurred while saving game: {Ex}")
+
         self.parent.resetMenu()

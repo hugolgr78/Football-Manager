@@ -73,50 +73,57 @@ class FootballManager(ctk.CTk):
         # List all files in the data folder ending with _copy.db
         copy_files = [f for f in os.listdir("data") if f.endswith("_copy.db")]
 
+        # Step 1: Always ask if the user is sure they want to quit
+        response = CTkMessagebox(
+            title="Exit",
+            message="Are you sure you want to quit?",
+            icon="question",
+            option_1="Yes",
+            option_2="No",
+            button_color=(CLOSE_RED, APP_BLUE),
+            button_hover_color=(CLOSE_RED, APP_BLUE)
+        )
+        try:
+            if hasattr(response, "button_1"):
+                response.button_1.configure(hover_color=CLOSE_RED)
+            if hasattr(response, "button_2"):
+                response.button_2.configure(hover_color=APP_BLUE)
+        except Exception:
+            pass
+
+        if response.get() != "Yes":
+            return  # user cancelled quitting
+
+        # Step 2: If there are unsaved changes, ask if they want to save
         if copy_files:
-            # There are unsaved changes
-            response = CTkMessagebox(
-                title="Exit",
-                message="Would you like to save before quitting?",
+            save_response = CTkMessagebox(
+                title="Save Changes",
+                message="You have unsaved changes. Would you like to save before quitting?",
                 icon="question",
                 option_1="Yes",
                 option_2="No",
-                button_color=(CLOSE_RED, APP_BLUE),
-                button_hover_color=(CLOSE_RED, APP_BLUE)
+                button_color=(APP_BLUE, CLOSE_RED),
+                button_hover_color=(APP_BLUE, CLOSE_RED)
             )
             try:
-                if hasattr(response, "button_1"):
-                    response.button_1.configure(hover_color=CLOSE_RED)
-                if hasattr(response, "button_2"):
-                    response.button_2.configure(hover_color=APP_BLUE)
+                if hasattr(save_response, "button_1"):
+                    save_response.button_1.configure(hover_color=APP_BLUE)
+                if hasattr(save_response, "button_2"):
+                    save_response.button_2.configure(hover_color=CLOSE_RED)
             except Exception:
                 pass
 
-            if response.get() == "Yes":
-                db = DatabaseManager()
+            db = DatabaseManager()
+            if save_response.get() == "Yes":
+                if self.loginMenu.main and self.loginMenu.main.tabs[4]:
+                    self.loginMenu.main.tabs[4].saveLineup()
+
                 db.commit_copy()
-                self.quit()
-        else:
-            # No unsaved changes, just confirm exit
-            response = CTkMessagebox(
-                title="Exit",
-                message="Are you sure you want to exit?",
-                icon="question",
-                option_1="Yes",
-                option_2="No",
-                button_color=(CLOSE_RED, APP_BLUE),
-                button_hover_color=(CLOSE_RED, APP_BLUE)
-            )
-            try:
-                if hasattr(response, "button_1"):
-                    response.button_1.configure(hover_color=CLOSE_RED)
-                if hasattr(response, "button_2"):
-                    response.button_2.configure(hover_color=APP_BLUE)
-            except Exception:
-                pass
+            else:
+                db.discard_copy()
 
-            if response.get() == "Yes":
-                self.quit()
-
+        # Finally, quit the app
+        self.quit()
+        
 if __name__ == "__main__":
     FootballManager()

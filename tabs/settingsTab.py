@@ -95,6 +95,9 @@ class SettingsTab(ctk.CTkFrame):
             self.parent.quit()
 
     def save(self, exit_):
+        if self.parent.tabs[4]:
+            self.parent.tabs[4].saveLineup()
+
         db = DatabaseManager()
         db.commit_copy()
 

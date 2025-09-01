@@ -19,12 +19,17 @@ from tabs.settingsTab import SettingsTab
 from utils.match import Match
 
 class MainMenu(ctk.CTkFrame):
-    def __init__(self, parent, manager_id):
+    def __init__(self, parent, manager_id, created):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND)
         self.pack(fill = "both", expand = True)
 
         self.parent = parent
         self.manager_id = manager_id
+
+        if created:
+            db = DatabaseManager()
+            db.commit_copy()
+
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
 
         self.initUI()

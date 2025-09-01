@@ -161,6 +161,8 @@ class MainMenu(ctk.CTkFrame):
 
         timeInBetween = stopDate - self.currDate
         PlayerBans.reduce_injuries(timeInBetween, stopDate)
+        Players.update_sharpness_and_fitness(timeInBetween)
+        update_ages(self.currDate, stopDate)
 
         # Run simulations concurrently so multiple matches can be processed at the same time.
         matches = []
@@ -170,8 +172,8 @@ class MainMenu(ctk.CTkFrame):
                 try:
                     match = Match(game, auto = True)  # init only
                     matches.append(match)
-                except Exception:
-                    pass
+                except Exception as e:
+                    print(e)
 
             # Phase 2: run startGame in parallel with ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers = len(matches)) as ex:
@@ -188,8 +190,6 @@ class MainMenu(ctk.CTkFrame):
                         fut.result()
                     except Exception as e:
                         print(e)
-
-        update_ages(self.currDate, stopDate)
 
         self.currDate += timeInBetween
         Game.increment_game_date(self.manager_id, timeInBetween)
@@ -211,7 +211,7 @@ class MainMenu(ctk.CTkFrame):
 
         check_player_games_happy(teams, self.currDate)
 
-        self.resetTabs(0, 1, 2, 3, 5, 6)
+        self.resetTabs(0, 1, 2, 3, 4, 5, 6)
         self.addDate()
         
     def resetMenu(self):
@@ -238,12 +238,3 @@ class MainMenu(ctk.CTkFrame):
                 frame.place_forget()
 
         self.overlappingProfiles = []
-
-        # Reset only the analysis tab in the tactics
-        if self.tabs[4]:
-            if self.tabs[4].tabs[1]:
-                self.tabs[4].tabs[1].destroy()
-                self.tabs[4].tabs[1] = None
-
-            if self.tabs[4].activeButton == 1:
-                self.tabs[4].loadAnalysis()

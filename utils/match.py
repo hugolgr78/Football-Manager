@@ -1,4 +1,4 @@
-import threading, time
+import threading
 import logging
 from settings import *
 from data.database import *
@@ -51,6 +51,9 @@ class Match():
         self.halfTime = False
         self.fullTime = False
 
+        self.homeFitness = {}
+        self.awayFitness = {}
+
         if self.auto:
             self.seconds, self.minutes = 0, 0
             self.createTeamLineup(self.homeTeam.id, True)
@@ -66,10 +69,12 @@ class Match():
             self.homeCurrentLineup = lineup
             self.homeCurrentSubs = substitutes
             self.homeStartLineup = lineup.copy()
+            self.homeFitness = {playerID: Players.get_player_by_id(playerID).fitness for playerID in list(lineup.values()) + substitutes}
         else:
             self.awayCurrentLineup = lineup
             self.awayCurrentSubs = substitutes
             self.awayStartLineup = lineup.copy()
+            self.awayFitness = {playerID: Players.get_player_by_id(playerID).fitness for playerID in list(lineup.values()) + substitutes}
 
     def generateScore(self, teamMatch = False, home = False):
         self.score = Score(self.homeTeam, self.awayTeam, self.homeCurrentLineup, self.awayCurrentLineup)
@@ -280,6 +285,16 @@ class Match():
             else:
                 self.seconds += 1
 
+            total_seconds = self.minutes * 60 + self.seconds
+            if total_seconds % 90 == 0:
+                for playerID, fitness in self.homeFitness.items():
+                    if fitness > 0 and playerID in self.homeCurrentLineup.values():
+                        self.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
+
+                for playerID, fitness in self.awayFitness.items():
+                    if fitness > 0 and playerID in self.awayCurrentLineup.values():
+                        self.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
+
             # ----------- half time ------------
             if self.minutes == 45 and self.seconds == 0:
 
@@ -454,16 +469,34 @@ class Match():
             for _, processedEvent in processedEvents.items():
                 if processedEvent["type"] == "yellow_card" and processedEvent["player"] == playerID:
                     event["type"] = "red_card"
+
                     playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
                     lineup.pop(playerPosition)
                     finalLineup.append((playerPosition, playerID))
+
                     event["position"] = playerPosition
 
                     if teamMatch:
                         if home:
                             teamMatch.homeLineupPitch.removePlayer(playerPosition)
+                            frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerID]
+
+                            if len(frame) == 0:
+                                frame = teamMatch.addPlayerFrame(teamMatch.homePlayersFrame, playerID)
+                            else:
+                                frame = frame[0]
+
+                            frame.removeFitness()
                         else:
                             teamMatch.awayLineupPitch.removePlayer(playerPosition)
+                            frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerID]
+
+                            if len(frame) == 0:
+                                frame = teamMatch.addPlayerFrame(teamMatch.awayPlayersFrame, playerID)
+                            else:
+                                frame = frame[0]
+
+                            frame.removeFitness()
 
         elif event["type"] == "red_card":
             redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
@@ -484,8 +517,24 @@ class Match():
             if teamMatch:
                 if home:
                     teamMatch.homeLineupPitch.removePlayer(playerPosition)
+                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerID]
+
+                    if len(frame) == 0:
+                        frame = teamMatch.addPlayerFrame(teamMatch.homePlayersFrame, playerID)
+                    else:
+                        frame = frame[0]
+
+                    frame.removeFitness()
                 else:
                     teamMatch.awayLineupPitch.removePlayer(playerPosition)
+                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerID]
+
+                    if len(frame) == 0:
+                        frame = teamMatch.addPlayerFrame(teamMatch.awayPlayersFrame, playerID)
+                    else:
+                        frame = frame[0]
+
+                    frame.removeFitness()
 
             if playerPosition == "Goalkeeper" and not managing_team:
 
@@ -569,8 +618,24 @@ class Match():
             if teamMatch:
                 if home:
                     teamMatch.homeLineupPitch.removePlayer(playerPosition)
+                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == injuredPlayerID]
+
+                    if len(frame) == 0:
+                        frame = teamMatch.addPlayerFrame(teamMatch.homePlayersFrame, injuredPlayerID)
+                    else:
+                        frame = frame[0]
+
+                    frame.removeFitness()
                 else:
                     teamMatch.awayLineupPitch.removePlayer(playerPosition)
+                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == injuredPlayerID]
+
+                    if len(frame) == 0:
+                        frame = teamMatch.addPlayerFrame(teamMatch.awayPlayersFrame, injuredPlayerID)
+                    else:
+                        frame = frame[0]
+
+                    frame.removeFitness()
 
             # find the substitution event for the injured player
             if not managing_team:
@@ -598,8 +663,24 @@ class Match():
             if teamMatch:
                 if home:
                     teamMatch.homeLineupPitch.removePlayer(playerPosition)
+                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerOffID]
+
+                    if len(frame) == 0:
+                        frame = teamMatch.addPlayerFrame(teamMatch.homePlayersFrame, playerOffID)
+                    else:
+                        frame = frame[0]
+
+                    frame.removeFitness()
                 else:
                     teamMatch.awayLineupPitch.removePlayer(playerPosition)
+                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerOffID]
+
+                    if len(frame) == 0:
+                        frame = teamMatch.addPlayerFrame(teamMatch.awayPlayersFrame, playerOffID)
+                    else:
+                        frame = frame[0]
+
+                    frame.removeFitness()
 
             playerPosition = "Goalkeeper" if redCardKeeper else playerPosition
             self.findSubstitute(event, playerOffID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
@@ -666,6 +747,16 @@ class Match():
 
         if teamMatch:
             teamMatch.updateSubFrame(home, playerOnID, playerOffID)
+            playersFrame = teamMatch.homePlayersFrame if home else teamMatch.awayPlayersFrame
+            frame = [f for f in playersFrame.winfo_children() if f.playerID == playerOffID]
+
+            if len(frame) == 0:
+                frame = teamMatch.addPlayerFrame(playersFrame, playerOffID)
+            else:
+                frame = frame[0]
+
+            frame.removeFitness()
+
             if not managing_team:
                 playerOn = Players.get_player_by_id(playerOnID)
                 if home:
@@ -912,9 +1003,22 @@ class Match():
                 logger.debug(f"Submitting match score update: {self.score.getScore()[0]} -> {self.score.getScore()[1]}")
                 futures.append(executor.submit(Matches.update_score, self.match.id, self.score.getScore()[0], self.score.getScore()[1]))
 
+                # Players updates
+                fitness_to_update = []
+                logger.debug("Preparing player fitness updates")
+                for playerID, fitness in self.homeFitness.items():
+                    fitness_to_update.append((playerID, round(fitness)))
+
+                for playerID, fitness in self.awayFitness.items():
+                    fitness_to_update.append((playerID, round(fitness)))
+
+                logger.debug(f"Submitting fitness updates for {len(fitness_to_update)} players")
+                futures.append(executor.submit(Players.batch_update_fitness, fitness_to_update))
+
                 # Lineups and morales
                 lineups_to_add = []
                 morales_to_update = []
+                sharpnesses_to_update = []
 
                 homePlayers = Players.get_all_players_by_team(self.homeTeam.id, youths = False)
                 awayPlayers = Players.get_all_players_by_team(self.awayTeam.id, youths = False)
@@ -937,6 +1041,7 @@ class Match():
                             reason=None,  # was selected
                             morales_to_update=morales_to_update,
                             lineups_to_add=lineups_to_add,
+                            sharpnesses_to_update=sharpnesses_to_update,
                             processed_events=self.homeProcessedEvents,
                             winner=self.winner,
                             team=self.homeTeam,
@@ -960,6 +1065,7 @@ class Match():
                             reason=None,  # was selected
                             morales_to_update=morales_to_update,
                             lineups_to_add=lineups_to_add,
+                            sharpnesses_to_update=sharpnesses_to_update,
                             processed_events=self.homeProcessedEvents,
                             winner=self.winner,
                             team=self.homeTeam,
@@ -978,6 +1084,7 @@ class Match():
                                 reason="benched",
                                 morales_to_update=morales_to_update,
                                 lineups_to_add=lineups_to_add,
+                                sharpnesses_to_update=sharpnesses_to_update,
                                 processed_events=self.homeProcessedEvents,
                                 winner=self.winner,
                                 team=self.homeTeam,
@@ -993,6 +1100,7 @@ class Match():
                                 reason="unavailable",
                                 morales_to_update=morales_to_update,
                                 lineups_to_add=lineups_to_add,
+                                sharpnesses_to_update=sharpnesses_to_update,
                                 processed_events=self.homeProcessedEvents,
                                 winner=self.winner,
                                 team=self.homeTeam,
@@ -1017,6 +1125,7 @@ class Match():
                             reason=None,  # was selected
                             morales_to_update=morales_to_update,
                             lineups_to_add=lineups_to_add,
+                            sharpnesses_to_update=sharpnesses_to_update,
                             processed_events=self.awayProcessedEvents,
                             winner=self.winner,
                             team=self.awayTeam,
@@ -1040,6 +1149,7 @@ class Match():
                             reason=None,  # was selected
                             morales_to_update=morales_to_update,
                             lineups_to_add=lineups_to_add,
+                            sharpnesses_to_update=sharpnesses_to_update,
                             processed_events=self.awayProcessedEvents,
                             winner=self.winner,
                             team=self.awayTeam,
@@ -1058,6 +1168,7 @@ class Match():
                                 reason="benched",
                                 morales_to_update=morales_to_update,
                                 lineups_to_add=lineups_to_add,
+                                sharpnesses_to_update=sharpnesses_to_update,
                                 processed_events=self.awayProcessedEvents,
                                 winner=self.winner,
                                 team=self.awayTeam,
@@ -1073,6 +1184,7 @@ class Match():
                                 reason="unavailable",
                                 morales_to_update=morales_to_update,
                                 lineups_to_add=lineups_to_add,
+                                sharpnesses_to_update=sharpnesses_to_update,
                                 processed_events=self.awayProcessedEvents,
                                 winner=self.winner,
                                 team=self.awayTeam,
@@ -1081,6 +1193,7 @@ class Match():
 
                 # submit morales update
                 futures.append(executor.submit(Players.batch_update_morales, morales_to_update))
+                futures.append(executor.submit(Players.batch_update_sharpnesses, sharpnesses_to_update))
 
                 # extra debug: how many rating entries we will store
                 logger.debug(f"Ratings stored: home={len(self.homeRatings)} away={len(self.awayRatings)}")
@@ -1104,34 +1217,58 @@ class Match():
     def getGameTime(self, playerID, events):
         sub_off_time = None
         sub_on_time = None
+        red_card_time = None
+        injury_time = None
 
         for time, event in events.items():
             if event["type"] == "sub_on" and event["player"] == playerID:
-                sub_on_time = time
+                sub_on_time = int(time.split(":")[0])
 
             if event["type"] == "sub_off" and event["player"] == playerID:
-                sub_off_time = time
+                sub_off_time = int(time.split(":")[0])
 
-        if sub_on_time and sub_off_time:
-            gameTime = int(sub_off_time) - int(sub_on_time)
-            return True if gameTime >= 20 else False
-        elif sub_on_time:
-            gameTime = 90 - int(sub_on_time)
-            return True if gameTime >= 20 else False
-        elif sub_off_time:
-            return True if sub_off_time >= 20 else False
+            if event["type"] == "red_card" and event["player"] == playerID:
+                red_card_time = int(time.split(":")[0])
+
+            if event["type"] == "injury" and event["player"] == playerID:
+                injury_time = int(time.split(":")[0])
+
+        playedEnough = False
+        game_time = 0
+
+        if not red_card_time and not injury_time:
+            if sub_on_time and sub_off_time:
+                game_time = sub_off_time - sub_on_time
+            elif sub_on_time:
+                game_time = 90 - sub_on_time
+            elif sub_off_time:
+                game_time = sub_off_time
+            else:
+                game_time = 90
+        elif red_card_time and not injury_time:
+            if sub_on_time:
+                game_time = red_card_time - sub_on_time
+            else:
+                game_time = red_card_time
         else:
-            # Player played the full 90 minutes
-            return True
+            if sub_on_time:
+                game_time = injury_time - sub_on_time
+            else:
+                game_time = injury_time
 
-    def add_player_lineup(self, player, start_position, end_position, rating, reason, morales_to_update, lineups_to_add, processed_events, winner, team, goal_diff):
+        playedEnough = True if game_time >= 20 else False
+
+        return playedEnough, game_time
+
+    def add_player_lineup(self, player, start_position, end_position, rating, reason, morales_to_update, lineups_to_add, sharpnesses_to_update, processed_events, winner, team, goal_diff):
         """
         Add player lineup entry and apply morale changes depending on reason.
         """
         lineups_to_add.append((self.match.id, player.id, start_position, end_position, rating, reason))
 
         if reason is None:  # player played
-            if not self.getGameTime(player.id, processed_events):
+            playedEnough, game_time = self.getGameTime(player.id, processed_events)
+            if not playedEnough:
                 # Played <20 minutes
                 full_player = Players.get_player_by_id(player.id)
                 moraleChange = get_morale_decrease_role(full_player)
@@ -1141,6 +1278,9 @@ class Match():
                 moraleChange = get_morale_change(result, rating, goal_diff)
 
             morales_to_update.append((player.id, moraleChange))
+
+            sharpnessGain = game_time * SHARPNESS_GAIN_PER_MINUTE
+            sharpnesses_to_update.append((player.id, sharpnessGain))
 
         elif reason == "benched":
             # Benched but available -> morale decrease by role

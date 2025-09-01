@@ -883,6 +883,39 @@ class PlayerFrame(ctk.CTkFrame):
                     src.thumbnail((18, 18))
                     img = ctk.CTkImage(src, None, (src.width, src.height))
                     ctk.CTkLabel(self.statFrame, image = img, text = "").place(relx = 0.9 - i * 0.18, rely = 0.5, anchor = "center")
+            case "Fitness":
+                player = Players.get_player_by_id(self.player.id)
+                fitness = player.fitness if player else 0
+                ctk.CTkLabel(self.statFrame, text = f"{fitness}%", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.7, rely = 0.5, anchor = "e")
+
+                if fitness > 75:
+                    src = "Images/fitness_good.png"
+                elif fitness > 25:
+                    src = "Images/fitness_ok.png"
+                else:
+                    src = "Images/fitness_bad.png"
+
+                image = Image.open(src)
+                image.thumbnail((20, 20))
+                ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+                ctk.CTkLabel(self.statFrame, image = ctk_image, text = "", fg_color = TKINTER_BACKGROUND).place(relx = 0.95, rely = 0.5, anchor = "e")
+            case "Match sharpness":
+                player = Players.get_player_by_id(self.player.id)
+                match_sharpness = player.sharpness if player else 0
+
+                ctk.CTkLabel(self.statFrame, text = f"{match_sharpness}%", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+                if match_sharpness > 75:
+                    src = "Images/sharpness_good.png"
+                elif match_sharpness > 25:
+                    src = "Images/sharpness_ok.png"
+                else:
+                    src = "Images/sharpness_bad.png"
+
+                image = Image.open(src)
+                image.thumbnail((20, 20))
+                ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+                ctk.CTkLabel(self.statFrame, image = ctk_image, text = "", fg_color = TKINTER_BACKGROUND).place(relx = 0.95, rely = 0.5, anchor = "e")
 
         for widget in self.statFrame.winfo_children():
             widget.bind("<Enter>", lambda event: self.onFrameHover())
@@ -1581,16 +1614,40 @@ class LineupPlayerFrame(ctk.CTkFrame):
         if xDisabled:
             self.removeButton.configure(state = "disabled")
 
-        self.caFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 55, height = 13, corner_radius = 0)
-        self.caFrame.place(relx = 0.5, rely = 0.95, anchor = "s")
+        self.attsFrame = ctk.CTkFrame(self, fg_color = fgColor, width = 55, height = 13, corner_radius = 0)
+        self.attsFrame.place(relx = 0.5, rely = 0.95, anchor = "s")
 
-        imageNames = star_images(self.caStars)
+        src = Image.open(f"Images/star_full.png")
+        src.thumbnail((10, 10))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.attsFrame, image = img, text = "").place(relx = 0, rely = 0.3, anchor = "w")
+        ctk.CTkLabel(self.attsFrame, text = round(self.caStars, 1), font = (APP_FONT, 12), fg_color = fgColor, height = 0, width = 0).place(relx = 0.22, rely = 0.3, anchor = "w")
 
-        for i, imageName in enumerate(imageNames):
-            src = Image.open(f"Images/{imageName}.png")
-            src.thumbnail((10, 10))
-            img = ctk.CTkImage(src, None, (src.width, src.height))
-            ctk.CTkLabel(self.caFrame, image = img, text = "").place(relx = 0.12 + i * 0.18, rely = 0.3, anchor = "center")
+        fitness = self.player.fitness
+        if fitness > 75:
+            src = "Images/fitness_good.png"
+        elif fitness > 25:
+            src = "Images/fitness_ok.png"
+        else:
+            src = "Images/fitness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((10, 10))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        ctk.CTkLabel(self.attsFrame, image = ctk_image, text = "", fg_color = fgColor, height = 0, width = 0).place(relx = 0.58, rely = 0.4, anchor = "w")
+
+        sharpness = self.player.sharpness
+        if sharpness > 75:
+            src = "Images/sharpness_good.png"
+        elif sharpness > 25:
+            src = "Images/sharpness_ok.png"
+        else:
+            src = "Images/sharpness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((10, 10))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        ctk.CTkLabel(self.attsFrame, image = ctk_image, text = "", fg_color = fgColor, height = 0, width = 0).place(relx = 0.82, rely = 0.4, anchor = "w")
 
         self.bind("<Button-1>", self.start_drag)
         self.bind("<B1-Motion>", self.do_drag)
@@ -1602,7 +1659,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
                 child.bind("<B1-Motion>", self.do_drag)
                 child.bind("<ButtonRelease-1>", self.stop_drag)
 
-        for child in self.caFrame.winfo_children():
+        for child in self.attsFrame.winfo_children():
             child.bind("<Button-1>", self.start_drag)
             child.bind("<B1-Motion>", self.do_drag)
             child.bind("<ButtonRelease-1>", self.stop_drag)
@@ -1820,6 +1877,32 @@ class SubstitutePlayer(ctk.CTkFrame):
         self.firstName.place(relx = 0.5, rely = 0.46, anchor = "center")
 
         PlayerProfileLink(self, player, self.player.last_name, textColor, 0.5, 0.65, "center", fgColor, parentTab, 15, APP_FONT_BOLD, ingame = ingame, ingameFunction = ingameFunction)
+
+        fitness = self.player.fitness
+        if fitness > 75:
+            src = "Images/fitness_good.png"
+        elif fitness > 25:
+            src = "Images/fitness_ok.png"
+        else:
+            src = "Images/fitness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((15, 15))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        ctk.CTkLabel(self, image = ctk_image, text = "", fg_color = fgColor, height = 0, width = 0).place(relx = 0.95, rely = 0.05, anchor = "ne")
+
+        sharpness = self.player.sharpness
+        if sharpness > 75:
+            src = "Images/sharpness_good.png"
+        elif sharpness > 25:
+            src = "Images/sharpness_ok.png"
+        else:
+            src = "Images/sharpness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((15, 15))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        ctk.CTkLabel(self, image = ctk_image, text = "", fg_color = fgColor, height = 0, width = 0).place(relx = 0.95, rely = 0.23, anchor = "ne")
 
         if checkBoxFunction is not None:
             self.checkBox = ctk.CTkCheckBox(self, text = "", fg_color = GREY, checkbox_height = 10, checkbox_width = 80, border_width = 1, border_color = GREY)
@@ -2236,3 +2319,54 @@ class PlayerMatchFrame(ctk.CTkFrame):
 
     def changeBack(self):
         self.profile.place_forget()
+
+class InGamePlayerFrame(ctk.CTkFrame):
+    def __init__(self, parent, playerID, width, height, fgColor):
+        super().__init__(parent, fg_color = fgColor, width = width, height = height)
+        self.pack(pady = 5, padx = 2)
+
+        self.playerID = playerID
+
+        self.player = Players.get_player_by_id(self.playerID)
+
+        fitness = self.player.fitness
+
+        if fitness > 75:
+            src = "Images/fitness_good.png"
+        elif fitness > 25:
+            src = "Images/fitness_ok.png"
+        else:
+            src = "Images/fitness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((20, 20))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+
+        self.nameLabel = ctk.CTkLabel(self, text = f"{self.player.first_name} {self.player.last_name}", font = (APP_FONT, 12), fg_color = fgColor, height = 0, text_color = "white")
+        self.nameLabel.place(relx = 0.05, rely = 0.5, anchor = "w")
+
+        self.fitnessImage = ctk.CTkLabel(self, text = "", image = ctk_image)
+        self.fitnessImage.place(relx = 0.95, rely = 0.5, anchor = "e")
+        self.fitnessLabel = ctk.CTkLabel(self, text = f"{fitness}%", font = (APP_FONT, 12), fg_color = fgColor, height = 0)
+        self.fitnessLabel.place(relx = 0.8, rely = 0.5, anchor = "e")
+
+    def updateFitness(self, fitness):
+        self.fitnessLabel.configure(text = f"{round(fitness)}%")
+
+        if fitness > 75:
+            src = "Images/fitness_good.png"
+        elif fitness > 25:
+            src = "Images/fitness_ok.png"
+        else:
+            src = "Images/fitness_bad.png"
+
+        image = Image.open(src)
+        image.thumbnail((20, 20))
+        ctk_image = ctk.CTkImage(image, None, (image.width, image.height))
+        self.fitnessImage.configure(image = ctk_image)
+
+    def removeFitness(self):
+        self.fitnessImage.destroy()
+        self.fitnessLabel.destroy()
+
+        self.nameLabel.configure(text_color = GREY)

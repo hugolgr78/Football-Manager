@@ -96,11 +96,7 @@ class Tactics(ctk.CTkFrame):
                 self.lineupTab.turnSubsOn()
             except Exception:
                 pass
-
-    def loadAnalysis(self):
-        self.tabs[1] = Analysis(self, self.manager_id)
-        self.tabs[1].pack(expand = True, fill = "both")
-
+            
     def activateProposed(self, lineup):
         self.lineupTab.proposedLineup(lineup = lineup)
 

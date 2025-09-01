@@ -479,10 +479,15 @@ EVENT_GROUPS = {
 }
 
 MATCHES_ROLES = {
-    "Star Player": 1,
+    "Star Player": 5,
     "First Team": 7,
     "Rotation": 10
 }
+
+DAILY_FITNESS_RECOVERY_RATE = 0.0125
+SHARPNESS_GAIN_PER_MINUTE = 0.2
+DAILY_SHARPNESS_DECAY = 0.04
+MIN_SHARPNESS = 10
 
 from data.database import StatsManager
 

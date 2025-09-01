@@ -375,6 +375,8 @@ class Players(Base):
     nationality = Column(String(128), nullable = False)
     flag = Column(BLOB)
     morale = Column(Integer, nullable = False, default = 50)
+    fitness = Column(Integer, nullable = False, default = 100)
+    sharpness = Column(Integer, nullable = False, default = 50)
     player_role = Column(Enum("Star Player", "Backup", "Rotation", "First Team", "Youth Team"), nullable = False)
 
     @classmethod
@@ -787,6 +789,23 @@ class Players(Base):
             session.close()
 
     @classmethod
+    def batch_update_sharpnesses(cls, sharpnesses):
+        session = DatabaseManager().get_session()
+        try:
+            for sharpness in sharpnesses:
+                player = session.query(Players).filter(Players.id == sharpness[0]).first()
+                if player:
+                    player.sharpness += sharpness[1]
+                    player.sharpness = min(100, max(MIN_SHARPNESS, player.sharpness))
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def get_all_players_by_team(cls, team_id, youths = True):
         session = DatabaseManager().get_session()
         try:
@@ -926,6 +945,64 @@ class Players(Base):
             player.morale = 25
             session.commit()
             return True
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_update_fitness(cls, fitness_data):
+        session = DatabaseManager().get_session()
+        try:
+            for player_id, fitness in fitness_data:
+                player = session.query(Players).filter(Players.id == player_id).first()
+                if player:
+                    player.fitness = fitness
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def update_sharpness_and_fitness(cls, time_in_between):
+        session = DatabaseManager().get_session()
+        try:
+            # Players eligible for fitness updates (exclude injury bans)
+            fitness_players = (
+                session.query(Players)
+                .outerjoin(PlayerBans, and_(PlayerBans.player_id == Players.id, PlayerBans.ban_type == 'injury'))
+                .filter(PlayerBans.id.is_(None))
+                .all()
+            )
+
+            all_players = session.query(Players).all()
+            fitness_ids = {p.id for p in fitness_players}
+
+            hours = int(time_in_between.total_seconds() // 3600)
+
+            if hours > 0:
+                hourly_rate = DAILY_SHARPNESS_DECAY / 24.0
+
+                for player in all_players:
+                    # sharpness exponential decay
+                    decay_factor = (1 - hourly_rate) ** hours
+                    player.sharpness *= decay_factor
+
+                    # clamp and round sharpness
+                    if player.sharpness < MIN_SHARPNESS:
+                        player.sharpness = MIN_SHARPNESS
+                    player.sharpness = int(round(player.sharpness))
+
+                    # fitness recovery only for non-injured players
+                    if player.id in fitness_ids:
+                        recovery_factor = (1 - DAILY_FITNESS_RECOVERY_RATE) ** hours
+                        new_fitness = 100 - (100 - player.fitness) * recovery_factor
+                        player.fitness = int(math.ceil(min(100, new_fitness)))
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
             session.close()
 
@@ -3023,6 +3100,21 @@ class PlayerBans(Base):
         try:
             bans = session.query(PlayerBans).join(Players).filter(Players.id == player_id).all()
             return bans if bans else []
+        finally:
+            session.close()
+
+    @classmethod
+    def get_player_injured(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).join(Players).filter(Players.id == player_id).all()
+            is_injured = False
+
+            for ban in bans:
+                if ban.ban_type == "injury":
+                    is_injured = True
+
+            return is_injured
         finally:
             session.close()
 

@@ -17,12 +17,15 @@ class GamesDatabaseManager:
             cls._instance.scoped_session = None
         return cls._instance
 
-    def set_database(self):
+    def set_database(self,  create_tables = False):
 
         DATABASE_URL = "sqlite:///data/games.db" 
         engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
         session_factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
         self.scoped_session = scoped_session(session_factory)
+
+        if create_tables:
+            Base.metadata.create_all(bind = engine)
 
     def get_session(self):
         if not self.scoped_session:

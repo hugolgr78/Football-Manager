@@ -40,22 +40,59 @@ class SettingsTab(ctk.CTkFrame):
     def quitGame(self, menu):
 
         if not self.canSave:
-            response = CTkMessagebox(title = "Exit", message = "Are you sure you want to exit?", icon = "question", option_1 = "Yes", option_2 = "No")
+            response = CTkMessagebox(
+                title="Exit",
+                message="Are you sure you want to exit?",
+                icon="question",
+                option_1="Yes",
+                option_2="No",
+                button_color=(CLOSE_RED, APP_BLUE),
+                button_hover_color=(CLOSE_RED, APP_BLUE)
+            )
+            try:
+                if hasattr(response, "button_1"):
+                    response.button_1.configure(hover_color=CLOSE_RED)
+                if hasattr(response, "button_2"):
+                    response.button_2.configure(hover_color=APP_BLUE)
+            except Exception:
+                pass
         else:
-            response = CTkMessagebox(title = "Exit", message = "Would you like to save before quitting?", icon = "question", option_1 = "Yes", option_2 = "No")
+            response = CTkMessagebox(
+                title="Exit",
+                message="Would you like to save before quitting?",
+                icon="question",
+                option_1="Yes",
+                option_2="No",
+                button_color=(CLOSE_RED, APP_BLUE),
+                button_hover_color=(CLOSE_RED, APP_BLUE)
+            )
+            try:
+                if hasattr(response, "button_1"):
+                    response.button_1.configure(hover_color=CLOSE_RED)
+                if hasattr(response, "button_2"):
+                    response.button_2.configure(hover_color=APP_BLUE)
+            except Exception:
+                pass
 
         if response.get() == "Yes":
 
             if self.canSave:
                 self.save(exit_ = False)
 
-            if menu:
-                from startMenu import StartMenu
+            self.exit_(menu)
+        else:
+            if self.canSave:
+                self.rollBack()
+                self.exit_(menu)
 
-                self.loginMenu = StartMenu(self.parent.parent)
-                self.parent.destroy()
-            else:
-                self.parent.quit()
+    def exit_(self, menu):
+        if menu:
+            from startMenu import StartMenu
+
+            self.loginMenu = StartMenu(self.parent.parent)
+            self.parent.destroy()
+        else:
+            self.parent.quit()
 
     def save(self, exit_):
         db = DatabaseManager()
@@ -67,3 +104,7 @@ class SettingsTab(ctk.CTkFrame):
             self.saveButton.configure(state = "disabled")
             self.saveAndExitButton.configure(state = "disabled")
             self.canSave = False
+
+    def rollBack(self):
+        db = DatabaseManager()
+        db.discard_copy()

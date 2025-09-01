@@ -105,10 +105,27 @@ class DatabaseManager:
     def discard_copy(self):
         """Delete copies of BOTH DBs and reconnect to originals."""
         if self.copy_active:
-            if os.path.exists(self.copy_path):
-                os.remove(self.copy_path)
-            if os.path.exists(self.game_copy):
-                os.remove(self.game_copy)
+            # Ensure sessions/engines are cleaned up
+            try:
+                if self.scoped_session:
+                    self.scoped_session.remove()
+            except Exception:
+                pass
+            try:
+                if self.engine:
+                    self.engine.dispose()
+            except Exception:
+                pass
+
+            # Try to delete copies, but don't crash if locked
+            for path in (self.copy_path, self.game_copy):
+                if os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except PermissionError as e:
+                        print(f"[DB DEBUG] Could not delete {path}: {e}")
+
+            # Reconnect to the original
             self._connect(self.original_path)
             self.copy_active = False
 

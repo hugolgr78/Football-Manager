@@ -20,17 +20,17 @@ class SettingsTab(ctk.CTkFrame):
         self.saveAndExitButton = ctk.CTkButton(self, text = "Save and Exit", font = (APP_FONT, 20), height = 40, width = 150, fg_color = APP_BLUE, command = lambda: self.save(exit_ = True))
         self.saveAndExitButton.place(relx = 0.35, rely = 0.85, anchor = "w")
 
-        self.mainMenuButton = ctk.CTkButton(self, text = "To Main menu", font = (APP_FONT, 20), height = 40, width = 150, fg_color = APP_BLUE, command = lambda: self.quit_game(menu = True))
+        self.mainMenuButton = ctk.CTkButton(self, text = "To Main menu", font = (APP_FONT, 20), height = 40, width = 150, fg_color = APP_BLUE, command = lambda: self.quitGame(menu = True))
         self.mainMenuButton.place(relx = 0.18, rely = 0.95, anchor = "w")
 
-        self.quitButton = ctk.CTkButton(self, text = "To Desktop", font = (APP_FONT, 20), height = 40, width = 150, fg_color = APP_BLUE, command = lambda: self.quit_game(menu = False))
+        self.quitButton = ctk.CTkButton(self, text = "To Desktop", font = (APP_FONT, 20), height = 40, width = 150, fg_color = APP_BLUE, command = lambda: self.quitGame(menu = False))
         self.quitButton.place(relx = 0.35, rely = 0.95, anchor = "w")
 
     def checkSave(self):
         db = DatabaseManager()
-        canSave = db.has_unsaved_changes()
+        self.canSave = db.has_unsaved_changes()
 
-        if not canSave:
+        if not self.canSave:
             self.saveButton.configure(state = "disabled")
             self.saveAndExitButton.configure(state = "disabled")
         else:
@@ -38,9 +38,17 @@ class SettingsTab(ctk.CTkFrame):
             self.saveAndExitButton.configure(state = "normal")
 
     def quitGame(self, menu):
-        response = CTkMessagebox(title = "Exit", message = "Are you sure you want to exit?", icon = "question", option_1 = "Yes", option_2 = "No")
+
+        if not self.canSave:
+            response = CTkMessagebox(title = "Exit", message = "Are you sure you want to exit?", icon = "question", option_1 = "Yes", option_2 = "No")
+        else:
+            response = CTkMessagebox(title = "Exit", message = "Would you like to save before quitting?", icon = "question", option_1 = "Yes", option_2 = "No")
 
         if response.get() == "Yes":
+
+            if self.canSave:
+                self.save(exit_ = False)
+
             if menu:
                 from startMenu import StartMenu
 
@@ -58,3 +66,4 @@ class SettingsTab(ctk.CTkFrame):
         else:
             self.saveButton.configure(state = "disabled")
             self.saveAndExitButton.configure(state = "disabled")
+            self.canSave = False

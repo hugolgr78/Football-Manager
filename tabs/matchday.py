@@ -1720,6 +1720,7 @@ class MatchDay(ctk.CTkFrame):
                 teams.append(frame.matchInstance.awayTeam)
 
         check_player_games_happy(teams, currDate)
+        SavedLineups.delete_current_lineup()
 
         self.pack_forget()
         self.update_idletasks()

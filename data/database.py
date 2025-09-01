@@ -138,6 +138,7 @@ class DatabaseManager:
         if not hasattr(session, "_real_commit"):
             session._real_commit = session.commit
             session.commit = lambda: _wrapped_commit(session, self)
+
         return session
 
     def has_unsaved_changes(self):
@@ -3257,6 +3258,7 @@ class SavedLineups(Base):
     lineup_name = Column(String(128), nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))
     position = Column(String(128), nullable = False)
+    current_lineup = Column(Boolean, default = False)
 
     @classmethod
     def add_lineup(cls, lineup_name, lineup):
@@ -3278,6 +3280,57 @@ class SavedLineups(Base):
             session.close()
 
     @classmethod
+    def add_current_lineup(cls, lineup):
+        session = DatabaseManager().get_session()
+        try:
+            for position, player_id in lineup.items():
+                lineup_entry = SavedLineups(
+                    lineup_name = str(uuid.uuid4()),
+                    player_id = player_id,
+                    position = position,
+                    current_lineup = True
+                )
+                session.add(lineup_entry)
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def has_current_lineup(cls):
+        session = DatabaseManager().get_session()
+        try:
+            lineup = session.query(SavedLineups).filter(SavedLineups.current_lineup == True).first()
+            return lineup is not None
+        finally:
+            session.close()
+        
+    @classmethod
+    def get_current_lineup(cls):
+        session = DatabaseManager().get_session()
+        try:
+            lineup_entries = session.query(SavedLineups).filter(SavedLineups.current_lineup == True).all()
+            lineup = {entry.position: Players.get_player_by_id(entry.player_id) for entry in lineup_entries}
+            return lineup
+        finally:
+            session.close()
+
+    @classmethod
+    def delete_current_lineup(cls):
+        session = DatabaseManager().get_session()
+        try:
+            session.query(SavedLineups).filter(SavedLineups.current_lineup.is_(True)).delete()
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def get_lineup_by_name(cls, name):
         session = DatabaseManager().get_session()
         try:
@@ -3290,7 +3343,14 @@ class SavedLineups(Base):
     def get_all_lineup_names(cls):
         session = DatabaseManager().get_session()
         try:
-            lineups = session.query(SavedLineups.lineup_name).distinct().all()
+            # Query only lineup_name and exclude any entries marked as current_lineup.
+            # Some DB rows may have current_lineup NULL, treat that as not-current.
+            lineups = (
+                session.query(SavedLineups.lineup_name)
+                .filter(or_(SavedLineups.current_lineup.is_(False), SavedLineups.current_lineup.is_(None)))
+                .distinct()
+                .all()
+            )
             return [l[0] for l in lineups]
         finally:
             session.close()

@@ -172,6 +172,10 @@ class MainMenu(ctk.CTkFrame):
         Players.update_sharpness_and_fitness(timeInBetween)
         update_ages(self.currDate, stopDate)
 
+        if self.tabs[4]:
+            SavedLineups.delete_current_lineup()
+            self.tabs[4].saveLineup()
+
         # Run simulations concurrently so multiple matches can be processed at the same time.
         matches = []
         if matchesToSim:

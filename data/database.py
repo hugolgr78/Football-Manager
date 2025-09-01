@@ -2218,10 +2218,10 @@ class MatchEvents(Base):
                 MatchEvents.event_type == "injury"
             ).first()
 
-            subOnTime = int(sub_on_event.time) if sub_on_event else None
-            subOffTime = int(sub_off_event.time) if sub_off_event else None
-            redCardTime = int(red_card_event.time) if red_card_event else None
-            injuryTime = int(injury_event.time) if injury_event else None
+            subOnTime = parse_time(sub_on_event.time) if sub_on_event else None
+            subOffTime = parse_time(sub_off_event.time) if sub_off_event else None
+            redCardTime = parse_time(red_card_event.time) if red_card_event else None
+            injuryTime = parse_time(injury_event.time) if injury_event else None
 
             if not redCardTime and not injuryTime:
                 if subOnTime and subOffTime:
@@ -4652,6 +4652,8 @@ def getPredictedLineup(opponent_id, currDate):
         league = LeagueTeams.get_league_by_team(team.id)
         matches = Matches.get_team_last_5_matches(team.id, currDate)
 
+        print(f"Getting predicted lineup for {team.name}")
+
         if len(matches) == 0:
             bestLineup = None
             bestScore = 0
@@ -4717,10 +4719,12 @@ def getPredictedLineup(opponent_id, currDate):
                 most_started_id = max(player_starts.items(), key = lambda x: x[1])[0]
                 selected_player = next(p for p in position_players if p.id == most_started_id)
             else:
-                # Choose by effective ability first, then by morale as a secondary tiebreaker
+                # Choose by effective ability first
                 selected_player = max(position_players, key = lambda p: effective_ability(p))
 
             predicted_lineup[position] = selected_player.id
+
+        print(len(predicted_lineup))
 
         return predicted_lineup
 

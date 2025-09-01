@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from settings import *
 from CTkMessagebox import CTkMessagebox
-from data.database import DatabaseManager
+from data.database import DatabaseManager, SavedLineups
 
 class SettingsTab(ctk.CTkFrame):
     def __init__(self, parent):
@@ -96,6 +96,7 @@ class SettingsTab(ctk.CTkFrame):
 
     def save(self, exit_):
         if self.parent.tabs[4]:
+            SavedLineups.delete_current_lineup()
             self.parent.tabs[4].saveLineup()
 
         db = DatabaseManager()

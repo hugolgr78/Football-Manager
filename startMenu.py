@@ -396,8 +396,8 @@ class StartMenu(ctk.CTkFrame):
 
         Game.add_game(self.chosenManagerID, self.first_name,self.last_name)
 
-        self.startGame()
+        self.startGame(created = True)
 
-    def startGame(self):
+    def startGame(self, created = False):
         self.pack_forget()
-        MainMenu(self.parent, self.chosenManagerID)
+        MainMenu(self.parent, self.chosenManagerID, created)

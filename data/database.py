@@ -1,4 +1,4 @@
-import re, datetime
+import re, datetime, os, shutil, time, gc
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
@@ -18,6 +18,19 @@ progressLabel = None
 progressFrame = None
 percentageLabel = None
 
+def _wrapped_commit(session, db_manager):
+    if not db_manager.copy_active:
+        db_manager.start_copy()
+
+        # Rebind and migrate
+        old_objs = list(session)
+        session.close()
+        session = db_manager.get_session()
+        for obj in old_objs:
+            session.merge(obj)
+
+    return session._real_commit()
+
 class DatabaseManager:
     _instance = None
 
@@ -25,25 +38,93 @@ class DatabaseManager:
         if cls._instance is None:
             cls._instance = super(DatabaseManager, cls).__new__(cls)
             cls._instance.database_name = None
+            cls._instance.engine = None
+            cls._instance.session_factory = None
             cls._instance.scoped_session = None
+            cls._instance.original_path = None
+            cls._instance.copy_path = None
+            cls._instance.copy_active = False
+
+            # game db paths
+            cls._instance.game_original = "data/games.db"
+            cls._instance.game_copy = "data/games_copy.db"
         return cls._instance
 
     def set_database(self, database_name, create_tables = False):
-
         self.database_name = database_name
-        DATABASE_URL = f"sqlite:///data/{database_name}.db"
-        engine = create_engine(DATABASE_URL, connect_args = {"check_same_thread": False})
-        session_factory = sessionmaker(autocommit = False, autoflush = False, bind = engine)
-        self.scoped_session = scoped_session(session_factory)  # One session per thread
+        self.original_path = f"data/{database_name}.db"
+        self.copy_path = f"data/{database_name}_copy.db"
+        self._connect(self.original_path, create_tables)
+
+    def _connect(self, db_path, create_tables = False):
+        DATABASE_URL = f"sqlite:///{db_path}"
+        self.engine = create_engine(DATABASE_URL, connect_args = {"check_same_thread": False})
+        self.session_factory = sessionmaker(autocommit = False, autoflush = False, bind = self.engine)
+        self.scoped_session = scoped_session(self.session_factory)
 
         if create_tables:
-            Base.metadata.create_all(bind = engine)
+            Base.metadata.create_all(bind = self.engine)
+
+    def start_copy(self):
+        """Create working copies of BOTH player DB and games DB, then switch connections to player copy."""
+        shutil.copy(self.original_path, self.copy_path)
+        if os.path.exists(self.game_original):
+            shutil.copy(self.game_original, self.game_copy)
+        self._connect(self.copy_path)
+        self.copy_active = True
+
+    def commit_copy(self):
+        if self.copy_active:
+            if self.scoped_session:
+                self.scoped_session.remove()
+            if self.engine:
+                self.engine.dispose()
+
+            gc.collect()  # force cleanup of lingering connections
+
+            def _safe_replace(src, dst):
+                attempts = 10
+                for i in range(attempts):
+                    try:
+                        os.replace(src, dst)
+                        return True
+                    except PermissionError:
+                        time.sleep(0.1)
+                # fallback
+                shutil.copy2(src, dst)
+                os.remove(src)
+                return True
+
+            _safe_replace(self.copy_path, self.original_path)
+            if os.path.exists(self.game_copy):
+                _safe_replace(self.game_copy, self.game_original)
+
+            self._connect(self.original_path)
+            self.copy_active = False
+
+    def discard_copy(self):
+        """Delete copies of BOTH DBs and reconnect to originals."""
+        if self.copy_active:
+            if os.path.exists(self.copy_path):
+                os.remove(self.copy_path)
+            if os.path.exists(self.game_copy):
+                os.remove(self.game_copy)
+            self._connect(self.original_path)
+            self.copy_active = False
 
     def get_session(self):
-        """Return the shared session per thread."""
         if not self.scoped_session:
             raise ValueError("Database has not been set. Call set_database() first.")
-        return self.scoped_session()
+        session = self.scoped_session()
+
+        # Monkey-patch only once
+        if not hasattr(session, "_real_commit"):
+            session._real_commit = session.commit
+            session.commit = lambda: _wrapped_commit(session, self)
+        return session
+
+    def has_unsaved_changes(self):
+         return os.path.exists(self.copy_path) or os.path.exists(self.game_copy)
 
 class Managers(Base):
     __tablename__ = 'managers'

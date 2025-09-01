@@ -122,6 +122,9 @@ class MainMenu(ctk.CTkFrame):
 
         self.tabs[self.activeButton].place(x = 200, y = 0, anchor = "nw")
 
+        if self.activeButton == 9:
+            self.tabs[self.activeButton].checkSave()
+
     def addDate(self):
 
         if self.dayLabel:

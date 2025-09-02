@@ -1721,6 +1721,7 @@ class MatchDay(ctk.CTkFrame):
 
         check_player_games_happy(teams, currDate)
         SavedLineups.delete_current_lineup()
+        Players.update_talked_to()
 
         self.pack_forget()
         self.update_idletasks()

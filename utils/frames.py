@@ -648,7 +648,7 @@ class CalendarFrame(ctk.CTkFrame):
         self.dayEventsFrame.place(relx = 0.5, rely = 0.02, anchor = "n")
         self.date = date
 
-        self.morningEvent, self.afternoonEvent, self.eveningEvent = None, None, None
+        self.chosenEvents = [None, None, None]
 
         day, text, _, = format_datetime_split(date)
         self.gameTommorrow = Matches.check_if_game_date(self.teamID, date + timedelta(days = 1))
@@ -662,7 +662,7 @@ class CalendarFrame(ctk.CTkFrame):
     
         ctk.CTkLabel(morningFrame, text = "Morning", fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.15, anchor = "center")
 
-        self.morningButton = ctk.CTkButton(morningFrame, text = "+", command = lambda: self.addCalendarEvent("morning"), anchor = "center", border_color = "white", border_width = 2, height = 60, width = 240, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, font = (APP_FONT, 20))
+        self.morningButton = ctk.CTkButton(morningFrame, text = "+", command = lambda: self.addCalendarEvent(0), anchor = "center", border_color = "white", border_width = 2, height = 60, width = 240, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, font = (APP_FONT, 20))
         self.morningButton.place(relx = 0.5, rely = 0.6, anchor = "center")
 
         afternoonFrame = ctk.CTkFrame(self.dayEventsFrame, fg_color = GREY_BACKGROUND, width = 250, height = 100, corner_radius = 10)
@@ -670,7 +670,7 @@ class CalendarFrame(ctk.CTkFrame):
 
         ctk.CTkLabel(afternoonFrame, text = "Afternoon", fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.15, anchor = "center")
 
-        self.afternoonButton = ctk.CTkButton(afternoonFrame, text = "+", command = lambda: self.addCalendarEvent("afternoon"), anchor = "center", border_color = "white", border_width = 2, height = 60, width = 240, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, font = (APP_FONT, 20))
+        self.afternoonButton = ctk.CTkButton(afternoonFrame, text = "+", command = lambda: self.addCalendarEvent(1), anchor = "center", border_color = "white", border_width = 2, height = 60, width = 240, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, font = (APP_FONT, 20))
         self.afternoonButton.place(relx = 0.5, rely = 0.6, anchor = "center")
 
         eveningFrame = ctk.CTkFrame(self.dayEventsFrame, fg_color = GREY_BACKGROUND, width = 250, height = 100, corner_radius = 10)
@@ -678,8 +678,10 @@ class CalendarFrame(ctk.CTkFrame):
 
         ctk.CTkLabel(eveningFrame, text = "Evening", fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.15, anchor = "center")
 
-        self.eveningButton = ctk.CTkButton(eveningFrame, text = "+", command = lambda: self.addCalendarEvent("evening"), anchor = "center", border_color = "white", border_width = 2, height = 60, width = 240, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, font = (APP_FONT, 20))
+        self.eveningButton = ctk.CTkButton(eveningFrame, text = "+", command = lambda: self.addCalendarEvent(2), anchor = "center", border_color = "white", border_width = 2, height = 60, width = 240, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, font = (APP_FONT, 20))
         self.eveningButton.place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        self.eventButtons = [self.morningButton, self.afternoonButton, self.eveningButton]
 
         okButton = ctk.CTkButton(self.dayEventsFrame, text = "OK", command = lambda: self.confirmEvents(), anchor = "center", height = 30, width = 240, fg_color = APP_BLUE, hover_color = APP_BLUE, font = (APP_FONT, 15))
         okButton.place(relx = 0.5, rely = 0.98, anchor = "s")
@@ -702,23 +704,37 @@ class CalendarFrame(ctk.CTkFrame):
         closeButton = ctk.CTkButton(self.eventsChooseFrame, text = "X", command = lambda: self.closeEventsChooseFrame(), fg_color = CLOSE_RED, hover_color = CLOSE_RED, font = (APP_FONT, 12), width = 25, height = 25, corner_radius = 5)
         closeButton.place(relx = 0.95, rely = 0.08, anchor = "center")
 
-        gap = 0.14
-        buttonHeight = 35
+        gap = 0.12
+        buttonHeight = 30
         for i, eventType in enumerate(MAX_EVENTS.keys()):
-            button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS[eventType], hover_color = EVENT_COLOURS[eventType], width = 250, height = buttonHeight, corner_radius = 5, text = eventType, font = (APP_FONT, 15), anchor = "w")
-            button.place(relx = 0.02, rely = 0.22 + (i * gap), anchor = "w")
+            button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS[eventType], hover_color = EVENT_COLOURS[eventType], width = 250, height = buttonHeight, corner_radius = 5, text = eventType, font = (APP_FONT, 15), anchor = "w", command = lambda e = eventType: self.closeEventsChooseFrame(e, timeOfDay))
+            button.place(relx = 0.02, rely = 0.2 + (i * gap), anchor = "w")
 
         if self.gameTommorrow or self.gameYesterday:
             if self.gameTommorrow:
-                button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS["Match Preparation"], hover_color = EVENT_COLOURS["Match Preparation"], width = 250, height = buttonHeight, corner_radius = 5, text = "Match Preparation", font = (APP_FONT, 15), anchor = "w")
+                button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS["Match Preparation"], hover_color = EVENT_COLOURS["Match Preparation"], width = 250, height = buttonHeight, corner_radius = 5, text = "Match Preparation", font = (APP_FONT, 15), anchor = "w", command = lambda: self.closeEventsChooseFrame("Match Preparation", timeOfDay))
             elif self.gameYesterday:
-                button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS["Match Review"], hover_color = EVENT_COLOURS["Match Review"], width = 250, height = buttonHeight, corner_radius = 5, text = "Match Review", font = (APP_FONT, 15), anchor = "w")
-            
-            button.place(relx = 0.02, rely = 0.22 + (len(MAX_EVENTS) * gap), anchor = "w")
+                button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS["Match Review"], hover_color = EVENT_COLOURS["Match Review"], width = 250, height = buttonHeight, corner_radius = 5, text = "Match Review", font = (APP_FONT, 15), anchor = "w", command = lambda: self.closeEventsChooseFrame("Match Review", timeOfDay))
+
+            button.place(relx = 0.02, rely = 0.2 + (len(MAX_EVENTS) * gap), anchor = "w")
+
+            self.addRestButton(len(MAX_EVENTS) + 1, gap, buttonHeight, timeOfDay)
+        else:
+            self.addRestButton(len(MAX_EVENTS), gap, buttonHeight, timeOfDay)
+
+    def addRestButton(self, lenEvents, gap, buttonHeight, timeOfDay):
+        button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS["Rest"], hover_color = EVENT_COLOURS["Rest"], width = 250, height = buttonHeight, corner_radius = 5, text = "Rest", font = (APP_FONT, 15), anchor = "w", command = lambda: self.closeEventsChooseFrame("Rest", timeOfDay))
+        button.place(relx = 0.02, rely = 0.2 + (lenEvents * gap), anchor = "w")
 
     def closeEventsChooseFrame(self, event = None, timeOfDay = None):
         self.eventsChooseFrame.place_forget()
         self.choosingEvent = False
+
+        if event:
+            button = self.eventButtons[timeOfDay]
+            self.chosenEvents[timeOfDay] = event
+
+            button.configure(text = event, fg_color = EVENT_COLOURS[event], hover_color = EVENT_COLOURS[event], border_width = 0, font = (APP_FONT_BOLD, 20))
 
 class MatchdayFrame(ctk.CTkFrame):
     def __init__(self, parent, matchday, matchdayNum, currentMatchday, parentFrame, parentTab, width, heigth, fgColor, relx, rely, anchor):

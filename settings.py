@@ -504,7 +504,8 @@ EVENT_COLOURS = {
     "Team Building": "#FFD700",    # gold
     "Recovery": "#1E90FF",         # dodger blue
     "Match Preparation": "#FF8C00", # dark orange
-    "Match Review": "#FF69B4"      # hot pink
+    "Match Review": "#FF69B4",     # hot pink
+    "Rest": "#B0C4DE"
 }
 
 from data.database import StatsManager

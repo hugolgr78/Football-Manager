@@ -732,9 +732,22 @@ class CalendarFrame(ctk.CTkFrame):
 
         if event:
             button = self.eventButtons[timeOfDay]
-            self.chosenEvents[timeOfDay] = event
+            self.chosenEvents[timeOfDay] = event if event != "Rest" else None
 
             button.configure(text = event, fg_color = EVENT_COLOURS[event], hover_color = EVENT_COLOURS[event], border_width = 0, font = (APP_FONT_BOLD, 20))
+
+    def confirmEvents(self):
+        for i, event in enumerate(self.chosenEvents):
+            if event is None:
+                button = self.eventButtons[i]
+                button.configure(text = "Rest", fg_color = EVENT_COLOURS["Rest"], hover_color = EVENT_COLOURS["Rest"], border_width = 0, font = (APP_FONT, 20))
+                continue
+
+            startHour, endHour = EVENT_TIMES[i]
+            startDate = self.date.replace(hour = startHour, minute = 0, second = 0, microsecond = 0)
+            endDate = self.date.replace(hour = endHour, minute = 0, second = 0, microsecond = 0)
+
+            CalendarEvents.add_event(event, startDate, endDate)
 
 class MatchdayFrame(ctk.CTkFrame):
     def __init__(self, parent, matchday, matchdayNum, currentMatchday, parentFrame, parentTab, width, heigth, fgColor, relx, rely, anchor):

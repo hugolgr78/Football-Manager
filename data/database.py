@@ -3401,12 +3401,24 @@ class CalendarEvents(Base):
     def add_event(cls, event_type, start_date, end_date):
         session = DatabaseManager().get_session()
         try:
-            event = CalendarEvents(
-                event_type = event_type,
+            # Check if an event with the same start & end exists
+            existing_event = session.query(CalendarEvents).filter_by(
                 start_date = start_date,
                 end_date = end_date
-            )
-            session.add(event)
+            ).first()
+
+            if existing_event:
+                # Update the event type
+                existing_event.event_type = event_type
+            else:
+                # Otherwise create a new one
+                event = CalendarEvents(
+                    event_type = event_type,
+                    start_date = start_date,
+                    end_date = end_date
+                )
+                session.add(event)
+
             session.commit()
         except Exception as e:
             session.rollback()

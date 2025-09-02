@@ -1469,6 +1469,18 @@ class Matches(Base):
         finally:
             session.close()
 
+    @classmethod
+    def check_if_game_date(cls, team_id, game_date):
+        session = DatabaseManager().get_session()
+        try:
+            match = session.query(Matches).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                func.date(Matches.date) == game_date.date()
+            ).order_by(Matches.date.asc()).first()
+            return match is not None
+        finally:
+            session.close()
+
 class TeamLineup(Base):
     __tablename__ = 'team_lineup'
     

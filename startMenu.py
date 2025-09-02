@@ -25,6 +25,7 @@ class StartMenu(ctk.CTkFrame):
         self.selectedTeam = None
         self.last_selected_team = None
         self.chosenManager = None
+        self.main = None
 
         self.createFrame = None
         self.chooseTeamFrame = None
@@ -396,8 +397,8 @@ class StartMenu(ctk.CTkFrame):
 
         Game.add_game(self.chosenManagerID, self.first_name,self.last_name)
 
-        self.startGame()
+        self.startGame(created = True)
 
-    def startGame(self):
+    def startGame(self, created = False):
         self.pack_forget()
-        MainMenu(self.parent, self.chosenManagerID)
+        self.main = MainMenu(self.parent, self.chosenManagerID, created)

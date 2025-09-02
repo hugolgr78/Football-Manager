@@ -287,6 +287,7 @@ class Squad(ctk.CTkFrame):
             moraleChange = random.randint(3, 8)
 
         Players.update_morale(player.id, moraleChange)
+        Players.update_talked_to(player.id)
         
         for frame in self.playersFrame.winfo_children():
             if frame.player.id == player.id:
@@ -298,7 +299,7 @@ class Squad(ctk.CTkFrame):
         self.talkFrame.destroy()
 
         for frame in self.playersFrame.winfo_children():
-            if frame.player.id not in self.talkedTo:
+            if frame.player.id not in self.talkedTo and not frame.player.talked_to:
                 frame.enableTalkButton()
 
     def changeStat(self, value):

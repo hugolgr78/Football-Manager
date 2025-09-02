@@ -3,35 +3,51 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from settings import *
-import uuid, datetime
+import uuid, datetime, os
 
 Base = declarative_base()
 
 class GamesDatabaseManager:
-    """Singleton manager for this module's local games database."""
+    """Singleton manager for the local games database."""
     _instance = None
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(GamesDatabaseManager, cls).__new__(cls)
             cls._instance.scoped_session = None
+            cls._instance.engine = None
+            cls._instance.original_path = "data/games.db"
+            cls._instance.copy_path = "data/games_copy.db"
         return cls._instance
 
-    def set_database(self,  create_tables = False):
+    def set_database(self, create_tables = False):
+        db_path = self.copy_path if os.path.exists(self.copy_path) else self.original_path
+        self._connect(db_path, create_tables)
 
-        DATABASE_URL = "sqlite:///data/games.db" 
-        engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-        session_factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    def _connect(self, db_path, create_tables = False):
+        DATABASE_URL = f"sqlite:///{db_path}"
+        self.engine = create_engine(DATABASE_URL, connect_args = {"check_same_thread": False})
+        session_factory = sessionmaker(autocommit = False, autoflush = False, bind = self.engine)
         self.scoped_session = scoped_session(session_factory)
 
         if create_tables:
-            Base.metadata.create_all(bind = engine)
+            Base.metadata.create_all(bind = self.engine)
 
     def get_session(self):
         if not self.scoped_session:
             self.set_database()
-        return self.scoped_session()
+        else:
+            # Check if a copy has appeared since last connection
+            current_db = str(self.engine.url).replace("sqlite:///", "")
+            if os.path.exists(self.copy_path) and current_db != self.copy_path:
+                # Switch to copy
+                self._connect(self.copy_path)
+            elif not os.path.exists(self.copy_path) and current_db != self.original_path:
+                # Copy was discarded → switch back to original
+                self._connect(self.original_path)
 
+        return self.scoped_session()
+    
 class Game(Base):
     __tablename__ = "games"
 

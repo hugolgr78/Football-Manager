@@ -497,6 +497,16 @@ MAX_EVENTS = {
     "Recovery": 2
 }
 
+EVENT_COLOURS = {
+    "Light Training": "#90EE90",   # light green
+    "Medium Training": "#32CD32",  # lime green
+    "Intense Training": "#006400", # dark green
+    "Team Building": "#FFD700",    # gold
+    "Recovery": "#1E90FF",         # dodger blue
+    "Match Preparation": "#FF8C00", # dark orange
+    "Match Review": "#FF69B4"      # hot pink
+}
+
 from data.database import StatsManager
 
 STAT_FUNCTIONS = {

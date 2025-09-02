@@ -4730,25 +4730,25 @@ def getPredictedLineup(opponent_id, currDate):
             youth = getYouthPlayer(team.id, position, league.league_id, predicted_lineup.values())
             if youth:
                 predicted_lineup[position] = youth
-
-        # Count starts in this position
-        player_starts = defaultdict(int)
-        for match in matches:
-            lineup = TeamLineup.get_lineup_by_match_and_team(match.id, team.id)
-            if lineup:
-                for entry in lineup:
-                    if entry.start_position == position and entry.player_id in [p.id for p in position_players]:
-                        player_starts[entry.player_id] += 1
-
-        # Select most started player
-        if player_starts:
-            most_started_id = max(player_starts.items(), key = lambda x: x[1])[0]
-            selected_player = next(p for p in position_players if p.id == most_started_id)
         else:
-            # Choose by effective ability first
-            selected_player = max(position_players, key = lambda p: effective_ability(p))
+            # Count starts in this position
+            player_starts = defaultdict(int)
+            for match in matches:
+                lineup = TeamLineup.get_lineup_by_match_and_team(match.id, team.id)
+                if lineup:
+                    for entry in lineup:
+                        if entry.start_position == position and entry.player_id in [p.id for p in position_players]:
+                            player_starts[entry.player_id] += 1
 
-        predicted_lineup[position] = selected_player.id
+            # Select most started player
+            if player_starts:
+                most_started_id = max(player_starts.items(), key = lambda x: x[1])[0]
+                selected_player = next(p for p in position_players if p.id == most_started_id)
+            else:
+                # Choose by effective ability first
+                selected_player = max(position_players, key = lambda p: effective_ability(p))
+
+            predicted_lineup[position] = selected_player.id
 
     session.close()
 
@@ -4841,6 +4841,7 @@ def score_formation(sortedPlayers, positions, teamID, compID):
 
             lineup[pos] = youthID
             used.add(youthID)
+            chosen = Players.get_player_by_id(youthID)
         else:
             # Find candidates that are "specialists" for this position, given the rest of the lineup
             specialists = []

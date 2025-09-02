@@ -5,6 +5,7 @@ from data.gamesDatabase import *
 from PIL import Image
 from utils.util_functions import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import traceback
 
 from tabs.hub import Hub
 from tabs.inbox import Inbox
@@ -185,6 +186,7 @@ class MainMenu(ctk.CTkFrame):
                     match = Match(game, auto = True)  # init only
                     matches.append(match)
                 except Exception as e:
+                    traceback.print_exc()
                     print(e)
 
             # Phase 2: run startGame in parallel with ThreadPoolExecutor

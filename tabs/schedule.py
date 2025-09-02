@@ -34,7 +34,7 @@ class Schedule(ctk.CTkFrame):
         self.matchInfoFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 280, height = 560, corner_radius = 15)
         self.matchInfoFrame.place(relx = 0.98, rely = 0.15, anchor = "ne")
 
-        self.calendarFrame = CalendarFrame(self, self.matches, self, self, self.matchInfoFrame, self.team.id)
+        self.calendarFrame = CalendarFrame(self, self.matches, self, self, self.matchInfoFrame, self.team.id, managingTeam = True)
 
         self.switchButton = ctk.CTkButton(self, text = "Calendar", fg_color = GREY_BACKGROUND, command = self.switchFrames, width = 280, height = 15)
         self.switchButton.place(relx = 0.98, rely = 0.99, anchor = "se")

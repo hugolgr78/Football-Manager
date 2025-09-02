@@ -294,7 +294,7 @@ class MatchFrame(ctk.CTkFrame):
             ctk.CTkLabel(self.lineupFrame, text = f"{player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 3, sticky = "w")
 
 class CalendarFrame(ctk.CTkFrame):
-    def __init__(self, parent, matches, parentFrame, parentTab, matchInfoFrame, teamID):
+    def __init__(self, parent, matches, parentFrame, parentTab, matchInfoFrame, teamID, managingTeam = False):
         super().__init__(parentFrame, fg_color = TKINTER_BACKGROUND, width = 670, height = 590)
 
         self.matches = matches
@@ -302,6 +302,7 @@ class CalendarFrame(ctk.CTkFrame):
         self.parent = parent
         self.matchInfoFrame = matchInfoFrame
         self.teamID = teamID
+        self.managingTeam = managingTeam
 
         self.months = ["August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"]
         self.calendarFrames = [None] * len(self.months)
@@ -330,6 +331,8 @@ class CalendarFrame(ctk.CTkFrame):
         self.daysLabelFrame.grid_propagate(False)
 
         self.daysLabelFrame.grid_columnconfigure((0, 1, 2, 3, 4, 5, 6), weight = 1)
+
+        self.dayEventsFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 545, corner_radius = 10)
 
         days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         for day in days:
@@ -374,10 +377,10 @@ class CalendarFrame(ctk.CTkFrame):
                 if (row == 0 and col < start_weekday) or day_num > num_days:
                     continue
 
-                date = datetime.datetime(year, month_index, day_num).date()
+                date = datetime.datetime(year, month_index, day_num)
                 today = self.currDate.date()
 
-                if today == date:
+                if today == date.date():
                     border_color = APP_BLUE
                 else:
                     border_color = "white"
@@ -426,6 +429,12 @@ class CalendarFrame(ctk.CTkFrame):
                     cell.bind("<Button-1>", lambda event, m = matchObj: self.displayMatchInfo(m))
                     cell.bind("<Enter>", lambda event, c = cell: self.onHoverCell(c))
                     cell.bind("<Leave>", lambda event, c = cell: self.onLeaveCell(c))
+                elif self.managingTeam:
+                    # only show if after today and never after 2 weeks
+                    if date.date() > today and date.date() < today + timedelta(weeks = 2):
+                        cell.bind("<Enter>", lambda event, c = cell: self.onHoverCell(c))
+                        cell.bind("<Leave>", lambda event, c = cell: self.onLeaveCell(c))
+                        cell.bind("<Button-1>", lambda event, d = date: self.setCalendarEvents(d))
 
                 day_num += 1
 
@@ -450,10 +459,13 @@ class CalendarFrame(ctk.CTkFrame):
 
     def displayMatchInfo(self, match):
 
-        if hasattr(self, "match"):
-            if self.match.id == match.id:
+        if hasattr(self, "activeMatch"):
+            if self.activeMatch == match.id:
                 return
+            
+        self.dayEventsFrame.place_forget()
 
+        self.activeMatch = match.id
         self.match = match
         self.homeTeam = Teams.get_team_by_id(match.home_id)
         self.awayTeam = Teams.get_team_by_id(match.away_id)
@@ -608,6 +620,28 @@ class CalendarFrame(ctk.CTkFrame):
 
             ctk.CTkLabel(self.lineupFrame, text = rating, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 2, sticky = "w", padx = (10, 5))
             ctk.CTkLabel(self.lineupFrame, text = f"{player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 3, sticky = "w")
+
+    def setCalendarEvents(self, date):
+        
+        if hasattr(self, "date") and self.date == date:
+            return
+
+        if hasattr(self, "match"):
+            self.activeMatch = None
+
+        for widget in self.dayEventsFrame.winfo_children():
+            widget.destroy()
+
+        for widget in self.matchInfoFrame.winfo_children():
+            widget.place_forget()
+
+        self.dayEventsFrame.place(relx = 0.5, rely = 0.02, anchor = "n")
+        self.date = date
+
+        day, text, _, = format_datetime_split(date)
+
+        ctk.CTkLabel(self.matchInfoFrame, text = day, fg_color = DARK_GREY, font = (APP_FONT_BOLD, 20)).place(relx = 0.5, rely = 0.05, anchor = "center")
+        ctk.CTkLabel(self.matchInfoFrame, text = text, fg_color = DARK_GREY, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.1, anchor = "center")
 
 class MatchdayFrame(ctk.CTkFrame):
     def __init__(self, parent, matchday, matchdayNum, currentMatchday, parentFrame, parentTab, width, heigth, fgColor, relx, rely, anchor):

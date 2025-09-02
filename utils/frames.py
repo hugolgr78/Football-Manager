@@ -759,6 +759,9 @@ class PlayerFrame(ctk.CTkFrame):
             self.talkButton.place(relx = 0.93, rely = 0.5, anchor = "center")
             self.talkButton.bind("<Enter>", lambda event: self.onFrameHover())
 
+            if self.player.talked_to:
+                self.talkButton.configure(state = "disabled")
+
     def onFrameHover(self):
         self.configure(fg_color = DARK_GREY)
         self.playerNumber.configure(fg_color = DARK_GREY)

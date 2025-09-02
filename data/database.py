@@ -477,6 +477,7 @@ class Players(Base):
     fitness = Column(Integer, nullable = False, default = 100)
     sharpness = Column(Integer, nullable = False, default = 50)
     player_role = Column(Enum("Star Player", "Backup", "Rotation", "First Team", "Youth Team"), nullable = False)
+    talked_to = Column(Boolean, default = False)
 
     @classmethod
     def add_player_entry(cls, data):
@@ -1104,6 +1105,26 @@ class Players(Base):
             raise e
         finally:
             session.close()
+    
+    @classmethod
+    def update_talked_to(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            player = session.query(Players).filter(Players.id == player_id).first()
+            if player:
+                player.talked_to = True
+                session.commit()
+        finally:
+            session.close()
+
+    @classmethod
+    def reset_talked_to(cls):
+        session = DatabaseManager().get_session()
+        try:
+            session.query(Players).update({Players.talked_to: False})
+            session.commit()
+        finally:
+            session.close()
 
 class Matches(Base):
     __tablename__ = 'matches'
@@ -1386,7 +1407,7 @@ class Matches(Base):
             matches = (
                 session.query(Matches)
                 .join(TeamLineup, TeamLineup.match_id == Matches.id)
-                .filter(TeamLineup.player_id == player_id)
+                .filter(TeamLineup.player_id == player_id, TeamLineup.reason.is_(None))
                 .distinct()
                 .all()
             )

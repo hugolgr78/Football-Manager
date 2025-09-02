@@ -3,11 +3,9 @@ from ctypes import windll
 from settings import *
 from startMenu import StartMenu
 from data.gamesDatabase import GamesDatabaseManager
-import shutil
-import os
-import glob
-import logging
-import sys
+from data.database import DatabaseManager
+import sys, signal, logging, os, glob, shutil
+from CTkMessagebox import CTkMessagebox
 
 # Enable debug mode if "debug" is passed as a command-line argument
 DEBUG_MODE = len(sys.argv) > 1 and sys.argv[1].lower() == "debug"
@@ -65,9 +63,67 @@ class FootballManager(ctk.CTk):
         self.geometry(str(APP_SIZE[0]) + "x" + str(APP_SIZE[1]))
         self.resizable(False, False)
 
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+        signal.signal(signal.SIGINT, self.on_close)
         self.loginMenu = StartMenu(self)
 
         self.mainloop()
 
+    def on_close(self, *args):
+        # List all files in the data folder ending with _copy.db
+        copy_files = [f for f in os.listdir("data") if f.endswith("_copy.db")]
+
+        # Step 1: Always ask if the user is sure they want to quit
+        response = CTkMessagebox(
+            title="Exit",
+            message="Are you sure you want to quit?",
+            icon="question",
+            option_1="Yes",
+            option_2="No",
+            button_color=(CLOSE_RED, APP_BLUE),
+            button_hover_color=(CLOSE_RED, APP_BLUE)
+        )
+        try:
+            if hasattr(response, "button_1"):
+                response.button_1.configure(hover_color=CLOSE_RED)
+            if hasattr(response, "button_2"):
+                response.button_2.configure(hover_color=APP_BLUE)
+        except Exception:
+            pass
+
+        if response.get() != "Yes":
+            return  # user cancelled quitting
+
+        # Step 2: If there are unsaved changes, ask if they want to save
+        if copy_files:
+            save_response = CTkMessagebox(
+                title="Save Changes",
+                message="You have unsaved changes. Would you like to save before quitting?",
+                icon="question",
+                option_1="Yes",
+                option_2="No",
+                button_color=(APP_BLUE, CLOSE_RED),
+                button_hover_color=(APP_BLUE, CLOSE_RED)
+            )
+            try:
+                if hasattr(save_response, "button_1"):
+                    save_response.button_1.configure(hover_color=APP_BLUE)
+                if hasattr(save_response, "button_2"):
+                    save_response.button_2.configure(hover_color=CLOSE_RED)
+            except Exception:
+                pass
+
+            db = DatabaseManager()
+            if save_response.get() == "Yes":
+                if self.loginMenu.main and self.loginMenu.main.tabs[4]:
+                    self.loginMenu.main.tabs[4].saveLineup()
+
+                db.commit_copy()
+            else:
+                db.discard_copy()
+
+        # Finally, quit the app
+        self.quit()
+        
 if __name__ == "__main__":
     FootballManager()

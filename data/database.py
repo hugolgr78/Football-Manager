@@ -1,4 +1,4 @@
-import re, datetime
+import re, datetime, os, shutil, time, gc
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
@@ -18,6 +18,19 @@ progressLabel = None
 progressFrame = None
 percentageLabel = None
 
+def _wrapped_commit(session, db_manager):
+    if not db_manager.copy_active:
+        db_manager.start_copy()
+
+        # Rebind and migrate
+        old_objs = list(session)
+        session.close()
+        session = db_manager.get_session()
+        for obj in old_objs:
+            session.merge(obj)
+
+    return session._real_commit()
+
 class DatabaseManager:
     _instance = None
 
@@ -25,25 +38,111 @@ class DatabaseManager:
         if cls._instance is None:
             cls._instance = super(DatabaseManager, cls).__new__(cls)
             cls._instance.database_name = None
+            cls._instance.engine = None
+            cls._instance.session_factory = None
             cls._instance.scoped_session = None
+            cls._instance.original_path = None
+            cls._instance.copy_path = None
+            cls._instance.copy_active = False
+
+            # game db paths
+            cls._instance.game_original = "data/games.db"
+            cls._instance.game_copy = "data/games_copy.db"
         return cls._instance
 
     def set_database(self, database_name, create_tables = False):
-
         self.database_name = database_name
-        DATABASE_URL = f"sqlite:///data/{database_name}.db"
-        engine = create_engine(DATABASE_URL, connect_args = {"check_same_thread": False})
-        session_factory = sessionmaker(autocommit = False, autoflush = False, bind = engine)
-        self.scoped_session = scoped_session(session_factory)  # One session per thread
+        self.original_path = f"data/{database_name}.db"
+        self.copy_path = f"data/{database_name}_copy.db"
+        self._connect(self.original_path, create_tables)
+
+    def _connect(self, db_path, create_tables = False):
+        DATABASE_URL = f"sqlite:///{db_path}"
+        self.engine = create_engine(DATABASE_URL, connect_args = {"check_same_thread": False})
+        self.session_factory = sessionmaker(autocommit = False, autoflush = False, bind = self.engine)
+        self.scoped_session = scoped_session(self.session_factory)
 
         if create_tables:
-            Base.metadata.create_all(bind = engine)
+            Base.metadata.create_all(bind = self.engine)
+
+    def start_copy(self):
+        """Create working copies of BOTH player DB and games DB, then switch connections to player copy."""
+        shutil.copy(self.original_path, self.copy_path)
+        if os.path.exists(self.game_original):
+            shutil.copy(self.game_original, self.game_copy)
+        self._connect(self.copy_path)
+        self.copy_active = True
+
+    def commit_copy(self):
+        if self.copy_active:
+            if self.scoped_session:
+                self.scoped_session.remove()
+            if self.engine:
+                self.engine.dispose()
+
+            gc.collect()  # force cleanup of lingering connections
+
+            def _safe_replace(src, dst):
+                attempts = 10
+                for i in range(attempts):
+                    try:
+                        os.replace(src, dst)
+                        return True
+                    except PermissionError:
+                        time.sleep(0.1)
+                # fallback
+                shutil.copy2(src, dst)
+                os.remove(src)
+                return True
+
+            _safe_replace(self.copy_path, self.original_path)
+            if os.path.exists(self.game_copy):
+                _safe_replace(self.game_copy, self.game_original)
+
+            self._connect(self.original_path)
+            self.copy_active = False
+
+    def discard_copy(self):
+        """Delete copies of BOTH DBs and reconnect to originals."""
+        if self.copy_active:
+            # Ensure sessions/engines are cleaned up
+            try:
+                if self.scoped_session:
+                    self.scoped_session.remove()
+            except Exception:
+                pass
+            try:
+                if self.engine:
+                    self.engine.dispose()
+            except Exception:
+                pass
+
+            # Try to delete copies, but don't crash if locked
+            for path in (self.copy_path, self.game_copy):
+                if os.path.exists(path):
+                    try:
+                        os.remove(path)
+                    except PermissionError as e:
+                        print(f"[DB DEBUG] Could not delete {path}: {e}")
+
+            # Reconnect to the original
+            self._connect(self.original_path)
+            self.copy_active = False
 
     def get_session(self):
-        """Return the shared session per thread."""
         if not self.scoped_session:
             raise ValueError("Database has not been set. Call set_database() first.")
-        return self.scoped_session()
+        session = self.scoped_session()
+
+        # Monkey-patch only once
+        if not hasattr(session, "_real_commit"):
+            session._real_commit = session.commit
+            session.commit = lambda: _wrapped_commit(session, self)
+
+        return session
+
+    def has_unsaved_changes(self):
+         return os.path.exists(self.copy_path) or os.path.exists(self.game_copy)
 
 class Managers(Base):
     __tablename__ = 'managers'
@@ -378,6 +477,7 @@ class Players(Base):
     fitness = Column(Integer, nullable = False, default = 100)
     sharpness = Column(Integer, nullable = False, default = 50)
     player_role = Column(Enum("Star Player", "Backup", "Rotation", "First Team", "Youth Team"), nullable = False)
+    talked_to = Column(Boolean, default = False)
 
     @classmethod
     def add_player_entry(cls, data):
@@ -1005,6 +1105,26 @@ class Players(Base):
             raise e
         finally:
             session.close()
+    
+    @classmethod
+    def update_talked_to(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            player = session.query(Players).filter(Players.id == player_id).first()
+            if player:
+                player.talked_to = True
+                session.commit()
+        finally:
+            session.close()
+
+    @classmethod
+    def reset_talked_to(cls):
+        session = DatabaseManager().get_session()
+        try:
+            session.query(Players).update({Players.talked_to: False})
+            session.commit()
+        finally:
+            session.close()
 
 class Matches(Base):
     __tablename__ = 'matches'
@@ -1287,7 +1407,7 @@ class Matches(Base):
             matches = (
                 session.query(Matches)
                 .join(TeamLineup, TeamLineup.match_id == Matches.id)
-                .filter(TeamLineup.player_id == player_id)
+                .filter(TeamLineup.player_id == player_id, TeamLineup.reason.is_(None))
                 .distinct()
                 .all()
             )
@@ -1586,7 +1706,7 @@ class TeamLineup(Base):
             availability = session.query(TeamLineup).filter(
                 TeamLineup.player_id == player_id,
                 TeamLineup.match_id == match_id,
-                TeamLineup.reason == "benched"
+                TeamLineup.reason == "benched" or TeamLineup.reason == "not_in_squad"
             ).first()
             return availability is not None
         finally:
@@ -2119,10 +2239,10 @@ class MatchEvents(Base):
                 MatchEvents.event_type == "injury"
             ).first()
 
-            subOnTime = int(sub_on_event.time) if sub_on_event else None
-            subOffTime = int(sub_off_event.time) if sub_off_event else None
-            redCardTime = int(red_card_event.time) if red_card_event else None
-            injuryTime = int(injury_event.time) if injury_event else None
+            subOnTime = parse_time(sub_on_event.time) if sub_on_event else None
+            subOffTime = parse_time(sub_off_event.time) if sub_off_event else None
+            redCardTime = parse_time(red_card_event.time) if red_card_event else None
+            injuryTime = parse_time(injury_event.time) if injury_event else None
 
             if not redCardTime and not injuryTime:
                 if subOnTime and subOffTime:
@@ -3159,6 +3279,7 @@ class SavedLineups(Base):
     lineup_name = Column(String(128), nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))
     position = Column(String(128), nullable = False)
+    current_lineup = Column(Boolean, default = False)
 
     @classmethod
     def add_lineup(cls, lineup_name, lineup):
@@ -3180,6 +3301,57 @@ class SavedLineups(Base):
             session.close()
 
     @classmethod
+    def add_current_lineup(cls, lineup):
+        session = DatabaseManager().get_session()
+        try:
+            for position, player_id in lineup.items():
+                lineup_entry = SavedLineups(
+                    lineup_name = str(uuid.uuid4()),
+                    player_id = player_id,
+                    position = position,
+                    current_lineup = True
+                )
+                session.add(lineup_entry)
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def has_current_lineup(cls):
+        session = DatabaseManager().get_session()
+        try:
+            lineup = session.query(SavedLineups).filter(SavedLineups.current_lineup == True).first()
+            return lineup is not None
+        finally:
+            session.close()
+        
+    @classmethod
+    def get_current_lineup(cls):
+        session = DatabaseManager().get_session()
+        try:
+            lineup_entries = session.query(SavedLineups).filter(SavedLineups.current_lineup == True).all()
+            lineup = {entry.position: Players.get_player_by_id(entry.player_id) for entry in lineup_entries}
+            return lineup
+        finally:
+            session.close()
+
+    @classmethod
+    def delete_current_lineup(cls):
+        session = DatabaseManager().get_session()
+        try:
+            session.query(SavedLineups).filter(SavedLineups.current_lineup.is_(True)).delete()
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def get_lineup_by_name(cls, name):
         session = DatabaseManager().get_session()
         try:
@@ -3192,7 +3364,14 @@ class SavedLineups(Base):
     def get_all_lineup_names(cls):
         session = DatabaseManager().get_session()
         try:
-            lineups = session.query(SavedLineups.lineup_name).distinct().all()
+            # Query only lineup_name and exclude any entries marked as current_lineup.
+            # Some DB rows may have current_lineup NULL, treat that as not-current.
+            lineups = (
+                session.query(SavedLineups.lineup_name)
+                .filter(or_(SavedLineups.current_lineup.is_(False), SavedLineups.current_lineup.is_(None)))
+                .distinct()
+                .all()
+            )
             return [l[0] for l in lineups]
         finally:
             session.close()
@@ -4487,64 +4666,71 @@ def searchResults(search, limit = SEARCH_LIMIT):
     finally:
         session.close()
 
+def getDefaultLineup(team, league, opponent_id):
+    bestLineup = None
+    bestScore = 0
+
+    players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
+    sortedPlayers = sorted(players, key = lambda p: effective_ability(p), reverse = True)
+
+    for _, positions in FORMATIONS_POSITIONS.items():
+        _, _, lineup = score_formation(sortedPlayers, positions, opponent_id, league.league_id)
+        formationScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
+        if formationScore > bestScore:
+            bestScore = formationScore
+            bestLineup = lineup
+
+    return bestLineup
+
 def getPredictedLineup(opponent_id, currDate):
     session = DatabaseManager().get_session()
-    try:
-        team = Teams.get_team_by_id(opponent_id)
-        league = LeagueTeams.get_league_by_team(team.id)
-        matches = Matches.get_team_last_5_matches(team.id, currDate)
+    team = Teams.get_team_by_id(opponent_id)
+    league = LeagueTeams.get_league_by_team(team.id)
+    matches = Matches.get_team_last_5_matches(team.id, currDate)
 
-        if len(matches) == 0:
-            bestLineup = None
-            bestScore = 0
+    if len(matches) == 0:
+        bestLineup = getDefaultLineup(team, league, opponent_id)
+        return bestLineup
 
-            players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
-            sortedPlayers = sorted(players, key = lambda p: effective_ability(p), reverse = True)
+    # Step 1: Find the most used formation
+    formation_counts = defaultdict(int)
+    most_used_formation = None
+    for match in matches:
+        lineup = TeamLineup.get_lineup_by_match_and_team(match.id, team.id)
+        if lineup:
+            positions = [entry.start_position for entry in lineup if entry.start_position is not None]
+
+            if not positions or len(positions) < 11:
+                continue
+
+            formation = next(form for form, pos in FORMATIONS_POSITIONS.items() if set(pos) == set(positions))
+            formation_counts[formation] += 1
+
+    most_used_formation = max(formation_counts.items(), key = lambda x: x[1])[0] if formation_counts else None
+    if not most_used_formation:
+        bestLineup = getDefaultLineup(team, league, opponent_id)
+        return bestLineup
+
+    # Step 2: Get all available players (excluding banned/injured)
+    available_players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
     
-            for formation, positions in FORMATIONS_POSITIONS.items():
-                _, _, lineup = score_formation(sortedPlayers, positions, opponent_id, league.league_id)
-                formationScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
-                if formationScore > bestScore:
-                    bestScore = formationScore
-                    bestLineup = lineup
+    # Step 3: For each position in the formation, find most started player
+    predicted_lineup = {}
+    positions = FORMATIONS_POSITIONS[most_used_formation]
 
-            return bestLineup
+    for position in positions:
+        # Find players who can play in this position
+        position_players = []
+        for player in available_players:
+            if POSITION_CODES[position] in player.specific_positions.split(","):
+                position_players.append(player)
 
-        # Step 1: Find the most used formation
-        formation_counts = defaultdict(int)
-        for match in matches:
-            lineup = TeamLineup.get_lineup_by_match_and_team(match.id, team.id)
-            if lineup:
-                positions = [entry.start_position for entry in lineup if entry.start_position is not None]
-
-                if not positions:
-                    continue
-
-                formation = next(form for form, pos in FORMATIONS_POSITIONS.items() if set(pos) == set(positions))
-                formation_counts[formation] += 1
-
-        most_used_formation = max(formation_counts.items(), key = lambda x: x[1])[0] if formation_counts else None
-        if not most_used_formation:
-            return None
-
-        # Step 2: Get all available players (excluding banned/injured)
-        available_players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
-        
-        # Step 3: For each position in the formation, find most started player
-        predicted_lineup = {}
-        positions = FORMATIONS_POSITIONS[most_used_formation]
-
-        for position in positions:
-            # Find players who can play in this position
-            position_players = []
-            for player in available_players:
-                if POSITION_CODES[position] in player.specific_positions.split(","):
-                    position_players.append(player)
-
-            if not position_players:
-                print(f"Error predicting lineup for team {team.name}, position {position}, lineup {predicted_lineup}")
-                return
-
+        if not position_players:
+            # Get a youth player if no senior players are available
+            youth = getYouthPlayer(team.id, position, league.league_id, predicted_lineup.values())
+            if youth:
+                predicted_lineup[position] = youth
+        else:
             # Count starts in this position
             player_starts = defaultdict(int)
             for match in matches:
@@ -4559,15 +4745,14 @@ def getPredictedLineup(opponent_id, currDate):
                 most_started_id = max(player_starts.items(), key = lambda x: x[1])[0]
                 selected_player = next(p for p in position_players if p.id == most_started_id)
             else:
-                # Choose by effective ability first, then by morale as a secondary tiebreaker
+                # Choose by effective ability first
                 selected_player = max(position_players, key = lambda p: effective_ability(p))
 
             predicted_lineup[position] = selected_player.id
 
-        return predicted_lineup
+    session.close()
 
-    finally:
-        session.close()
+    return predicted_lineup
 
 def getProposedLineup(team_id, opponent_id, comp_id, currDate):
     predictedLineup = getPredictedLineup(opponent_id, currDate)
@@ -4633,34 +4818,10 @@ def score_formation(sortedPlayers, positions, teamID, compID):
     lineup = {}
     used = set()
 
-    # Pre-bucket players by role
-    role_to_players = {
-        "goalkeeper": [p for p in sortedPlayers if p.position == "goalkeeper"],
-        "defender":   [p for p in sortedPlayers if p.position == "defender"],
-        "midfielder": [p for p in sortedPlayers if p.position == "midfielder"],
-        "forward":    [p for p in sortedPlayers if p.position == "forward"],
-    }
-
-    # Map formation position names to a role
-    def get_role(pos):
-        if "Goalkeeper" in pos:
-            return "goalkeeper"
-        elif pos in DEFENSIVE_POSITIONS:
-            return "defender"
-        elif pos in MIDFIELD_POSITIONS:
-            return "midfielder"
-        elif pos in ATTACKING_POSITIONS:
-            return "forward"
-        return None
-
     # Count how many players can fill each slot
     position_candidates = {}
     for pos in positions:
-        role = get_role(pos)
-        if role is None:
-            position_candidates[pos] = []
-        else:
-            position_candidates[pos] = [p for p in role_to_players[role]]
+        position_candidates[pos] = [p for p in sortedPlayers if POSITION_CODES[pos] in p.specific_positions.split(",")]
 
     # Sort positions by "scarcity" (fewest candidates first)
     ordered_positions = sorted(positions, key = lambda pos: len(position_candidates[pos]))
@@ -4670,7 +4831,7 @@ def score_formation(sortedPlayers, positions, teamID, compID):
 
     # Assign players greedily starting with scarce positions
     for pos in ordered_positions:
-        candidates = [p for p in position_candidates[pos] if p.id not in used and POSITION_CODES[pos] in p.specific_positions.split(",")]
+        candidates = [p for p in position_candidates[pos] if p.id not in used]
         
         if not candidates:
             youthID = getYouthPlayer(teamID, pos, compID, lineup.values())
@@ -4680,6 +4841,7 @@ def score_formation(sortedPlayers, positions, teamID, compID):
 
             lineup[pos] = youthID
             used.add(youthID)
+            chosen = Players.get_player_by_id(youthID)
         else:
             # Find candidates that are "specialists" for this position, given the rest of the lineup
             specialists = []
@@ -4696,7 +4858,7 @@ def score_formation(sortedPlayers, positions, teamID, compID):
                 if not any(other_pos in [POSITION_CODES[x] for x in ordered_positions if x not in lineup] for other_pos in other_positions):
                     specialists.append(p)
 
-            # If there are specialists, pick the best one; otherwise, pick the best overall
+            # If there are specialists, pick the best one; otherwise, pick the best overall (already sorted)
             if specialists:
                 chosen = specialists[0]
             else:
@@ -4729,7 +4891,9 @@ def getYouthPlayer(teamID, position, compID, players):
     return available_youths[0].id if available_youths else None
 
 def effective_ability(p):
-    multiplier = 0.75 + (p.morale / 100.0) * 0.5
+    # weights: morale 20%, fitness 40%, sharpness 40%
+    weighted = (0.2 * p.morale + 0.4 * p.fitness + 0.4 * p.sharpness) / 100.0
+    multiplier = 0.75 + (weighted * 0.5)
     return p.current_ability * multiplier
 
 def getSubstitutes(teamID, lineup, compID):

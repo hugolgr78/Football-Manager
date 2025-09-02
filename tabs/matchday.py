@@ -1720,7 +1720,17 @@ class MatchDay(ctk.CTkFrame):
                 teams.append(frame.matchInstance.awayTeam)
 
         check_player_games_happy(teams, currDate)
+        SavedLineups.delete_current_lineup()
+        Players.reset_talked_to()
 
         self.pack_forget()
         self.update_idletasks()
+        
+        # Force a save of the game.
+        try:
+            db = DatabaseManager()
+            db.commit_copy()
+        except Exception as Ex:
+            print(f"Error occurred while saving game: {Ex}")
+
         self.parent.resetMenu()

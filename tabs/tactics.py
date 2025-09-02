@@ -99,6 +99,9 @@ class Tactics(ctk.CTkFrame):
             
     def activateProposed(self, lineup):
         self.lineupTab.proposedLineup(lineup = lineup)
+    
+    def saveLineup(self):
+        self.lineupTab.saveLineup(current = True)
 
 class Lineup(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
@@ -153,7 +156,12 @@ class Lineup(ctk.CTkFrame):
         self.substituteFrame.lift()
 
         self.createChoosePlayerFrame()
-        self.importLineup()
+
+        if SavedLineups.has_current_lineup():
+            current_lineup = SavedLineups.get_current_lineup()
+            self.importLineup(auto = current_lineup)
+        else:
+            self.importLineup()
 
     def createChoosePlayerFrame(self):
         self.choosePlayerFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 50, corner_radius = 0, border_color = APP_BLUE, border_width = 2)
@@ -558,7 +566,12 @@ class Lineup(ctk.CTkFrame):
 
         self.autoBox.set("Choose Lineup")
 
-    def saveLineup(self):
+    def saveLineup(self, current = False):
+
+        if current:
+            SavedLineups.add_current_lineup(self.selectedLineup)
+            return
+
         lineupName = self.saveBox.get()
         if lineupName:
 
@@ -574,7 +587,6 @@ class Lineup(ctk.CTkFrame):
             SavedLineups.add_lineup(lineupName, self.selectedLineup)
 
             self.settingsFrame.place_forget()
-            pass
 
     def loadLineup(self):
         lineupName = self.loadBox.get()

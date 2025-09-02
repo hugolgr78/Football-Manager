@@ -5,6 +5,7 @@ from data.gamesDatabase import *
 from PIL import Image
 from utils.util_functions import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import traceback
 
 from tabs.hub import Hub
 from tabs.inbox import Inbox
@@ -19,12 +20,17 @@ from tabs.settingsTab import SettingsTab
 from utils.match import Match
 
 class MainMenu(ctk.CTkFrame):
-    def __init__(self, parent, manager_id):
+    def __init__(self, parent, manager_id, created):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND)
         self.pack(fill = "both", expand = True)
 
         self.parent = parent
         self.manager_id = manager_id
+
+        if created:
+            db = DatabaseManager()
+            db.commit_copy()
+
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
 
         self.initUI()
@@ -122,6 +128,9 @@ class MainMenu(ctk.CTkFrame):
 
         self.tabs[self.activeButton].place(x = 200, y = 0, anchor = "nw")
 
+        if self.activeButton == 9:
+            self.tabs[self.activeButton].checkSave()
+
     def addDate(self):
 
         if self.dayLabel:
@@ -164,6 +173,10 @@ class MainMenu(ctk.CTkFrame):
         Players.update_sharpness_and_fitness(timeInBetween)
         update_ages(self.currDate, stopDate)
 
+        if self.tabs[4]:
+            SavedLineups.delete_current_lineup()
+            self.tabs[4].saveLineup()
+
         # Run simulations concurrently so multiple matches can be processed at the same time.
         matches = []
         if matchesToSim:
@@ -173,6 +186,7 @@ class MainMenu(ctk.CTkFrame):
                     match = Match(game, auto = True)  # init only
                     matches.append(match)
                 except Exception as e:
+                    traceback.print_exc()
                     print(e)
 
             # Phase 2: run startGame in parallel with ThreadPoolExecutor

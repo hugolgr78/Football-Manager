@@ -1,8 +1,7 @@
 import customtkinter as ctk
 from settings import *
 from CTkMessagebox import CTkMessagebox
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from data.database import DatabaseManager, SavedLineups
 
 class SettingsTab(ctk.CTkFrame):
     def __init__(self, parent):
@@ -12,23 +11,104 @@ class SettingsTab(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = "Settings", font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.04, anchor = "w")
 
-
+        ctk.CTkLabel(self, text = "Save", font = (APP_FONT, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.85, anchor = "w")
         ctk.CTkLabel(self, text = "Quit Game", font = (APP_FONT, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.945, anchor = "w")
 
-        self.mainMenuButton = ctk.CTkButton(self, text = "To Main menu", font = (APP_FONT, 20), height = 40, width = 150, fg_color = APP_BLUE, command = lambda: self.quit_game(menu = True))
+        self.saveButton = ctk.CTkButton(self, text = "Save", font = (APP_FONT, 20), height = 40, width = 150, fg_color = APP_BLUE, command = lambda: self.save(exit_ = False))
+        self.saveButton.place(relx = 0.18, rely = 0.85, anchor = "w")
+
+        self.saveAndExitButton = ctk.CTkButton(self, text = "Save and Exit", font = (APP_FONT, 20), height = 40, width = 150, fg_color = APP_BLUE, command = lambda: self.save(exit_ = True))
+        self.saveAndExitButton.place(relx = 0.35, rely = 0.85, anchor = "w")
+
+        self.mainMenuButton = ctk.CTkButton(self, text = "To Main menu", font = (APP_FONT, 20), height = 40, width = 150, fg_color = APP_BLUE, command = lambda: self.quitGame(menu = True))
         self.mainMenuButton.place(relx = 0.18, rely = 0.95, anchor = "w")
 
-        self.quitButton = ctk.CTkButton(self, text = "To Desktop", font = (APP_FONT, 20), height = 40, width = 150, fg_color = APP_BLUE, command = lambda: self.quit_game(menu = False))
+        self.quitButton = ctk.CTkButton(self, text = "To Desktop", font = (APP_FONT, 20), height = 40, width = 150, fg_color = APP_BLUE, command = lambda: self.quitGame(menu = False))
         self.quitButton.place(relx = 0.35, rely = 0.95, anchor = "w")
 
-    def quit_game(self, menu):
-        response = CTkMessagebox(title = "Exit", message = "Are you sure you want to exit?", icon = "question", option_1 = "Yes", option_2 = "No")
+    def checkSave(self):
+        db = DatabaseManager()
+        self.canSave = db.has_unsaved_changes()
+
+        if not self.canSave:
+            self.saveButton.configure(state = "disabled")
+            self.saveAndExitButton.configure(state = "disabled")
+        else:
+            self.saveButton.configure(state = "normal")
+            self.saveAndExitButton.configure(state = "normal")
+
+    def quitGame(self, menu):
+
+        if not self.canSave:
+            response = CTkMessagebox(
+                title="Exit",
+                message="Are you sure you want to exit?",
+                icon="question",
+                option_1="Yes",
+                option_2="No",
+                button_color=(CLOSE_RED, APP_BLUE),
+                button_hover_color=(CLOSE_RED, APP_BLUE)
+            )
+            try:
+                if hasattr(response, "button_1"):
+                    response.button_1.configure(hover_color=CLOSE_RED)
+                if hasattr(response, "button_2"):
+                    response.button_2.configure(hover_color=APP_BLUE)
+            except Exception:
+                pass
+        else:
+            response = CTkMessagebox(
+                title="Exit",
+                message="Would you like to save before quitting?",
+                icon="question",
+                option_1="Yes",
+                option_2="No",
+                button_color=(CLOSE_RED, APP_BLUE),
+                button_hover_color=(CLOSE_RED, APP_BLUE)
+            )
+            try:
+                if hasattr(response, "button_1"):
+                    response.button_1.configure(hover_color=CLOSE_RED)
+                if hasattr(response, "button_2"):
+                    response.button_2.configure(hover_color=APP_BLUE)
+            except Exception:
+                pass
 
         if response.get() == "Yes":
-            if menu:
-                from startMenu import StartMenu
 
-                self.loginMenu = StartMenu(self.parent.parent)
-                self.parent.destroy()
-            else:
-                self.parent.quit()
+            if self.canSave:
+                self.save(exit_ = False)
+
+            self.exit_(menu)
+        else:
+            if self.canSave:
+                self.rollBack()
+                self.exit_(menu)
+
+    def exit_(self, menu):
+        if menu:
+            from startMenu import StartMenu
+
+            self.loginMenu = StartMenu(self.parent.parent)
+            self.parent.destroy()
+        else:
+            self.parent.quit()
+
+    def save(self, exit_):
+        if self.parent.tabs[4]:
+            SavedLineups.delete_current_lineup()
+            self.parent.tabs[4].saveLineup()
+
+        db = DatabaseManager()
+        db.commit_copy()
+
+        if exit_:
+            self.parent.quit()
+        else:
+            self.saveButton.configure(state = "disabled")
+            self.saveAndExitButton.configure(state = "disabled")
+            self.canSave = False
+
+    def rollBack(self):
+        db = DatabaseManager()
+        db.discard_copy()

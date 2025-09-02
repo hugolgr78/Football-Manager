@@ -3376,6 +3376,79 @@ class SavedLineups(Base):
         finally:
             session.close()
 
+class CalendarEvents(Base):
+    __tablename__ = 'calendar_events'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    event_type = Column(Enum("Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match review"), nullable = False)
+    start_date = Column(DateTime, nullable = False)
+    end_date = Column(DateTime, nullable = False)
+    finished = Column(Boolean, default = False)
+
+    @classmethod
+    def add_event(cls, event_type, start_date, end_date):
+        session = DatabaseManager().get_session()
+        try:
+            event = CalendarEvents(
+                event_type = event_type,
+                start_date = start_date,
+                end_date = end_date
+            )
+            session.add(event)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def remove_event(cls, event_id):
+        session = DatabaseManager().get_session()
+        try:
+            session.query(CalendarEvents).filter(CalendarEvents.id == event_id).delete()
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_event_by_id(cls, event_id):
+        session = DatabaseManager().get_session()
+        try:
+            event = session.query(CalendarEvents).filter(CalendarEvents.id == event_id).first()
+            return event
+        finally:
+            session.close()
+
+    @classmethod
+    def get_events_dates(cls, start_date, end_date):
+        session = DatabaseManager().get_session()
+        try:
+            events = session.query(CalendarEvents).filter(
+                CalendarEvents.start_date < end_date,
+                CalendarEvents.end_date > start_date,
+                CalendarEvents.finished == False
+            ).all()
+            return events
+        finally:
+            session.close()
+
+    @classmethod
+    def update_event(cls, event_id):
+        session = DatabaseManager().get_session()
+        try:
+            event = session.query(CalendarEvents).filter(CalendarEvents.id == event_id).first()
+            event.finished = True
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
 class StatsManager:
     @staticmethod
     def get_goals_scored(leagueTeams, league_id):

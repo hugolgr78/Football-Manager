@@ -489,6 +489,14 @@ SHARPNESS_GAIN_PER_MINUTE = 0.2
 DAILY_SHARPNESS_DECAY = 0.04
 MIN_SHARPNESS = 10
 
+MAX_EVENTS = {
+    "Light Training": 3,
+    "Medium Training": 3,
+    "Intense Training": 3,
+    "Team Building": 2,
+    "Recovery": 2
+}
+
 from data.database import StatsManager
 
 STAT_FUNCTIONS = {

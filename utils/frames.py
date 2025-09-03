@@ -1,3 +1,4 @@
+from datetime import date
 import customtkinter as ctk
 from settings import *
 from data.database import *
@@ -434,6 +435,11 @@ class CalendarFrame(ctk.CTkFrame):
                 elif self.managingTeam:
                     # only show if after today and never after 2 weeks
                     if date.date() > today and date.date() < today + timedelta(weeks = 2):
+                        savedEvents = CalendarEvents.get_events_dates(date, date.replace(hour = 23))
+
+                        for i, event in enumerate(savedEvents):
+                            self.addSmallEventFrame(event.event_type, cell, date, i)
+
                         cell.bind("<Enter>", lambda event, c = cell: self.onHoverCell(c))
                         cell.bind("<Leave>", lambda event, c = cell: self.onLeaveCell(c))
                         cell.bind("<Button-1>", lambda event, d = date, c = cell: self.setCalendarEvents(d, c))
@@ -688,6 +694,21 @@ class CalendarFrame(ctk.CTkFrame):
 
         okButton = ctk.CTkButton(self.dayEventsFrame, text = "OK", command = lambda: self.confirmEvents(cell, date), anchor = "center", height = 30, width = 240, fg_color = APP_BLUE, hover_color = APP_BLUE, font = (APP_FONT, 15))
         okButton.place(relx = 0.5, rely = 0.98, anchor = "s")
+
+        savedEvents = CalendarEvents.get_events_dates(date, date.replace(hour = 23))
+        times = [10, 14, 17]
+        if len(savedEvents) > 0:
+            for i, hour in enumerate(times):
+                slot_time = date.replace(hour = hour)
+                event = next((e for e in savedEvents if e.start_date <= slot_time <= e.end_date), None)
+
+                if event:
+                    self.chosenEvents[i] = event.event_type
+                    eventText = event.event_type
+                else:
+                    eventText = "Rest"
+
+                self.eventButtons[i].configure(text = eventText, fg_color = EVENT_COLOURS[eventText], hover_color = EVENT_COLOURS[eventText], border_width = 0, font = (APP_FONT_BOLD, 20))
 
     def addCalendarEvent(self, timeOfDay):
 

@@ -3392,7 +3392,7 @@ class CalendarEvents(Base):
     __tablename__ = 'calendar_events'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    event_type = Column(Enum("Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match review"), nullable = False)
+    event_type = Column(Enum("Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match Review"), nullable = False)
     start_date = Column(DateTime, nullable = False)
     end_date = Column(DateTime, nullable = False)
     finished = Column(Boolean, default = False)

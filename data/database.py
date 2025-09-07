@@ -3448,14 +3448,17 @@ class CalendarEvents(Base):
             session.close()
 
     @classmethod
-    def get_events_dates(cls, start_date, end_date):
+    def get_events_dates(cls, start_date, end_date, get_finished = False):
         session = DatabaseManager().get_session()
         try:
             events = session.query(CalendarEvents).filter(
                 CalendarEvents.start_date < end_date,
                 CalendarEvents.end_date > start_date,
-                CalendarEvents.finished == False
             ).all()
+
+            if not get_finished:
+                events = [event for event in events if not event.finished]
+
             return events
         finally:
             session.close()
@@ -3470,6 +3473,34 @@ class CalendarEvents(Base):
         except Exception as e:
             session.rollback()
             raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_events_week(cls, date):
+        session = DatabaseManager().get_session()
+        try:
+            start_of_week = date - timedelta(days = date.weekday())
+            end_of_week = start_of_week + timedelta(days = 7)
+
+            # Aggregate counts per event_type for events overlapping the week
+            rows = (
+                session.query(CalendarEvents.event_type, func.count(CalendarEvents.id))
+                .filter(
+                    CalendarEvents.start_date < end_of_week,
+                    CalendarEvents.end_date >= start_of_week,
+                )
+                .group_by(CalendarEvents.event_type)
+                .all()
+            )
+
+            counts = {etype: int(cnt) for etype, cnt in rows}
+
+            # Ensure all possible event types are present with zero if missing
+            all_types = ["Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match Review"]
+            result = {t: counts.get(t, 0) for t in all_types}
+
+            return result
         finally:
             session.close()
 

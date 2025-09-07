@@ -435,7 +435,7 @@ class CalendarFrame(ctk.CTkFrame):
                 elif self.managingTeam:
                     # only show if after today and never after 2 weeks
                     if date.date() > today and date.date() < today + timedelta(weeks = 2):
-                        savedEvents = CalendarEvents.get_events_dates(date, date.replace(hour = 23))
+                        savedEvents = CalendarEvents.get_events_dates(date, date.replace(hour = 23), get_finished = True)
 
                         for i, event in enumerate(savedEvents):
                             self.addSmallEventFrame(event.event_type, cell, date, i)
@@ -657,6 +657,7 @@ class CalendarFrame(ctk.CTkFrame):
         self.dayEventsFrame.place(relx = 0.5, rely = 0.02, anchor = "n")
         self.date = date
 
+        self.currEvents = CalendarEvents.get_events_week(self.date)
         self.chosenEvents = [None, None, None]
 
         day, text, _, = format_datetime_split(date)
@@ -695,7 +696,7 @@ class CalendarFrame(ctk.CTkFrame):
         okButton = ctk.CTkButton(self.dayEventsFrame, text = "OK", command = lambda: self.confirmEvents(cell, date), anchor = "center", height = 30, width = 240, fg_color = APP_BLUE, hover_color = APP_BLUE, font = (APP_FONT, 15))
         okButton.place(relx = 0.5, rely = 0.98, anchor = "s")
 
-        savedEvents = CalendarEvents.get_events_dates(date, date.replace(hour = 23))
+        savedEvents = CalendarEvents.get_events_dates(date, date.replace(hour = 23), get_finished = True)
         times = [10, 14, 17]
         if len(savedEvents) > 0:
             for i, hour in enumerate(times):
@@ -725,7 +726,7 @@ class CalendarFrame(ctk.CTkFrame):
         ctk.CTkLabel(self.eventsChooseFrame, text = "Event", fg_color = DARK_GREY, font = (APP_FONT, 20)).place(relx = 0.05, rely = 0.08, anchor = "w")
         ctk.CTkLabel(self.eventsChooseFrame, text = "Available", fg_color = DARK_GREY, font = (APP_FONT, 18)).place(relx = 0.8, rely = 0.08, anchor = "center")
 
-        closeButton = ctk.CTkButton(self.eventsChooseFrame, text = "X", command = lambda: self.closeEventsChooseFrame(), fg_color = CLOSE_RED, hover_color = CLOSE_RED, font = (APP_FONT, 12), width = 25, height = 25, corner_radius = 5)
+        closeButton = ctk.CTkButton(self.eventsChooseFrame, text = "X", command = lambda: self.closeEventsChooseFrame(), fg_color = DARK_GREY, hover_color = CLOSE_RED, font = (APP_FONT, 12), width = 25, height = 25, corner_radius = 5)
         closeButton.place(relx = 0.95, rely = 0.08, anchor = "center")
 
         gap = 0.12
@@ -733,6 +734,11 @@ class CalendarFrame(ctk.CTkFrame):
         for i, eventType in enumerate(MAX_EVENTS.keys()):
             button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS[eventType], hover_color = EVENT_COLOURS[eventType], width = 250, height = buttonHeight, corner_radius = 5, text = eventType, font = (APP_FONT, 15), anchor = "w", command = lambda e = eventType: self.closeEventsChooseFrame(e, timeOfDay))
             button.place(relx = 0.02, rely = 0.2 + (i * gap), anchor = "w")
+
+            ctk.CTkLabel(self.eventsChooseFrame, text = MAX_EVENTS[eventType] - self.currEvents[eventType], fg_color = DARK_GREY, font = (APP_FONT, 12)).place(relx = 0.8, rely = 0.2 + (i * gap), anchor = "center")
+
+            if MAX_EVENTS[eventType] - self.currEvents[eventType] == 0:
+                button.configure(state = "disabled")
 
         if self.gameTommorrow or self.gameYesterday:
             if self.gameTommorrow:
@@ -755,6 +761,12 @@ class CalendarFrame(ctk.CTkFrame):
         self.choosingEvent = False
 
         if event:
+            if event not in ["Rest", "Match Preparation", "Match Review"]:
+                self.currEvents[event] += 1
+
+                if self.chosenEvents[timeOfDay]:
+                    self.currEvents[self.chosenEvents[timeOfDay]] -= 1
+
             button = self.eventButtons[timeOfDay]
             self.chosenEvents[timeOfDay] = event if event != "Rest" else None
 
@@ -782,7 +794,7 @@ class CalendarFrame(ctk.CTkFrame):
 
     def addSmallEventFrame(self, event, cell, date, count):
         frame = ctk.CTkFrame(cell, fg_color = EVENT_COLOURS[event], width = 75, height = 15, corner_radius = 5)
-        frame.place(relx = 0.5, rely = 0.25 + (count * 0.2), anchor = "n")
+        frame.place(relx = 0.5, rely = 0.3 + (count * 0.2), anchor = "n")
 
         frame.bind("<Enter>", lambda event, c = cell: self.onHoverCell(c))
         frame.bind("<Button-1>", lambda event, d = date, c = cell: self.setCalendarEvents(d, c))

@@ -434,12 +434,9 @@ class CalendarFrame(ctk.CTkFrame):
                     cell.bind("<Leave>", lambda event, c = cell: self.onLeaveCell(c))
                 elif self.managingTeam:
                     # only show if after today and never after 2 weeks
+                    savedEvents = CalendarEvents.get_events_dates(self.teamID, date, date.replace(hour = 23), get_finished = True)
+
                     if date.date() > today and date.date() < today + timedelta(weeks = 2):
-                        savedEvents = CalendarEvents.get_events_dates(self.teamID, date, date.replace(hour = 23), get_finished = True)
-
-                        for i, event in enumerate(savedEvents):
-                            self.addSmallEventFrame(event.event_type, cell, date, i)
-
                         cell.bind("<Enter>", lambda event, c = cell: self.onHoverCell(c))
                         cell.bind("<Leave>", lambda event, c = cell: self.onLeaveCell(c))
                         cell.bind("<Button-1>", lambda event, d = date, c = cell: self.setCalendarEvents(d, c))
@@ -447,6 +444,13 @@ class CalendarFrame(ctk.CTkFrame):
                         for widget in cell.winfo_children():
                             widget.bind("<Button-1>", lambda event, d = date, c = cell: self.setCalendarEvents(d, c))
                             widget.bind("<Enter>", lambda event, c = cell: self.onHoverCell(c))
+
+                        for i, event in enumerate(savedEvents):
+                            self.addSmallEventFrame(event.event_type, cell, date, i)
+                    else:
+                        for i, event in enumerate(savedEvents):
+                            self.addSmallEventFrame(event.event_type, cell, date, i, bind = False)
+
 
                 day_num += 1
 
@@ -809,12 +813,13 @@ class CalendarFrame(ctk.CTkFrame):
             self.addSmallEventFrame(event, cell, date, count)
             count += 1
 
-    def addSmallEventFrame(self, event, cell, date, count):
+    def addSmallEventFrame(self, event, cell, date, count, bind = True):
         frame = ctk.CTkFrame(cell, fg_color = EVENT_COLOURS[event], width = 75, height = 15, corner_radius = 5)
         frame.place(relx = 0.5, rely = 0.3 + (count * 0.2), anchor = "n")
 
-        frame.bind("<Enter>", lambda event, c = cell: self.onHoverCell(c))
-        frame.bind("<Button-1>", lambda event, d = date, c = cell: self.setCalendarEvents(d, c))
+        if bind:
+            frame.bind("<Enter>", lambda event, c = cell: self.onHoverCell(c))
+            frame.bind("<Button-1>", lambda event, d = date, c = cell: self.setCalendarEvents(d, c))
 
 class MatchdayFrame(ctk.CTkFrame):
     def __init__(self, parent, matchday, matchdayNum, currentMatchday, parentFrame, parentTab, width, heigth, fgColor, relx, rely, anchor):

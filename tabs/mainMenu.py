@@ -167,9 +167,9 @@ class MainMenu(ctk.CTkFrame):
         stopDate = min(dates)
 
         # Create events for other teams on Mondays between current date and stop date
-        current_day = self.currDate
+        current_day = self.currDate + timedelta(days = 1)
         teamIDs = Teams.get_all_teams()
-        while current_day < stopDate:
+        while current_day.date() <= stopDate.date():
             if current_day.weekday() == 0:
                 for team_id in teamIDs:
                     if team_id != self.team.id:

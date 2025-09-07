@@ -3417,6 +3417,7 @@ class CalendarEvents(Base):
         try:
             # Check if an event with the same start & end exists
             existing_event = session.query(CalendarEvents).filter_by(
+                team_id = team_id,
                 start_date = start_date,
                 end_date = end_date
             ).first()
@@ -3510,6 +3511,10 @@ class CalendarEvents(Base):
                 .group_by(CalendarEvents.event_type)
                 .all()
             )
+
+            # If no events for this team/week, return empty dict
+            if not rows:
+                return {}
 
             counts = {etype: int(cnt) for etype, cnt in rows}
 
@@ -5192,13 +5197,13 @@ def create_events_for_other_teams(team_id, start_date):
 
     if len(CalendarEvents.get_events_week(start_date, team_id)) > 0:
         return
-    
-    matches = Matches.get_match_by_team_and_date(team_id, start_date, end_date)
+
+    matches = Matches.get_match_by_team_and_date_range(team_id, start_date, end_date)
 
     match_days = set()
     for match in matches:
         day_name, _, _ = format_datetime_split(match.date)
-        match_days.add(datetime.strptime(day_name, "%A").weekday())
+        match_days.add(datetime.datetime.strptime(day_name, "%A").weekday())
 
     weekly_usage = {event: 0 for event in MAX_EVENTS}
 

@@ -166,6 +166,17 @@ class MainMenu(ctk.CTkFrame):
         dates.append(Emails.get_next_email(self.currDate).date)
         stopDate = min(dates)
 
+        # Create events for other teams on Mondays between current date and stop date
+        current_day = self.currDate
+        teamIDs = Teams.get_all_teams()
+        while current_day < stopDate:
+            if current_day.weekday() == 0:
+                for team_id in teamIDs:
+                    if team_id != self.team.id:
+                        create_events_for_other_teams(team_id, current_day)
+                        
+            current_day += timedelta(days = 1)
+
         matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
 
         timeInBetween = stopDate - self.currDate

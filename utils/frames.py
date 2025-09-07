@@ -435,7 +435,7 @@ class CalendarFrame(ctk.CTkFrame):
                 elif self.managingTeam:
                     # only show if after today and never after 2 weeks
                     if date.date() > today and date.date() < today + timedelta(weeks = 2):
-                        savedEvents = CalendarEvents.get_events_dates(date, date.replace(hour = 23), get_finished = True)
+                        savedEvents = CalendarEvents.get_events_dates(self.teamID, date, date.replace(hour = 23), get_finished = True)
 
                         for i, event in enumerate(savedEvents):
                             self.addSmallEventFrame(event.event_type, cell, date, i)
@@ -657,7 +657,7 @@ class CalendarFrame(ctk.CTkFrame):
         self.dayEventsFrame.place(relx = 0.5, rely = 0.02, anchor = "n")
         self.date = date
 
-        self.currEvents = CalendarEvents.get_events_week(self.date)
+        self.currEvents = CalendarEvents.get_events_week(self.date, self.teamID)
         self.chosenEvents = [None, None, None]
 
         day, text, _, = format_datetime_split(date)
@@ -696,7 +696,7 @@ class CalendarFrame(ctk.CTkFrame):
         okButton = ctk.CTkButton(self.dayEventsFrame, text = "OK", command = lambda: self.confirmEvents(cell, date), anchor = "center", height = 30, width = 240, fg_color = APP_BLUE, hover_color = APP_BLUE, font = (APP_FONT, 15))
         okButton.place(relx = 0.5, rely = 0.98, anchor = "s")
 
-        savedEvents = CalendarEvents.get_events_dates(date, date.replace(hour = 23), get_finished = True)
+        savedEvents = CalendarEvents.get_events_dates(self.teamID, date, date.replace(hour = 23), get_finished = True)
         times = [10, 14, 17]
         if len(savedEvents) > 0:
             for i, hour in enumerate(times):
@@ -805,7 +805,7 @@ class CalendarFrame(ctk.CTkFrame):
             startDate = self.date.replace(hour = startHour, minute = 0, second = 0, microsecond = 0)
             endDate = self.date.replace(hour = endHour, minute = 0, second = 0, microsecond = 0)
 
-            CalendarEvents.add_event(event, startDate, endDate)
+            CalendarEvents.add_event(self.teamID, event, startDate, endDate)
             self.addSmallEventFrame(event, cell, date, count)
             count += 1
 

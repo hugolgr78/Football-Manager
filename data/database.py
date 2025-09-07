@@ -1208,6 +1208,19 @@ class Matches(Base):
             return match
         finally:
             session.close()
+
+    @classmethod
+    def get_match_by_team_and_date_range(cls, team_id, start_date, end_date):
+        session = DatabaseManager().get_session()
+        try:
+            matches = session.query(Matches).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                Matches.date >= start_date,
+                Matches.date <= end_date
+            ).all()
+            return matches
+        finally:
+            session.close()
         
     @classmethod
     def get_team_matchday_match(cls, team_id, league_id, matchday):
@@ -3393,12 +3406,13 @@ class CalendarEvents(Base):
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     event_type = Column(Enum("Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match Review"), nullable = False)
+    team_id = Column(String(128), ForeignKey('teams.id'))
     start_date = Column(DateTime, nullable = False)
     end_date = Column(DateTime, nullable = False)
     finished = Column(Boolean, default = False)
 
     @classmethod
-    def add_event(cls, event_type, start_date, end_date):
+    def add_event(cls, team_id, event_type, start_date, end_date):
         session = DatabaseManager().get_session()
         try:
             # Check if an event with the same start & end exists
@@ -3413,6 +3427,7 @@ class CalendarEvents(Base):
             else:
                 # Otherwise create a new one
                 event = CalendarEvents(
+                    team_id = team_id,
                     event_type = event_type,
                     start_date = start_date,
                     end_date = end_date
@@ -3448,12 +3463,13 @@ class CalendarEvents(Base):
             session.close()
 
     @classmethod
-    def get_events_dates(cls, start_date, end_date, get_finished = False):
+    def get_events_dates(cls, team_id, start_date, end_date, get_finished = False):
         session = DatabaseManager().get_session()
         try:
             events = session.query(CalendarEvents).filter(
                 CalendarEvents.start_date < end_date,
                 CalendarEvents.end_date > start_date,
+                CalendarEvents.team_id == team_id
             ).all()
 
             if not get_finished:
@@ -3477,7 +3493,7 @@ class CalendarEvents(Base):
             session.close()
 
     @classmethod
-    def get_events_week(cls, date):
+    def get_events_week(cls, date, team_id):
         session = DatabaseManager().get_session()
         try:
             start_of_week = date - timedelta(days = date.weekday())
@@ -3489,6 +3505,7 @@ class CalendarEvents(Base):
                 .filter(
                     CalendarEvents.start_date < end_of_week,
                     CalendarEvents.end_date >= start_of_week,
+                    CalendarEvents.team_id == team_id
                 )
                 .group_by(CalendarEvents.event_type)
                 .all()
@@ -5169,3 +5186,64 @@ def check_player_games_happy(teams, currDate):
                 if team.id == managed_team.id and reduced:
                     email_date = currDate + timedelta(days = 1)
                     Emails.add_email("player_games_issue", None, player.id, None, None, email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+
+def create_events_for_other_teams(team_id, start_date):
+    end_date = start_date + timedelta(days=7)
+
+    if len(CalendarEvents.get_events_week(start_date, team_id)) > 0:
+        return
+    
+    matches = Matches.get_match_by_team_and_date(team_id, start_date, end_date)
+
+    match_days = set()
+    for match in matches:
+        day_name, _, _ = format_datetime_split(match.date)
+        match_days.add(datetime.strptime(day_name, "%A").weekday())
+
+    weekly_usage = {event: 0 for event in MAX_EVENTS}
+
+    for i in range(7):
+        current_date = start_date + timedelta(days = i)
+        events = []
+
+        is_prep = (i + 1) in match_days
+        is_review = (i - 1) in match_days
+        is_match = i in match_days
+
+        if is_match:
+            continue
+
+        # Match Review or Prep handling
+        if is_review or is_prep:
+            # Pick a 2-event template
+            template = random.choice(TEMPLATES_2)
+            for t_event in template:
+                if weekly_usage[t_event] < MAX_EVENTS[t_event]:
+                    events.append(t_event)
+                    weekly_usage[t_event] += 1
+
+            # Insert Match Review/Prep at correct position
+            if is_review:
+                events = ["Match Review"] + events[:2]  # Match Review first
+            elif is_prep:
+                events = events[:2] + ["Match Prep"]  # Match Prep last
+
+        # Normal day
+        if not events:
+            template = random.choice(TEMPLATES_2 + TEMPLATES_3)
+            for t_event in template:
+                if len(events) >= 3:
+                    break
+                if weekly_usage[t_event] < MAX_EVENTS[t_event]:
+                    events.append(t_event)
+                    weekly_usage[t_event] += 1
+
+        # Ensure max 3 events per day
+        events = events[:3]
+
+        for i, event in enumerate(events):
+            startHour, endHour = EVENT_TIMES[i]
+            startDate = current_date.replace(hour = startHour, minute = 0, second = 0, microsecond = 0)
+            endDate = current_date.replace(hour = endHour, minute = 0, second = 0, microsecond = 0)
+
+            CalendarEvents.add_event(team_id, event, startDate, endDate)

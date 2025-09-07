@@ -743,8 +743,25 @@ class CalendarFrame(ctk.CTkFrame):
         if self.gameTommorrow or self.gameYesterday:
             if self.gameTommorrow:
                 button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS["Match Preparation"], hover_color = EVENT_COLOURS["Match Preparation"], width = 250, height = buttonHeight, corner_radius = 5, text = "Match Preparation", font = (APP_FONT, 15), anchor = "w", command = lambda: self.closeEventsChooseFrame("Match Preparation", timeOfDay))
+            
+                if "Match Preparation" in self.chosenEvents:
+                    button.configure(state = "disabled")   
+                    text = "0"    
+                else:
+                    text = "1"
+
+                ctk.CTkLabel(self.eventsChooseFrame, text = text, fg_color = DARK_GREY, font = (APP_FONT, 12)).place(relx = 0.8, rely = 0.2 + (len(MAX_EVENTS) * gap), anchor = "center")
+
             elif self.gameYesterday:
                 button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS["Match Review"], hover_color = EVENT_COLOURS["Match Review"], width = 250, height = buttonHeight, corner_radius = 5, text = "Match Review", font = (APP_FONT, 15), anchor = "w", command = lambda: self.closeEventsChooseFrame("Match Review", timeOfDay))
+
+                if "Match Review" in self.chosenEvents:
+                    button.configure(state = "disabled")   
+                    text = "0"
+                else:
+                    text = "1"
+
+                ctk.CTkLabel(self.eventsChooseFrame, text = text, fg_color = DARK_GREY, font = (APP_FONT, 12)).place(relx = 0.8, rely = 0.2 + (len(MAX_EVENTS) * gap), anchor = "center")
 
             button.place(relx = 0.02, rely = 0.2 + (len(MAX_EVENTS) * gap), anchor = "w")
 

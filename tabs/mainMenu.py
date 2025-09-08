@@ -165,8 +165,9 @@ class MainMenu(ctk.CTkFrame):
         dates.append(Matches.get_team_next_match(self.team.id, self.currDate).date)
         dates.append(Emails.get_next_email(self.currDate).date)
         stopDate = min(dates)
+        overallTimeInBetween = stopDate - self.currDate
 
-        # Create events for other teams on Mondays between current date and stop date
+        # ------------------- Creating calendar events -------------------
         current_day = self.currDate + timedelta(days = 1)
         teamIDs = Teams.get_all_teams()
         while current_day.date() <= stopDate.date():
@@ -177,19 +178,27 @@ class MainMenu(ctk.CTkFrame):
                         
             current_day += timedelta(days = 1)
 
-        matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
+        # -------------------Figuring out intervals -------------------
 
-        timeInBetween = stopDate - self.currDate
-        PlayerBans.reduce_injuries(timeInBetween, stopDate)
-        Players.update_sharpness_and_fitness(timeInBetween)
+        intervals = self.getIntervals(self.currDate, stopDate, teamIDs)
+
+        # ------------------- Update player attributes and carry out events -------------------
+
+        for start, end in intervals:
+            timeInBetween = end - start
+            Players.update_sharpness_and_fitness(timeInBetween)
+            PlayerBans.reduce_injuries(timeInBetween, stopDate)
+    
         update_ages(self.currDate, stopDate)
+
+        # ------------------- Matches simulation -------------------
 
         if self.tabs[4]:
             SavedLineups.delete_current_lineup()
             self.tabs[4].saveLineup()
 
-        # Run simulations concurrently so multiple matches can be processed at the same time.
         matches = []
+        matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
         if matchesToSim:
             # Phase 1: create all Match objects
             for game in matchesToSim:
@@ -216,8 +225,10 @@ class MainMenu(ctk.CTkFrame):
                     except Exception as e:
                         print(e)
 
-        self.currDate += timeInBetween
-        Game.increment_game_date(self.manager_id, timeInBetween)
+        self.currDate += overallTimeInBetween
+        Game.increment_game_date(self.manager_id, overallTimeInBetween)
+
+        # ------------------- Post-match updates -------------------
 
         leagueIDs = list({match.league.league_id for match in matches})
         for id_ in leagueIDs:
@@ -236,8 +247,54 @@ class MainMenu(ctk.CTkFrame):
 
         check_player_games_happy(teams, self.currDate)
 
+        # ------------------- Reset/End -------------------
+
         self.resetTabs(0, 1, 2, 3, 4, 5, 6)
         self.addDate()
+
+    def getIntervals(self, start_date, end_date, teamIDs):
+        intervals = set()
+
+        for team_id in teamIDs:
+            teamEvents = CalendarEvents.get_events_dates(team_id, start_date, end_date)
+            for event in teamEvents:
+                intervals.add((event.start_date, event.end_date))
+
+        # Fill in gaps between intervals
+        intervals = sorted(intervals)
+        numIntervals = len(intervals)
+        for i in range(numIntervals):
+            _, currIntervalEnd = intervals[i]
+
+            if i + 1 >= numIntervals:
+                break
+
+            nextIntervalStart, _ = intervals[i + 1]
+            if currIntervalEnd != nextIntervalStart:
+                intervals.insert(i + 1, (currIntervalEnd, nextIntervalStart))
+                numIntervals += 1
+
+                injuries = PlayerBans.get_injuries_dates(start_date, end_date)
+
+        # Add the start and end dates
+        if len(intervals) != 0:
+            intervals.insert(0, (start_date, intervals[0][0]))
+            intervals.append((intervals[-1][1], end_date))
+        else:
+            intervals.append((start_date, end_date))
+
+        # Insert injury intervals
+        for inj in injuries:
+            for i in range(len(intervals)):
+                start, end = list(intervals)[i]
+                injuryDate = inj.injury
+                if start <= injuryDate <= end:
+                    intervals.remove((start, end))
+                    intervals.append((start, injuryDate))
+                    intervals.append((injuryDate, end))
+                    break
+
+        return sorted(intervals)
         
     def resetMenu(self):
         

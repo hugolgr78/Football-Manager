@@ -3225,6 +3225,22 @@ class PlayerBans(Base):
             session.close()
 
     @classmethod
+    def remove_ban(cls, ban_id):
+        session = DatabaseManager().get_session()
+        try:
+            ban = session.query(PlayerBans).filter(PlayerBans.id == ban_id).first()
+            if ban:
+                session.delete(ban)
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def check_bans_for_player(cls, player_id, competition_id):
         session = DatabaseManager().get_session()
         try:
@@ -3294,6 +3310,19 @@ class PlayerBans(Base):
                     non_banned_players.append(player)
 
             return non_banned_players
+        finally:
+            session.close()
+
+    @classmethod
+    def get_injuries_dates(cls, start_date, end_date):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).filter(
+                PlayerBans.ban_type == "injury",
+                PlayerBans.injury >= start_date,
+                PlayerBans.injury <= end_date
+            ).all()
+            return bans
         finally:
             session.close()
 

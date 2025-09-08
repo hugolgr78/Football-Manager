@@ -517,15 +517,17 @@ EVENT_TIMES = [MORNING_EVENT_TIMES, AFTERNOON_EVENT_TIMES, EVENING_EVENT_TIMES]
 TEMPLATES_3 = [
     ["Intense Training", "Medium Training", "Light Training"],
     ["Medium Training", "Team Building", "Recovery"],
-    ["Light Training", "Recovery", "Team Building"],
-    ["Medium Training", "Intense Training", "Recovery"]
+    ["Light Training", "Recovery", "Intense Training"],
+    ["Team Building", "Medium Training", "Recovery"],
+    ["Recovery", "Team Building", "Medium Training"]
 ]
 
 TEMPLATES_2 = [
     ["Medium Training", "Light Training"],
     ["Intense Training", "Recovery"],
     ["Team Building", "Medium Training"],
-    ["Recovery", "Light Training"]
+    ["Recovery", "Light Training"],
+    ["Intense Training", "Team Building"]
 ]
 
 from data.database import StatsManager

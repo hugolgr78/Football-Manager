@@ -1,3 +1,4 @@
+import calendar
 from datetime import timedelta
 from settings import *
 import random
@@ -479,3 +480,7 @@ def getFitnessDrop(player):
 
     # return a random float in the range for that position
     return random.uniform(*position_ranges[player.position])
+
+def getDayIndex(date):
+    day, _, _ = format_datetime_split(date)
+    return list(calendar.day_name).index(day)

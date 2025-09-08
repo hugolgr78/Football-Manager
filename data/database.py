@@ -872,6 +872,22 @@ class Players(Base):
             session.close()
 
     @classmethod
+    def update_morale_with_values(cls, team_id, morale_value):
+        session = DatabaseManager().get_session()
+        try:
+            players = session.query(Players).filter(Players.team_id == team_id).all()
+            for player in players:
+                player.morale += morale_value
+                player.morale = min(100, max(0, player.morale))
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def batch_update_morales(cls, morales):
         session = DatabaseManager().get_session()
         try:
@@ -1064,18 +1080,30 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def update_sharpness_and_fitness(cls, time_in_between):
+    def update_sharpness_and_fitness(cls, time_in_between, team_id):
         session = DatabaseManager().get_session()
         try:
             # Players eligible for fitness updates (exclude injury bans)
             fitness_players = (
                 session.query(Players)
-                .outerjoin(PlayerBans, and_(PlayerBans.player_id == Players.id, PlayerBans.ban_type == 'injury'))
+                .outerjoin(
+                    PlayerBans,
+                    and_(
+                        PlayerBans.player_id == Players.id,
+                        PlayerBans.ban_type == 'injury'
+                    )
+                )
                 .filter(PlayerBans.id.is_(None))
+                .filter(Players.team_id == team_id)
                 .all()
             )
 
-            all_players = session.query(Players).all()
+            # All players from this team
+            all_players = (
+                session.query(Players)
+                .filter(Players.team_id == team_id)
+                .all()
+            )
             fitness_ids = {p.id for p in fitness_players}
 
             hours = int(time_in_between.total_seconds() // 3600)
@@ -1105,7 +1133,27 @@ class Players(Base):
             raise e
         finally:
             session.close()
-    
+
+    @classmethod
+    def update_sharpness_and_fitness_with_values(cls, team_id, fitness_value, sharpness_value):
+        session = DatabaseManager().get_session()
+        try:
+            players = session.query(Players).filter(Players.team_id == team_id).all()
+
+            for player in players:
+                player.fitness += fitness_value
+                player.sharpness += sharpness_value
+
+                player.fitness = min(100, max(0, player.fitness))
+                player.sharpness = min(100, max(MIN_SHARPNESS, player.sharpness))
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+        
     @classmethod
     def update_talked_to(cls, player_id):
         session = DatabaseManager().get_session()
@@ -3504,6 +3552,20 @@ class CalendarEvents(Base):
 
             if not get_finished:
                 events = [event for event in events if not event.finished]
+
+            return events
+        finally:
+            session.close()
+
+    @classmethod
+    def get_events_dates_all(cls, start_date, end_date):
+        session = DatabaseManager().get_session()
+        try:
+            events = session.query(CalendarEvents).filter(
+                CalendarEvents.start_date < end_date,
+                CalendarEvents.end_date > start_date,
+                CalendarEvents.finished == False
+            ).all()
 
             return events
         finally:

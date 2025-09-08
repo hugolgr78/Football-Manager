@@ -186,7 +186,18 @@ class MainMenu(ctk.CTkFrame):
 
         for start, end in intervals:
             timeInBetween = end - start
-            Players.update_sharpness_and_fitness(timeInBetween)
+
+            for teamID in teamIDs:
+                events = CalendarEvents.get_events_dates(teamID, start, end)
+
+                if len(events) == 0:
+                    Players.update_sharpness_and_fitness(timeInBetween, teamID)
+                    continue
+
+                for event in events:
+                    self.carryOutEvent(event)
+                    CalendarEvents.update_event(event.id)
+
             PlayerBans.reduce_injuries(timeInBetween, stopDate)
     
         update_ages(self.currDate, stopDate)
@@ -295,7 +306,29 @@ class MainMenu(ctk.CTkFrame):
                     break
 
         return sorted(intervals)
-        
+
+    def carryOutEvent(self, event):
+        team = Teams.get_team_by_id(event.team_id)
+        updateStats = True
+        match event.event_type:
+            case "Light Training":
+                Players.update_sharpness_and_fitness_with_values(team.id, -5, 5)
+                updateStats = False
+            case "Medium Training":
+                Players.update_sharpness_and_fitness_with_values(team.id, -12, 10)
+                updateStats = False
+            case "Intense Training":
+                Players.update_sharpness_and_fitness_with_values(team.id, -20, 15)
+                updateStats = False
+            case "Team Building":
+                Players.update_morale_with_values(team.id, random.randint(5, 10))
+            case "Recovery":
+                Players.update_sharpness_and_fitness_with_values(team.id, 20, 0)
+                updateStats = False
+
+        if updateStats:
+            Players.update_sharpness_and_fitness(event.end_date - event.start_date, team.id)
+
     def resetMenu(self):
         
         for tab in self.tabs:

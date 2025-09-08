@@ -739,10 +739,16 @@ class CalendarFrame(ctk.CTkFrame):
             button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS[eventType], hover_color = EVENT_COLOURS[eventType], width = 250, height = buttonHeight, corner_radius = 5, text = eventType, font = (APP_FONT, 15), anchor = "w", command = lambda e = eventType: self.closeEventsChooseFrame(e, timeOfDay))
             button.place(relx = 0.02, rely = 0.2 + (i * gap), anchor = "w")
 
-            ctk.CTkLabel(self.eventsChooseFrame, text = MAX_EVENTS[eventType] - self.currEvents[eventType], fg_color = DARK_GREY, font = (APP_FONT, 12)).place(relx = 0.8, rely = 0.2 + (i * gap), anchor = "center")
+            if eventType in self.currEvents.keys():
+                text = MAX_EVENTS[eventType] - self.currEvents[eventType]
 
-            if MAX_EVENTS[eventType] - self.currEvents[eventType] == 0:
-                button.configure(state = "disabled")
+                if text == 0:
+                    button.configure(state = "disabled")
+
+            else:
+                text = MAX_EVENTS[eventType]
+            
+            ctk.CTkLabel(self.eventsChooseFrame, text = text, fg_color = DARK_GREY, font = (APP_FONT, 12)).place(relx = 0.8, rely = 0.2 + (i * gap), anchor = "center")
 
         if self.gameTommorrow or self.gameYesterday:
             if self.gameTommorrow:
@@ -783,7 +789,11 @@ class CalendarFrame(ctk.CTkFrame):
 
         if event:
             if event not in ["Rest", "Match Preparation", "Match Review"]:
-                self.currEvents[event] += 1
+                
+                if event in self.currEvents.keys():
+                    self.currEvents[event] += 1
+                else:
+                    self.currEvents[event] = 1
 
                 if self.chosenEvents[timeOfDay]:
                     self.currEvents[self.chosenEvents[timeOfDay]] -= 1

@@ -5378,7 +5378,6 @@ def create_events_for_other_teams(team_id, start_date):
 
         is_prep = getDayIndex(current_date + timedelta(days = 1)) in match_days
         is_match = getDayIndex(current_date) in match_days
-        is_home = True if is_match and Matches.get_team_match_no_time(team_id, current_date).home_id == team_id else False
 
         if getDayIndex(current_date) == 0:
             # Checks if there was a game on last week Sunday
@@ -5388,6 +5387,12 @@ def create_events_for_other_teams(team_id, start_date):
 
         if not is_match:
             if is_review or is_prep:
+
+                if is_review:
+                    is_home = True if Matches.get_team_match_no_time(team_id, current_date - timedelta(days = 1)).home_id == team_id else False
+                elif is_prep:
+                    is_home = True if Matches.get_team_match_no_time(team_id, current_date + timedelta(days = 1)).home_id == team_id else False
+
                 if is_home:
                     template = random.choice(TEMPLATES_2)
                     for t_event in template:
@@ -5415,7 +5420,6 @@ def create_events_for_other_teams(team_id, start_date):
                         events = ["Travel", "Match Preparation"]
                         if event:
                             events.insert(0, event)
-                
             else:
                 template = random.choice(TEMPLATES_3)
                 for t_event in template:

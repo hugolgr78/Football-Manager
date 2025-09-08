@@ -717,7 +717,7 @@ class CalendarFrame(ctk.CTkFrame):
 
     def addCalendarEvent(self, timeOfDay):
 
-        if self.choosingEvent:
+        if self.choosingEvent or self.chosenEvents[timeOfDay] == "Travel":
             return
 
         self.choosingEvent = True

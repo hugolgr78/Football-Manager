@@ -5389,9 +5389,11 @@ def create_events_for_other_teams(team_id, start_date):
             if is_review or is_prep:
 
                 if is_review:
-                    is_home = True if Matches.get_team_match_no_time(team_id, current_date - timedelta(days = 1)).home_id == team_id else False
+                    date_check = current_date - timedelta(days = 1)
                 elif is_prep:
-                    is_home = True if Matches.get_team_match_no_time(team_id, current_date + timedelta(days = 1)).home_id == team_id else False
+                    date_check = current_date + timedelta(days = 1)
+
+                is_home = True if Matches.get_team_match_no_time(team_id, date_check).home_id == team_id else False
 
                 if is_home:
                     template = random.choice(TEMPLATES_2)

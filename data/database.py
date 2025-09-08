@@ -5341,6 +5341,17 @@ def create_events_for_other_teams(team_id, start_date):
             # Ensure max 3 events per day
             events = events[:3]
 
+            days_left = (end_date - current_date).days
+            if weekly_usage["Recovery"] < 2 and days_left <= (2 - weekly_usage["Recovery"]):
+                if events:
+                    if "Recovery" not in events:
+                        weekly_usage[events[-1]] -= 1
+                        events[-1] = "Recovery"
+                        weekly_usage["Recovery"] += 1
+                else:
+                    events.append("Recovery")
+                    weekly_usage["Recovery"] += 1
+
             for i, event in enumerate(events):
                 startHour, endHour = EVENT_TIMES[i]
                 startDate = current_date.replace(hour = startHour, minute = 0, second = 0, microsecond = 0)
@@ -5349,3 +5360,5 @@ def create_events_for_other_teams(team_id, start_date):
                 CalendarEvents.add_event(team_id, event, startDate, endDate)
 
         current_date += timedelta(days = 1)
+
+    print(weekly_usage)

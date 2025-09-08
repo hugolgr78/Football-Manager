@@ -160,6 +160,7 @@ class MainMenu(ctk.CTkFrame):
 
     def moveDate(self):
         self.currDate = Game.get_game_date(self.manager_id)
+        teamIDs = Teams.get_all_teams()
 
         dates = []
         dates.append(Matches.get_team_next_match(self.team.id, self.currDate).date)
@@ -169,13 +170,12 @@ class MainMenu(ctk.CTkFrame):
 
         # ------------------- Creating calendar events -------------------
         current_day = self.currDate + timedelta(days = 1)
-        teamIDs = Teams.get_all_teams()
         while current_day.date() <= stopDate.date():
+            print(current_day.weekday())
             if current_day.weekday() == 0:
                 for team_id in teamIDs:
                     if team_id != self.team.id:
                         create_events_for_other_teams(team_id, current_day)
-                        
             current_day += timedelta(days = 1)
 
         # -------------------Figuring out intervals -------------------
@@ -285,8 +285,6 @@ class MainMenu(ctk.CTkFrame):
                 intervals.insert(i + 1, (currIntervalEnd, nextIntervalStart))
                 numIntervals += 1
 
-                injuries = PlayerBans.get_injuries_dates(start_date, end_date)
-
         # Add the start and end dates
         if len(intervals) != 0:
             intervals.insert(0, (start_date, intervals[0][0]))
@@ -295,6 +293,7 @@ class MainMenu(ctk.CTkFrame):
             intervals.append((start_date, end_date))
 
         # Insert injury intervals
+        injuries = PlayerBans.get_injuries_dates(start_date, end_date)
         for inj in injuries:
             for i in range(len(intervals)):
                 start, end = list(intervals)[i]

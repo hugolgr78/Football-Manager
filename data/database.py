@@ -5193,7 +5193,7 @@ def check_player_games_happy(teams, currDate):
                     Emails.add_email("player_games_issue", None, player.id, None, None, email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
 
 def create_events_for_other_teams(team_id, start_date):
-    end_date = start_date + timedelta(days=7)
+    end_date = start_date + timedelta(days = 7)
 
     if len(CalendarEvents.get_events_week(start_date, team_id)) > 0:
         return
@@ -5202,53 +5202,59 @@ def create_events_for_other_teams(team_id, start_date):
 
     match_days = set()
     for match in matches:
-        day_name, _, _ = format_datetime_split(match.date)
-        match_days.add(datetime.datetime.strptime(day_name, "%A").weekday())
+        match_days.add(getDayIndex(match.date))
 
     weekly_usage = {event: 0 for event in MAX_EVENTS}
 
-    for i in range(7):
-        current_date = start_date + timedelta(days = i)
+    current_date = start_date
+    while current_date.date() < end_date.date():
         events = []
 
-        is_prep = (i + 1) in match_days
-        is_review = (i - 1) in match_days
-        is_match = i in match_days
+        templates_2 = TEMPLATES_2.copy()
+        templates_3 = TEMPLATES_3.copy()
 
-        if is_match:
-            continue
+        is_prep = getDayIndex(current_date + timedelta(days = 1)) in match_days
+        is_match = getDayIndex(current_date) in match_days
 
-        # Match Review or Prep handling
-        if is_review or is_prep:
-            # Pick a 2-event template
-            template = random.choice(TEMPLATES_2)
-            for t_event in template:
-                if weekly_usage[t_event] < MAX_EVENTS[t_event]:
-                    events.append(t_event)
-                    weekly_usage[t_event] += 1
 
-            # Insert Match Review/Prep at correct position
-            if is_review:
-                events = ["Match Review"] + events[:2]  # Match Review first
-            elif is_prep:
-                events = events[:2] + ["Match Prep"]  # Match Prep last
+        if getDayIndex(current_date) == 0:
+            # Checks if there was a game on last week Sunday
+            is_review = Matches.check_if_game_date(team_id, current_date - timedelta(days = 1))
+        else:
+            is_review = getDayIndex(current_date - timedelta(days = 1)) in match_days
 
-        # Normal day
-        if not events:
-            template = random.choice(TEMPLATES_2 + TEMPLATES_3)
-            for t_event in template:
-                if len(events) >= 3:
-                    break
-                if weekly_usage[t_event] < MAX_EVENTS[t_event]:
-                    events.append(t_event)
-                    weekly_usage[t_event] += 1
 
-        # Ensure max 3 events per day
-        events = events[:3]
+        if not is_match:
+            if is_review or is_prep:
+                template = random.choice(TEMPLATES_2)
+                for t_event in template:
+                    if weekly_usage[t_event] < MAX_EVENTS[t_event]:
+                        events.append(t_event)
+                        weekly_usage[t_event] += 1
 
-        for i, event in enumerate(events):
-            startHour, endHour = EVENT_TIMES[i]
-            startDate = current_date.replace(hour = startHour, minute = 0, second = 0, microsecond = 0)
-            endDate = current_date.replace(hour = endHour, minute = 0, second = 0, microsecond = 0)
+                templates_2.remove(template)
 
-            CalendarEvents.add_event(team_id, event, startDate, endDate)
+                if is_review:
+                    events = ["Match Review"] + events[:2]
+                elif is_prep:
+                    events = events[:2] + ["Match Preparation"]
+            else:
+                template = random.choice(TEMPLATES_3)
+                for t_event in template:
+                    if weekly_usage[t_event] < MAX_EVENTS[t_event]:
+                        events.append(t_event)
+                        weekly_usage[t_event] += 1
+                
+                templates_3.remove(template)
+
+            # Ensure max 3 events per day
+            events = events[:3]
+
+            for i, event in enumerate(events):
+                startHour, endHour = EVENT_TIMES[i]
+                startDate = current_date.replace(hour = startHour, minute = 0, second = 0, microsecond = 0)
+                endDate = current_date.replace(hour = endHour, minute = 0, second = 0, microsecond = 0)
+
+                CalendarEvents.add_event(team_id, event, startDate, endDate)
+
+        current_date += timedelta(days = 1)

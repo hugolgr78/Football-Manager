@@ -1543,6 +1543,18 @@ class Matches(Base):
         finally:
             session.close()
 
+    @classmethod
+    def get_team_match_no_time(cls, team_id, date):
+        session = DatabaseManager().get_session()
+        try:
+            match = session.query(Matches).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                func.date(Matches.date) == date.date()
+            ).order_by(Matches.date.asc()).first()
+            return match
+        finally:
+            session.close()
+
 class TeamLineup(Base):
     __tablename__ = 'team_lineup'
     
@@ -5366,7 +5378,7 @@ def create_events_for_other_teams(team_id, start_date):
 
         is_prep = getDayIndex(current_date + timedelta(days = 1)) in match_days
         is_match = getDayIndex(current_date) in match_days
-
+        is_home = True if is_match and Matches.get_team_match_no_time(team_id, current_date).home_id == team_id else False
 
         if getDayIndex(current_date) == 0:
             # Checks if there was a game on last week Sunday
@@ -5374,21 +5386,36 @@ def create_events_for_other_teams(team_id, start_date):
         else:
             is_review = getDayIndex(current_date - timedelta(days = 1)) in match_days
 
-
         if not is_match:
             if is_review or is_prep:
-                template = random.choice(TEMPLATES_2)
-                for t_event in template:
-                    if weekly_usage[t_event] < MAX_EVENTS[t_event]:
-                        events.append(t_event)
-                        weekly_usage[t_event] += 1
+                if is_home:
+                    template = random.choice(TEMPLATES_2)
+                    for t_event in template:
+                        if weekly_usage[t_event] < MAX_EVENTS[t_event]:
+                            events.append(t_event)
+                            weekly_usage[t_event] += 1
 
-                templates_2.remove(template)
+                    templates_2.remove(template)
 
-                if is_review:
-                    events = ["Match Review"] + events[:2]
-                elif is_prep:
-                    events = events[:2] + ["Match Preparation"]
+                    if is_review:
+                        events = ["Match Review"] + events[:2]
+                    elif is_prep:
+                        events = events[:2] + ["Match Preparation"]
+                else:
+                    possible_events = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e]]
+                    event = random.choice(possible_events) if possible_events else None
+                    if event:
+                        weekly_usage[event] += 1
+
+                    if is_review:
+                        events = ["Travel", "Match Review"]
+                        if event:
+                            events.append(event)
+                    elif is_prep:
+                        events = ["Travel", "Match Preparation"]
+                        if event:
+                            events.insert(0, event)
+                
             else:
                 template = random.choice(TEMPLATES_3)
                 for t_event in template:

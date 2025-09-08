@@ -204,6 +204,7 @@ class Managers(Base):
                 updateProgress(3)
                 League.add_league(LEAGUE_NAME, FIRST_YEAR, 0, 3)
                 Emails.add_emails(managerID)
+                CalendarEvents.add_travel_events(managerID)
                 updateProgress(None)
 
             return managerID
@@ -2570,7 +2571,6 @@ class League(Base):
         finally:
             session.close()
 
-
 class LeagueTeams(Base):
     __tablename__ = 'league_teams'
     
@@ -3482,14 +3482,15 @@ class CalendarEvents(Base):
     __tablename__ = 'calendar_events'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    event_type = Column(Enum("Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match Review"), nullable = False)
+    event_type = Column(Enum("Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match Review", "Travel"), nullable = False)
     team_id = Column(String(128), ForeignKey('teams.id'))
     start_date = Column(DateTime, nullable = False)
     end_date = Column(DateTime, nullable = False)
     finished = Column(Boolean, default = False)
+    unchangable = Column(Boolean, default = False)
 
     @classmethod
-    def add_event(cls, team_id, event_type, start_date, end_date):
+    def add_event(cls, team_id, event_type, start_date, end_date, unchangable = False):
         session = DatabaseManager().get_session()
         try:
             # Check if an event with the same start & end exists
@@ -3508,7 +3509,8 @@ class CalendarEvents(Base):
                     team_id = team_id,
                     event_type = event_type,
                     start_date = start_date,
-                    end_date = end_date
+                    end_date = end_date,
+                    unchangable = unchangable
                 )
                 session.add(event)
 
@@ -3516,6 +3518,58 @@ class CalendarEvents(Base):
         except Exception as e:
             session.rollback()
             raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_add_events(cls, events):
+        session = DatabaseManager().get_session()
+        try:
+            event_dicts = []
+            for event in events:
+                team_id, event_type, start_date, end_date, unchangable = event
+
+                entry = {
+                    "id": str(uuid.uuid4()),
+                    "team_id": team_id,
+                    "event_type": event_type,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "unchangable": unchangable
+                }
+
+                event_dicts.append(entry)
+
+            session.execute(insert(CalendarEvents), event_dicts)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def add_travel_events(cls, manager_id):
+        session = DatabaseManager().get_session()
+        try:
+            team = session.query(Teams).filter(Teams.manager_id == manager_id).first()
+            matches = Matches.get_all_matches_by_team(team.id)
+            events = []
+
+            for match in matches:
+
+                if match.home_id == team.id:
+                    continue
+
+                event_date = match.date - timedelta(days = 1)
+                start_date = event_date.replace(hour = AFTERNOON_EVENT_TIMES[0], minute = 0, second = 0, microsecond = 0)
+                end_date = event_date.replace(hour = AFTERNOON_EVENT_TIMES[1], minute = 0, second = 0, microsecond = 0)
+
+                events.append((team.id, "Travel", start_date, end_date, True))
+            
+            if events:
+                cls.batch_add_events(events)
+
         finally:
             session.close()
 
@@ -5360,5 +5414,3 @@ def create_events_for_other_teams(team_id, start_date):
                 CalendarEvents.add_event(team_id, event, startDate, endDate)
 
         current_date += timedelta(days = 1)
-
-    print(weekly_usage)

@@ -171,7 +171,6 @@ class MainMenu(ctk.CTkFrame):
         # ------------------- Creating calendar events -------------------
         current_day = self.currDate + timedelta(days = 1)
         while current_day.date() <= stopDate.date():
-            print(current_day.weekday())
             if current_day.weekday() == 0:
                 for team_id in teamIDs:
                     if team_id != self.team.id:

@@ -3566,6 +3566,12 @@ class CalendarEvents(Base):
                 end_date = event_date.replace(hour = AFTERNOON_EVENT_TIMES[1], minute = 0, second = 0, microsecond = 0)
 
                 events.append((team.id, "Travel", start_date, end_date, True))
+
+                event_date = match.date + timedelta(days = 1)
+                start_date = event_date.replace(hour = MORNING_EVENT_TIMES[0], minute = 0, second = 0, microsecond = 0)
+                end_date = event_date.replace(hour = MORNING_EVENT_TIMES[1], minute = 0, second = 0, microsecond = 0)
+
+                events.append((team.id, "Travel", start_date, end_date, True))
             
             if events:
                 cls.batch_add_events(events)

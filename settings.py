@@ -505,7 +505,8 @@ EVENT_COLOURS = {
     "Recovery": "#1E90FF",         # dodger blue
     "Match Preparation": "#FF8C00", # dark orange
     "Match Review": "#FF69B4",     # hot pink
-    "Rest": "#B0C4DE"
+    "Rest": "#B0C4DE",
+    "Travel": "#D3D3D3"
 }
 
 MORNING_EVENT_TIMES = (9, 12)

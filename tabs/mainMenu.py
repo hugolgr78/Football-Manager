@@ -168,7 +168,7 @@ class MainMenu(ctk.CTkFrame):
         stopDate = min(dates)
         overallTimeInBetween = stopDate - self.currDate
 
-        # ------------------- Creating calendar events -------------------
+        # ------------------- Creating calendar events for other teams -------------------
         current_day = self.currDate + timedelta(days = 1)
         while current_day.date() <= stopDate.date():
             if current_day.weekday() == 0:

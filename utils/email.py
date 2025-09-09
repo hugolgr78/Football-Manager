@@ -1204,11 +1204,12 @@ class CalendarEventsEmail():
     def delegate(self):
         response = CTkMessagebox(
             title="Delegate Event Creation",
-            message="Are you sure you want to delegate the event creations to your Assistant Manager?\nThis week's events will not be created.\nYou can always take back control in the Settings tab.",
+            message="Are you sure you want to delegate the event creations to your Assistant Manager?\nAny events you create will be overwritten.\nYou can always take back control in the Settings tab.",
             icon="question",
             option_1="Yes",
             option_2="No",
             button_color=(CLOSE_RED, APP_BLUE),
+            width = 450,
         )
         try:
             if hasattr(response, "button_1"):

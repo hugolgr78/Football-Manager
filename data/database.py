@@ -205,6 +205,7 @@ class Managers(Base):
                 League.add_league(LEAGUE_NAME, FIRST_YEAR, 0, 3)
                 Emails.add_emails(managerID)
                 CalendarEvents.add_travel_events(managerID)
+                Settings.add_settings()
                 updateProgress(None)
 
             return managerID
@@ -2925,6 +2926,7 @@ class Emails(Base):
     injury = Column(DateTime)
     comp_id = Column(String(128))
     action_complete = Column(Boolean, default = False)
+    send = Column(Boolean, default = True)
 
     @classmethod
     def add_emails(cls, manager_id):
@@ -3043,7 +3045,7 @@ class Emails(Base):
                     "comp_id": comp_id,
                     "date": date,
                     "suspension": ban_length if email_type == "player_ban" else None,
-                    "injury": ban_length if email_type == "player_injury" else None
+                    "injury": ban_length if email_type == "player_injury" else None,
                 }
 
                 email_dicts.append(email_dict)
@@ -3123,7 +3125,7 @@ class Emails(Base):
     def get_all_emails(cls, curr_date):
         session = DatabaseManager().get_session()
         try:
-            emails = session.query(Emails).filter(Emails.date <= curr_date).order_by(Emails.date.desc()).all()
+            emails = session.query(Emails).filter(Emails.date <= curr_date, Emails.send == True).order_by(Emails.date.desc()).all()
             return emails
         finally:
             session.close()  
@@ -3154,6 +3156,24 @@ class Emails(Base):
             if email:
                 email.action_complete = True
                 session.commit()
+        finally:
+            session.close()
+
+    @classmethod
+    def toggle_send_calendar_emails(cls, date):
+        session = DatabaseManager().get_session()
+        try:
+            current_setting = session.query(Emails).filter(Emails.email_type == "calendar_events", Emails.date > date).first()
+            if current_setting:
+                new_send_value = not current_setting.send
+                session.query(Emails).filter(Emails.email_type == "calendar_events", Emails.date > date).update({Emails.send: new_send_value})
+                session.commit()
+                return new_send_value
+            else:
+                return None
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
             session.close()
 
@@ -3698,6 +3718,74 @@ class CalendarEvents(Base):
             result = {t: counts.get(t, 0) for t in all_types}
 
             return result
+        finally:
+            session.close()
+
+class Settings(Base):
+    __tablename__ = 'settings'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    setting_name = Column(String(128), nullable = False, unique = True)
+    setting_value = Column(String(256), nullable = False)
+
+    @classmethod
+    def add_settings(cls):
+        session = DatabaseManager().get_session()
+        try:
+            # store booleans as '1' or '0' strings for consistency
+            setting = Settings(
+                setting_name = "events_delegated",
+                setting_value = '0'
+            )
+            
+            session.add(setting)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_setting(cls, name):
+        session = DatabaseManager().get_session()
+        try:
+            setting = session.query(Settings).filter(Settings.setting_name == name).first()
+            if not setting:
+                return None
+
+            val = setting.setting_value
+            # Normalize common boolean representations
+            if isinstance(val, str):
+                v = val.strip().lower()
+                if v in ('1', 'true', 'yes', 'on'):
+                    return True
+                if v in ('0', 'false', 'no', 'off'):
+                    return False
+                # try integer
+                try:
+                    return int(v)
+                except Exception:
+                    return val
+            return val
+        finally:
+            session.close()
+
+    @classmethod
+    def set_setting(cls, name, value):
+        session = DatabaseManager().get_session()
+        try:
+            setting = session.query(Settings).filter(Settings.setting_name == name).first()
+            # Normalize booleans to '1'/'0' strings to keep storage consistent
+            if isinstance(value, bool):
+                setting.setting_value = '1' if value else '0'
+            else:
+                setting.setting_value = str(value)
+        
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
             session.close()
 

@@ -1145,7 +1145,9 @@ class CalendarEvents():
 
         ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.12, anchor = "w")
 
-        self.cellsFrame.place(relx = 0.05, rely = 0.2, anchor = "nw")
+        self.cellsFrame.place(relx = 0.05, rely = 0.25, anchor = "nw")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.65, anchor = "w")
 
     def setUpEmail(self):
         self.emailText_1 = (
@@ -1172,6 +1174,18 @@ class CalendarEvents():
                     CalendarEventFrame(self.frame, self.cellsFrame, date.day, date, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew", interactive = False)
                 else:
                     CalendarEventFrame(self.frame, self.cellsFrame, date.day, date, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew")
+
+        self.emailText_2 = (
+            "Here’s a quick explanation of each event in case you need a refresher:\n"
+            "- Light Training: A relaxed session to keep fitness ticking over.\n"
+            "- Medium Training: A balanced workout to maintain sharpness.\n"
+            "- Intense Training: A tough session pushing players to their limits.\n"
+            "- Team Building: Activities to strengthen squad morale.\n"
+            "- Recovery: Helps the players regain fitness quickly.\n"
+            "- Match Preparation: TBA.\n"
+            "- Match Review: TBA.\n"
+            "- Rest: No scheduled activity for this slot.\n"
+        )
 
 EMAIL_CLASSES = {
     "welcome": Welcome,

@@ -9,7 +9,7 @@ from utils.playerProfileLink import *
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 from utils.matchProfileLink import MatchProfileLink
-from utils.frames import CalendarEventFrame
+from utils.frames import CalendarEventFrame, CalendarMatchFrame
 from PIL import Image
 import io
 
@@ -1162,7 +1162,12 @@ class CalendarEvents():
 
         for i in range(7):
             date = self.date + timedelta(days = i)
-            cell = CalendarEventFrame(self.frame, self.cellsFrame, date.day, date, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew")
+
+            if Matches.check_if_game_date(self.parent.team.id, date):
+                match_ = Matches.get_team_match_no_time(self.parent.team.id, date)
+                CalendarMatchFrame(self.frame, self.parent.parentTab, self.cellsFrame, match_, date.day, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew", 1)
+            else:
+                CalendarEventFrame(self.frame, self.cellsFrame, date.day, date, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew")
 
 EMAIL_CLASSES = {
     "welcome": Welcome,

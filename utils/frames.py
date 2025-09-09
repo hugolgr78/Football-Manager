@@ -401,7 +401,7 @@ class CalendarFrame(ctk.CTkFrame):
                         break
                 
                 if matchObj:
-                    CalendarMatchFrame(self, self.parentTab, frame, matchObj, day_num, self.teamID, 150, 150, TKINTER_BACKGROUND, 0, border_color, 1, row, col, 5, 5, "nsew", numRows, matchInfoFrame = self.matchInfoFrame)
+                    CalendarMatchFrame(self, self.parentTab, frame, matchObj, day_num, self.teamID, 150, 150, TKINTER_BACKGROUND, 0, border_color, 1, row, col, 5, 5, "nsew", len(numRows), matchInfoFrame = self.matchInfoFrame)
                 elif self.managingTeam:
                     CalendarEventFrame(self, frame, day_num, date, self.teamID, 150, 150, TKINTER_BACKGROUND, 0, border_color, 1, row, col, 5, 5, "nsew", matchInfoFrame = self.matchInfoFrame, today = today)
                 else:
@@ -435,7 +435,7 @@ class CalendarMatchFrame(ctk.CTkFrame):
         ctk.CTkLabel(self, text = str(day), font = (APP_FONT_BOLD, 12), height = 0).place(relx = 0.05, rely = 0.05, anchor = "nw")
 
         home = True if self.match.home_id == self.teamID else False
-        oppNameY = 0.6 if len(numRows) > 5 else 0.5
+        oppNameY = 0.6 if numRows > 5 else 0.5
 
         src = Image.open(f"Images/{"stadium" if home else "plane"}.png")
         src.thumbnail((15, 15))

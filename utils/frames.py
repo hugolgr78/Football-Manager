@@ -668,7 +668,7 @@ class CalendarEventFrame(ctk.CTkFrame):
 
         savedEvents = CalendarEvents.get_events_dates(self.teamID, self.date, self.date.replace(hour = 23), get_finished = True)
 
-        add = (not today or today < self.date.date() < today + timedelta(weeks = 2)) and interactive
+        add = (not today or today <= self.date.date() < today + timedelta(weeks = 2)) and interactive
 
         if add:
             bindings = [
@@ -902,6 +902,9 @@ class CalendarEventFrame(ctk.CTkFrame):
 
                 if self.chosenEvents[timeOfDay]:
                     self.currEvents[self.chosenEvents[timeOfDay]] -= 1
+            elif event == "Rest":
+                if self.chosenEvents[timeOfDay]:
+                    self.currEvents[self.chosenEvents[timeOfDay]] -= 1
 
             button = self.eventButtons[timeOfDay]
             self.chosenEvents[timeOfDay] = event if event != "Rest" else None
@@ -918,6 +921,14 @@ class CalendarEventFrame(ctk.CTkFrame):
             if event is None:
                 button = self.eventButtons[i]
                 button.configure(text = "Rest", fg_color = EVENT_COLOURS["Rest"], hover_color = EVENT_COLOURS["Rest"], border_width = 0, font = (APP_FONT, 20))
+                
+                startDate = self.date.replace(hour = EVENT_TIMES[i][0], minute = 0, second = 0, microsecond = 0)
+                endDate = self.date.replace(hour = EVENT_TIMES[i][1], minute = 0, second = 0, microsecond = 0)
+                event = CalendarEvents.get_event_by_time(self.teamID, startDate, endDate)
+
+                if event:
+                    CalendarEvents.remove_event(event.id)
+
                 continue
 
             startHour, endHour = EVENT_TIMES[i]

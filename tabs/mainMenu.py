@@ -173,12 +173,14 @@ class MainMenu(ctk.CTkFrame):
         overallTimeInBetween = stopDate - self.currDate
 
         # ------------------- Creating calendar events for other teams -------------------
-        current_day = self.currDate + timedelta(days = 1)
+        current_day = self.currDate # + timedelta(days = 1)
         while current_day.date() <= stopDate.date():
             if current_day.weekday() == 0:
-                for team_id in teamIDs:
-                    if team_id != self.team.id or Settings.get_setting("events_delegated"):
-                        create_events_for_other_teams(team_id, current_day)
+                monday_moment = datetime.datetime(current_day.year, current_day.month, current_day.day, 8, 59)
+                if monday_moment > self.currDate and monday_moment <= stopDate:
+                    for team_id in teamIDs:
+                        if team_id != self.team.id or Settings.get_setting("events_delegated"):
+                            create_events_for_other_teams(team_id, current_day, add_travel = team_id != self.team.id)
             current_day += timedelta(days = 1)
 
         # -------------------Figuring out intervals -------------------

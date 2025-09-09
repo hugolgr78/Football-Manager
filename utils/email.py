@@ -9,6 +9,7 @@ from utils.playerProfileLink import *
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 from utils.matchProfileLink import MatchProfileLink
+from utils.frames import CalendarEventFrame
 from PIL import Image
 import io
 
@@ -1126,6 +1127,7 @@ class CalendarEvents():
 
         self.parent = parent
         self.frame = self.parent.emailFrame
+        self.date = self.parent.fullDate
 
         self.subject = "Weekly events reminder"
         self.sender = "Name, Assistant Manager"
@@ -1142,11 +1144,24 @@ class CalendarEvents():
 
         ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.12, anchor = "w")
 
+        self.cellsFrame.place(relx = 0.05, rely = 0.2, anchor = "nw")
+
     def setUpEmail(self):
         self.emailText_1 = (
             f"Hey Boss, just a quick reminder to set up the events for the upcoming week.\n"
             f"You can do it here or by going into your Schedule tab -> Calendar."
         )
+
+        self.frame.activeEventDate = None
+        self.frame.choosingEvent = False
+
+        self.cellsFrame = ctk.CTkFrame(self.frame, fg_color = TKINTER_BACKGROUND, width = 630, height = 160)
+        self.cellsFrame.grid_columnconfigure((0, 1, 2, 3, 4, 5, 6), weight = 1)
+        self.cellsFrame.grid_propagate(False)
+
+        for i in range(7):
+            date = self.date + timedelta(days = i)
+            cell = CalendarEventFrame(self.frame, self.cellsFrame, date.day, date, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew")
 
 EMAIL_CLASSES = {
     "welcome": Welcome,

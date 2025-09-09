@@ -766,7 +766,7 @@ class CalendarEventFrame(ctk.CTkFrame):
             okButtonWidth = 100
             okButtonHeight = 50
 
-            self.buttonFont = (APP_FONT_BOLD, 15)
+            self.buttonFont = (APP_FONT_BOLD, 13)
         
         self.currEvents = CalendarEvents.get_events_week(self.date, self.teamID)
 
@@ -900,10 +900,10 @@ class CalendarEventFrame(ctk.CTkFrame):
                 else:
                     self.currEvents[event] = 1
 
-                if self.chosenEvents[timeOfDay]:
+                if self.chosenEvents[timeOfDay] and self.chosenEvents[timeOfDay] not in ["Rest", "Match Preparation", "Match Review"]:
                     self.currEvents[self.chosenEvents[timeOfDay]] -= 1
             elif event == "Rest":
-                if self.chosenEvents[timeOfDay]:
+                if self.chosenEvents[timeOfDay] and self.chosenEvents[timeOfDay] not in ["Rest", "Match Preparation", "Match Review"]:
                     self.currEvents[self.chosenEvents[timeOfDay]] -= 1
 
             button = self.eventButtons[timeOfDay]

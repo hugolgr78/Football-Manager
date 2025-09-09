@@ -1186,7 +1186,7 @@ class CalendarEventsEmail():
                     CalendarEventFrame(self.frame, self.cellsFrame, date.day, date, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew")
 
         self.emailText_2 = (
-            "Here’s a quick explanation of each event in case you need a refresher:\n"
+            "Here’s a quick explanation of each event in case you need a refresher:\n\n"
             "- Light Training: A relaxed session to keep fitness ticking over.\n"
             "- Medium Training: A balanced workout to maintain sharpness.\n"
             "- Intense Training: A tough session pushing players to their limits.\n"

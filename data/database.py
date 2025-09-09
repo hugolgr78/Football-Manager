@@ -3701,7 +3701,8 @@ class CalendarEvents(Base):
                 .filter(
                     CalendarEvents.start_date < end_of_week,
                     CalendarEvents.end_date >= start_of_week,
-                    CalendarEvents.team_id == team_id
+                    CalendarEvents.team_id == team_id,
+                    CalendarEvents.event_type != "Travel"
                 )
                 .group_by(CalendarEvents.event_type)
                 .all()
@@ -3718,6 +3719,19 @@ class CalendarEvents(Base):
             result = {t: counts.get(t, 0) for t in all_types}
 
             return result
+        finally:
+            session.close()
+    
+    @classmethod
+    def get_event_by_time(cls, team_id, start, end):
+        session = DatabaseManager().get_session()
+        try:
+            event = session.query(CalendarEvents).filter(
+                CalendarEvents.team_id == team_id,
+                CalendarEvents.start_date == start,
+                CalendarEvents.end_date == end
+            ).first()
+            return event
         finally:
             session.close()
 
@@ -5455,11 +5469,11 @@ def check_player_games_happy(teams, currDate):
                     email_date = currDate + timedelta(days = 1)
                     Emails.add_email("player_games_issue", None, player.id, None, None, email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
 
-def create_events_for_other_teams(team_id, start_date):
+def create_events_for_other_teams(team_id, start_date, add_travel):
     end_date = start_date + timedelta(days = 7)
 
-    if len(CalendarEvents.get_events_week(start_date, team_id)) > 0:
-        return
+    # if len(CalendarEvents.get_events_week(start_date, team_id)) > 0:
+    #     return
 
     matches = Matches.get_match_by_team_and_date_range(team_id, start_date, end_date)
 
@@ -5470,86 +5484,101 @@ def create_events_for_other_teams(team_id, start_date):
     weekly_usage = {event: 0 for event in MAX_EVENTS}
 
     current_date = start_date
+    planned_events = defaultdict(list)
     while current_date.date() < end_date.date():
         events = []
+
+        # 1. Get already scheduled events for this team & day
+        existing = CalendarEvents.get_events_dates(
+            team_id,
+            current_date.replace(hour=0, minute=0, second=0, microsecond=0),
+            current_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        )
+        existing_types = [ev.event_type for ev in existing]
+        events.extend(existing_types)
 
         templates_2 = TEMPLATES_2.copy()
         templates_3 = TEMPLATES_3.copy()
 
-        is_prep = getDayIndex(current_date + timedelta(days = 1)) in match_days
+        is_prep = getDayIndex(current_date + timedelta(days=1)) in match_days
         is_match = getDayIndex(current_date) in match_days
 
         if getDayIndex(current_date) == 0:
-            # Checks if there was a game on last week Sunday
-            is_review = Matches.check_if_game_date(team_id, current_date - timedelta(days = 1))
+            is_review = Matches.check_if_game_date(team_id, current_date - timedelta(days=1))
         else:
-            is_review = getDayIndex(current_date - timedelta(days = 1)) in match_days
+            is_review = getDayIndex(current_date - timedelta(days=1)) in match_days
 
         if not is_match:
             if is_review or is_prep:
+                if is_review and "Match Review" not in existing_types:
+                    events.insert(1, "Match Review")
+                if is_prep and "Match Preparation" not in existing_types:
+                    events.insert(2, "Match Preparation")
 
-                if is_review:
-                    date_check = current_date - timedelta(days = 1)
-                elif is_prep:
-                    date_check = current_date + timedelta(days = 1)
+                if len(events) < 3:
+                    is_home = (
+                        Matches.get_team_match_no_time(team_id, current_date - timedelta(days=1) if is_review else current_date + timedelta(days=1)).home_id
+                        == team_id
+                    )
 
-                is_home = True if Matches.get_team_match_no_time(team_id, date_check).home_id == team_id else False
+                    if is_home:
+                        template = random.choice(templates_2)
+                        for t_event in template:
+                            if weekly_usage[t_event] < MAX_EVENTS[t_event] and t_event not in events:
+                                events.append(t_event)
+                                weekly_usage[t_event] += 1
+                        templates_2.remove(template)
+                    else:
+                        possible_events = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e] and e not in events]
+                        if possible_events:
+                            event = random.choice(possible_events)
+                            events.append(event)
+                            weekly_usage[event] += 1
 
-                if is_home:
-                    template = random.choice(TEMPLATES_2)
+                        if add_travel:
+                            if is_review and "Travel" not in events:
+                                events.insert(0, "Travel")
+                            elif is_prep and "Travel" not in events:
+                                events.insert(1, "Travel")
+            else:
+                if len(events) < 3:
+                    template = random.choice(templates_3)
                     for t_event in template:
-                        if weekly_usage[t_event] < MAX_EVENTS[t_event]:
+                        if weekly_usage[t_event] < MAX_EVENTS[t_event] and t_event not in events:
                             events.append(t_event)
                             weekly_usage[t_event] += 1
+                    templates_3.remove(template)
 
-                    templates_2.remove(template)
+            # Store provisional events for the day
+            planned_events[current_date.date()] = events[:3]
 
-                    if is_review:
-                        events = ["Match Review"] + events[:2]
-                    elif is_prep:
-                        events = events[:2] + ["Match Preparation"]
-                else:
-                    possible_events = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e]]
-                    event = random.choice(possible_events) if possible_events else None
-                    if event:
-                        weekly_usage[event] += 1
+        current_date += timedelta(days=1)
 
-                    if is_review:
-                        events = ["Travel", "Match Review"]
-                        if event:
-                            events.append(event)
-                    elif is_prep:
-                        events = ["Travel", "Match Preparation"]
-                        if event:
-                            events.insert(0, event)
-            else:
-                template = random.choice(TEMPLATES_3)
-                for t_event in template:
-                    if weekly_usage[t_event] < MAX_EVENTS[t_event]:
-                        events.append(t_event)
-                        weekly_usage[t_event] += 1
-                
-                templates_3.remove(template)
-
-            # Ensure max 3 events per day
-            events = events[:3]
-
-            days_left = (end_date - current_date).days
-            if weekly_usage["Recovery"] < 2 and days_left <= (2 - weekly_usage["Recovery"]):
+    # === SECOND PASS: fill gaps and insert into DB ===
+    for day, events in planned_events.items():
+        # Fill recovery requirement if needed
+        days_left = (end_date.date() - day).days
+        if weekly_usage["Recovery"] < 2 and days_left <= (2 - weekly_usage["Recovery"]):
+            if "Recovery" not in events:
                 if events:
-                    if "Recovery" not in events:
-                        weekly_usage[events[-1]] -= 1
-                        events[-1] = "Recovery"
-                        weekly_usage["Recovery"] += 1
+                    weekly_usage[events[-1]] -= 1 if events[-1] in weekly_usage else 0
+                    events[-1] = "Recovery"
                 else:
                     events.append("Recovery")
-                    weekly_usage["Recovery"] += 1
+                weekly_usage["Recovery"] += 1
 
-            for i, event in enumerate(events):
-                startHour, endHour = EVENT_TIMES[i]
-                startDate = current_date.replace(hour = startHour, minute = 0, second = 0, microsecond = 0)
-                endDate = current_date.replace(hour = endHour, minute = 0, second = 0, microsecond = 0)
+        # Fill empty slots up to 3
+        while len(events) < 3:
+            possible_events = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e] and e not in events]
+            if not possible_events:
+                break
+            chosen = random.choice(possible_events)
+            events.append(chosen)
+            weekly_usage[chosen] += 1
 
-                CalendarEvents.add_event(team_id, event, startDate, endDate)
-
-        current_date += timedelta(days = 1)
+        # Insert into DB with correct time slots
+        for i, event in enumerate(events):
+            startHour, endHour = EVENT_TIMES[i]
+            startDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=startHour)
+            endDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=endHour)
+            CalendarEvents.add_event(team_id, event, startDate, endDate)

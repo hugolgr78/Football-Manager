@@ -72,6 +72,7 @@ class EmailFrame(ctk.CTkFrame):
         if self.emailOpen:
             return
 
+        self.parentTab.currentEmail = self
         self.canvas.place_forget()
         self.configure(border_color = APP_BLUE, border_width = 2)
 

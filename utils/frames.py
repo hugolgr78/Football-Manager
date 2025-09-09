@@ -815,7 +815,7 @@ class CalendarEventFrame(ctk.CTkFrame):
                 else:
                     eventText = "Rest"
 
-                self.eventButtons[i].configure(text = eventText, fg_color = EVENT_COLOURS[eventText], hover_color = EVENT_COLOURS[eventText], border_width = 0, font = (APP_FONT_BOLD, 20))
+                self.eventButtons[i].configure(text = eventText, fg_color = EVENT_COLOURS[eventText], hover_color = EVENT_COLOURS[eventText], border_width = 0, font = self.buttonFont)
 
     def addCalendarEvent(self, timeOfDay):
 

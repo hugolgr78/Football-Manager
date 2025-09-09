@@ -925,7 +925,7 @@ class PlayerGamesIssue():
             self.parent.player,
             f"{self.parent.player.first_name} {self.parent.player.last_name}",
             "I wanted to inform you that ",
-            " is unhappy his game time.",
+            " is unhappy with his game time.",
             240,
             30,
             self.parent.parentTab,
@@ -1121,6 +1121,33 @@ class PlayerBirthday():
 
         Emails.update_action(self.parent.email_id)
 
+class CalendarEvents():
+    def __init__(self, parent):
+
+        self.parent = parent
+        self.frame = self.parent.emailFrame
+
+        self.subject = "Weekly events reminder"
+        self.sender = "Name, Assistant Manager"
+        self.subjectFontSize = 20
+
+    def openEmail(self):
+        for widget in self.frame.winfo_children():
+            widget.place_forget()
+
+        self.setUpEmail()
+
+        self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
+        self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.12, anchor = "w")
+
+    def setUpEmail(self):
+        self.emailText_1 = (
+            f"Hey Boss, just a quick reminder to set up the events for the upcoming week.\n"
+            f"You can do it here or by going into your Schedule tab -> Calendar."
+        )
+
 EMAIL_CLASSES = {
     "welcome": Welcome,
     "matchday_review": MatchdayReview,
@@ -1130,5 +1157,6 @@ EMAIL_CLASSES = {
     "season_preview": SeasonPreview,
     "player_injury": PlayerInjury,
     "player_ban": PlayerBan,
-    "player_birthday": PlayerBirthday
+    "player_birthday": PlayerBirthday,
+    "calendar_events": CalendarEvents
 }

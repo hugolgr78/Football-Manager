@@ -130,6 +130,8 @@ class MainMenu(ctk.CTkFrame):
 
         if self.activeButton == 9:
             self.tabs[self.activeButton].checkSave()
+        elif self.activeButton == 3:
+            self.tabs[self.activeButton].updateCalendar()
 
     def addDate(self):
 

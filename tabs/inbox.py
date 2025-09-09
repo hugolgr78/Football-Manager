@@ -13,6 +13,7 @@ class Inbox(ctk.CTkFrame):
         self.manager_id = Managers.get_all_user_managers()[0].id
 
         self.emailsToAdd = {}
+        self.currentEmail = None
 
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
@@ -36,6 +37,14 @@ class Inbox(ctk.CTkFrame):
         canvas.place(x = 0, y = 65, anchor = "w")
 
         self.addEmails()
+
+    def resetOpenEmail(self):
+        if self.currentEmail and self.currentEmail.email_type == "calendar_events":
+
+            for widget in self.emailDataFrame.winfo_children():
+                widget.destroy()
+
+            self.currentEmail.email.openEmail()
 
     def addEmails(self):
         emails = Emails.get_all_emails(Game.get_game_date(self.manager_id))

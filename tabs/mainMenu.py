@@ -132,6 +132,8 @@ class MainMenu(ctk.CTkFrame):
             self.tabs[self.activeButton].checkSave()
         elif self.activeButton == 3:
             self.tabs[self.activeButton].updateCalendar()
+        elif self.activeButton == 1:
+            self.tabs[self.activeButton].resetOpenEmail()
 
     def addDate(self):
 

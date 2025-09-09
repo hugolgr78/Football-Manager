@@ -724,6 +724,9 @@ class CalendarEventFrame(ctk.CTkFrame):
         else:
             self.configure(border_color = APP_BLUE)
 
+            self.parentFrame.place_forget()
+            self.parentFrame.place(relx = 0.05, rely = 0.2, anchor = "nw")
+
             for cell in self.parentFrame.winfo_children():
                 if isinstance(cell, CalendarEventFrame) and cell != self:
                     cell.configure(border_color = "white")

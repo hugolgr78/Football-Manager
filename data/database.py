@@ -204,6 +204,8 @@ class Managers(Base):
                 updateProgress(3)
                 League.add_league(LEAGUE_NAME, FIRST_YEAR, 0, 3)
                 Emails.add_emails(managerID)
+                CalendarEvents.add_travel_events(managerID)
+                Settings.add_settings()
                 updateProgress(None)
 
             return managerID
@@ -872,6 +874,22 @@ class Players(Base):
             session.close()
 
     @classmethod
+    def update_morale_with_values(cls, team_id, morale_value):
+        session = DatabaseManager().get_session()
+        try:
+            players = session.query(Players).filter(Players.team_id == team_id).all()
+            for player in players:
+                player.morale += morale_value
+                player.morale = min(100, max(0, player.morale))
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def batch_update_morales(cls, morales):
         session = DatabaseManager().get_session()
         try:
@@ -1064,18 +1082,30 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def update_sharpness_and_fitness(cls, time_in_between):
+    def update_sharpness_and_fitness(cls, time_in_between, team_id):
         session = DatabaseManager().get_session()
         try:
             # Players eligible for fitness updates (exclude injury bans)
             fitness_players = (
                 session.query(Players)
-                .outerjoin(PlayerBans, and_(PlayerBans.player_id == Players.id, PlayerBans.ban_type == 'injury'))
+                .outerjoin(
+                    PlayerBans,
+                    and_(
+                        PlayerBans.player_id == Players.id,
+                        PlayerBans.ban_type == 'injury'
+                    )
+                )
                 .filter(PlayerBans.id.is_(None))
+                .filter(Players.team_id == team_id)
                 .all()
             )
 
-            all_players = session.query(Players).all()
+            # All players from this team
+            all_players = (
+                session.query(Players)
+                .filter(Players.team_id == team_id)
+                .all()
+            )
             fitness_ids = {p.id for p in fitness_players}
 
             hours = int(time_in_between.total_seconds() // 3600)
@@ -1105,7 +1135,27 @@ class Players(Base):
             raise e
         finally:
             session.close()
-    
+
+    @classmethod
+    def update_sharpness_and_fitness_with_values(cls, team_id, fitness_value, sharpness_value):
+        session = DatabaseManager().get_session()
+        try:
+            players = session.query(Players).filter(Players.team_id == team_id).all()
+
+            for player in players:
+                player.fitness += fitness_value
+                player.sharpness += sharpness_value
+
+                player.fitness = min(100, max(0, player.fitness))
+                player.sharpness = min(100, max(MIN_SHARPNESS, player.sharpness))
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+        
     @classmethod
     def update_talked_to(cls, player_id):
         session = DatabaseManager().get_session()
@@ -1206,6 +1256,19 @@ class Matches(Base):
                 Matches.date == date
             ).first()
             return match
+        finally:
+            session.close()
+
+    @classmethod
+    def get_match_by_team_and_date_range(cls, team_id, start_date, end_date):
+        session = DatabaseManager().get_session()
+        try:
+            matches = session.query(Matches).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                Matches.date >= start_date,
+                Matches.date <= end_date
+            ).all()
+            return matches
         finally:
             session.close()
         
@@ -1433,7 +1496,7 @@ class Matches(Base):
         try:
             matches = session.query(Matches).filter(
                 Matches.date >= start,
-                Matches.date < end
+                Matches.date < end - timedelta(hours=2)
             ).order_by(Matches.date.asc()).all()
             return matches
         finally:
@@ -1466,6 +1529,30 @@ class Matches(Base):
             ).first()
 
             return finished is not None
+        finally:
+            session.close()
+
+    @classmethod
+    def check_if_game_date(cls, team_id, game_date):
+        session = DatabaseManager().get_session()
+        try:
+            match = session.query(Matches).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                func.date(Matches.date) == game_date.date()
+            ).order_by(Matches.date.asc()).first()
+            return match is not None
+        finally:
+            session.close()
+
+    @classmethod
+    def get_team_match_no_time(cls, team_id, date):
+        session = DatabaseManager().get_session()
+        try:
+            match = session.query(Matches).filter(
+                ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
+                func.date(Matches.date) == date.date()
+            ).order_by(Matches.date.asc()).first()
+            return match
         finally:
             session.close()
 
@@ -2497,7 +2584,6 @@ class League(Base):
         finally:
             session.close()
 
-
 class LeagueTeams(Base):
     __tablename__ = 'league_teams'
     
@@ -2832,7 +2918,7 @@ class Emails(Base):
     __tablename__ = 'emails'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday"), nullable = False)
+    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday", "calendar_events"), nullable = False)
     matchday = Column(Integer)
     date = Column(DateTime, nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))
@@ -2840,6 +2926,7 @@ class Emails(Base):
     injury = Column(DateTime)
     comp_id = Column(String(128))
     action_complete = Column(Boolean, default = False)
+    send = Column(Boolean, default = True)
 
     @classmethod
     def add_emails(cls, manager_id):
@@ -2890,6 +2977,18 @@ class Emails(Base):
                 if email_date >= SEASON_START_DATE:
                     birthday_email = ("player_birthday", None, player.id, None, None, email_date)
                     emails.append(birthday_email)
+
+            # Create calendar events email (every monday at 8am)
+            calendar_date = SEASON_START_DATE
+            while calendar_date.weekday() != 0:
+                calendar_date += datetime.timedelta(days = 1)
+
+            season_end = SEASON_START_DATE.replace(year = SEASON_START_DATE.year + 1)
+
+            while calendar_date < season_end:
+                calendar_email = ("calendar_events", None, None, None, None, calendar_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                emails.append(calendar_email)
+                calendar_date += datetime.timedelta(weeks = 1)
 
             cls.batch_add_emails(emails)
         finally:
@@ -2946,7 +3045,7 @@ class Emails(Base):
                     "comp_id": comp_id,
                     "date": date,
                     "suspension": ban_length if email_type == "player_ban" else None,
-                    "injury": ban_length if email_type == "player_injury" else None
+                    "injury": ban_length if email_type == "player_injury" else None,
                 }
 
                 email_dicts.append(email_dict)
@@ -3026,7 +3125,7 @@ class Emails(Base):
     def get_all_emails(cls, curr_date):
         session = DatabaseManager().get_session()
         try:
-            emails = session.query(Emails).filter(Emails.date <= curr_date).order_by(Emails.date.desc()).all()
+            emails = session.query(Emails).filter(Emails.date <= curr_date, Emails.send == True).order_by(Emails.date.desc()).all()
             return emails
         finally:
             session.close()  
@@ -3057,6 +3156,24 @@ class Emails(Base):
             if email:
                 email.action_complete = True
                 session.commit()
+        finally:
+            session.close()
+
+    @classmethod
+    def toggle_send_calendar_emails(cls, date):
+        session = DatabaseManager().get_session()
+        try:
+            current_setting = session.query(Emails).filter(Emails.email_type == "calendar_events", Emails.date > date).first()
+            if current_setting:
+                new_send_value = not current_setting.send
+                session.query(Emails).filter(Emails.email_type == "calendar_events", Emails.date > date).update({Emails.send: new_send_value})
+                session.commit()
+                return new_send_value
+            else:
+                return None
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
             session.close()
 
@@ -3200,6 +3317,22 @@ class PlayerBans(Base):
             session.close()
 
     @classmethod
+    def remove_ban(cls, ban_id):
+        session = DatabaseManager().get_session()
+        try:
+            ban = session.query(PlayerBans).filter(PlayerBans.id == ban_id).first()
+            if ban:
+                session.delete(ban)
+                session.commit()
+                return True
+            return False
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def check_bans_for_player(cls, player_id, competition_id):
         session = DatabaseManager().get_session()
         try:
@@ -3269,6 +3402,19 @@ class PlayerBans(Base):
                     non_banned_players.append(player)
 
             return non_banned_players
+        finally:
+            session.close()
+
+    @classmethod
+    def get_injuries_dates(cls, start_date, end_date):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).filter(
+                PlayerBans.ban_type == "injury",
+                PlayerBans.injury >= start_date,
+                PlayerBans.injury <= end_date
+            ).all()
+            return bans
         finally:
             session.close()
 
@@ -3373,6 +3519,303 @@ class SavedLineups(Base):
                 .all()
             )
             return [l[0] for l in lineups]
+        finally:
+            session.close()
+
+class CalendarEvents(Base):
+    __tablename__ = 'calendar_events'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    event_type = Column(Enum("Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match Review", "Travel"), nullable = False)
+    team_id = Column(String(128), ForeignKey('teams.id'))
+    start_date = Column(DateTime, nullable = False)
+    end_date = Column(DateTime, nullable = False)
+    finished = Column(Boolean, default = False)
+    unchangable = Column(Boolean, default = False)
+
+    @classmethod
+    def add_event(cls, team_id, event_type, start_date, end_date, unchangable = False):
+        session = DatabaseManager().get_session()
+        try:
+            # Check if an event with the same start & end exists
+            existing_event = session.query(CalendarEvents).filter_by(
+                team_id = team_id,
+                start_date = start_date,
+                end_date = end_date
+            ).first()
+
+            if existing_event:
+                # Update the event type
+                existing_event.event_type = event_type
+            else:
+                # Otherwise create a new one
+                event = CalendarEvents(
+                    team_id = team_id,
+                    event_type = event_type,
+                    start_date = start_date,
+                    end_date = end_date,
+                    unchangable = unchangable
+                )
+                session.add(event)
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_add_events(cls, events):
+        session = DatabaseManager().get_session()
+        try:
+            event_dicts = []
+            for event in events:
+                team_id, event_type, start_date, end_date, unchangable = event
+
+                entry = {
+                    "id": str(uuid.uuid4()),
+                    "team_id": team_id,
+                    "event_type": event_type,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "unchangable": unchangable
+                }
+
+                event_dicts.append(entry)
+
+            session.execute(insert(CalendarEvents), event_dicts)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def add_travel_events(cls, manager_id):
+        session = DatabaseManager().get_session()
+        try:
+            team = session.query(Teams).filter(Teams.manager_id == manager_id).first()
+            matches = Matches.get_all_matches_by_team(team.id)
+            events = []
+
+            for match in matches:
+
+                if match.home_id == team.id:
+                    continue
+
+                event_date = match.date - timedelta(days = 1)
+                start_date = event_date.replace(hour = AFTERNOON_EVENT_TIMES[0], minute = 0, second = 0, microsecond = 0)
+                end_date = event_date.replace(hour = AFTERNOON_EVENT_TIMES[1], minute = 0, second = 0, microsecond = 0)
+
+                events.append((team.id, "Travel", start_date, end_date, True))
+
+                event_date = match.date + timedelta(days = 1)
+                start_date = event_date.replace(hour = MORNING_EVENT_TIMES[0], minute = 0, second = 0, microsecond = 0)
+                end_date = event_date.replace(hour = MORNING_EVENT_TIMES[1], minute = 0, second = 0, microsecond = 0)
+
+                events.append((team.id, "Travel", start_date, end_date, True))
+            
+            if events:
+                cls.batch_add_events(events)
+
+        finally:
+            session.close()
+
+    @classmethod
+    def remove_event(cls, event_id):
+        session = DatabaseManager().get_session()
+        try:
+            session.query(CalendarEvents).filter(CalendarEvents.id == event_id).delete()
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_event_by_id(cls, event_id):
+        session = DatabaseManager().get_session()
+        try:
+            event = session.query(CalendarEvents).filter(CalendarEvents.id == event_id).first()
+            return event
+        finally:
+            session.close()
+
+    @classmethod
+    def get_events_dates(cls, team_id, start_date, end_date, get_finished = False):
+        session = DatabaseManager().get_session()
+        try:
+            events = session.query(CalendarEvents).filter(
+                CalendarEvents.start_date < end_date,
+                CalendarEvents.end_date > start_date,
+                CalendarEvents.team_id == team_id
+            ).all()
+
+            if not get_finished:
+                events = [event for event in events if not event.finished]
+
+            return events
+        finally:
+            session.close()
+
+    @classmethod
+    def get_events_dates_all(cls, start_date, end_date):
+        session = DatabaseManager().get_session()
+        try:
+            events = session.query(CalendarEvents).filter(
+                CalendarEvents.start_date < end_date,
+                CalendarEvents.end_date > start_date,
+                CalendarEvents.finished == False
+            ).all()
+
+            return events
+        finally:
+            session.close()
+
+    @classmethod
+    def update_event(cls, event_id):
+        session = DatabaseManager().get_session()
+        try:
+            event = session.query(CalendarEvents).filter(CalendarEvents.id == event_id).first()
+            event.finished = True
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_events_week(cls, date, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            start_of_week = date - timedelta(days = date.weekday())
+            end_of_week = start_of_week + timedelta(days = 7)
+
+            # Aggregate counts per event_type for events overlapping the week
+            rows = (
+                session.query(CalendarEvents.event_type, func.count(CalendarEvents.id))
+                .filter(
+                    CalendarEvents.start_date < end_of_week,
+                    CalendarEvents.end_date >= start_of_week,
+                    CalendarEvents.team_id == team_id,
+                    CalendarEvents.event_type != "Travel"
+                )
+                .group_by(CalendarEvents.event_type)
+                .all()
+            )
+
+            # If no events for this team/week, return empty dict
+            if not rows:
+                return {}
+
+            counts = {etype: int(cnt) for etype, cnt in rows}
+
+            # Ensure all possible event types are present with zero if missing
+            all_types = ["Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match Review"]
+            result = {t: counts.get(t, 0) for t in all_types}
+
+            return result
+        finally:
+            session.close()
+    
+    @classmethod
+    def get_event_by_time(cls, team_id, start, end):
+        session = DatabaseManager().get_session()
+        try:
+            event = session.query(CalendarEvents).filter(
+                CalendarEvents.team_id == team_id,
+                CalendarEvents.start_date == start,
+                CalendarEvents.end_date == end
+            ).first()
+            return event
+        finally:
+            session.close()
+
+    @classmethod
+    def delete_events_for_team_in_date_range(cls, team_id, start_date, end_date):
+        session = DatabaseManager().get_session()
+        try:
+            session.query(CalendarEvents).filter(
+                CalendarEvents.team_id == team_id,
+                CalendarEvents.start_date >= start_date,
+                CalendarEvents.end_date <= end_date,
+            ).delete(synchronize_session = False)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+class Settings(Base):
+    __tablename__ = 'settings'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    setting_name = Column(String(128), nullable = False, unique = True)
+    setting_value = Column(String(256), nullable = False)
+
+    @classmethod
+    def add_settings(cls):
+        session = DatabaseManager().get_session()
+        try:
+            # store booleans as '1' or '0' strings for consistency
+            setting = Settings(
+                setting_name = "events_delegated",
+                setting_value = '0'
+            )
+            
+            session.add(setting)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_setting(cls, name):
+        session = DatabaseManager().get_session()
+        try:
+            setting = session.query(Settings).filter(Settings.setting_name == name).first()
+            if not setting:
+                return None
+
+            val = setting.setting_value
+            # Normalize common boolean representations
+            if isinstance(val, str):
+                v = val.strip().lower()
+                if v in ('1', 'true', 'yes', 'on'):
+                    return True
+                if v in ('0', 'false', 'no', 'off'):
+                    return False
+                # try integer
+                try:
+                    return int(v)
+                except Exception:
+                    return val
+            return val
+        finally:
+            session.close()
+
+    @classmethod
+    def set_setting(cls, name, value):
+        session = DatabaseManager().get_session()
+        try:
+            setting = session.query(Settings).filter(Settings.setting_name == name).first()
+            # Normalize booleans to '1'/'0' strings to keep storage consistent
+            if isinstance(value, bool):
+                setting.setting_value = '1' if value else '0'
+            else:
+                setting.setting_value = str(value)
+        
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
             session.close()
 
@@ -5041,3 +5484,101 @@ def check_player_games_happy(teams, currDate):
                 if team.id == managed_team.id and reduced:
                     email_date = currDate + timedelta(days = 1)
                     Emails.add_email("player_games_issue", None, player.id, None, None, email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+
+def create_events_for_other_teams(team_id, start_date, managing_team):
+    end_date = start_date + timedelta(days=7)
+    matches = Matches.get_match_by_team_and_date_range(team_id, start_date, end_date)
+
+    match_days = {getDayIndex(match.date) for match in matches}
+    weekly_usage = {event: 0 for event in MAX_EVENTS}
+    planned_events = defaultdict(list)  # store per day
+
+    if managing_team:
+        CalendarEvents.delete_events_for_team_in_date_range(team_id, start_date, end_date)
+
+    current_date = start_date
+    while current_date.date() < end_date.date():
+        events = []
+
+        templates_2 = TEMPLATES_2.copy()
+        templates_3 = TEMPLATES_3.copy()
+
+        is_prep = getDayIndex(current_date + timedelta(days=1)) in match_days
+        is_match = getDayIndex(current_date) in match_days
+
+        if getDayIndex(current_date) == 0:
+            is_review = Matches.check_if_game_date(team_id, current_date - timedelta(days=1))
+        else:
+            is_review = getDayIndex(current_date - timedelta(days=1)) in match_days
+
+        if not is_match:
+            if is_review or is_prep:
+                date_check = current_date - timedelta(days=1) if is_review else current_date + timedelta(days=1)
+                is_home = Matches.get_team_match_no_time(team_id, date_check).home_id == team_id
+
+                if is_home:
+                    template = random.choice(TEMPLATES_2)
+                    for t_event in template:
+                        if weekly_usage[t_event] < MAX_EVENTS[t_event]:
+                            events.append(t_event)
+                            weekly_usage[t_event] += 1
+                    templates_2.remove(template)
+
+                    if is_review:
+                        events = ["Match Review"] + events[:2]
+                    elif is_prep:
+                        events = events[:2] + ["Match Preparation"]
+                else:
+                    possible = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e]]
+                    event = random.choice(possible) if possible else None
+                    if event:
+                        weekly_usage[event] += 1
+
+                    if is_review:
+                        events = ["Travel", "Match Review"]
+                        if event:
+                            events.append(event)
+                    elif is_prep:
+                        events = ["Travel", "Match Preparation"]
+                        if event:
+                            events.insert(0, event)
+            else:
+                template = random.choice(TEMPLATES_3)
+                for t_event in template:
+                    if weekly_usage[t_event] < MAX_EVENTS[t_event]:
+                        events.append(t_event)
+                        weekly_usage[t_event] += 1
+                templates_3.remove(template)
+
+            planned_events[current_date.date()] = events[:3]
+
+        current_date += timedelta(days=1)
+
+    # === SECOND PASS: fill in gaps and insert ===
+    for day, events in planned_events.items():
+        days_left = (end_date.date() - day).days
+        if weekly_usage["Recovery"] < 2 and days_left <= (2 - weekly_usage["Recovery"]):
+            if events:
+                if "Recovery" not in events:
+                    weekly_usage[events[-1]] -= 1
+                    events[-1] = "Recovery"
+                    weekly_usage["Recovery"] += 1
+            else:
+                events.append("Recovery")
+                weekly_usage["Recovery"] += 1
+
+        # Fill remaining slots up to 3
+        while len(events) < 3:
+            possible = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e] and e not in events]
+            if not possible:
+                break
+            choice = random.choice(possible)
+            events.append(choice)
+            weekly_usage[choice] += 1
+
+        # Insert into DB
+        for i, event in enumerate(events):
+            startHour, endHour = EVENT_TIMES[i]
+            startDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=startHour)
+            endDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=endHour)
+            CalendarEvents.add_event(team_id, event, startDate, endDate)

@@ -55,7 +55,7 @@ class Game(Base):
     manager_id = Column(String(256), nullable = False)
     first_name = Column(String(128), nullable = False)
     last_name = Column(String(128), nullable = False)
-    curr_date = Column(DateTime, nullable = False, default = datetime.datetime(2025, 8, 14, 7, 0, 0))
+    curr_date = Column(DateTime, nullable = False, default = SEASON_START_DATE)
 
     @classmethod
     def add_game(cls, manager_id, first_name, last_name):

@@ -35,7 +35,7 @@ TABLE_COLOURS = ["#C0392B", "#27AE60", "#2980B9", "#8E44AD", "#D35400", "#16A085
 LEAGUE_NAME = "Eclipse League"
 FIRST_YEAR = 2024
 NUM_TEAMS = 20
-SEASON_START_DATE = datetime.datetime(2025, 8, 14, 7, 0, 0, 0)
+SEASON_START_DATE = datetime.datetime(2025, 8, 10, 7, 0, 0, 0)
 
 TOTAL_STEPS = 400
 PROGRESS = 0
@@ -488,6 +488,48 @@ DAILY_FITNESS_RECOVERY_RATE = 0.0125
 SHARPNESS_GAIN_PER_MINUTE = 0.2
 DAILY_SHARPNESS_DECAY = 0.04
 MIN_SHARPNESS = 10
+
+MAX_EVENTS = {
+    "Light Training": 3,
+    "Medium Training": 3,
+    "Intense Training": 3,
+    "Team Building": 2,
+    "Recovery": 2
+}
+
+EVENT_COLOURS = {
+    "Light Training": "#90EE90",   # light green
+    "Medium Training": "#32CD32",  # lime green
+    "Intense Training": "#006400", # dark green
+    "Team Building": "#FFD700",    # gold
+    "Recovery": "#1E90FF",         # dodger blue
+    "Match Preparation": "#FF8C00", # dark orange
+    "Match Review": "#FF69B4",     # hot pink
+    "Rest": "#B0C4DE",
+    "Travel": "#D3D3D3"
+}
+
+MORNING_EVENT_TIMES = (9, 12)
+AFTERNOON_EVENT_TIMES = (12, 15)
+EVENING_EVENT_TIMES = (15, 18)
+
+EVENT_TIMES = [MORNING_EVENT_TIMES, AFTERNOON_EVENT_TIMES, EVENING_EVENT_TIMES]
+
+TEMPLATES_3 = [
+    ["Intense Training", "Medium Training", "Light Training"],
+    ["Medium Training", "Team Building", "Recovery"],
+    ["Light Training", "Recovery", "Intense Training"],
+    ["Team Building", "Medium Training", "Recovery"],
+    ["Recovery", "Team Building", "Medium Training"]
+]
+
+TEMPLATES_2 = [
+    ["Medium Training", "Light Training"],
+    ["Intense Training", "Recovery"],
+    ["Team Building", "Medium Training"],
+    ["Recovery", "Light Training"],
+    ["Intense Training", "Team Building"]
+]
 
 from data.database import StatsManager
 

@@ -1,3 +1,4 @@
+from datetime import date
 import customtkinter as ctk
 from settings import *
 from data.database import *
@@ -294,7 +295,7 @@ class MatchFrame(ctk.CTkFrame):
             ctk.CTkLabel(self.lineupFrame, text = f"{player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 3, sticky = "w")
 
 class CalendarFrame(ctk.CTkFrame):
-    def __init__(self, parent, matches, parentFrame, parentTab, matchInfoFrame, teamID):
+    def __init__(self, parent, matches, parentFrame, parentTab, matchInfoFrame, teamID, managingTeam = False):
         super().__init__(parentFrame, fg_color = TKINTER_BACKGROUND, width = 670, height = 590)
 
         self.matches = matches
@@ -302,12 +303,16 @@ class CalendarFrame(ctk.CTkFrame):
         self.parent = parent
         self.matchInfoFrame = matchInfoFrame
         self.teamID = teamID
+        self.managingTeam = managingTeam
 
         self.months = ["August", "September", "October", "November", "December", "January", "February", "March", "April", "May", "June", "July"]
         self.calendarFrames = [None] * len(self.months)
 
         self.currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
         self.startMonth = self.currDate.month
+        self.choosingEvent = False
+        self.activeMatch = None
+        self.activeEventDate = None
 
         if self.startMonth >= 8:
             self.startYear = self.currDate.year
@@ -374,10 +379,10 @@ class CalendarFrame(ctk.CTkFrame):
                 if (row == 0 and col < start_weekday) or day_num > num_days:
                     continue
 
-                date = datetime.datetime(year, month_index, day_num).date()
+                date = datetime.datetime(year, month_index, day_num)
                 today = self.currDate.date()
 
-                if today == date:
+                if today == date.date():
                     border_color = APP_BLUE
                 else:
                     border_color = "white"
@@ -394,69 +399,101 @@ class CalendarFrame(ctk.CTkFrame):
                     if (matchDay == day_num and matchMonth == month):
                         matchObj = match
                         break
-
-                cell = ctk.CTkFrame(frame, height = 150, width = 150, fg_color = TKINTER_BACKGROUND, corner_radius = 0, border_color = border_color, border_width = 1)
-                cell.grid(row = row, column = col, padx = 5, pady = 5, sticky = "nsew")
-                ctk.CTkLabel(cell, text = str(day_num), font = (APP_FONT_BOLD, 12)).place(relx = 0.05, rely = 0.02, anchor = "nw")
                 
                 if matchObj:
-                    home = True if matchObj.home_id == self.teamID else False
-                    oppNameY = 0.6 if len(numRows) > 5 else 0.5
-
-                    src = Image.open(f"Images/{"stadium" if home else "plane"}.png")
-                    src.thumbnail((15, 15))
-                    ctk.CTkLabel(cell, image = ctk.CTkImage(src, None, (src.width, src.height)), text = "", fg_color = TKINTER_BACKGROUND, height = 0).place(relx = 0.95, rely = 0.02, anchor = "ne")
-
-                    src = Image.open("Images/Eclipse League.png")
-                    src.thumbnail((15, 15))
-                    ctk.CTkLabel(cell, image = ctk.CTkImage(src, None, (src.width, src.height)), text = "", fg_color = TKINTER_BACKGROUND, height = 0).place(relx = 0.95, rely = 0.2 if oppNameY == 0.5 else 0.25, anchor = "ne")
-
-                    src = Image.open(io.BytesIO(Teams.get_team_by_id(matchObj.away_id if home else matchObj.home_id).logo))
-                    src.thumbnail((35, 35))
-                    ctk.CTkLabel(cell, image = ctk.CTkImage(src, None, (src.width, src.height)), text = "", fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.1, anchor = "n")
-
-                    oppositionName = Teams.get_team_by_id(matchObj.away_id if home else matchObj.home_id).name
-                    ctk.CTkLabel(cell, text = f"{oppositionName.split(" ")[0]}", font = (APP_FONT, 10), fg_color = TKINTER_BACKGROUND, height = 0).place(relx = 0.5, rely = oppNameY, anchor = "n")
-                    ctk.CTkLabel(cell, text = f"{oppositionName.split(" ")[1]}", font = (APP_FONT_BOLD, 12), fg_color = TKINTER_BACKGROUND, height = 0).place(relx = 0.5, rely = oppNameY + 0.15, anchor = "n")
-
-                    for widget in cell.winfo_children():
-                        widget.bind("<Button-1>", lambda event, m = matchObj: self.displayMatchInfo(m))
-                        widget.bind("<Enter>", lambda event, c = cell: self.onHoverCell(c))
-
-                    cell.bind("<Button-1>", lambda event, m = matchObj: self.displayMatchInfo(m))
-                    cell.bind("<Enter>", lambda event, c = cell: self.onHoverCell(c))
-                    cell.bind("<Leave>", lambda event, c = cell: self.onLeaveCell(c))
+                    CalendarMatchFrame(self, self.parentTab, frame, matchObj, day_num, self.teamID, 150, 150, TKINTER_BACKGROUND, 0, border_color, 1, row, col, 5, 5, "nsew", len(numRows), matchInfoFrame = self.matchInfoFrame)
+                elif self.managingTeam:
+                    CalendarEventFrame(self, frame, day_num, date, self.teamID, 150, 150, TKINTER_BACKGROUND, 0, border_color, 1, row, col, 5, 5, "nsew", matchInfoFrame = self.matchInfoFrame, today = today)
+                else:
+                    cell = ctk.CTkFrame(frame, fg_color = TKINTER_BACKGROUND, width = 150, height = 150, corner_radius = 0, border_width = 1, border_color = border_color)
+                    cell.grid(row = row, column = col, padx = 5, pady = 5, sticky = "nsew")
+                    ctk.CTkLabel(cell, text = str(day_num), font = (APP_FONT_BOLD, 12), height = 0).place(relx = 0.05, rely = 0.05, anchor = "nw")
 
                 day_num += 1
 
         frame.place(relx = 0, rely = 0.13, anchor = "nw")
         self.calendarFrames[self.currIndex] = frame
 
-    def onHoverCell(self, cell):
-        cell.configure(cursor = "hand2")
-        cell.configure(fg_color = DARK_GREY)
+class CalendarMatchFrame(ctk.CTkFrame):
+    def __init__(self, parent, parentTab, parentFrame, match, day, teamID, width, heigth, fgColor, corner_radius, border_color, border_width, row, col, padx, pady, sticky, numRows, matchInfoFrame = None):
+        super().__init__(parentFrame, fg_color = fgColor, width = width, height = heigth, corner_radius = corner_radius, border_width = border_width, border_color = border_color)
+        self.grid(row = row, column = col, padx = padx, pady = pady, sticky = sticky)
+        
+        self.pack_propagate(False)
 
-        for child in cell.winfo_children():
-            child.configure(cursor = "hand2")
-            child.configure(fg_color = DARK_GREY)
-
-    def onLeaveCell(self, cell):
-        cell.configure(cursor = "")
-        cell.configure(fg_color = TKINTER_BACKGROUND)
-
-        for child in cell.winfo_children():
-            child.configure(cursor = "")
-            child.configure(fg_color = TKINTER_BACKGROUND)
-
-    def displayMatchInfo(self, match):
-
-        if hasattr(self, "match"):
-            if self.match.id == match.id:
-                return
-
+        self.parent = parent
+        self.parentTab = parentTab
         self.match = match
-        self.homeTeam = Teams.get_team_by_id(match.home_id)
-        self.awayTeam = Teams.get_team_by_id(match.away_id)
+        self.day = day
+        self.teamID = teamID
+        self.fgColor = fgColor
+        self.border_color = border_color
+        self.border_width = border_width
+        self.numRows = numRows
+        self.matchInfoFrame = matchInfoFrame
+
+        ctk.CTkLabel(self, text = str(day), font = (APP_FONT_BOLD, 12), height = 0).place(relx = 0.05, rely = 0.05, anchor = "nw")
+
+        home = True if self.match.home_id == self.teamID else False
+        oppNameY = 0.6 if numRows > 5 else 0.5
+
+        src = Image.open(f"Images/{"stadium" if home else "plane"}.png")
+        src.thumbnail((15, 15))
+        ctk.CTkLabel(self, image = ctk.CTkImage(src, None, (src.width, src.height)), text = "", fg_color = TKINTER_BACKGROUND, height = 0).place(relx = 0.95, rely = 0.02, anchor = "ne")
+
+        src = Image.open("Images/Eclipse League.png")
+        src.thumbnail((15, 15))
+        ctk.CTkLabel(self, image = ctk.CTkImage(src, None, (src.width, src.height)), text = "", fg_color = TKINTER_BACKGROUND, height = 0).place(relx = 0.95, rely = 0.2 if oppNameY == 0.5 else 0.25, anchor = "ne")
+
+        src = Image.open(io.BytesIO(Teams.get_team_by_id(self.match.away_id if home else self.match.home_id).logo))
+        src.thumbnail((35, 35))
+        ctk.CTkLabel(self, image = ctk.CTkImage(src, None, (src.width, src.height)), text = "", fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.1, anchor = "n")
+
+        oppositionName = Teams.get_team_by_id(self.match.away_id if home else self.match.home_id).name
+        ctk.CTkLabel(self, text = f"{oppositionName.split(" ")[0]}", font = (APP_FONT, 10), fg_color = TKINTER_BACKGROUND, height = 0).place(relx = 0.5, rely = oppNameY, anchor = "n")
+        ctk.CTkLabel(self, text = f"{oppositionName.split(" ")[1]}", font = (APP_FONT_BOLD, 12), fg_color = TKINTER_BACKGROUND, height = 0).place(relx = 0.5, rely = oppNameY + 0.15, anchor = "n")
+
+        if self.matchInfoFrame:
+            for widget in self.winfo_children():
+                widget.bind("<Button-1>", lambda event: self.displayMatchInfo())
+                widget.bind("<Enter>", lambda event: self.onHoverCell())
+
+            self.bind("<Button-1>", lambda event: self.displayMatchInfo())
+            self.bind("<Enter>", lambda event: self.onHoverCell())
+            self.bind("<Leave>", lambda event: self.onLeaveCell())
+
+    def onHoverCell(self):
+        self.configure(cursor = "hand2")
+        self.configure(fg_color = DARK_GREY)
+
+        for child in self.winfo_children():
+            child.configure(cursor = "hand2")
+
+            if not isinstance(child, ctk.CTkFrame):
+                child.configure(fg_color = DARK_GREY)
+
+    def onLeaveCell(self):
+        self.configure(cursor = "")
+        self.configure(fg_color = TKINTER_BACKGROUND)
+
+        for child in self.winfo_children():
+            child.configure(cursor = "")
+
+            if not isinstance(child, ctk.CTkFrame):
+                child.configure(fg_color = TKINTER_BACKGROUND)
+
+    def displayMatchInfo(self):
+
+        if self.parent.choosingEvent or self.parent.activeMatch == self.match.id:
+            return
+            
+        for widget in self.matchInfoFrame.winfo_children():
+            widget.destroy()
+
+        self.parent.activeMatch = self.match.id
+        self.parent.activeEventDate = None
+        self.homeTeam = Teams.get_team_by_id(self.match.home_id)
+        self.awayTeam = Teams.get_team_by_id(self.match.away_id)
 
         self.played = Matches.check_game_played(self.match, Game.get_game_date(Managers.get_all_user_managers()[0].id))
 
@@ -608,6 +645,307 @@ class CalendarFrame(ctk.CTkFrame):
 
             ctk.CTkLabel(self.lineupFrame, text = rating, fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 2, sticky = "w", padx = (10, 5))
             ctk.CTkLabel(self.lineupFrame, text = f"{player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 3, sticky = "w")
+
+class CalendarEventFrame(ctk.CTkFrame):
+    def __init__(self, parent, parentFrame, day, date, teamID, width, height, fgColor, corner_radius, border_color, border_width, row, col, padx, pady, sticky, matchInfoFrame = None, today = None, interactive = True):
+        super().__init__(parentFrame, fg_color = fgColor, corner_radius = corner_radius, border_color = border_color, border_width = border_width, width = width, height = height)
+        self.grid(row = row, column = col, padx = padx, pady = pady, sticky = sticky)
+        
+        self.parent = parent
+        self.parentFrame = parentFrame
+        self.day = day
+        self.date = date
+        self.teamID = teamID
+        self.matchInfoFrame = matchInfoFrame
+
+        self.eventsChooseFrame = ctk.CTkFrame(self.parent, fg_color = DARK_GREY, width = 400, height = 300, corner_radius = 10)
+
+        self.chosenEvents = [None, None, None]
+        self.gameTommorrow = Matches.check_if_game_date(self.teamID, self.date + timedelta(days = 1))
+        self.gameYesterday = Matches.check_if_game_date(self.teamID, self.date - timedelta(days = 1))
+
+        ctk.CTkLabel(self, text = str(day), font = (APP_FONT_BOLD, 12), height = 0).place(relx = 0.05, rely = 0.05, anchor = "nw")
+
+        savedEvents = CalendarEvents.get_events_dates(self.teamID, self.date, self.date.replace(hour = 23), get_finished = True)
+
+        add = (not today or today <= self.date.date() < today + timedelta(weeks = 2)) and interactive
+
+        if add:
+            bindings = [
+                ("<Enter>", lambda e: self.onHoverCell()),
+                ("<Leave>", lambda e: self.onLeaveCell()),
+                ("<Button-1>", lambda e: self.setCalendarEvents())
+            ]
+            for seq, func in bindings:
+                self.bind(seq, func)
+
+            for widget in self.winfo_children():
+                widget.bind("<Button-1>", lambda e: self.setCalendarEvents())
+                widget.bind("<Enter>", lambda e: self.onHoverCell())
+
+            for i, event in enumerate(savedEvents):
+                self.addSmallEventFrame(event.event_type, i)
+        else:
+            for i, event in enumerate(savedEvents):
+                self.addSmallEventFrame(event.event_type, i, bind = False)
+
+    def onHoverCell(self):
+        self.configure(cursor = "hand2")
+        self.configure(fg_color = DARK_GREY)
+
+        for child in self.winfo_children():
+            child.configure(cursor = "hand2")
+
+            if not isinstance(child, ctk.CTkFrame):
+                child.configure(fg_color = DARK_GREY)
+
+    def onLeaveCell(self):
+        self.configure(cursor = "")
+        self.configure(fg_color = TKINTER_BACKGROUND)
+
+        for child in self.winfo_children():
+            child.configure(cursor = "")
+
+            if not isinstance(child, ctk.CTkFrame):
+                child.configure(fg_color = TKINTER_BACKGROUND)
+
+    def setCalendarEvents(self):
+
+        if self.parent.choosingEvent or self.parent.activeEventDate == self.date:
+            return
+        
+        self.parent.activeEventDate = self.date
+
+        if self.matchInfoFrame:
+            self.parent.activeMatch = None
+
+            for widget in self.matchInfoFrame.winfo_children():
+                widget.destroy()
+        else:
+            self.configure(border_color = APP_BLUE)
+
+            self.parentFrame.place_forget()
+            self.parentFrame.place(relx = 0.05, rely = 0.2, anchor = "nw")
+
+            for cell in self.parentFrame.winfo_children():
+                if isinstance(cell, CalendarEventFrame) and cell != self:
+                    cell.configure(border_color = "white")
+
+        if self.matchInfoFrame:
+            self.dayEventsFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 545, corner_radius = 10)
+            self.dayEventsFrame.place(relx = 0.5, rely = 0.02, anchor = "n")
+
+            morningFrameX = 0.5
+            morningFrameY = 0.2
+            afternoonFrameX = 0.5
+            afternoonFrameY = 0.4
+            eveningFrameX = 0.5
+            eveningFrameY = 0.6
+            okButtonX = 0.5
+            okButtonY = 0.95
+
+            buttonsWidth = 250
+            okButtonWidth = 240
+            okButtonHeight = 30
+
+            self.buttonFont = (APP_FONT_BOLD, 20)
+        else:
+            self.dayEventsFrame = ctk.CTkFrame(self.parent, fg_color = GREY_BACKGROUND, width = 630, height = 110)
+            self.dayEventsFrame.place(relx = 0.05, rely = 0.35, anchor = "nw")
+
+            morningFrameX = 0.13
+            morningFrameY = 0.05
+            afternoonFrameX = 0.37
+            afternoonFrameY = 0.05
+            eveningFrameX = 0.61
+            eveningFrameY = 0.05
+            okButtonX = 0.87
+            okButtonY = 0.72
+
+            buttonsWidth = 150
+            okButtonWidth = 100
+            okButtonHeight = 50
+
+            self.buttonFont = (APP_FONT_BOLD, 13)
+        
+        self.currEvents = CalendarEvents.get_events_week(self.date, self.teamID)
+
+        day, text, _, = format_datetime_split(self.date)
+
+        if self.matchInfoFrame:
+            ctk.CTkLabel(self.matchInfoFrame, text = day, fg_color = DARK_GREY, bg_color = DARK_GREY, font = (APP_FONT_BOLD, 20), height = 0).place(relx = 0.5, rely = 0.09, anchor = "center")
+            ctk.CTkLabel(self.matchInfoFrame, text = text, fg_color = DARK_GREY, bg_color = DARK_GREY, font = (APP_FONT, 15), height = 0).place(relx = 0.5, rely = 0.14, anchor = "center")
+
+        morningFrame = ctk.CTkFrame(self.dayEventsFrame, fg_color = GREY_BACKGROUND, width = buttonsWidth, height = 100, corner_radius = 10)
+        morningFrame.place(relx = morningFrameX, rely = morningFrameY, anchor = "n")
+    
+        ctk.CTkLabel(morningFrame, text = "Morning", fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.15, anchor = "center")
+
+        self.morningButton = ctk.CTkButton(morningFrame, text = "+", command = lambda: self.addCalendarEvent(0), anchor = "center", border_color = "white", border_width = 2, height = 60, width = buttonsWidth - 10, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, font = (APP_FONT, 20))
+        self.morningButton.place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        afternoonFrame = ctk.CTkFrame(self.dayEventsFrame, fg_color = GREY_BACKGROUND, width = buttonsWidth, height = 100, corner_radius = 10)
+        afternoonFrame.place(relx = afternoonFrameX, rely = afternoonFrameY, anchor = "n")
+
+        ctk.CTkLabel(afternoonFrame, text = "Afternoon", fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.15, anchor = "center")
+
+        self.afternoonButton = ctk.CTkButton(afternoonFrame, text = "+", command = lambda: self.addCalendarEvent(1), anchor = "center", border_color = "white", border_width = 2, height = 60, width = buttonsWidth - 10, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, font = (APP_FONT, 20))
+        self.afternoonButton.place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        eveningFrame = ctk.CTkFrame(self.dayEventsFrame, fg_color = GREY_BACKGROUND, width = buttonsWidth, height = 100, corner_radius = 10)
+        eveningFrame.place(relx = eveningFrameX, rely = eveningFrameY, anchor = "n")
+
+        ctk.CTkLabel(eveningFrame, text = "Evening", fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.15, anchor = "center")
+
+        self.eveningButton = ctk.CTkButton(eveningFrame, text = "+", command = lambda: self.addCalendarEvent(2), anchor = "center", border_color = "white", border_width = 2, height = 60, width = buttonsWidth - 10, fg_color = GREY_BACKGROUND, hover_color = DARK_GREY, font = (APP_FONT, 20))
+        self.eveningButton.place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        self.eventButtons = [self.morningButton, self.afternoonButton, self.eveningButton]
+
+        okButton = ctk.CTkButton(self.dayEventsFrame, text = "OK", command = self.confirmEvents, anchor = "center", height = okButtonHeight, width = okButtonWidth, fg_color = APP_BLUE, hover_color = APP_BLUE, font = (APP_FONT, 15))
+        okButton.place(relx = okButtonX, rely = okButtonY, anchor = "s")
+
+        savedEvents = CalendarEvents.get_events_dates(self.teamID, self.date, self.date.replace(hour = 23), get_finished = True)
+        times = [10, 14, 17]
+        if len(savedEvents) > 0:
+            for i, hour in enumerate(times):
+                slot_time = self.date.replace(hour = hour)
+                event = next((e for e in savedEvents if e.start_date <= slot_time <= e.end_date), None)
+
+                if event:
+                    self.chosenEvents[i] = event.event_type
+                    eventText = event.event_type
+                else:
+                    eventText = "Rest"
+
+                self.eventButtons[i].configure(text = eventText, fg_color = EVENT_COLOURS[eventText], hover_color = EVENT_COLOURS[eventText], border_width = 0, font = self.buttonFont)
+
+    def addCalendarEvent(self, timeOfDay):
+
+        if self.parent.choosingEvent or self.chosenEvents[timeOfDay] == "Travel":
+            return
+
+        self.parent.choosingEvent = True
+        self.eventsChooseFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
+        self.eventsChooseFrame.lift()
+
+        for widget in self.eventsChooseFrame.winfo_children():
+            widget.destroy()
+
+        ctk.CTkLabel(self.eventsChooseFrame, text = "Event", fg_color = DARK_GREY, font = (APP_FONT, 20)).place(relx = 0.05, rely = 0.08, anchor = "w")
+        ctk.CTkLabel(self.eventsChooseFrame, text = "Available", fg_color = DARK_GREY, font = (APP_FONT, 18)).place(relx = 0.8, rely = 0.08, anchor = "center")
+
+        closeButton = ctk.CTkButton(self.eventsChooseFrame, text = "X", command = self.closeEventsChooseFrame, fg_color = DARK_GREY, hover_color = CLOSE_RED, font = (APP_FONT, 12), width = 25, height = 25, corner_radius = 5)
+        closeButton.place(relx = 0.95, rely = 0.08, anchor = "center")
+
+        gap = 0.12
+        buttonHeight = 30
+        for i, eventType in enumerate(MAX_EVENTS.keys()):
+            button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS[eventType], hover_color = EVENT_COLOURS[eventType], width = 250, height = buttonHeight, corner_radius = 5, text = eventType, font = (APP_FONT, 15), anchor = "w", command = lambda e = eventType: self.closeEventsChooseFrame(e, timeOfDay))
+            button.place(relx = 0.02, rely = 0.2 + (i * gap), anchor = "w")
+
+            if eventType in self.currEvents.keys():
+                text = MAX_EVENTS[eventType] - self.currEvents[eventType]
+
+                if text == 0:
+                    button.configure(state = "disabled")
+
+            else:
+                text = MAX_EVENTS[eventType]
+            
+            ctk.CTkLabel(self.eventsChooseFrame, text = text, fg_color = DARK_GREY, font = (APP_FONT, 12)).place(relx = 0.8, rely = 0.2 + (i * gap), anchor = "center")
+
+        if self.gameTommorrow or self.gameYesterday:
+            if self.gameTommorrow:
+                button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS["Match Preparation"], hover_color = EVENT_COLOURS["Match Preparation"], width = 250, height = buttonHeight, corner_radius = 5, text = "Match Preparation", font = (APP_FONT, 15), anchor = "w", command = lambda: self.closeEventsChooseFrame("Match Preparation", timeOfDay))
+            
+                if "Match Preparation" in self.chosenEvents:
+                    button.configure(state = "disabled")   
+                    text = "0"    
+                else:
+                    text = "1"
+
+                ctk.CTkLabel(self.eventsChooseFrame, text = text, fg_color = DARK_GREY, font = (APP_FONT, 12)).place(relx = 0.8, rely = 0.2 + (len(MAX_EVENTS) * gap), anchor = "center")
+
+            elif self.gameYesterday:
+                button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS["Match Review"], hover_color = EVENT_COLOURS["Match Review"], width = 250, height = buttonHeight, corner_radius = 5, text = "Match Review", font = (APP_FONT, 15), anchor = "w", command = lambda: self.closeEventsChooseFrame("Match Review", timeOfDay))
+
+                if "Match Review" in self.chosenEvents:
+                    button.configure(state = "disabled")   
+                    text = "0"
+                else:
+                    text = "1"
+
+                ctk.CTkLabel(self.eventsChooseFrame, text = text, fg_color = DARK_GREY, font = (APP_FONT, 12)).place(relx = 0.8, rely = 0.2 + (len(MAX_EVENTS) * gap), anchor = "center")
+
+            button.place(relx = 0.02, rely = 0.2 + (len(MAX_EVENTS) * gap), anchor = "w")
+
+            self.addRestButton(len(MAX_EVENTS) + 1, gap, buttonHeight, timeOfDay)
+        else:
+            self.addRestButton(len(MAX_EVENTS), gap, buttonHeight, timeOfDay)
+
+    def addRestButton(self, lenEvents, gap, buttonHeight, timeOfDay):
+        button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS["Rest"], hover_color = EVENT_COLOURS["Rest"], width = 250, height = buttonHeight, corner_radius = 5, text = "Rest", font = (APP_FONT, 15), anchor = "w", command = lambda: self.closeEventsChooseFrame("Rest", timeOfDay))
+        button.place(relx = 0.02, rely = 0.2 + (lenEvents * gap), anchor = "w")
+
+    def closeEventsChooseFrame(self, event = None, timeOfDay = None):
+        self.eventsChooseFrame.place_forget()
+        self.parent.choosingEvent = False
+
+        if event:
+            if event not in ["Rest", "Match Preparation", "Match Review"]:
+                
+                if event in self.currEvents.keys():
+                    self.currEvents[event] += 1
+                else:
+                    self.currEvents[event] = 1
+
+                if self.chosenEvents[timeOfDay] and self.chosenEvents[timeOfDay] not in ["Rest", "Match Preparation", "Match Review"]:
+                    self.currEvents[self.chosenEvents[timeOfDay]] -= 1
+            elif event == "Rest":
+                if self.chosenEvents[timeOfDay] and self.chosenEvents[timeOfDay] not in ["Rest", "Match Preparation", "Match Review"]:
+                    self.currEvents[self.chosenEvents[timeOfDay]] -= 1
+
+            button = self.eventButtons[timeOfDay]
+            self.chosenEvents[timeOfDay] = event if event != "Rest" else None
+
+            button.configure(text = event, fg_color = EVENT_COLOURS[event], hover_color = EVENT_COLOURS[event], border_width = 0, font = self.buttonFont)
+
+    def confirmEvents(self):
+        for widget in self.winfo_children():
+            if isinstance(widget, ctk.CTkFrame):
+                widget.destroy()
+
+        count = 0
+        for i, event in enumerate(self.chosenEvents):
+            if event is None:
+                button = self.eventButtons[i]
+                button.configure(text = "Rest", fg_color = EVENT_COLOURS["Rest"], hover_color = EVENT_COLOURS["Rest"], border_width = 0, font = (APP_FONT, 20))
+                
+                startDate = self.date.replace(hour = EVENT_TIMES[i][0], minute = 0, second = 0, microsecond = 0)
+                endDate = self.date.replace(hour = EVENT_TIMES[i][1], minute = 0, second = 0, microsecond = 0)
+                event = CalendarEvents.get_event_by_time(self.teamID, startDate, endDate)
+
+                if event:
+                    CalendarEvents.remove_event(event.id)
+
+                continue
+
+            startHour, endHour = EVENT_TIMES[i]
+            startDate = self.date.replace(hour = startHour, minute = 0, second = 0, microsecond = 0)
+            endDate = self.date.replace(hour = endHour, minute = 0, second = 0, microsecond = 0)
+
+            CalendarEvents.add_event(self.teamID, event, startDate, endDate)
+            self.addSmallEventFrame(event, count)
+            count += 1
+
+    def addSmallEventFrame(self, event, count, bind = True):
+        frame = ctk.CTkFrame(self, fg_color = EVENT_COLOURS[event], width = 75, height = 15, corner_radius = 5)
+        frame.place(relx = 0.5, rely = 0.3 + (count * 0.2), anchor = "n")
+
+        if bind:
+            frame.bind("<Enter>", lambda event: self.onHoverCell())
+            frame.bind("<Button-1>", lambda event: self.setCalendarEvents())
 
 class MatchdayFrame(ctk.CTkFrame):
     def __init__(self, parent, matchday, matchdayNum, currentMatchday, parentFrame, parentTab, width, heigth, fgColor, relx, rely, anchor):

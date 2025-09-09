@@ -1,6 +1,5 @@
 import customtkinter as ctk
 from settings import *
-import calendar
 from data.database import *
 from data.gamesDatabase import *
 from utils.frames import MatchFrame, CalendarFrame
@@ -34,12 +33,31 @@ class Schedule(ctk.CTkFrame):
         self.matchInfoFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 280, height = 560, corner_radius = 15)
         self.matchInfoFrame.place(relx = 0.98, rely = 0.15, anchor = "ne")
 
-        self.calendarFrame = CalendarFrame(self, self.matches, self, self, self.matchInfoFrame, self.team.id)
+        self.calendarFrame = None
 
         self.switchButton = ctk.CTkButton(self, text = "Calendar", fg_color = GREY_BACKGROUND, command = self.switchFrames, width = 280, height = 15)
         self.switchButton.place(relx = 0.98, rely = 0.99, anchor = "se")
 
         self.addMatches()
+
+    def updateCalendar(self):
+        if self.calendarFrame is not None:
+            self.calendarFrame.destroy()
+
+        self.calendarFrame = None
+
+        if self.switchButton.cget("text") == "List":
+            self.calendarFrame = CalendarFrame(self, self.matches, self, self, self.matchInfoFrame, self.team.id, managingTeam = True)
+            self.calendarFrame.place(relx = 0.02, rely = 0.15, anchor = "nw")
+
+    def showCalendar(self):
+        if self.calendarFrame is None:
+            self.calendarFrame = CalendarFrame(self, self.matches, self, self, self.matchInfoFrame, self.team.id, managingTeam = True)
+
+        if not self.calendarFrame.winfo_ismapped():
+            self.scheduleFrame.place_forget()
+            self.calendarFrame.place(relx = 0.02, rely = 0.15, anchor = "nw")
+            self.switchButton.configure(text = "List")
 
     def addMatches(self, replace = False):
 
@@ -64,7 +82,11 @@ class Schedule(ctk.CTkFrame):
             self.frames.append(frame)
 
     def switchFrames(self):
-        if self.scheduleFrame.winfo_ismapped():
+        if self.switchButton.cget("text") == "Calendar":
+
+            if self.calendarFrame is None:
+                self.calendarFrame = CalendarFrame(self, self.matches, self, self, self.matchInfoFrame, self.team.id, managingTeam = True)
+
             self.scheduleFrame.place_forget()
             self.calendarFrame.place(relx = 0.02, rely = 0.15, anchor = "nw")
             self.switchButton.configure(text = "List")

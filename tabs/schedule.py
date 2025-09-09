@@ -50,6 +50,15 @@ class Schedule(ctk.CTkFrame):
             self.calendarFrame = CalendarFrame(self, self.matches, self, self, self.matchInfoFrame, self.team.id, managingTeam = True)
             self.calendarFrame.place(relx = 0.02, rely = 0.15, anchor = "nw")
 
+    def showCalendar(self):
+        if self.calendarFrame is None:
+            self.calendarFrame = CalendarFrame(self, self.matches, self, self, self.matchInfoFrame, self.team.id, managingTeam = True)
+
+        if not self.calendarFrame.winfo_ismapped():
+            self.scheduleFrame.place_forget()
+            self.calendarFrame.place(relx = 0.02, rely = 0.15, anchor = "nw")
+            self.switchButton.configure(text = "List")
+
     def addMatches(self, replace = False):
 
         if replace:
@@ -73,7 +82,7 @@ class Schedule(ctk.CTkFrame):
             self.frames.append(frame)
 
     def switchFrames(self):
-        if self.scheduleFrame.winfo_ismapped():
+        if self.switchButton.cget("text") == "Calendar":
 
             if self.calendarFrame is None:
                 self.calendarFrame = CalendarFrame(self, self.matches, self, self, self.matchInfoFrame, self.team.id, managingTeam = True)

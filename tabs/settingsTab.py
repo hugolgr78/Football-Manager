@@ -2,6 +2,8 @@ import customtkinter as ctk
 from settings import *
 from CTkMessagebox import CTkMessagebox
 from data.database import DatabaseManager, SavedLineups
+from data.database import Settings, Emails
+from data.gamesDatabase import Game
 
 class SettingsTab(ctk.CTkFrame):
     def __init__(self, parent):
@@ -10,6 +12,23 @@ class SettingsTab(ctk.CTkFrame):
         self.parent = parent
 
         ctk.CTkLabel(self, text = "Settings", font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.04, anchor = "w")
+
+        ctk.CTkLabel(self, text = "Delegate events", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.15, anchor = "w")
+
+        delegated = Settings.get_setting("events_delegated")
+        self.delegateVar = ctk.BooleanVar(value=delegated)
+
+        self.delegateOn = ctk.CTkSwitch(
+            self,
+            text="",
+            font=(APP_FONT, 15),
+            fg_color=TKINTER_BACKGROUND,
+            variable=self.delegateVar,
+            command=self.toggleDelegate,
+            onvalue=True,
+            offvalue=False
+        )
+        self.delegateOn.place(relx = 0.18, rely = 0.15, anchor = "w")
 
         ctk.CTkLabel(self, text = "Save", font = (APP_FONT, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.85, anchor = "w")
         ctk.CTkLabel(self, text = "Quit Game", font = (APP_FONT, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.945, anchor = "w")
@@ -25,6 +44,26 @@ class SettingsTab(ctk.CTkFrame):
 
         self.quitButton = ctk.CTkButton(self, text = "To Desktop", font = (APP_FONT, 20), height = 40, width = 150, fg_color = APP_BLUE, command = lambda: self.quitGame(menu = False))
         self.quitButton.place(relx = 0.35, rely = 0.95, anchor = "w")
+
+    def updateSettings(self):
+        delegated = Settings.get_setting("events_delegated")
+        self.delegateVar.set(delegated)
+
+        if not delegated:
+            self.delegateOn.configure(text="Off")
+        else:
+            self.delegateOn.configure(text="On")
+
+        self.checkSave()
+
+    def toggleDelegate(self):
+        Settings.set_setting("events_delegated", self.delegateVar.get())
+        Emails.toggle_send_calendar_emails(Game.get_game_date(self.parent.manager_id))
+
+        if self.delegateVar.get():
+            self.delegateOn.configure(text="On")
+        else:
+            self.delegateOn.configure(text="Off")
 
     def checkSave(self):
         db = DatabaseManager()

@@ -129,7 +129,7 @@ class MainMenu(ctk.CTkFrame):
         self.tabs[self.activeButton].place(x = 200, y = 0, anchor = "nw")
 
         if self.activeButton == 9:
-            self.tabs[self.activeButton].checkSave()
+            self.tabs[self.activeButton].updateSettings()
         elif self.activeButton == 3:
             self.tabs[self.activeButton].updateCalendar()
         elif self.activeButton == 1:
@@ -177,7 +177,7 @@ class MainMenu(ctk.CTkFrame):
         while current_day.date() <= stopDate.date():
             if current_day.weekday() == 0:
                 for team_id in teamIDs:
-                    if team_id != self.team.id:
+                    if team_id != self.team.id or Settings.get_setting("events_delegated"):
                         create_events_for_other_teams(team_id, current_day)
             current_day += timedelta(days = 1)
 

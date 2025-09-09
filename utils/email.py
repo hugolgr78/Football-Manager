@@ -12,6 +12,7 @@ from utils.matchProfileLink import MatchProfileLink
 from utils.frames import CalendarEventFrame, CalendarMatchFrame
 from PIL import Image
 import io
+from CTkMessagebox import CTkMessagebox
 
 class EmailFrame(ctk.CTkFrame):
     def __init__(self, parent, manager_id, email, emailFrame, parentTab):
@@ -1123,7 +1124,7 @@ class PlayerBirthday():
 
         Emails.update_action(self.parent.email_id)
 
-class CalendarEvents():
+class CalendarEventsEmail():
     def __init__(self, parent):
 
         self.parent = parent
@@ -1151,6 +1152,12 @@ class CalendarEvents():
 
         self.calendarButton = ctk.CTkButton(self.frame, text = "Go to Calendar", font = (APP_FONT_BOLD, 15), command = lambda: self.goToCalendar(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
         self.calendarButton.place(relx = 0.95, rely = 0.95, anchor = "se")
+
+        self.delegateButton = ctk.CTkButton(self.frame, text = "Delegate To Asst. Manager", font = (APP_FONT_BOLD, 15), command = lambda: self.delegate(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
+        self.delegateButton.place(relx = 0.65, rely = 0.95, anchor = "se")
+
+        if Settings.get_setting("events_delegated"):
+            self.delegateButton.configure(state = "disabled")
 
     def setUpEmail(self):
         self.emailText_1 = (
@@ -1194,6 +1201,28 @@ class CalendarEvents():
         self.parent.mainMenu.changeTab(3)
         self.parent.mainMenu.tabs[3].showCalendar()
 
+    def delegate(self):
+        response = CTkMessagebox(
+            title="Delegate Event Creation",
+            message="Are you sure you want to delegate the event creations to your Assistant Manager?\nThis week's events will not be created.\nYou can always take back control in the Settings tab.",
+            icon="question",
+            option_1="Yes",
+            option_2="No",
+            button_color=(CLOSE_RED, APP_BLUE),
+        )
+        try:
+            if hasattr(response, "button_1"):
+                response.button_1.configure(hover_color=CLOSE_RED)
+            if hasattr(response, "button_2"):
+                response.button_2.configure(hover_color=APP_BLUE)
+        except Exception:
+            pass
+
+        if response.get() == "Yes":
+            Emails.toggle_send_calendar_emails(Game.get_game_date(self.parent.manager.id))
+            self.delegateButton.configure(state = "disabled")
+            Settings.set_setting("events_delegated", True)
+
 EMAIL_CLASSES = {
     "welcome": Welcome,
     "matchday_review": MatchdayReview,
@@ -1204,5 +1233,5 @@ EMAIL_CLASSES = {
     "player_injury": PlayerInjury,
     "player_ban": PlayerBan,
     "player_birthday": PlayerBirthday,
-    "calendar_events": CalendarEvents
+    "calendar_events": CalendarEventsEmail
 }

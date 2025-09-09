@@ -40,6 +40,16 @@ class Schedule(ctk.CTkFrame):
 
         self.addMatches()
 
+    def updateCalendar(self):
+        if self.calendarFrame is not None:
+            self.calendarFrame.destroy()
+
+        self.calendarFrame = None
+
+        if self.switchButton.cget("text") == "List":
+            self.calendarFrame = CalendarFrame(self, self.matches, self, self, self.matchInfoFrame, self.team.id, managingTeam = True)
+            self.calendarFrame.place(relx = 0.02, rely = 0.15, anchor = "nw")
+
     def addMatches(self, replace = False):
 
         if replace:

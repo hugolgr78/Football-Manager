@@ -647,7 +647,7 @@ class CalendarMatchFrame(ctk.CTkFrame):
             ctk.CTkLabel(self.lineupFrame, text = f"{player.first_name} {player.last_name}", fg_color = DARK_GREY, font = (APP_FONT, 10)).grid(row = i, column = 3, sticky = "w")
 
 class CalendarEventFrame(ctk.CTkFrame):
-    def __init__(self, parent, parentFrame, day, date, teamID, width, height, fgColor, corner_radius, border_color, border_width, row, col, padx, pady, sticky, matchInfoFrame = None, today = None):
+    def __init__(self, parent, parentFrame, day, date, teamID, width, height, fgColor, corner_radius, border_color, border_width, row, col, padx, pady, sticky, matchInfoFrame = None, today = None, interactive = True):
         super().__init__(parentFrame, fg_color = fgColor, corner_radius = corner_radius, border_color = border_color, border_width = border_width, width = width, height = height)
         self.grid(row = row, column = col, padx = padx, pady = pady, sticky = sticky)
         
@@ -668,20 +668,20 @@ class CalendarEventFrame(ctk.CTkFrame):
 
         savedEvents = CalendarEvents.get_events_dates(self.teamID, self.date, self.date.replace(hour = 23), get_finished = True)
 
-        add = False
-        if not today:
-            add = True
-        elif self.date.date() > today and self.date.date() < today + timedelta(weeks = 2):
-            add = True
-    
+        add = (not today or today < self.date.date() < today + timedelta(weeks = 2)) and interactive
+
         if add:
-            self.bind("<Enter>", lambda event: self.onHoverCell())
-            self.bind("<Leave>", lambda event: self.onLeaveCell())
-            self.bind("<Button-1>", lambda event: self.setCalendarEvents())
+            bindings = [
+                ("<Enter>", lambda e: self.onHoverCell()),
+                ("<Leave>", lambda e: self.onLeaveCell()),
+                ("<Button-1>", lambda e: self.setCalendarEvents())
+            ]
+            for seq, func in bindings:
+                self.bind(seq, func)
 
             for widget in self.winfo_children():
-                widget.bind("<Button-1>", lambda event: self.setCalendarEvents())
-                widget.bind("<Enter>", lambda event: self.onHoverCell())
+                widget.bind("<Button-1>", lambda e: self.setCalendarEvents())
+                widget.bind("<Enter>", lambda e: self.onHoverCell())
 
             for i, event in enumerate(savedEvents):
                 self.addSmallEventFrame(event.event_type, i)

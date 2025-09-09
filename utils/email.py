@@ -1167,7 +1167,11 @@ class CalendarEvents():
                 match_ = Matches.get_team_match_no_time(self.parent.team.id, date)
                 CalendarMatchFrame(self.frame, self.parent.parentTab, self.cellsFrame, match_, date.day, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew", 1)
             else:
-                CalendarEventFrame(self.frame, self.cellsFrame, date.day, date, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew")
+                currDate = Game.get_game_date(self.parent.manager.id)
+                if date < currDate:
+                    CalendarEventFrame(self.frame, self.cellsFrame, date.day, date, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew", interactive = False)
+                else:
+                    CalendarEventFrame(self.frame, self.cellsFrame, date.day, date, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew")
 
 EMAIL_CLASSES = {
     "welcome": Welcome,

@@ -1149,6 +1149,9 @@ class CalendarEvents():
 
         ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.65, anchor = "w")
 
+        self.calendarButton = ctk.CTkButton(self.frame, text = "Go to Calendar", font = (APP_FONT_BOLD, 15), command = lambda: self.goToCalendar(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
+        self.calendarButton.place(relx = 0.95, rely = 0.95, anchor = "se")
+
     def setUpEmail(self):
         self.emailText_1 = (
             f"Hey Boss, just a quick reminder to set up the events for the upcoming week.\n"
@@ -1186,6 +1189,10 @@ class CalendarEvents():
             "- Match Review: TBA.\n"
             "- Rest: No scheduled activity for this slot.\n"
         )
+
+    def goToCalendar(self):
+        self.parent.mainMenu.changeTab(3)
+        self.parent.mainMenu.tabs[3].showCalendar()
 
 EMAIL_CLASSES = {
     "welcome": Welcome,

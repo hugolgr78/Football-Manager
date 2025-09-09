@@ -9,8 +9,10 @@ from utils.playerProfileLink import *
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 from utils.matchProfileLink import MatchProfileLink
+from utils.frames import CalendarEventFrame, CalendarMatchFrame
 from PIL import Image
 import io
+from CTkMessagebox import CTkMessagebox
 
 class EmailFrame(ctk.CTkFrame):
     def __init__(self, parent, manager_id, email, emailFrame, parentTab):
@@ -71,6 +73,7 @@ class EmailFrame(ctk.CTkFrame):
         if self.emailOpen:
             return
 
+        self.parentTab.currentEmail = self
         self.canvas.place_forget()
         self.configure(border_color = APP_BLUE, border_width = 2)
 
@@ -925,7 +928,7 @@ class PlayerGamesIssue():
             self.parent.player,
             f"{self.parent.player.first_name} {self.parent.player.last_name}",
             "I wanted to inform you that ",
-            " is unhappy his game time.",
+            " is unhappy with his game time.",
             240,
             30,
             self.parent.parentTab,
@@ -1121,6 +1124,106 @@ class PlayerBirthday():
 
         Emails.update_action(self.parent.email_id)
 
+class CalendarEventsEmail():
+    def __init__(self, parent):
+
+        self.parent = parent
+        self.frame = self.parent.emailFrame
+        self.date = self.parent.fullDate
+
+        self.subject = "Weekly events reminder"
+        self.sender = "Name, Assistant Manager"
+        self.subjectFontSize = 20
+
+    def openEmail(self):
+        for widget in self.frame.winfo_children():
+            widget.place_forget()
+
+        self.setUpEmail()
+
+        self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
+        self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.12, anchor = "w")
+
+        self.cellsFrame.place(relx = 0.05, rely = 0.25, anchor = "nw")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.65, anchor = "w")
+
+        self.calendarButton = ctk.CTkButton(self.frame, text = "Go to Calendar", font = (APP_FONT_BOLD, 15), command = lambda: self.goToCalendar(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
+        self.calendarButton.place(relx = 0.95, rely = 0.95, anchor = "se")
+
+        self.delegateButton = ctk.CTkButton(self.frame, text = "Delegate To Asst. Manager", font = (APP_FONT_BOLD, 15), command = lambda: self.delegate(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
+        self.delegateButton.place(relx = 0.65, rely = 0.95, anchor = "se")
+
+        if Settings.get_setting("events_delegated"):
+            self.delegateButton.configure(state = "disabled")
+
+    def setUpEmail(self):
+        self.emailText_1 = (
+            f"Hey Boss, just a quick reminder to set up the events for the upcoming week.\n"
+            f"You can do it here or by going into your Schedule tab -> Calendar."
+        )
+
+        self.frame.activeEventDate = None
+        self.frame.choosingEvent = False
+
+        self.cellsFrame = ctk.CTkFrame(self.frame, fg_color = TKINTER_BACKGROUND, width = 630, height = 160)
+        self.cellsFrame.grid_columnconfigure((0, 1, 2, 3, 4, 5, 6), weight = 1)
+        self.cellsFrame.grid_propagate(False)
+
+        for i in range(7):
+            date = self.date + timedelta(days = i)
+
+            if Matches.check_if_game_date(self.parent.team.id, date):
+                match_ = Matches.get_team_match_no_time(self.parent.team.id, date)
+                CalendarMatchFrame(self.frame, self.parent.parentTab, self.cellsFrame, match_, date.day, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew", 1)
+            else:
+                currDate = Game.get_game_date(self.parent.manager.id)
+                if date < currDate:
+                    CalendarEventFrame(self.frame, self.cellsFrame, date.day, date, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew", interactive = False)
+                else:
+                    CalendarEventFrame(self.frame, self.cellsFrame, date.day, date, self.parent.team.id, 155, 90, TKINTER_BACKGROUND, 0, "white", 1, 0, i, 5, 5, "nsew")
+
+        self.emailText_2 = (
+            "Here’s a quick explanation of each event in case you need a refresher:\n\n"
+            "- Light Training: A relaxed session to keep fitness ticking over.\n"
+            "- Medium Training: A balanced workout to maintain sharpness.\n"
+            "- Intense Training: A tough session pushing players to their limits.\n"
+            "- Team Building: Activities to strengthen squad morale.\n"
+            "- Recovery: Helps the players regain fitness quickly.\n"
+            "- Match Preparation: TBA.\n"
+            "- Match Review: TBA.\n"
+            "- Rest: No scheduled activity for this slot.\n"
+        )
+
+    def goToCalendar(self):
+        self.parent.mainMenu.changeTab(3)
+        self.parent.mainMenu.tabs[3].showCalendar()
+
+    def delegate(self):
+        response = CTkMessagebox(
+            title="Delegate Event Creation",
+            message="Are you sure you want to delegate the event creations to your Assistant Manager?\nAny events you create will be overwritten.\nYou can always take back control in the Settings tab.",
+            icon="question",
+            option_1="Yes",
+            option_2="No",
+            button_color=(CLOSE_RED, APP_BLUE),
+            width = 450,
+        )
+        try:
+            if hasattr(response, "button_1"):
+                response.button_1.configure(hover_color=CLOSE_RED)
+            if hasattr(response, "button_2"):
+                response.button_2.configure(hover_color=APP_BLUE)
+        except Exception:
+            pass
+
+        if response.get() == "Yes":
+            Emails.toggle_send_calendar_emails(Game.get_game_date(self.parent.manager.id))
+            self.delegateButton.configure(state = "disabled")
+            Settings.set_setting("events_delegated", True)
+
 EMAIL_CLASSES = {
     "welcome": Welcome,
     "matchday_review": MatchdayReview,
@@ -1130,5 +1233,6 @@ EMAIL_CLASSES = {
     "season_preview": SeasonPreview,
     "player_injury": PlayerInjury,
     "player_ban": PlayerBan,
-    "player_birthday": PlayerBirthday
+    "player_birthday": PlayerBirthday,
+    "calendar_events": CalendarEventsEmail
 }

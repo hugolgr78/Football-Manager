@@ -180,7 +180,7 @@ class MainMenu(ctk.CTkFrame):
                 if monday_moment > self.currDate and monday_moment <= stopDate:
                     for team_id in teamIDs:
                         if team_id != self.team.id or Settings.get_setting("events_delegated"):
-                            create_events_for_other_teams(team_id, current_day, add_travel = team_id != self.team.id)
+                            create_events_for_other_teams(team_id, current_day, managing_team = team_id == self.team.id)
             current_day += timedelta(days = 1)
 
         # -------------------Figuring out intervals -------------------

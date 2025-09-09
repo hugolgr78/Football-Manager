@@ -198,7 +198,7 @@ class MainMenu(ctk.CTkFrame):
                     CalendarEvents.update_event(event.id)
 
             PlayerBans.reduce_injuries(timeInBetween, stopDate)
-    
+
         update_ages(self.currDate, stopDate)
 
         # ------------------- Matches simulation -------------------

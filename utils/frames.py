@@ -402,9 +402,12 @@ class CalendarFrame(ctk.CTkFrame):
                 
                 if matchObj:
                     CalendarMatchFrame(self, self.parentTab, frame, matchObj, day_num, self.teamID, 150, 150, TKINTER_BACKGROUND, 0, border_color, 1, row, col, 5, 5, "nsew", numRows, matchInfoFrame = self.matchInfoFrame)
-
                 elif self.managingTeam:
                     CalendarEventFrame(self, frame, day_num, date, today, self.teamID, TKINTER_BACKGROUND, 0, border_color, 1, row, col, 5, 5, "nsew", matchInfoFrame = self.matchInfoFrame)
+                else:
+                    cell = ctk.CTkFrame(frame, fg_color = TKINTER_BACKGROUND, width = 150, height = 150, corner_radius = 0, border_width = 1, border_color = border_color)
+                    cell.grid(row = row, column = col, padx = 5, pady = 5, sticky = "nsew")
+                    ctk.CTkLabel(cell, text = str(day_num), font = (APP_FONT_BOLD, 12), height = 0).place(relx = 0.05, rely = 0.05, anchor = "nw")
 
                 day_num += 1
 
@@ -429,7 +432,7 @@ class CalendarMatchFrame(ctk.CTkFrame):
         self.numRows = numRows
         self.matchInfoFrame = matchInfoFrame
 
-        ctk.CTkLabel(self, text = str(day), font = (APP_FONT_BOLD, 12)).place(relx = 0.05, rely = 0.02, anchor = "nw")
+        ctk.CTkLabel(self, text = str(day), font = (APP_FONT_BOLD, 12), height = 0).place(relx = 0.05, rely = 0.05, anchor = "nw")
 
         home = True if self.match.home_id == self.teamID else False
         oppNameY = 0.6 if len(numRows) > 5 else 0.5
@@ -488,6 +491,7 @@ class CalendarMatchFrame(ctk.CTkFrame):
             widget.destroy()
 
         self.parent.activeMatch = self.match.id
+        self.parent.activeEventDate = None
         self.homeTeam = Teams.get_team_by_id(self.match.home_id)
         self.awayTeam = Teams.get_team_by_id(self.match.away_id)
 
@@ -659,6 +663,8 @@ class CalendarEventFrame(ctk.CTkFrame):
         self.gameTommorrow = Matches.check_if_game_date(self.teamID, self.date + timedelta(days = 1))
         self.gameYesterday = Matches.check_if_game_date(self.teamID, self.date - timedelta(days = 1))
 
+        ctk.CTkLabel(self, text = str(day), font = (APP_FONT_BOLD, 12), height = 0).place(relx = 0.05, rely = 0.05, anchor = "nw")
+
         savedEvents = CalendarEvents.get_events_dates(self.teamID, self.date, self.date.replace(hour = 23), get_finished = True)
 
         if self.date.date() > today and self.date.date() < today + timedelta(weeks = 2):
@@ -707,17 +713,30 @@ class CalendarEventFrame(ctk.CTkFrame):
         for widget in self.matchInfoFrame.winfo_children():
             widget.destroy()
 
-        self.dayEventsFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 545, corner_radius = 10)
-        self.dayEventsFrame.place(relx = 0.5, rely = 0.02, anchor = "n")
+        if self.matchInfoFrame:
+            self.dayEventsFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 545, corner_radius = 10)
+            self.dayEventsFrame.place(relx = 0.5, rely = 0.02, anchor = "n")
+
+            morningFrameX = 0.5
+            morningFrameY = 0.2
+            afternoonFrameX = 0.5
+            afternoonFrameY = 0.4
+            eveningFrameX = 0.5
+            eveningFrameY = 0.6
+        else:
+            # create diff day events frame for the email
+            pass
+        
         self.currEvents = CalendarEvents.get_events_week(self.date, self.teamID)
 
         day, text, _, = format_datetime_split(self.date)
 
-        ctk.CTkLabel(self.matchInfoFrame, text = day, fg_color = DARK_GREY, bg_color = DARK_GREY, font = (APP_FONT_BOLD, 20), height = 0).place(relx = 0.5, rely = 0.09, anchor = "center")
-        ctk.CTkLabel(self.matchInfoFrame, text = text, fg_color = DARK_GREY, bg_color = DARK_GREY, font = (APP_FONT, 15), height = 0).place(relx = 0.5, rely = 0.14, anchor = "center")
+        if self.matchInfoFrame:
+            ctk.CTkLabel(self.matchInfoFrame, text = day, fg_color = DARK_GREY, bg_color = DARK_GREY, font = (APP_FONT_BOLD, 20), height = 0).place(relx = 0.5, rely = 0.09, anchor = "center")
+            ctk.CTkLabel(self.matchInfoFrame, text = text, fg_color = DARK_GREY, bg_color = DARK_GREY, font = (APP_FONT, 15), height = 0).place(relx = 0.5, rely = 0.14, anchor = "center")
 
         morningFrame = ctk.CTkFrame(self.dayEventsFrame, fg_color = GREY_BACKGROUND, width = 250, height = 100, corner_radius = 10)
-        morningFrame.place(relx = 0.5, rely = 0.2, anchor = "n")
+        morningFrame.place(relx = morningFrameX, rely = morningFrameY, anchor = "n")
     
         ctk.CTkLabel(morningFrame, text = "Morning", fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.15, anchor = "center")
 
@@ -725,7 +744,7 @@ class CalendarEventFrame(ctk.CTkFrame):
         self.morningButton.place(relx = 0.5, rely = 0.6, anchor = "center")
 
         afternoonFrame = ctk.CTkFrame(self.dayEventsFrame, fg_color = GREY_BACKGROUND, width = 250, height = 100, corner_radius = 10)
-        afternoonFrame.place(relx = 0.5, rely = 0.4, anchor = "n")
+        afternoonFrame.place(relx = afternoonFrameX, rely = afternoonFrameY, anchor = "n")
 
         ctk.CTkLabel(afternoonFrame, text = "Afternoon", fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.15, anchor = "center")
 
@@ -733,7 +752,7 @@ class CalendarEventFrame(ctk.CTkFrame):
         self.afternoonButton.place(relx = 0.5, rely = 0.6, anchor = "center")
 
         eveningFrame = ctk.CTkFrame(self.dayEventsFrame, fg_color = GREY_BACKGROUND, width = 250, height = 100, corner_radius = 10)
-        eveningFrame.place(relx = 0.5, rely = 0.6, anchor = "n")
+        eveningFrame.place(relx = eveningFrameX, rely = eveningFrameY, anchor = "n")
 
         ctk.CTkLabel(eveningFrame, text = "Evening", fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.15, anchor = "center")
 

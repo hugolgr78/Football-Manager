@@ -1495,7 +1495,7 @@ class Matches(Base):
         try:
             matches = session.query(Matches).filter(
                 Matches.date >= start,
-                Matches.date + timedelta(hours = 2) < end
+                Matches.date < end - timedelta(hours=2)
             ).order_by(Matches.date.asc()).all()
             return matches
         finally:
@@ -2917,7 +2917,7 @@ class Emails(Base):
     __tablename__ = 'emails'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday"), nullable = False)
+    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday", "calendar_events"), nullable = False)
     matchday = Column(Integer)
     date = Column(DateTime, nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))
@@ -2975,6 +2975,18 @@ class Emails(Base):
                 if email_date >= SEASON_START_DATE:
                     birthday_email = ("player_birthday", None, player.id, None, None, email_date)
                     emails.append(birthday_email)
+
+            # Create calendar events email (every monday at 8am)
+            calendar_date = SEASON_START_DATE
+            while calendar_date.weekday() != 0:
+                calendar_date += datetime.timedelta(days = 1)
+
+            season_end = SEASON_START_DATE.replace(year = SEASON_START_DATE.year + 1)
+
+            while calendar_date < season_end:
+                calendar_email = ("calendar_events", None, None, None, None, calendar_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                emails.append(calendar_email)
+                calendar_date += datetime.timedelta(weeks = 1)
 
             cls.batch_add_emails(emails)
         finally:

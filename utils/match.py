@@ -8,15 +8,15 @@ import concurrent.futures
 from utils.util_functions import *
 
 class Match():
-    def __init__(self, match, auto = False):
+    def __init__(self, match, auto = False, managingTeam = False):
 
         self.match = match
         self.auto = auto
 
         self.homeTeam = Teams.get_team_by_id(self.match.home_id)
         self.awayTeam = Teams.get_team_by_id(self.match.away_id)
-
         self.league = LeagueTeams.get_league_by_team(self.homeTeam.id)
+        self.referee = Referees.get_referee_by_id(self.match.referee_id)
 
         self.homeFinalLineup = []
         self.awayFinalLineup = []
@@ -25,6 +25,8 @@ class Match():
 
         self.homeCurrentSubs = None
         self.awayCurrentSubs = None
+        self.homeSubs = 0
+        self.awaySubs = 0
 
         self.homeEvents = {}
         self.awayEvents = {}
@@ -53,6 +55,8 @@ class Match():
 
         self.homeFitness = {}
         self.awayFitness = {}
+        self.homeStats = {}
+        self.awayStats = {}
 
         if self.auto:
             self.seconds, self.minutes = 0, 0
@@ -154,12 +158,15 @@ class Match():
                 self.add_events(self.awayEvents, self.awaySubs, "substitution", self.awayInjury)
 
     def checkSubsitutionTime(self, time, events):
-        # This function is here because i want the substitution after an injury to always be a minute after, so if there are any events at that time, add 5 mins to that event and check
-        for event_time, _ in events.items():
-            if event_time == time:
-                minute = int(time.split(":")[0])
-                event_time = str(minute + 5) + ":" + time.split(":")[1]
-                self.checkTime(time, events)
+        # If the requested substitution time conflicts with an existing event,
+        # push it forward by 5 minutes (and re-check recursively).
+        if time in events:
+            minute = int(time.split(":")[0])
+            seconds = time.split(":")[1]
+            new_time = f"{minute + 5}:{seconds}"
+            return self.checkTime(new_time, events)
+
+        return time
 
     def checkTime(self, time, events):
         while time in events:
@@ -177,7 +184,6 @@ class Match():
         return time
 
     def getYellowsAndReds(self):
-        self.referee = Referees.get_referee_by_id(self.match.referee_id)
         severity = self.referee.severity
 
         choices = len(LOW_YELLOW_CARD)
@@ -250,15 +256,52 @@ class Match():
 
                 new_events.append((time, {"type": event_type, "extra": extra}))
             else:
+                # If an injury was generated, try to create a substitution ~10s after
+                # the injury. If that's beyond the allowed period, fall back to
+                # forcing a 45:10 sub for first-half edge-case; otherwise do not
+                # create a sub.
                 if injury and not managing_team and not injurySub:
                     for event_time, event in list(events_dict.items()):
                         if event["type"] == "injury":
-                            minute = event_time.split(":")[0]
-                            sub_time = str(int(minute) + 1) + ":30" 
+                            try:
+                                minute, second = map(int, event_time.split(":"))
+                            except Exception:
+                                minute = int(event_time.split(":")[0])
+                                second = 0
 
-                            new_events.append((sub_time, {"type": "substitution", "player": None, "player_off": None, "player_on": None, "injury": True, "extra": event["extra"]}))
-                            self.checkSubsitutionTime(sub_time, events_dict)
-                            injurySub = True
+                            currTotalSecs = minute * 60 + second
+
+                            # Determine max allowed seconds for substitution
+                            if event["extra"]:
+                                # If the injury itself was marked extra, determine
+                                # whether it's first-half or second-half extra
+                                if minute < 90:
+                                    maxMinute = 45 + (self.extraTimeHalf if hasattr(self, "extraTimeHalf") else 0)
+                                else:
+                                    maxMinute = 90 + (self.extraTimeFull if hasattr(self, "extraTimeFull") else 0)
+                            else:
+                                # Normal play: first half or second half
+                                maxMinute = 45 if minute < 45 else 90
+
+                            maxTotalSecs = maxMinute * 60
+
+                            subTotalSecs = currTotalSecs + 10
+
+                            if subTotalSecs <= maxTotalSecs:
+                                subMin = subTotalSecs // 60
+                                subSec = subTotalSecs % 60
+                                sub_time = f"{subMin}:{subSec:02d}"
+                                sub_time = self.checkSubsitutionTime(sub_time, events_dict)
+                                new_events.append((sub_time, {"type": "substitution", "player": None, "player_off": None, "player_on": None, "injury": True, "extra": event["extra"]}))
+                                injurySub = True
+                            else:
+                                # First-half edge-case: force 45:10 if injury happened
+                                # at end of first half and we're not already in extra.
+                                if (not event["extra"]) and minute < 45:
+                                    sub_time = "45:10"
+                                    sub_time = self.checkSubsitutionTime(sub_time, events_dict)
+                                    new_events.append((sub_time, {"type": "substitution", "player": None, "player_off": None, "player_on": None, "injury": True, "extra": False}))
+                                    injurySub = True
                 else:
                     minute_ranges = list(range(46, 91))
                     weights = [2] * 19 + [3] * 11 + [1] * 15  # Weights for 46-65, 65-75, 75-90
@@ -581,7 +624,7 @@ class Match():
                     minute = minute + 1
 
                 newTime = str(minute) + ":" + str(newSeconds)
-                self.checkSubsitutionTime(newTime, events)
+                newTime = self.checkSubsitutionTime(newTime, events)
 
                 extra = False
                 if self.halfTime or self.fullTime:
@@ -637,13 +680,31 @@ class Match():
 
                     frame.removeFitness()
 
-            # find the substitution event for the injured player
             if not managing_team:
-                currMinute = int(time.split(":")[0])
-                sub_time = str(currMinute + 1) + ":30"
-                for event_time, event_data in events.items():
-                    if event_data["type"] == "substitution" and event_time == sub_time:
-                        self.findSubstitute(event_data, injuredPlayerID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
+                # currMinute and currSec from the match clock
+                currMinute, currSec = map(int, time.split(":"))
+                currTotalSecs = currMinute * 60 + currSec
+                extraTime = self.halfTime or self.fullTime
+
+                if extraTime:
+                    maxMinute = self.matchFrame.matchInstance.extraTimeHalf if self.halfTime else self.matchFrame.matchInstance.extraTimeFull
+                else:
+                    maxMinute = 45 if self.halfTime else 90
+
+                maxTotalSecs = maxMinute * 60
+                subTotalSecs = currTotalSecs + 10  # 10 seconds after the injury
+
+                # Handle normal case or first-half 45:10 special case
+                if subTotalSecs <= maxTotalSecs:
+                    subMin = subTotalSecs // 60
+                    subSec = subTotalSecs % 60
+                    sub_time = f"{subMin}:{subSec:02d}"
+
+                    self.findSubstitute(events[sub_time], injuredPlayerID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
+
+                elif (extraTime and self.halfTime) or maxTotalSecs == 45*60:
+                    sub_time = "45:10"
+                    self.findSubstitute(events[sub_time], injuredPlayerID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
 
         elif event["type"] == "substitution" and not event["injury"] and not managing_team:
 

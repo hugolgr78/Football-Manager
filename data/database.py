@@ -541,7 +541,7 @@ class Players(Base):
             other_positions = specific_positions[position]
             other_positions.remove(required_code)
             if len(other_positions) > 0:
-                num_other_positions = random.randint(1, len(other_positions))
+                num_other_positions = random.randint(0, 1)
                 player_positions.extend(random.sample(other_positions, num_other_positions))
 
         new_player.specific_positions = ','.join(player_positions)

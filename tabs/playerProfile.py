@@ -192,6 +192,8 @@ class Profile(ctk.CTkFrame):
         caFrame.place(relx = 0.83, rely = 0.3, anchor = "center")
         ctk.CTkLabel(caFrame, text = "CA", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.6, anchor = "center")
 
+        ctk.CTkLabel(self, text = f"{self.player.current_ability}", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.95, rely = 0.3, anchor = "e")
+
         imageNames = star_images(self.parent.caStars)
 
         for i, imageName in enumerate(imageNames):
@@ -203,6 +205,8 @@ class Profile(ctk.CTkFrame):
         paFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 200, height = 30, corner_radius = 15)
         paFrame.place(relx = 0.83, rely = 0.36, anchor = "center")
         ctk.CTkLabel(paFrame, text = "PA", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.6, anchor = "center")
+
+        ctk.CTkLabel(self, text = f"{self.player.potential_ability}", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.95, rely = 0.36, anchor = "e")
 
         imageNames = star_images(paStars)
 
@@ -218,8 +222,6 @@ class Profile(ctk.CTkFrame):
         self.footballPitch = FootballPitchPlayerPos(self, 435, 250, 0.04, 0.43, "nw", TKINTER_BACKGROUND)
         positions = self.player.specific_positions.split(",")
         self.footballPitch.add_player_positions(positions)
-
-        # ctk.CTkLabel(self, text = self.player.position.capitalize(), font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.45, anchor = "center")
 
         self.attributesFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 350, height = 50, corner_radius = 15)
         self.attributesFrame.place(relx = 0.04, rely = 0.84, anchor = "sw")

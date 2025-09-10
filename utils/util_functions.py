@@ -278,34 +278,47 @@ def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius = 10, **kwargs):
 def generate_CA(age: int, team_strength: float, min_level: int = 150) -> int:
     """
     Generate a player's Current Ability (CA) based on age and team strength.
-    Skewed distribution: high chance near min_level, very low chance near max_level.
-    
-    team_strength > 1.0 makes stronger teams more likely to get higher CAs
+    Young players (<21) are very likely to be within +10 of min_level,
+    but it's still (rarely) possible to exceed it.
     """
     max_level = min_level + 50
     CAs = list(range(min_level, max_level + 1))
 
-    # Age factor
-    if age <= 21:
-        age_factor = 0.8
+    # Age factor & skew
+    if age < 21:
+        age_factor = 0.1 + 0.02 * age
+        # Penalize CAs above +10 extra heavily
+        def penalty(ca):
+            if ca <= min_level + 10:
+                return 1.0
+            else:
+                # exponential penalty for > +10
+                return math.exp(-0.5 * (ca - (min_level + 10)))
+        skew_power = 4  # strong bias toward low values
     elif age <= 25:
-        age_factor = 1.05
+        age_factor = 1.15
+        penalty = lambda ca: 1.0
+        skew_power = 3
     elif age <= 30:
-        age_factor = 1.0
+        age_factor = 1.05
+        penalty = lambda ca: 1.0
+        skew_power = 3
     else:
         age_factor = 0.9
+        penalty = lambda ca: 1.0
+        skew_power = 3
 
     # Skewed weights: lower CA more likely
-    weights = [(max_level - ca + 1) ** 3 * age_factor for ca in CAs]
+    weights = [(max_level - ca + 1) ** skew_power * age_factor * penalty(ca)
+               for ca in CAs]
 
     # Apply team strength: shift distribution toward higher CAs
     if team_strength != 1.0:
-            # scale factor determines how much stronger/weaker the curve is
-            scale = 15 * (team_strength - 1)   # stronger teams get exponential boost
-            weights = [w * math.exp(scale * ((ca - min_level) / (max_level - min_level)))
-                    for ca, w in zip(CAs, weights)]
+        scale = 15 * (team_strength - 1)
+        weights = [w * math.exp(scale * ((ca - min_level) / (max_level - min_level)))
+                   for ca, w in zip(CAs, weights)]
 
-    level = random.choices(CAs, weights = weights, k = 1)[0]
+    level = random.choices(CAs, weights=weights, k=1)[0]
     return level
 
 def generate_youth_player_level(max_level: int = 150) -> int:

@@ -373,16 +373,16 @@ def calculate_potential_ability(age: int, CA: int) -> int:
 
     if age <= 18:
         max_gap = 200 - CA
-        min_gap = 10
+        min_gap = 25
     elif age <= 21:
         max_gap = min(60, 200 - CA)
-        min_gap = 5
+        min_gap = 15
     elif age <= 24:
         max_gap = min(40, 200 - CA)
-        min_gap = 2
+        min_gap = 10
     elif age <= 27:
         max_gap = min(25, 200 - CA)
-        min_gap = 1
+        min_gap = 5
     elif age <= 30:
         max_gap = min(15, 200 - CA)
         min_gap = 0

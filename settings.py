@@ -254,6 +254,35 @@ GOAL_TYPE_CHANCES = {
     "own_goal": 0.05
 }
 
+BASE_SHOT = 0.15    
+BASE_ON_TARGET = 0.35
+BASE_GOAL = 0.20
+
+BASE_FOUL = 0.10
+BASE_YELLOW = 0.15
+BASE_RED = 0.05
+
+BASE_INJURY = 0.005
+
+SUB_PROB_THRESHOLDS = {
+    10: 0.001,  # almost impossible before 10’
+    20: 0.002,  # still extremely rare
+    30: 0.005,  # very low
+    40: 0.01,   # slightly higher
+    45: 0.02,   # just before HT, still low
+    50: 0.02,   # second half start, still rare
+    60: 0.10,
+    70: 0.20,
+    75: 0.30,
+    80: 0.40,
+    85: 0.50,
+    90: 0.60,   # FT
+    105: 0.70,  # Extra time 1st half
+    110: 0.75,
+    115: 0.80,
+    120: 0.85   # Extra time 2nd half
+}
+
 PENALTY_SCORE_CHANCE = 0.8
 
 OWN_GOAL_CHANCES = {

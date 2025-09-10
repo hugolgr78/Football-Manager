@@ -283,8 +283,6 @@ class MatchDay(ctk.CTkFrame):
             ctk.CTkLabel(oppSubFrame, text = player.first_name + " " + player.last_name, font = (APP_FONT, 10), fg_color = GREY_BACKGROUND).place(relx = 0.1, rely = 0.25 + 0.11 * i, anchor = "w")
             ctk.CTkLabel(oppSubFrame, text = player.specific_positions, font = (APP_FONT, 10), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.25 + 0.11 * i, anchor = "e")
 
-        self.matchFrame.matchInstance.generateScore(teamMatch = True, home = self.home)
-
     def addPlayerFrame(self, frame, playerID):
         frame = InGamePlayerFrame(frame, playerID, 220, 18, GREY_BACKGROUND)
         return frame
@@ -357,6 +355,13 @@ class MatchDay(ctk.CTkFrame):
                 seconds = 0
             else:
                 seconds += 1
+
+            if seconds % 30 == 0:
+                self.generateEvents("home")
+                self.generateEvents("away")
+
+                print(self.matchFrame.matchInstance.homeEvents)
+                print(self.matchFrame.matchInstance.awayEvents)
 
             total_seconds = minutes * 60 + seconds
             if total_seconds % 90 == 0:
@@ -695,11 +700,11 @@ class MatchDay(ctk.CTkFrame):
                             self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
 
                             if not self.home and event_details["type"] == "injury":
-                                self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
+                                self.substitution(forceSub = True, injuredPlayer = event_details["player"])
                             if not self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer = newEvent["player"], redCardPosition = newEvent["position"])
+                                self.substitution(redCardPlayer = event_details["player"], redCardPosition = event_details["position"])
 
-                            self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
+                            self.after(0, self.updateMatchDataFrame, event_details, event_time, False)
                     else:
                         if not (self.halfTime or self.fullTime):
                             if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
@@ -708,11 +713,11 @@ class MatchDay(ctk.CTkFrame):
                             self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
 
                             if not self.home and event_details["type"] == "injury":
-                                self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
+                                self.substitution(forceSub = True, injuredPlayer = event_details["player"])
                             if not self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer = newEvent["player"], redCardPosition = newEvent["position"])
+                                self.substitution(redCardPlayer = event_details["player"], redCardPosition = event_details["position"])
 
-                            self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
+                            self.after(0, self.updateMatchDataFrame, event_details, event_time, False)
 
             if self.halfTimeEnded:
                 self.timeLabel.configure(text = "HT")
@@ -723,6 +728,216 @@ class MatchDay(ctk.CTkFrame):
                 self.after(0, self.updateTimeLabel, minutes, seconds)
 
             time.sleep(self.speed)
+
+    def generateEvents(self, side):
+        eventsToAdd = []
+        statsToAdd = []
+
+        lineup = self.matchFrame.matchInstance.homeCurrentLineup if side == "home" else self.matchFrame.matchInstance.awayCurrentLineup
+        oppLineup = self.matchFrame.matchInstance.awayCurrentLineup if side == "home" else self.matchFrame.matchInstance.homeCurrentLineup
+        matchEvents = self.matchFrame.matchInstance.homeEvents if side == "home" else self.matchFrame.matchInstance.awayEvents
+        fitness = self.matchFrame.matchInstance.homeFitness if side == "home" else self.matchFrame.matchInstance.awayFitness
+        subsCount = self.matchFrame.matchInstance.homeSubs if side == "home" else self.matchFrame.matchInstance.awaySubs
+
+        sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
+        avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
+        avgSharpness = (sum(sharpness) - Players.get_player_by_id(lineup["Goalkeeper"]).sharpness) / (len(sharpness) - 1)
+
+        avgFitness = sum(fitness[playerID] for playerID in lineup.values()) / len(lineup)
+        
+        morale = [Players.get_player_by_id(playerID).morale for pos, playerID in lineup.items() if pos != "Goalkeeper"]
+        avgMorale = sum(morale) / len(morale)
+
+        oppKeeper = Players.get_player_by_id(oppLineup["Goalkeeper"])
+
+        attackingLevel = sum(Players.get_player_by_id(playerID).current_ability for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS + ["Attacking Midfielder"])
+        defendingLevel = sum(Players.get_player_by_id(playerID).current_ability for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS + ["Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"])
+
+        # ------------------ GOAL ------------------
+        event = self.goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper)
+
+        if event == "goal":
+
+            goalType = random.choices(list(GOAL_TYPE_CHANCES.keys()), weights = list(GOAL_TYPE_CHANCES.values()), k = 1)[0]
+
+            eventsToAdd.append(goalType)
+            statsToAdd.append("shot")
+            statsToAdd.append("shot on target")
+        elif event != "nothing":
+            statsToAdd.append(event)
+
+        # ------------------ FOUL ------------------
+        event = self.foulChances(avgSharpnessWthKeeper)
+
+        if event in ["yellow_card", "red_card"]:
+            eventsToAdd.append(event)
+            statsToAdd.append("foul")
+        elif event == "foul":
+            statsToAdd.append(event)
+
+        # ------------------ INJURY ------------------
+        event = self.injuryChances(avgFitness)
+
+        if event == "injury":
+            eventsToAdd.append(event)
+
+        if (self.home and side == "away") or (not self.home and side == "home"):
+            numSubs = self.substitutionChances()
+
+            for _ in range(numSubs):
+                eventsToAdd.append("substitution")
+
+        # ------------------ TIMES and ADDING ------------------
+        currMin, currSec = map(int, self.timeLabel.cget("text").split(":"))
+        extraTime = True if (self.halfTime or self.fullTime) else False
+
+        if extraTime:
+            maxMinute = self.matchFrame.matchInstance.extraTimeHalf if self.halfTime else self.matchFrame.matchInstance.extraTimeFull
+        else:
+            maxMinute = 45 if self.halfTime else 90
+
+        currTotalSecs = currMin * 60 + currSec
+        futureTotalSecs = currTotalSecs + 30
+        maxTotalSecs = maxMinute * 60
+        endTotalSecs = min(futureTotalSecs, maxTotalSecs)
+
+        print(eventsToAdd)
+        print(statsToAdd)
+
+        for event in eventsToAdd:
+            eventTotalSecs = random.randint(currTotalSecs, endTotalSecs)
+
+            # Convert back to mm:ss
+            eventMin = eventTotalSecs // 60
+            eventSec = eventTotalSecs % 60
+            eventTime = f"{eventMin}:{eventSec:02d}"
+
+            if event == "substitution":
+                matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player": None, "player_off": None, "player_on": None, "injury": False}
+                subsCount += 1
+            elif event == "injury":
+                matchEvents[eventTime] = {"type": "injury", "extra": extraTime}
+
+                # Create a substitution 10s after injury if possible
+                if (self.home and side == "away") or (not self.home and side == "home"):
+                    subs = self.matchFrame.matchInstance.homeCurrentSubs if side == "away" else self.matchFrame.matchInstance.awayCurrentSubs
+                    subsAvailable = len(subs) - MATCHDAY_SUBS + MAX_SUBS
+
+                    if subsAvailable > 0:
+                        subsCount += 1
+                        subTotalSecs = eventTotalSecs + 10
+
+                        if subTotalSecs <= maxTotalSecs:
+                            subMin = subTotalSecs // 60
+                            subSec = subTotalSecs % 60
+                            subTime = f"{subMin}:{subSec:02d}"
+                            matchEvents[subTime] = {"type": "substitution", "extra": extraTime, "player": None, "player_off": None, "player_on": None, "injury": True}
+                        elif maxTotalSecs == 45 * 60 or (extraTime and self.halfTime):
+                            matchEvents[f"45:10"] = {"type": "substitution", "extra": False, "player": None, "player_off": None, "player_on": None, "injury": True}
+            else:
+                matchEvents[eventTime] = {"type": event, "extra": extraTime}
+
+    def goalChances(self, attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
+        attackRatio = attackingLevel / defendingLevel
+
+        attackModifier = (avgSharpness / 100) * (avgMorale / 100)
+        keeperModifier = (oppKeeper.current_ability / 200) * (oppKeeper.sharpness / 100)
+
+        # Scale them
+        shot_prob = BASE_SHOT * attackRatio * attackModifier
+        shot_prob = min(max(shot_prob, 0.05), 0.40)
+
+        on_target_prob = BASE_ON_TARGET * attackModifier
+        on_target_prob = min(max(on_target_prob, 0.20), 0.70)
+
+        goal_prob = BASE_GOAL * attackModifier / max(0.5, keeperModifier)
+        goal_prob = min(max(goal_prob, 0.05), 0.60)
+
+        # Final event distribution
+        p_nothing = 1 - shot_prob
+        p_shot_off = shot_prob * (1 - on_target_prob)
+        p_shot_saved = shot_prob * on_target_prob * (1 - goal_prob)
+        p_goal = shot_prob * on_target_prob * goal_prob
+
+        events = ["nothing", "shot", "shot on target", "goal"]
+        probs = [p_nothing, p_shot_off, p_shot_saved, p_goal]
+
+        return random.choices(events, weights = probs, k = 1)[0]
+
+    def foulChances(self, avgSharpnessWthKeeper):
+        severity = self.matchFrame.matchInstance.referee.severity
+
+        foul_prob = BASE_FOUL * (100 - avgSharpnessWthKeeper) / 50.0
+        foul_prob = min(max(foul_prob, 0.02), 0.40)
+
+        yellow_prob = BASE_YELLOW * (100 - avgSharpnessWthKeeper) / 100.0
+        red_prob = BASE_RED * (100 - avgSharpnessWthKeeper) / 100.0
+
+        # --- Referee severity scaling ---
+        severity_map = {
+            "low": 0.7,
+            "medium": 1.0, 
+            "high": 1.4
+        }
+        severity = severity_map.get(severity, 1.0)
+
+        yellow_prob *= severity
+        red_prob *= severity
+
+        # Clamp card probabilities
+        yellow_prob = min(max(yellow_prob, 0.02), 0.60)
+        red_prob = min(max(red_prob, 0.01), 0.25)
+
+        # --- Final event distribution ---
+        p_nothing = 1 - foul_prob
+        p_foul_no_card = foul_prob * (1 - yellow_prob - red_prob)
+        if p_foul_no_card < 0:  # if referee is too strict, prevent negative prob
+            p_foul_no_card = 0
+        p_yellow = foul_prob * yellow_prob
+        p_red = foul_prob * red_prob
+
+        events = ["nothing", "foul", "yellow_card", "red_card"]
+        probs = [p_nothing, p_foul_no_card, p_yellow, p_red]
+
+        return random.choices(events, weights = probs, k = 1)[0]
+
+    def injuryChances(self, avgFitness):
+
+        injury_prob = BASE_INJURY * (100 / avgFitness)
+        injury_prob = min(max(injury_prob, 0.001), 0.05)
+
+        # --- Final event distribution ---
+        p_nothing = 1 - injury_prob
+        p_injury = injury_prob
+
+        events = ["nothing", "injury"]
+        probs = [p_nothing, p_injury]
+
+        return random.choices(events, weights = probs, k = 1)[0]
+
+    def substitutionChances(self):
+        currMin = int(self.timeLabel.cget("text").split(":")[0])
+        subs = self.matchFrame.matchInstance.homeCurrentSubs if not self.home else self.matchFrame.matchInstance.awayCurrentSubs
+        subsAvailable = len(subs) - MATCHDAY_SUBS + MAX_SUBS
+
+        # No substitutions possible
+        if subsAvailable <= 0:
+            return 0
+        
+        subProb = getSubProb(currMin)
+        probs = {
+            0: 1 - subProb,
+            1: subProb * 0.65,
+            2: subProb * 0.25 if subsAvailable >= 2 else 0,
+            3: subProb * 0.10 if subsAvailable >= 3 else 0,
+        }
+
+        # Normalise for random.choices
+        outcomes = list(probs.keys())
+        weights = list(probs.values())
+        numSubs = random.choices(outcomes, weights = weights, k = 1)[0]
+
+        return numSubs
 
     def shouts(self):
 

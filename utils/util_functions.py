@@ -497,3 +497,11 @@ def getFitnessDrop(player):
 def getDayIndex(date):
     day, _, _ = format_datetime_split(date)
     return list(calendar.day_name).index(day)
+
+def getSubProb(currMin: int) -> float:
+    prob = 0.0
+    for minute in sorted(SUB_PROB_THRESHOLDS.keys()):
+        if currMin < minute:
+            return prob
+        prob = SUB_PROB_THRESHOLDS[minute]
+    return prob

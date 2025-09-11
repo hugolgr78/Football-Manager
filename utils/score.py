@@ -4,7 +4,7 @@ from data.gamesDatabase import *
 from utils.util_functions import *
 
 class Score():
-    def __init__(self, homeTeam, awayTeam, homeLineup, awayLineup):
+    def __init__(self, homeTeam, awayTeam, homeLineup, awayLineup, decide = True):
     
         self.homeTeam = homeTeam
         self.awayTeam = awayTeam
@@ -14,11 +14,15 @@ class Score():
         self.homeLevel = Teams.get_team_average_current_ability(self.homeTeam.id)
         self.awayLevel = Teams.get_team_average_current_ability(self.awayTeam.id)
 
-        self.score = []
+
         self.winner = None
 
-        self.decideWinner()
-        self.generateScore()
+        if decide:
+            self.score = []
+            self.decideWinner()
+            self.generateScore()
+        else:
+            self.score = [0, 0]
 
     ## This function will need to append the level of each team based on the many factors that can affect it (morale, form, etc.)
     def decideWinner(self, advantage = True):
@@ -124,7 +128,15 @@ class Score():
         return self.score
     
     def getWinner(self):
-        return self.winner
+        if self.winner:
+            return self.winner
+        else:
+            if self.score[0] > self.score[1]:
+                return self.homeTeam
+            elif self.score[1] > self.score[0]:
+                return self.awayTeam
+            else:
+                return None
     
     def appendScore(self, value, home):
         if home:

@@ -217,6 +217,7 @@ class MatchDay(ctk.CTkFrame):
             if match.home_id == self.team.id or match.away_id == self.team.id:
                 self.teamMatch = match
                 self.matchFrame = MatchDayMatchFrame(self.teamMatchFrame, match, TKINTER_BACKGROUND, 150, 400, imageSize = 70, relx =  0.5, rely =  0.03, anchor = "n", border_width = 3, border_color = GREY_BACKGROUND, pack = False)
+                self.matchFrame.matchInstance.createScore()
                 
                 self.matchDataFrame = ctk.CTkScrollableFrame(self.teamMatchFrame, width = 370, height = 300, fg_color = TKINTER_BACKGROUND, border_width = 3, border_color = GREY_BACKGROUND)
                 self.matchDataFrame.place(relx = 0.5, rely = 0.27, anchor = "n")
@@ -354,15 +355,6 @@ class MatchDay(ctk.CTkFrame):
                 seconds = 0
             else:
                 seconds += 1
-
-            if seconds % 30 == 0:
-                self.generateEvents("home")
-                self.generateEvents("away")
-
-                print("Home")            
-                print(self.matchFrame.matchInstance.homeEvents)
-                print("Away")
-                print(self.matchFrame.matchInstance.awayEvents)
 
             total_seconds = minutes * 60 + seconds
             if total_seconds % 90 == 0:
@@ -592,6 +584,15 @@ class MatchDay(ctk.CTkFrame):
                     print(self.matchFrame.matchInstance.homeStats)
                     print(self.matchFrame.matchInstance.awayStats)
 
+            if seconds % 30 == 0:
+                self.generateEvents("home")
+                self.generateEvents("away")
+
+                print("Home")            
+                print(self.matchFrame.matchInstance.homeEvents)
+                print("Away")
+                print(self.matchFrame.matchInstance.awayEvents)
+
             ## ----------- substitution end ------------
             if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
                 self.substitutionButton.configure(state = "disabled")
@@ -770,15 +771,23 @@ class MatchDay(ctk.CTkFrame):
             goalType = random.choices(list(GOAL_TYPE_CHANCES.keys()), weights = list(GOAL_TYPE_CHANCES.values()), k = 1)[0]
 
             if goalType == "penalty":
-                if random.random() < PENALTY_SCORE_CHANCE:
+                if random.random() < PENALTY_SCORE_CHANCE or "Goalkeeper" not in oppLineup:
                     goalType = "penalty_goal"
+                    self.matchFrame.matchInstance.score.appendScore(1, True if side == "home" else False)
                 else:
                     goalType = "penalty_miss"
+            elif event == "own_goal":
+                self.matchFrame.matchInstance.score.appendScore(1, False if side == "home" else True)
+            else:
+                self.matchFrame.matchInstance.score.appendScore(1, True if side == "home" else False)
 
             eventsToAdd.append(goalType)
             statsToAdd.append("shot")
             statsToAdd.append("shot on target")
-        elif event != "nothing":
+        elif event == "shot_on_target":
+            statsToAdd.append("shot")
+            statsToAdd.append(event)
+        elif event == "shot":
             statsToAdd.append(event)
 
         # ------------------ FOUL ------------------
@@ -823,7 +832,7 @@ class MatchDay(ctk.CTkFrame):
         endTotalSecs = min(futureTotalSecs, maxTotalSecs)
 
         for event in eventsToAdd:
-            eventTotalSecs = random.randint(currTotalSecs, endTotalSecs)
+            eventTotalSecs = random.randint(currTotalSecs + 5, endTotalSecs)
 
             # Convert back to mm:ss
             eventMin = eventTotalSecs // 60
@@ -863,36 +872,41 @@ class MatchDay(ctk.CTkFrame):
 
     def goalChances(self, attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
         attackRatio = attackingLevel / defendingLevel
-
         attackModifier = (avgSharpness / 100 + avgMorale / 100) / 2
 
         if oppKeeper:
-            if oppKeeper.position != "Goalkeeper":
-                # Outfield player as keeper
-                keeperModifier = 0.3
-            else:
+            if oppKeeper.position == "goalkeeper":
                 keeperModifier = (oppKeeper.current_ability / 200) * (oppKeeper.sharpness / 100)
+
+                shot_base = BASE_SHOT * attackRatio * attackModifier
+                shotProb = min(max(shot_base, 0.05), MAX_SHOT_PROB)
+
+                onTarget_base = BASE_ON_TARGET * attackModifier
+                onTargetProb = min(max(onTarget_base, 0.25), MAX_TARGET_PROB)
+
+                goal_base = BASE_GOAL * attackModifier
+                goalProb = goal_base * (1 - keeperModifier)
+                goalProb = min(max(goalProb, 0.05), MAX_GOAL_PROB)
+
+            else:
+                # Outfield player in goal
+                shotProb = min(max(BASE_SHOT * attackRatio * attackModifier * 1.2, 0.15), 0.7)
+                onTargetProb = min(max(BASE_ON_TARGET * attackModifier * 1.2, 0.40), 0.8)
+                goalProb = min(max(BASE_GOAL * attackModifier * 1.5, 0.50), 0.9)
+
         else:
-            keeperModifier = 0
+            shotProb = min(max(BASE_SHOT * attackRatio * attackModifier * 1.5, 0.25), 0.75)
+            onTargetProb = min(max(BASE_ON_TARGET * attackModifier * 1.5, 0.60), 0.85)
+            goalProb = min(max(BASE_GOAL * attackModifier * 2.0, 0.80), 0.95)
 
-        # Scale them
-        shotProb = BASE_SHOT * attackRatio * attackModifier 
-        shotProb = min(max(shotProb, 0.05), MAX_SHOT_PROB)
-
-        onTargetProb = BASE_ON_TARGET * attackModifier
-        onTargetProb = min(max(onTargetProb, 0.20), MAX_TARGET_PROB)
-
-        goalProb = BASE_GOAL * attackModifier
-        goalProb = min(max(goalProb, 0.05), MAX_GOAL_PROB)
-
-        # Final event distribution
-        pNothing = 1 - shotProb
-        pShotOff = shotProb * (1 - onTargetProb)
+        # Final distribution
+        pNothing   = 1 - shotProb
+        pShotOff   = shotProb * (1 - onTargetProb)
         pShotSaved = shotProb * onTargetProb * (1 - goalProb)
-        pGoal = shotProb * onTargetProb * goalProb
+        pGoal      = shotProb * onTargetProb * goalProb
 
         events = ["nothing", "shot", "shot on target", "goal"]
-        probs = [pNothing, pShotOff, pShotSaved, pGoal]
+        probs  = [pNothing, pShotOff, pShotSaved, pGoal]
 
         return random.choices(events, weights = probs, k = 1)[0]
 

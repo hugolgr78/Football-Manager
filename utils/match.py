@@ -688,10 +688,11 @@ class Match():
 
                 if extraTime:
                     maxMinute = self.matchFrame.matchInstance.extraTimeHalf if self.halfTime else self.matchFrame.matchInstance.extraTimeFull
+                    maxTotalSecs = currTotalSecs + (maxMinute * 60)
                 else:
                     maxMinute = 45 if self.halfTime else 90
+                    maxTotalSecs = maxMinute * 60
 
-                maxTotalSecs = maxMinute * 60
                 subTotalSecs = currTotalSecs + 10  # 10 seconds after the injury
 
                 # Handle normal case or first-half 45:10 special case

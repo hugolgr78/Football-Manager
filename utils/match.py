@@ -84,6 +84,9 @@ class Match():
         self.score = Score(self.homeTeam, self.awayTeam, self.homeCurrentLineup, self.awayCurrentLineup)
         self.generateEventTypesAndTimes(teamMatch, home)
 
+    def createScore(self):
+        self.score = Score(self.homeTeam, self.awayTeam, self.homeCurrentLineup, self.awayCurrentLineup, decide = False)
+
     def generateEventTypesAndTimes(self, teamMatch, home):
 
         self.getYellowsAndReds()
@@ -687,7 +690,7 @@ class Match():
                 extraTime = self.halfTime or self.fullTime
 
                 if extraTime:
-                    maxMinute = self.matchFrame.matchInstance.extraTimeHalf if self.halfTime else self.matchFrame.matchInstance.extraTimeFull
+                    maxMinute = self.extraTimeHalf if self.halfTime else self.extraTimeFull
                     maxTotalSecs = currTotalSecs + (maxMinute * 60)
                 else:
                     maxMinute = 45 if self.halfTime else 90

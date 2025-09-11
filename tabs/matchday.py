@@ -6,7 +6,6 @@ from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitc
 from utils.shouts import ShoutFrame
 from utils.util_functions import *
 import threading, time
-import concurrent.futures
 from PIL import Image, ImageTk
 import math
 
@@ -360,7 +359,9 @@ class MatchDay(ctk.CTkFrame):
                 self.generateEvents("home")
                 self.generateEvents("away")
 
+                print("Home")            
                 print(self.matchFrame.matchInstance.homeEvents)
+                print("Away")
                 print(self.matchFrame.matchInstance.awayEvents)
 
             total_seconds = minutes * 60 + seconds
@@ -588,6 +589,9 @@ class MatchDay(ctk.CTkFrame):
                         self.matchDataFrame.update_idletasks()
                         self.matchDataFrame._parent_canvas.yview_moveto(1)
 
+                    print(self.matchFrame.matchInstance.homeStats)
+                    print(self.matchFrame.matchInstance.awayStats)
+
             ## ----------- substitution end ------------
             if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
                 self.substitutionButton.configure(state = "disabled")
@@ -738,20 +742,25 @@ class MatchDay(ctk.CTkFrame):
         matchEvents = self.matchFrame.matchInstance.homeEvents if side == "home" else self.matchFrame.matchInstance.awayEvents
         fitness = self.matchFrame.matchInstance.homeFitness if side == "home" else self.matchFrame.matchInstance.awayFitness
         subsCount = self.matchFrame.matchInstance.homeSubs if side == "home" else self.matchFrame.matchInstance.awaySubs
+        stats = self.matchFrame.matchInstance.homeStats if side == "home" else self.matchFrame.matchInstance.awayStats
 
         sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
-        avgSharpness = (sum(sharpness) - Players.get_player_by_id(lineup["Goalkeeper"]).sharpness) / (len(sharpness) - 1)
+
+        if "Goalkeeper" in lineup:
+            avgSharpness = (sum(sharpness) - Players.get_player_by_id(lineup["Goalkeeper"]).sharpness) / (len(sharpness) - 1)
+        else:
+            avgSharpness = avgSharpnessWthKeeper
 
         avgFitness = sum(fitness[playerID] for playerID in lineup.values()) / len(lineup)
         
         morale = [Players.get_player_by_id(playerID).morale for pos, playerID in lineup.items() if pos != "Goalkeeper"]
         avgMorale = sum(morale) / len(morale)
 
-        oppKeeper = Players.get_player_by_id(oppLineup["Goalkeeper"])
+        oppKeeper = Players.get_player_by_id(oppLineup["Goalkeeper"]) if "Goalkeeper" in oppLineup else None
 
         attackingLevel = sum(Players.get_player_by_id(playerID).current_ability for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS + ["Attacking Midfielder"])
-        defendingLevel = sum(Players.get_player_by_id(playerID).current_ability for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS + ["Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"])
+        defendingLevel = sum(Players.get_player_by_id(playerID).current_ability for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS + ["Goalkeeper", "Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"])
 
         # ------------------ GOAL ------------------
         event = self.goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper)
@@ -759,6 +768,12 @@ class MatchDay(ctk.CTkFrame):
         if event == "goal":
 
             goalType = random.choices(list(GOAL_TYPE_CHANCES.keys()), weights = list(GOAL_TYPE_CHANCES.values()), k = 1)[0]
+
+            if goalType == "penalty":
+                if random.random() < PENALTY_SCORE_CHANCE:
+                    goalType = "penalty_goal"
+                else:
+                    goalType = "penalty_miss"
 
             eventsToAdd.append(goalType)
             statsToAdd.append("shot")
@@ -771,7 +786,11 @@ class MatchDay(ctk.CTkFrame):
 
         if event in ["yellow_card", "red_card"]:
             eventsToAdd.append(event)
-            statsToAdd.append("foul")
+
+            # 70% chance of foul too
+            if random.random() < 0.7:
+                statsToAdd.append("foul")
+
         elif event == "foul":
             statsToAdd.append(event)
 
@@ -790,19 +809,18 @@ class MatchDay(ctk.CTkFrame):
         # ------------------ TIMES and ADDING ------------------
         currMin, currSec = map(int, self.timeLabel.cget("text").split(":"))
         extraTime = True if (self.halfTime or self.fullTime) else False
+        
+        currTotalSecs = currMin * 60 + currSec
+        futureTotalSecs = currTotalSecs + 30
 
         if extraTime:
             maxMinute = self.matchFrame.matchInstance.extraTimeHalf if self.halfTime else self.matchFrame.matchInstance.extraTimeFull
+            maxTotalSecs = currTotalSecs + (maxMinute * 60)
         else:
             maxMinute = 45 if self.halfTime else 90
+            maxTotalSecs = maxMinute * 60
 
-        currTotalSecs = currMin * 60 + currSec
-        futureTotalSecs = currTotalSecs + 30
-        maxTotalSecs = maxMinute * 60
         endTotalSecs = min(futureTotalSecs, maxTotalSecs)
-
-        print(eventsToAdd)
-        print(statsToAdd)
 
         for event in eventsToAdd:
             eventTotalSecs = random.randint(currTotalSecs, endTotalSecs)
@@ -837,81 +855,95 @@ class MatchDay(ctk.CTkFrame):
             else:
                 matchEvents[eventTime] = {"type": event, "extra": extraTime}
 
+        for stat in statsToAdd:
+            if not stat in stats:
+                stats[stat] = 0
+
+            stats[stat] += 1
+
     def goalChances(self, attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
         attackRatio = attackingLevel / defendingLevel
 
-        attackModifier = (avgSharpness / 100) * (avgMorale / 100)
-        keeperModifier = (oppKeeper.current_ability / 200) * (oppKeeper.sharpness / 100)
+        attackModifier = (avgSharpness / 100 + avgMorale / 100) / 2
+
+        if oppKeeper:
+            if oppKeeper.position != "Goalkeeper":
+                # Outfield player as keeper
+                keeperModifier = 0.3
+            else:
+                keeperModifier = (oppKeeper.current_ability / 200) * (oppKeeper.sharpness / 100)
+        else:
+            keeperModifier = 0
 
         # Scale them
-        shot_prob = BASE_SHOT * attackRatio * attackModifier
-        shot_prob = min(max(shot_prob, 0.05), 0.40)
+        shotProb = BASE_SHOT * attackRatio * attackModifier 
+        shotProb = min(max(shotProb, 0.05), MAX_SHOT_PROB)
 
-        on_target_prob = BASE_ON_TARGET * attackModifier
-        on_target_prob = min(max(on_target_prob, 0.20), 0.70)
+        onTargetProb = BASE_ON_TARGET * attackModifier
+        onTargetProb = min(max(onTargetProb, 0.20), MAX_TARGET_PROB)
 
-        goal_prob = BASE_GOAL * attackModifier / max(0.5, keeperModifier)
-        goal_prob = min(max(goal_prob, 0.05), 0.60)
+        goalProb = BASE_GOAL * attackModifier
+        goalProb = min(max(goalProb, 0.05), MAX_GOAL_PROB)
 
         # Final event distribution
-        p_nothing = 1 - shot_prob
-        p_shot_off = shot_prob * (1 - on_target_prob)
-        p_shot_saved = shot_prob * on_target_prob * (1 - goal_prob)
-        p_goal = shot_prob * on_target_prob * goal_prob
+        pNothing = 1 - shotProb
+        pShotOff = shotProb * (1 - onTargetProb)
+        pShotSaved = shotProb * onTargetProb * (1 - goalProb)
+        pGoal = shotProb * onTargetProb * goalProb
 
         events = ["nothing", "shot", "shot on target", "goal"]
-        probs = [p_nothing, p_shot_off, p_shot_saved, p_goal]
+        probs = [pNothing, pShotOff, pShotSaved, pGoal]
 
         return random.choices(events, weights = probs, k = 1)[0]
 
     def foulChances(self, avgSharpnessWthKeeper):
         severity = self.matchFrame.matchInstance.referee.severity
 
-        foul_prob = BASE_FOUL * (100 - avgSharpnessWthKeeper) / 50.0
-        foul_prob = min(max(foul_prob, 0.02), 0.40)
+        foulProb = BASE_FOUL * (100 - avgSharpnessWthKeeper) / 50.0
+        foulProb = min(max(foulProb, 0.02), 0.40)
 
-        yellow_prob = BASE_YELLOW * (100 - avgSharpnessWthKeeper) / 100.0
-        red_prob = BASE_RED * (100 - avgSharpnessWthKeeper) / 100.0
+        yellowProb = BASE_YELLOW * (100 - avgSharpnessWthKeeper) / 100.0
+        redProb = BASE_RED * (100 - avgSharpnessWthKeeper) / 100.0
 
         # --- Referee severity scaling ---
-        severity_map = {
+        severityMap = {
             "low": 0.7,
             "medium": 1.0, 
             "high": 1.4
         }
-        severity = severity_map.get(severity, 1.0)
+        severity = severityMap.get(severity, 1.0)
 
-        yellow_prob *= severity
-        red_prob *= severity
+        yellowProb *= severity
+        redProb *= severity
 
         # Clamp card probabilities
-        yellow_prob = min(max(yellow_prob, 0.02), 0.60)
-        red_prob = min(max(red_prob, 0.01), 0.25)
+        yellowProb = min(max(yellowProb, 0.02), 0.60)
+        redProb = min(max(redProb, 0.01), 0.25)
 
         # --- Final event distribution ---
-        p_nothing = 1 - foul_prob
-        p_foul_no_card = foul_prob * (1 - yellow_prob - red_prob)
-        if p_foul_no_card < 0:  # if referee is too strict, prevent negative prob
-            p_foul_no_card = 0
-        p_yellow = foul_prob * yellow_prob
-        p_red = foul_prob * red_prob
+        pNothing = 1 - foulProb
+        pFoulNoCard = foulProb * (1 - yellowProb - redProb)
+        if pFoulNoCard < 0:  # if referee is too strict, prevent negative prob
+            pFoulNoCard = 0
+        pYellow = foulProb * yellowProb
+        pRed = foulProb * redProb
 
         events = ["nothing", "foul", "yellow_card", "red_card"]
-        probs = [p_nothing, p_foul_no_card, p_yellow, p_red]
+        probs = [pNothing, pFoulNoCard, pYellow, pRed]
 
         return random.choices(events, weights = probs, k = 1)[0]
 
     def injuryChances(self, avgFitness):
 
-        injury_prob = BASE_INJURY * (100 / avgFitness)
-        injury_prob = min(max(injury_prob, 0.001), 0.05)
+        injuryProb = BASE_INJURY * (100 / avgFitness)
+        injuryProb = min(max(injuryProb, 0.0001), MAX_INJURY_PROB)
 
         # --- Final event distribution ---
-        p_nothing = 1 - injury_prob
-        p_injury = injury_prob
+        pNothing = 1 - injuryProb
+        pInjury = injuryProb
 
         events = ["nothing", "injury"]
-        probs = [p_nothing, p_injury]
+        probs = [pNothing, pInjury]
 
         return random.choices(events, weights = probs, k = 1)[0]
 

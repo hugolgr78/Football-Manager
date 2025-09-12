@@ -913,37 +913,35 @@ class MatchDay(ctk.CTkFrame):
     def foulChances(self, avgSharpnessWthKeeper):
         severity = self.matchFrame.matchInstance.referee.severity
 
-        foulProb = BASE_FOUL * (100 - avgSharpnessWthKeeper) / 50.0
-        foulProb = min(max(foulProb, 0.02), 0.40)
+        severity_map = {"low": 0.7, "medium": 1.0, "high": 1.4}
+        severity = severity_map.get(severity, 1.0)
 
-        yellowProb = BASE_YELLOW * (100 - avgSharpnessWthKeeper) / 100.0
-        redProb = BASE_RED * (100 - avgSharpnessWthKeeper) / 100.0
+        gamma = 0.5
+        sf = ((100.0 - max(0.0, min(99.9, avgSharpnessWthKeeper))) / 20.0) ** gamma
 
-        # --- Referee severity scaling ---
-        severityMap = {
-            "low": 0.7,
-            "medium": 1.0, 
-            "high": 1.4
-        }
-        severity = severityMap.get(severity, 1.0)
+        foulProb   = BASE_FOUL   * sf
+        yellowProb = BASE_YELLOW * sf * severity
+        redProb    = BASE_RED    * sf * severity
 
-        yellowProb *= severity
-        redProb *= severity
+        # realistic clamps
+        foulProb   = min(max(foulProb, 0.01), 0.20)
+        yellowProb = min(max(yellowProb, 0.002), 0.05)
+        redProb    = min(max(redProb, 0.0001), 0.02)
 
-        # Clamp card probabilities
-        yellowProb = min(max(yellowProb, 0.02), 0.60)
-        redProb = min(max(redProb, 0.01), 0.25)
+        # ensure total <= 1
+        total = foulProb + yellowProb + redProb
+        if total > 1:
+            scale = 1.0 / total
+            foulProb *= scale
+            yellowProb *= scale
+            redProb *= scale
 
-        # --- Final event distribution ---
-        pNothing = 1 - foulProb
-        pFoulNoCard = foulProb * (1 - yellowProb - redProb)
-        if pFoulNoCard < 0:  # if referee is too strict, prevent negative prob
-            pFoulNoCard = 0
-        pYellow = foulProb * yellowProb
-        pRed = foulProb * redProb
+        pNothing = 1.0 - (foulProb + yellowProb + redProb)
 
         events = ["nothing", "foul", "yellow_card", "red_card"]
-        probs = [pNothing, pFoulNoCard, pYellow, pRed]
+        probs = [pNothing, foulProb, yellowProb, redProb]
+
+        print(avgSharpnessWthKeeper, pNothing, foulProb, yellowProb, redProb)
 
         return random.choices(events, weights = probs, k = 1)[0]
 

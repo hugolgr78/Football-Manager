@@ -515,7 +515,7 @@ def ownGoalFoulWeight(p):
     base = 0.5 * ability_factor + 0.5 * sharpness_factor
     return max(base, 0.01)  # avoid zero probability
 
-def fitnessWeight(p):
+def fitnessWeight(p, fitness):
     # Low fitness → higher chance
-    fitness_factor = (100 - p.fitness) / 100.0
+    fitness_factor = (100 - fitness) / 100.0
     return max(fitness_factor, 0.01)  # avoid 0 prob

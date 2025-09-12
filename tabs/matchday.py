@@ -364,17 +364,29 @@ class MatchDay(ctk.CTkFrame):
                             if fitness > 0 and playerID in frame.matchInstance.homeCurrentLineup.values():
                                 frame.matchInstance.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
 
+                                if frame.matchInstance.homeFitness[playerID] < 0:
+                                    frame.matchInstance.homeFitness[playerID] = 0
+
                         for playerID, fitness in frame.matchInstance.awayFitness.items():
                             if fitness > 0 and playerID in frame.matchInstance.awayCurrentLineup.values():
                                 frame.matchInstance.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
+
+                                if frame.matchInstance.awayFitness[playerID] < 0:
+                                    frame.matchInstance.awayFitness[playerID] = 0
 
                 for playerID, fitness in self.matchFrame.matchInstance.homeFitness.items():
                     if fitness > 0 and playerID in self.matchFrame.matchInstance.homeCurrentLineup.values():
                         self.matchFrame.matchInstance.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
 
+                        if self.matchFrame.matchInstance.homeFitness[playerID] < 0:
+                            self.matchFrame.matchInstance.homeFitness[playerID] = 0
+
                 for playerID, fitness in self.matchFrame.matchInstance.awayFitness.items():
                     if fitness > 0 and playerID in self.matchFrame.matchInstance.awayCurrentLineup.values():
                         self.matchFrame.matchInstance.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
+
+                        if self.matchFrame.matchInstance.awayFitness[playerID] < 0:
+                            self.matchFrame.matchInstance.awayFitness[playerID] = 0
 
                 if self.homePlayersFrame.winfo_ismapped():
                     for playerID in self.matchFrame.matchInstance.homeCurrentLineup.values():

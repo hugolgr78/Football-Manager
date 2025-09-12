@@ -745,6 +745,8 @@ class MatchDay(ctk.CTkFrame):
         subsCount = self.matchFrame.matchInstance.homeSubs if side == "home" else self.matchFrame.matchInstance.awaySubs
         stats = self.matchFrame.matchInstance.homeStats if side == "home" else self.matchFrame.matchInstance.awayStats
 
+        print(self.matchFrame.matchInstance.score.getScore())
+
         sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
 
@@ -832,7 +834,7 @@ class MatchDay(ctk.CTkFrame):
         endTotalSecs = min(futureTotalSecs, maxTotalSecs)
 
         for event in eventsToAdd:
-            eventTotalSecs = random.randint(currTotalSecs + 7, endTotalSecs)
+            eventTotalSecs = random.randint(currTotalSecs + 10, endTotalSecs)
 
             # Convert back to mm:ss
             eventMin = eventTotalSecs // 60
@@ -864,6 +866,10 @@ class MatchDay(ctk.CTkFrame):
                             self.matchFrame.matchInstance.awaySubs = subsCount
 
                         subTotalSecs = eventTotalSecs + 10
+
+                        # Ensure the subs event is at least 10s after the next tick
+                        if currTotalSecs + 30 < subTotalSecs < currTotalSecs + 40:
+                            subTotalSecs = currTotalSecs + 40
 
                         if subTotalSecs <= maxTotalSecs:
                             subMin = subTotalSecs // 60

@@ -567,7 +567,7 @@ class MatchProfile(ctk.CTkFrame):
                 self.homeStartLineupPitch.addPlayer(player.start_position, playerData.last_name)
                 
                 # Also show in end lineup if they finished the match (not subbed off and not red carded)
-                if not subbed_off and not red_carded:
+                if not subbed_off and not red_carded and not injured:
                     self.homeEndLineupPitch.addPlayer(player.end_position, playerData.last_name)
                     pitch = "Both"
             else:

@@ -335,14 +335,14 @@ class Match():
             if total_seconds % 90 == 0:
                 for playerID, fitness in self.homeFitness.items():
                     if fitness > 0 and playerID in self.homeCurrentLineup.values():
-                        self.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
+                        self.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID), fitness)
 
                         if self.homeFitness[playerID] < 0:
                             self.homeFitness[playerID] = 0
 
                 for playerID, fitness in self.awayFitness.items():
                     if fitness > 0 and playerID in self.awayCurrentLineup.values():
-                        self.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
+                        self.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID), fitness)
 
                         if self.awayFitness[playerID] < 0:
                             self.awayFitness[playerID] = 0

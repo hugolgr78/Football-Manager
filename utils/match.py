@@ -337,9 +337,15 @@ class Match():
                     if fitness > 0 and playerID in self.homeCurrentLineup.values():
                         self.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
 
+                        if self.homeFitness[playerID] < 0:
+                            self.homeFitness[playerID] = 0
+
                 for playerID, fitness in self.awayFitness.items():
                     if fitness > 0 and playerID in self.awayCurrentLineup.values():
                         self.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
+
+                        if self.awayFitness[playerID] < 0:
+                            self.awayFitness[playerID] = 0
 
             # ----------- half time ------------
             if self.minutes == 45 and self.seconds == 0:
@@ -436,7 +442,8 @@ class Match():
             finalLineup = self.homeFinalLineup
             events = self.homeEvents
             processedEvents = self.homeProcessedEvents
-            subsCount = self.homeSubs     
+            subsCount = self.homeSubs    
+            fitness = self.homeFitness 
         else:
             lineup = self.awayCurrentLineup
             subs = self.awayCurrentSubs
@@ -444,6 +451,7 @@ class Match():
             events = self.awayEvents
             processedEvents = self.awayProcessedEvents
             subsCount = self.awaySubs
+            fitness = self.awayFitness
 
         # Fetch all players in the lineup with a single query
         player_ids = list(lineup.values())
@@ -670,7 +678,7 @@ class Match():
 
         elif event["type"] == "injury":
 
-            weights = [fitnessWeight(player) for player in players_dict.values()]
+            weights = [fitnessWeight(player, fitness[player.id]) for player in players_dict.values()]
 
             injuredPlayerID = random.choices(list(players_dict.values()), weights = weights, k = 1)[0].id
             event["player"] = injuredPlayerID
@@ -736,7 +744,7 @@ class Match():
                 redCardKeeper = False
                 players = [player for player in players_dict.values() if player.position != "goalkeeper"]
 
-                weights = [fitnessWeight(player) for player in players]
+                weights = [fitnessWeight(player, fitness[player.id]) for player in players]
 
                 playerOffID = random.choices(players, weights = weights, k = 1)[0].id
                 playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)

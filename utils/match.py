@@ -1011,7 +1011,7 @@ class Match():
                         events_to_add.append((self.match.id, "assist", minute, assister_id))
                         logger.debug(f"Home goal event queued: match={self.match.id} player={player_id} minute={minute}")
                     elif event["type"] == "penalty_miss":
-                        goalkeeper_id = self.awayCurrentLineup["Goalkeeper"]
+                        goalkeeper_id = event["keeper"]
                         events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
                         events_to_add.append((self.match.id, "penalty_saved", minute, goalkeeper_id))
                         logger.debug(f"Home penalty miss queued: match={self.match.id} player={player_id} minute={minute}")
@@ -1059,7 +1059,7 @@ class Match():
                         events_to_add.append((self.match.id, "assist", minute, assister_id))
                         logger.debug(f"Away goal event queued: match={self.match.id} player={player_id} minute={minute}")
                     elif event["type"] == "penalty_miss":
-                        goalkeeper_id = self.homeCurrentLineup["Goalkeeper"]
+                        goalkeeper_id = event["keeper"]
                         events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
                         events_to_add.append((self.match.id, "penalty_saved", minute, goalkeeper_id))
                         logger.debug(f"Away penalty miss queued: match={self.match.id} player={player_id} minute={minute}")

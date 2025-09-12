@@ -890,6 +890,8 @@ class MatchDay(ctk.CTkFrame):
                             matchEvents[subTime] = {"type": "substitution", "extra": extraTime, "player": None, "player_off": None, "player_on": None, "injury": True}
                         elif maxTotalSecs == 45 * 60 or (extraTime and self.halfTime):
                             matchEvents[f"45:10"] = {"type": "substitution", "extra": False, "player": None, "player_off": None, "player_on": None, "injury": True}
+            elif event == "penalty_miss":
+                matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"].id if "Goalkeeper" in oppLineup else None}
             else:
                 matchEvents[eventTime] = {"type": event, "extra": extraTime}
 

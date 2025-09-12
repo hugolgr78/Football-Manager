@@ -482,7 +482,7 @@ def player_gametime(avg_minutes, player):
 
     return False
 
-def getFitnessDrop(player):
+def getFitnessDrop(player, fitness):
 
     position_ranges = {
         "goalkeeper": (0.1, 0.35),
@@ -492,7 +492,9 @@ def getFitnessDrop(player):
     }
 
     # return a random float in the range for that position
-    return random.uniform(*position_ranges[player.position])
+    drop = random.uniform(*position_ranges[player.position])
+    scaled_drop = drop * (fitness / 100.0) ** 0.5
+    return scaled_drop
 
 def getDayIndex(date):
     day, _, _ = format_datetime_split(date)

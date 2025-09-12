@@ -453,14 +453,17 @@ class Match():
         if event["type"] == "goal":
             ## scorer
             scorerPosition = random.choices(list(SCORER_CHANCES.keys()), weights = list(SCORER_CHANCES.values()), k = 1)[0]
-            players = [Players.get_player_by_id(player_id).id for player_id in lineup.values() if Players.get_player_by_id(player_id).position == scorerPosition]
             players = [player.id for player in players_dict.values() if player.position == scorerPosition]
 
             while len(players) == 0:
                 scorerPosition = random.choices(list(SCORER_CHANCES.keys()), weights = list(SCORER_CHANCES.values()), k = 1)[0]
                 players = [player.id for player in players_dict.values() if player.position == scorerPosition]
 
-            playerID = random.choices(players, k = 1)[0]
+            weights = [effective_ability(players_dict[playerID]) for playerID in players]
+            if sum(weights) == 0:
+                weights = [1] * len(players)
+
+            playerID = random.choices(players, weights = weights, k = 1)[0]
             event["player"] = playerID
 
             ## assister
@@ -471,14 +474,24 @@ class Match():
                 assisterPosition = random.choices(list(ASSISTER_CHANCES.keys()), weights = list(ASSISTER_CHANCES.values()), k = 1)[0]
                 players = [player.id for player in players_dict.values() if player.position == assisterPosition]
             
-            playerID = random.choices(players, k = 1)[0]
+            weights = [effective_ability(players_dict[playerID]) for playerID in players]
+            if sum(weights) == 0:
+                weights = [1] * len(players)
 
-            if assisterPosition == scorerPosition and len(players) == 1: # makes sure player doesnt assist themselves
+            playerID = random.choices(players, weights = weights, k = 1)[0]
+
+            # make sure player doesnt assist themselves
+            if assisterPosition == scorerPosition and len(players) == 1: 
                 available_positions = [pos for pos in ASSISTER_CHANCES.keys() if pos != assisterPosition]
                 assisterPosition = random.choices(available_positions, weights = [ASSISTER_CHANCES[pos] for pos in available_positions], k = 1)[0]
-
             while playerID == event["player"]:
-                playerID = random.choices([player.id for player in players_dict.values() if player.position == assisterPosition], k = 1)[0]
+                players = [player.id for player in players_dict.values() if player.position == assisterPosition]
+
+                weights = [effective_ability(players_dict[playerID]) for playerID in players]
+                if sum(weights) == 0:
+                    weights = [1] * len(players)
+
+                playerID = random.choices(players, weights = weights, k = 1)[0]
 
             event["assister"] = playerID
 
@@ -498,18 +511,21 @@ class Match():
             oppositionLineup = self.homeCurrentLineup if lineup == self.awayCurrentLineup else self.awayCurrentLineup
             
             players = Players.get_players_by_ids(list(oppositionLineup.values()))
-            players_dict = {player.id: player for player in players}
-            
-            players_in_position = [player.id for player in players_dict.values() if player.position == ownGoalPosition]
+            players_in_position = [player for player in players if player.position == ownGoalPosition]
 
             if not players_in_position:
-                playerID = random.choice(list(oppositionLineup.values()))
-            else:
-                playerID = random.choice(players_in_position)
+                players_in_position = players
+                
+            weights = [ownGoalFoulWeight(p) for p in players_in_position]
+            playerID = random.choices(players_in_position, weights = weights, k = 1)[0].id
 
             event["player"] = playerID
+
         elif event["type"] == "yellow_card":
-            playerID = random.choices(list(lineup.values()), k = 1)[0]
+
+            weights = [ownGoalFoulWeight(player) for player in players_dict.values()]
+
+            playerID = random.choices(list(players_dict.values()), weights = weights, k = 1)[0].id
             event["player"] = playerID
 
             for _, processedEvent in processedEvents.items():
@@ -546,13 +562,15 @@ class Match():
 
         elif event["type"] == "red_card":
             redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
-            players = [player.id for player in players_dict.values() if player.position == redCardPosition]
+            players = [player for player in players_dict.values() if player.position == redCardPosition]
 
             while len(players) == 0:
                 redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
-                players = [player.id for player in players_dict.values() if player.position == redCardPosition]
-            
-            playerID = random.choices(players, k = 1)[0]
+                players = [player for player in players_dict.values() if player.position == redCardPosition]
+
+            weights = [ownGoalFoulWeight(player) for player in players]
+
+            playerID = random.choices(players, weights = weights, k = 1)[0].id
             event["player"] = playerID
 
             playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
@@ -629,9 +647,7 @@ class Match():
                 newTime = str(minute) + ":" + str(newSeconds)
                 newTime = self.checkSubsitutionTime(newTime, events)
 
-                extra = False
-                if self.halfTime or self.fullTime:
-                    extra = True
+                extra = self.halfTime or self.fullTime
 
                 # Take a random forward off
                 players = [player.id for player in players_dict.values() if player.position == "forward"]
@@ -653,7 +669,10 @@ class Match():
                 }
 
         elif event["type"] == "injury":
-            injuredPlayerID = random.choices(list(lineup.values()), k = 1)[0]
+
+            weights = [fitnessWeight(player) for player in players_dict.values()]
+
+            injuredPlayerID = random.choices(list(players_dict.values()), weights = weights, k = 1)[0].id
             event["player"] = injuredPlayerID
 
             playerPosition = list(lineup.keys())[list(lineup.values()).index(injuredPlayerID)]
@@ -715,8 +734,11 @@ class Match():
             redCardKeeper = True
             if not event["player_off"]:
                 redCardKeeper = False
-                players = [player.id for player in players_dict.values() if player.position != "goalkeeper"]
-                playerOffID = random.choices(list(players), k = 1)[0]
+                players = [player for player in players_dict.values() if player.position != "goalkeeper"]
+
+                weights = [fitnessWeight(player) for player in players]
+
+                playerOffID = random.choices(players, weights = weights, k = 1)[0].id
                 playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
             else:
                 playerOffID = event["player_off"]

@@ -505,3 +505,17 @@ def getSubProb(currMin: int) -> float:
             return prob
         prob = SUB_PROB_THRESHOLDS[minute]
     return prob
+
+def ownGoalFoulWeight(p):
+    # Lower ability and sharpness → higher chance
+    ability_factor = (200 - p.current_ability) / 200.0
+    sharpness_factor = (100 - p.sharpness) / 100.0
+
+    # Combine factors
+    base = 0.5 * ability_factor + 0.5 * sharpness_factor
+    return max(base, 0.01)  # avoid zero probability
+
+def fitnessWeight(p):
+    # Low fitness → higher chance
+    fitness_factor = (100 - p.fitness) / 100.0
+    return max(fitness_factor, 0.01)  # avoid 0 prob

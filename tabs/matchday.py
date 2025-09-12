@@ -810,7 +810,7 @@ class MatchDay(ctk.CTkFrame):
             eventsToAdd.append(event)
 
         if (self.home and side == "away") or (not self.home and side == "home"):
-            numSubs = self.substitutionChances()
+            numSubs = self.substitutionChances(subsCount)
 
             for _ in range(numSubs):
                 eventsToAdd.append("substitution")
@@ -832,7 +832,7 @@ class MatchDay(ctk.CTkFrame):
         endTotalSecs = min(futureTotalSecs, maxTotalSecs)
 
         for event in eventsToAdd:
-            eventTotalSecs = random.randint(currTotalSecs + 5, endTotalSecs)
+            eventTotalSecs = random.randint(currTotalSecs + 7, endTotalSecs)
 
             # Convert back to mm:ss
             eventMin = eventTotalSecs // 60
@@ -842,16 +842,27 @@ class MatchDay(ctk.CTkFrame):
             if event == "substitution":
                 matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player": None, "player_off": None, "player_on": None, "injury": False}
                 subsCount += 1
+
+                if side == "home":
+                    self.matchFrame.matchInstance.homeSubs = subsCount
+                else:
+                    self.matchFrame.matchInstance.awaySubs = subsCount
+
             elif event == "injury":
                 matchEvents[eventTime] = {"type": "injury", "extra": extraTime}
 
                 # Create a substitution 10s after injury if possible
                 if (self.home and side == "away") or (not self.home and side == "home"):
-                    subs = self.matchFrame.matchInstance.homeCurrentSubs if side == "away" else self.matchFrame.matchInstance.awayCurrentSubs
-                    subsAvailable = len(subs) - MATCHDAY_SUBS + MAX_SUBS
+                    subsAvailable = MAX_SUBS - subsCount
 
                     if subsAvailable > 0:
                         subsCount += 1
+
+                        if side == "home":
+                            self.matchFrame.matchInstance.homeSubs = subsCount
+                        else:
+                            self.matchFrame.matchInstance.awaySubs = subsCount
+
                         subTotalSecs = eventTotalSecs + 10
 
                         if subTotalSecs <= maxTotalSecs:
@@ -941,8 +952,6 @@ class MatchDay(ctk.CTkFrame):
         events = ["nothing", "foul", "yellow_card", "red_card"]
         probs = [pNothing, foulProb, yellowProb, redProb]
 
-        print(avgSharpnessWthKeeper, pNothing, foulProb, yellowProb, redProb)
-
         return random.choices(events, weights = probs, k = 1)[0]
 
     def injuryChances(self, avgFitness):
@@ -959,27 +968,40 @@ class MatchDay(ctk.CTkFrame):
 
         return random.choices(events, weights = probs, k = 1)[0]
 
-    def substitutionChances(self):
+    def substitutionChances(self, subsMade):
         currMin = int(self.timeLabel.cget("text").split(":")[0])
-        subs = self.matchFrame.matchInstance.homeCurrentSubs if not self.home else self.matchFrame.matchInstance.awayCurrentSubs
-        subsAvailable = len(subs) - MATCHDAY_SUBS + MAX_SUBS
+        subsAvailable = MAX_SUBS - subsMade
 
         # No substitutions possible
         if subsAvailable <= 0:
             return 0
         
-        subProb = getSubProb(currMin)
+        baseProb = getSubProb(currMin)
+        decayFactor = max(0.2, 1 - (subsMade * 0.2))  
+        subProb = baseProb * decayFactor
+
+        # Scale multi-sub chances with time
+        if currMin < 60:
+            multiFactor = 0.2   # very rare before 60 mins
+        elif currMin < 75:
+            multiFactor = 0.6   # somewhat more common
+        else:
+            multiFactor = 1.0   # normal weighting in last 15+
+
         probs = {
             0: 1 - subProb,
-            1: subProb * 0.65,
-            2: subProb * 0.25 if subsAvailable >= 2 else 0,
-            3: subProb * 0.10 if subsAvailable >= 3 else 0,
+            1: subProb * 0.75,  # keep single-sub most likely
+            2: subProb * 0.20 * multiFactor if subsAvailable >= 2 else 0,
+            3: subProb * 0.05 * multiFactor if subsAvailable >= 3 else 0,
         }
 
         # Normalise for random.choices
         outcomes = list(probs.keys())
         weights = list(probs.values())
-        numSubs = random.choices(outcomes, weights = weights, k = 1)[0]
+        numSubs = random.choices(outcomes, weights=weights, k=1)[0]
+
+        if numSubs > subsAvailable:
+            numSubs = subsAvailable
 
         return numSubs
 

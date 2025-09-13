@@ -869,7 +869,7 @@ class MatchDay(ctk.CTkFrame):
                 else:
                     matchInstance.awaySubs = subsCount
             elif event == "penalty_miss":
-                matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"].id if "Goalkeeper" in oppLineup else None}
+                matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"] if "Goalkeeper" in oppLineup else None}
             else:
                 matchEvents[eventTime] = {"type": event, "extra": extraTime}
 

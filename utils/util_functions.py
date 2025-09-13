@@ -561,7 +561,7 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
     return random.choices(events, weights = probs, k = 1)[0]
 
 def foulChances(avgSharpnessWthKeeper, severity):
-    severity_map = {"low": 0.7, "medium": 1.0, "high": 1.4}
+    severity_map = {"low": 0.85, "medium": 1.0, "high": 1.15}
     severity = severity_map.get(severity, 1.0)
 
     gamma = 0.5
@@ -630,14 +630,16 @@ def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness):
         if played_minutes >= 30:
             prob = sub_probability(fitness[playerID])
             if prob > 0:
-                has_replacement = any(Players.get_player_by_id(pID).specific_positions.split(",") == POSITION_CODES[pos] for pID in subs)
-                candidates.append((prob, playerID, pos, has_replacement))
+                has_replacement = any(POSITION_CODES[pos] in Players.get_player_by_id(pID).specific_positions.split(",") for pID in subs)
+
+                if has_replacement:
+                    candidates.append((prob, playerID, pos))
 
     if not candidates:
         return []
 
     # --- Step 2: sort by lowest fitness first ---
-    candidates.sort(key = lambda x: (not x[3], fitness[x[1]]))
+    candidates.sort(key = lambda x: fitness[x[1]])
 
     # --- Step 3: decide how many subs to attempt ---
     outcomes = [1, 2, 3]
@@ -649,7 +651,7 @@ def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness):
 
     # --- Step 4: roll substitutions ---
     chosen = []
-    for prob, playerID, pos, has_replacement in candidates:
+    for prob, playerID, pos in candidates:
         if len(chosen) >= num_to_sub:
             break
         if random.random() < prob:

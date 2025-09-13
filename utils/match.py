@@ -171,34 +171,34 @@ class Match():
             if self.fullTime and self.minutes == 90 + self.extraTimeFull and self.seconds == 0:
                 self.fullTime = False
                 self.saveData()
+            else:
+                if total_seconds % TICK == 0:
+                    self.generateEvents("home")
+                    self.generateEvents("away")
 
-            if total_seconds % TICK == 0:
-                self.generateEvents("home")
-                self.generateEvents("away")
+                # ----------- home events ------------
+                for event_time, event_details in list(self.homeEvents.items()):
+                    if event_time == str(self.minutes) + ":" + str(self.seconds) and event_time not in self.homeProcessedEvents:
+                        if event_details["extra"]:
+                            if self.halfTime or self.fullTime:
+                                self.getEventPlayer(event_details, True, event_time)
+                                self.homeProcessedEvents[event_time] = event_details
+                        else:
+                            if not (self.halfTime or self.fullTime):
+                                self.getEventPlayer(event_details, True, event_time)
+                                self.homeProcessedEvents[event_time] = event_details
 
-            # ----------- home events ------------
-            for event_time, event_details in list(self.homeEvents.items()):
-                if event_time == str(self.minutes) + ":" + str(self.seconds) and event_time not in self.homeProcessedEvents:
-                    if event_details["extra"]:
-                        if self.halfTime or self.fullTime:
-                            self.getEventPlayer(event_details, True, event_time)
-                            self.homeProcessedEvents[event_time] = event_details
-                    else:
-                        if not (self.halfTime or self.fullTime):
-                            self.getEventPlayer(event_details, True, event_time)
-                            self.homeProcessedEvents[event_time] = event_details
-
-            # ----------- away events ------------
-            for event_time, event_details in list(self.awayEvents.items()):
-                if event_time == str(self.minutes) + ":" + str(self.seconds) and event_time not in self.awayProcessedEvents:
-                    if event_details["extra"]:
-                        if self.halfTime or self.fullTime:
-                            self.getEventPlayer(event_details, False, event_time)
-                            self.awayProcessedEvents[event_time] = event_details
-                    else:
-                        if not (self.halfTime or self.fullTime):
-                            self.getEventPlayer(event_details, False, event_time)
-                            self.awayProcessedEvents[event_time] = event_details
+                # ----------- away events ------------
+                for event_time, event_details in list(self.awayEvents.items()):
+                    if event_time == str(self.minutes) + ":" + str(self.seconds) and event_time not in self.awayProcessedEvents:
+                        if event_details["extra"]:
+                            if self.halfTime or self.fullTime:
+                                self.getEventPlayer(event_details, False, event_time)
+                                self.awayProcessedEvents[event_time] = event_details
+                        else:
+                            if not (self.halfTime or self.fullTime):
+                                self.getEventPlayer(event_details, False, event_time)
+                                self.awayProcessedEvents[event_time] = event_details
 
     def generateEvents(self, side):
         eventsToAdd = []
@@ -282,14 +282,15 @@ class Match():
 
         # ------------------ TIMES and ADDING ------------------
         currMin, currSec = self.minutes, self.seconds
-        extraTime = True if (self.halfTime or self.fullTime) else False
+        extraTime = self.halfTime or self.fullTime
         
         currTotalSecs = currMin * 60 + currSec
         futureTotalSecs = currTotalSecs + 30
 
         if extraTime:
             maxMinute = self.extraTimeHalf if self.halfTime else self.extraTimeFull
-            maxTotalSecs = currTotalSecs + (maxMinute * 60)
+            finalMinute = 45 if self.halfTime else 90
+            maxTotalSecs = (finalMinute + maxMinute) * 60
         else:
             maxMinute = 45 if self.halfTime else 90
             maxTotalSecs = maxMinute * 60

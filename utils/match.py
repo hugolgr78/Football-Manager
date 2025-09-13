@@ -172,7 +172,7 @@ class Match():
                 self.fullTime = False
                 self.saveData()
 
-            if self.seconds % 30 == 0:
+            if total_seconds % TICK == 0:
                 self.generateEvents("home")
                 self.generateEvents("away")
 
@@ -573,9 +573,7 @@ class Match():
                     maxMinute = 45 if self.halfTime else 90
                     maxTotalSecs = maxMinute * 60
 
-                subTotalSecs = currTotalSecs + 10  # 10 seconds after the injury
-
-                TICK = 30
+                subTotalSecs = currTotalSecs + 10
                 next_tick = ((currTotalSecs // TICK) + 1) * TICK
 
                 if subTotalSecs > next_tick:

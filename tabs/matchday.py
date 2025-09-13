@@ -591,7 +591,7 @@ class MatchDay(ctk.CTkFrame):
                     print(self.matchFrame.matchInstance.homeStats)
                     print(self.matchFrame.matchInstance.awayStats)
 
-            if seconds % 30 == 0:
+            if total_seconds % TICK == 0:
                 self.generateEvents("home", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
                 self.generateEvents("away", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
 

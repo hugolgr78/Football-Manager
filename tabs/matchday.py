@@ -860,35 +860,6 @@ class MatchDay(ctk.CTkFrame):
                     matchInstance.homeSubs = subsCount
                 else:
                     matchInstance.awaySubs = subsCount
-
-            elif event == "injury":
-                matchEvents[eventTime] = {"type": "injury", "extra": extraTime}
-
-                # Create a substitution 10s after injury if possible
-                if (self.home and side == "away") or (not self.home and side == "home"):
-                    subsAvailable = MAX_SUBS - subsCount
-
-                    if subsAvailable > 0:
-                        subsCount += 1
-
-                        if side == "home":
-                            matchInstance.homeSubs = subsCount
-                        else:
-                            matchInstance.awaySubs = subsCount
-
-                        subTotalSecs = eventTotalSecs + 10
-
-                        # Ensure the subs event is at least 10s after the next tick
-                        if currTotalSecs + 30 < subTotalSecs < currTotalSecs + 40:
-                            subTotalSecs = currTotalSecs + 40
-
-                        if subTotalSecs <= maxTotalSecs:
-                            subMin = subTotalSecs // 60
-                            subSec = subTotalSecs % 60
-                            subTime = f"{subMin}:{subSec:02d}"
-                            matchEvents[subTime] = {"type": "substitution", "extra": extraTime, "player": None, "player_off": None, "player_on": None, "injury": True}
-                        elif maxTotalSecs == 45 * 60 or (extraTime and self.halfTime):
-                            matchEvents[f"45:10"] = {"type": "substitution", "extra": False, "player": None, "player_off": None, "player_on": None, "injury": True}
             elif event == "penalty_miss":
                 matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"].id if "Goalkeeper" in oppLineup else None}
             else:

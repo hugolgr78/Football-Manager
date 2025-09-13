@@ -456,6 +456,63 @@ class Match():
                                 frame = frame[0]
 
                             frame.removeFitness()
+                    
+                    if playerPosition == "Goalkeeper" and not managing_team:
+                        # Find out if the team can make a substitution
+                        subPossible = subsCount < MAX_SUBS
+
+                        if not subPossible:
+                            players = [player.id for player in players_dict.values() if player.position == "forward"]
+
+                            if len(players) == 0:
+                                newKeeper = random.choices(list(lineup.values()), k = 1)[0]
+                            else:
+                                newKeeper = random.choices(list(players), k = 1)[0]
+
+                            newKeeperPosition = list(lineup.keys())[list(lineup.values()).index(newKeeper)]
+                            lineup.pop(newKeeperPosition)
+                            lineup["Goalkeeper"] = newKeeper
+
+                            if teamMatch:
+                                if home:
+                                    teamMatch.homeLineupPitch.removePlayer(newKeeperPosition)
+                                    teamMatch.homeLineupPitch.addPlayer("Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
+                                else:
+                                    teamMatch.awayLineupPitch.removePlayer(newKeeperPosition)
+                                    teamMatch.awayLineupPitch.addPlayer("Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
+
+                            return event
+
+                        # Create the substitution event
+                        minute = int(time.split(":")[0])
+                        seconds = int(time.split(":")[1])
+                        newSeconds = seconds + 10
+
+                        if newSeconds >= 60:
+                            newSeconds -= 60
+                            minute = minute + 1
+
+                        newTime = str(minute) + ":" + str(newSeconds)
+                        extra = self.halfTime or self.fullTime
+
+                        # Take a random forward off
+                        players = [player.id for player in players_dict.values() if player.position == "forward"]
+
+                        if len(players) == 0:
+                            playerOffID = random.choices(list(lineup.values()), k = 1)[0]
+                        else:
+                            playerOffID = random.choices(list(players), k = 1)[0]
+
+                        playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
+
+                        events[newTime] = {
+                            "type": "substitution",
+                            "player": None,
+                            "player_off": playerOffID,
+                            "player_on": None,
+                            "injury": False,
+                            "extra": extra
+                        }
 
         elif event["type"] == "red_card":
             redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
@@ -468,6 +525,7 @@ class Match():
             weights = [ownGoalFoulWeight(player) for player in players]
 
             playerID = random.choices(players, weights = weights, k = 1)[0].id
+
             event["player"] = playerID
 
             playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]

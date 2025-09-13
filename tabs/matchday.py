@@ -751,6 +751,8 @@ class MatchDay(ctk.CTkFrame):
         fitness = matchInstance.homeFitness if side == "home" else matchInstance.awayFitness
         subsCount = matchInstance.homeSubs if side == "home" else matchInstance.awaySubs
         stats = matchInstance.homeStats if side == "home" else matchInstance.awayStats
+        subs = matchInstance.homeCurrentSubs if side == "home" else matchInstance.awayCurrentSubs
+        events = matchInstance.homeProcessedEvents if side == "home" else matchInstance.awayProcessedEvents
 
         sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
@@ -821,14 +823,14 @@ class MatchDay(ctk.CTkFrame):
 
         # ------------------ SUBSTITUTIONS ------------------
         if not teamMatch:
-            numSubs = substitutionChances(subsCount, int(self.timeLabel.cget("text").split(":")[0]))
-            for _ in range(numSubs):
+            subsChosen = substitutionChances(lineup, subsCount, subs, events, int(self.timeLabel.cget("text").split(":")[0]), fitness)
+            for _ in range(len(subsChosen)):
                 eventsToAdd.append("substitution")
 
         else:
             if (self.home and side == "away") or (not self.home and side == "home"):
-                numSubs = substitutionChances(subsCount, int(self.timeLabel.cget("text").split(":")[0]))
-                for _ in range(numSubs):
+                subsChosen = substitutionChances(lineup, subsCount, subs, events, int(self.timeLabel.cget("text").split(":")[0]), fitness)
+                for _ in range(len(subsChosen)):
                     eventsToAdd.append("substitution")
 
         # ------------------ TIMES and ADDING ------------------
@@ -848,6 +850,7 @@ class MatchDay(ctk.CTkFrame):
 
         endTotalSecs = min(futureTotalSecs, maxTotalSecs)
 
+        subsChosenCount = 0
         for event in eventsToAdd:
             eventTotalSecs = random.randint(currTotalSecs + 10, endTotalSecs)
 
@@ -857,8 +860,9 @@ class MatchDay(ctk.CTkFrame):
             eventTime = f"{eventMin}:{eventSec:02d}"
 
             if event == "substitution":
-                matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player": None, "player_off": None, "player_on": None, "injury": False}
+                matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player": None, "player_off": subsChosen[subsChosenCount], "player_on": None, "injury": False}
                 subsCount += 1
+                subsChosenCount += 1
 
                 if side == "home":
                     matchInstance.homeSubs = subsCount

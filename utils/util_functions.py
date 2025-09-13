@@ -521,3 +521,127 @@ def fitnessWeight(p, fitness):
     # Low fitness → higher chance
     fitness_factor = (100 - fitness) / 100.0
     return max(fitness_factor, 0.01)  # avoid 0 prob
+
+def goalChances(self, attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
+        attackRatio = attackingLevel / defendingLevel
+        attackModifier = (avgSharpness / 100 + avgMorale / 100) / 2
+
+        if oppKeeper:
+            if oppKeeper.position == "goalkeeper":
+                keeperModifier = (oppKeeper.current_ability / 200) * (oppKeeper.sharpness / 100)
+
+                shot_base = BASE_SHOT * attackRatio * attackModifier
+                shotProb = min(max(shot_base, 0.05), MAX_SHOT_PROB)
+
+                onTarget_base = BASE_ON_TARGET * attackModifier
+                onTargetProb = min(max(onTarget_base, 0.25), MAX_TARGET_PROB)
+
+                goal_base = BASE_GOAL * attackModifier
+                goalProb = goal_base * (1 - keeperModifier)
+                goalProb = min(max(goalProb, 0.05), MAX_GOAL_PROB)
+
+            else:
+                # Outfield player in goal
+                shotProb = min(max(BASE_SHOT * attackRatio * attackModifier * 1.2, 0.15), 0.7)
+                onTargetProb = min(max(BASE_ON_TARGET * attackModifier * 1.2, 0.40), 0.8)
+                goalProb = min(max(BASE_GOAL * attackModifier * 1.5, 0.50), 0.9)
+
+        else:
+            shotProb = min(max(BASE_SHOT * attackRatio * attackModifier * 1.5, 0.25), 0.75)
+            onTargetProb = min(max(BASE_ON_TARGET * attackModifier * 1.5, 0.60), 0.85)
+            goalProb = min(max(BASE_GOAL * attackModifier * 2.0, 0.80), 0.95)
+
+        # Final distribution
+        pNothing   = 1 - shotProb
+        pShotOff   = shotProb * (1 - onTargetProb)
+        pShotSaved = shotProb * onTargetProb * (1 - goalProb)
+        pGoal      = shotProb * onTargetProb * goalProb
+
+        events = ["nothing", "shot", "shot on target", "goal"]
+        probs  = [pNothing, pShotOff, pShotSaved, pGoal]
+
+        return random.choices(events, weights = probs, k = 1)[0]
+
+def foulChances(self, avgSharpnessWthKeeper):
+    severity = self.matchFrame.matchInstance.referee.severity
+
+    severity_map = {"low": 0.7, "medium": 1.0, "high": 1.4}
+    severity = severity_map.get(severity, 1.0)
+
+    gamma = 0.5
+    sf = ((100.0 - max(0.0, min(99.9, avgSharpnessWthKeeper))) / 20.0) ** gamma
+
+    foulProb   = BASE_FOUL   * sf
+    yellowProb = BASE_YELLOW * sf * severity
+    redProb    = BASE_RED    * sf * severity
+
+    # realistic clamps
+    foulProb   = min(max(foulProb, 0.01), 0.20)
+    yellowProb = min(max(yellowProb, 0.002), 0.05)
+    redProb    = min(max(redProb, 0.0001), 0.02)
+
+    # ensure total <= 1
+    total = foulProb + yellowProb + redProb
+    if total > 1:
+        scale = 1.0 / total
+        foulProb *= scale
+        yellowProb *= scale
+        redProb *= scale
+
+    pNothing = 1.0 - (foulProb + yellowProb + redProb)
+
+    events = ["nothing", "foul", "yellow_card", "red_card"]
+    probs = [pNothing, foulProb, yellowProb, redProb]
+
+    return random.choices(events, weights = probs, k = 1)[0]
+
+def injuryChances(self, avgFitness):
+
+    injuryProb = BASE_INJURY * (100 / avgFitness)
+    injuryProb = min(max(injuryProb, 0.0001), MAX_INJURY_PROB)
+
+    # --- Final event distribution ---
+    pNothing = 1 - injuryProb
+    pInjury = injuryProb
+
+    events = ["nothing", "injury"]
+    probs = [pNothing, pInjury]
+
+    return random.choices(events, weights = probs, k = 1)[0]
+
+def substitutionChances(self, subsMade, currMin):
+    currMin = int(self.timeLabel.cget("text").split(":")[0])
+    subsAvailable = MAX_SUBS - subsMade
+
+    # No substitutions possible
+    if subsAvailable <= 0:
+        return 0
+    
+    baseProb = getSubProb(currMin)
+    decayFactor = max(0.2, 1 - (subsMade * 0.2))  
+    subProb = baseProb * decayFactor
+
+    # Scale multi-sub chances with time
+    if currMin < 60:
+        multiFactor = 0.2   # very rare before 60 mins
+    elif currMin < 75:
+        multiFactor = 0.6   # somewhat more common
+    else:
+        multiFactor = 1.0   # normal weighting in last 15+
+
+    probs = {
+        0: 1 - subProb,
+        1: subProb * 0.75,  # keep single-sub most likely
+        2: subProb * 0.20 * multiFactor if subsAvailable >= 2 else 0,
+        3: subProb * 0.05 * multiFactor if subsAvailable >= 3 else 0,
+    }
+
+    # Normalise for random.choices
+    outcomes = list(probs.keys())
+    weights = list(probs.values())
+    numSubs = random.choices(outcomes, weights=weights, k=1)[0]
+
+    if numSubs > subsAvailable:
+        numSubs = subsAvailable
+
+    return numSubs

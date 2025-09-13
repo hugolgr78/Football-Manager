@@ -539,13 +539,11 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
                 goal_base = BASE_GOAL * attackModifier
                 goalProb = goal_base * (1 - keeperModifier)
                 goalProb = min(max(goalProb, 0.05), MAX_GOAL_PROB)
-
             else:
                 # Outfield player in goal
                 shotProb = min(max(BASE_SHOT * attackRatio * attackModifier * 1.2, 0.15), 0.7)
                 onTargetProb = min(max(BASE_ON_TARGET * attackModifier * 1.2, 0.40), 0.8)
                 goalProb = min(max(BASE_GOAL * attackModifier * 1.5, 0.50), 0.9)
-
         else:
             shotProb = min(max(BASE_SHOT * attackRatio * attackModifier * 1.5, 0.25), 0.75)
             onTargetProb = min(max(BASE_ON_TARGET * attackModifier * 1.5, 0.60), 0.85)

@@ -830,14 +830,15 @@ class MatchDay(ctk.CTkFrame):
 
         # ------------------ TIMES and ADDING ------------------
         currMin, currSec = map(int, self.timeLabel.cget("text").split(":"))
-        extraTime = True if (self.halfTime or self.fullTime) else False
+        extraTime = self.halfTime or self.fullTime
         
         currTotalSecs = currMin * 60 + currSec
         futureTotalSecs = currTotalSecs + 30
 
         if extraTime:
             maxMinute = self.matchFrame.matchInstance.extraTimeHalf if self.halfTime else self.matchFrame.matchInstance.extraTimeFull
-            maxTotalSecs = currTotalSecs + (maxMinute * 60)
+            finalMinute = 45 if self.halfTime else 90
+            maxTotalSecs = (finalMinute + maxMinute) * 60
         else:
             maxMinute = 45 if self.halfTime else 90
             maxTotalSecs = maxMinute * 60

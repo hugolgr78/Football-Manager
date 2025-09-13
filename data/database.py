@@ -5310,9 +5310,9 @@ def score_formation(sortedPlayers, positions, teamID, compID):
             lineup[pos] = chosen.id
             used.add(chosen.id)
 
-        if pos in ATTACKING_POSITIONS:
+        if pos in ATTACKING_POSITIONS + ["Attacking Midfielder"]:
             attackingScore += effective_ability(chosen)
-        elif pos in DEFENSIVE_POSITIONS:
+        elif pos in DEFENSIVE_POSITIONS + ["Goalkeeper", "Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]:
             defendingScore += effective_ability(chosen)
 
     # Check if all positions are filled
@@ -5582,3 +5582,23 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
             startDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=startHour)
             endDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=endHour)
             CalendarEvents.add_event(team_id, event, startDate, endDate)
+
+def teamStrength(playerIDs, role):
+    if not playerIDs:
+        return 0
+    
+    weights = []
+    for pid in playerIDs:
+        p = Players.get_player_by_id(pid)
+        ability = p.current_ability
+
+        # attackers scale harder when more of them
+        if role == "attack":
+            weights.append(ability ** 1.1)  # slight bias
+        else:  # defenders
+            weights.append(ability ** 1.0)  # normal
+
+    # geometric mean balances numbers and ability
+    avg = sum(weights) / len(weights)
+    return avg * (len(weights) ** 0.5)   # sublinear scaling with numbers
+    

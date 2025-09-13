@@ -767,8 +767,11 @@ class MatchDay(ctk.CTkFrame):
 
         oppKeeper = Players.get_player_by_id(oppLineup["Goalkeeper"]) if "Goalkeeper" in oppLineup else None
 
-        attackingLevel = sum(Players.get_player_by_id(playerID).current_ability for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS + ["Attacking Midfielder"])
-        defendingLevel = sum(Players.get_player_by_id(playerID).current_ability for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS + ["Goalkeeper", "Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"])
+        attackingPlayers = [playerID for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS + ["Attacking Midfielder"]]
+        defendingPlayers = [playerID for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS + ["Goalkeeper", "Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]]
+
+        attackingLevel = teamStrength(attackingPlayers, role = "attack")
+        defendingLevel = teamStrength(defendingPlayers, role = "defend")
 
         # ------------------ GOAL ------------------
         event = goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper)

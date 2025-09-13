@@ -523,42 +523,42 @@ def fitnessWeight(p, fitness):
     return max(fitness_factor, 0.01)  # avoid 0 prob
 
 def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
-        attackRatio = attackingLevel / defendingLevel
-        attackModifier = (avgSharpness / 100 + avgMorale / 100) / 2
+    attackRatio = attackingLevel / max(1, defendingLevel)
+    attackModifier = (avgSharpness / 100 + avgMorale / 100) / 2
 
-        if oppKeeper:
-            if oppKeeper.position == "goalkeeper":
-                keeperModifier = (oppKeeper.current_ability / 200) * (oppKeeper.sharpness / 100)
+    if oppKeeper:
+        if oppKeeper.position == "goalkeeper":
+            keeperModifier = (oppKeeper.current_ability / 200) * (oppKeeper.sharpness / 100)
 
-                shot_base = BASE_SHOT * attackRatio * attackModifier
-                shotProb = min(max(shot_base, 0.05), MAX_SHOT_PROB)
+            shot_base = BASE_SHOT * attackRatio * attackModifier
+            shotProb = min(max(shot_base, 0.05), MAX_SHOT_PROB)
 
-                onTarget_base = BASE_ON_TARGET * attackModifier
-                onTargetProb = min(max(onTarget_base, 0.25), MAX_TARGET_PROB)
+            onTarget_base = BASE_ON_TARGET * attackModifier
+            onTargetProb = min(max(onTarget_base, 0.25), MAX_TARGET_PROB)
 
-                goal_base = BASE_GOAL * attackModifier
-                goalProb = goal_base * (1 - keeperModifier)
-                goalProb = min(max(goalProb, 0.05), MAX_GOAL_PROB)
-            else:
-                # Outfield player in goal
-                shotProb = min(max(BASE_SHOT * attackRatio * attackModifier * 1.2, 0.15), 0.7)
-                onTargetProb = min(max(BASE_ON_TARGET * attackModifier * 1.2, 0.40), 0.8)
-                goalProb = min(max(BASE_GOAL * attackModifier * 1.5, 0.50), 0.9)
+            goal_base = BASE_GOAL * attackModifier
+            goalProb = goal_base * (1 - keeperModifier)
+            goalProb = min(max(goalProb, 0.05), MAX_GOAL_PROB)
         else:
-            shotProb = min(max(BASE_SHOT * attackRatio * attackModifier * 1.5, 0.25), 0.75)
-            onTargetProb = min(max(BASE_ON_TARGET * attackModifier * 1.5, 0.60), 0.85)
-            goalProb = min(max(BASE_GOAL * attackModifier * 2.0, 0.80), 0.95)
+            # Outfield player in goal
+            shotProb = min(max(BASE_SHOT * attackRatio * attackModifier * 1.2, 0.15), 0.7)
+            onTargetProb = min(max(BASE_ON_TARGET * attackModifier * 1.2, 0.40), 0.8)
+            goalProb = min(max(BASE_GOAL * attackModifier * 1.5, 0.50), 0.9)
+    else:
+        shotProb = min(max(BASE_SHOT * attackRatio * attackModifier * 1.5, 0.25), 0.75)
+        onTargetProb = min(max(BASE_ON_TARGET * attackModifier * 1.5, 0.60), 0.85)
+        goalProb = min(max(BASE_GOAL * attackModifier * 2.0, 0.80), 0.95)
 
-        # Final distribution
-        pNothing   = 1 - shotProb
-        pShotOff   = shotProb * (1 - onTargetProb)
-        pShotSaved = shotProb * onTargetProb * (1 - goalProb)
-        pGoal      = shotProb * onTargetProb * goalProb
+    # Final distribution
+    pNothing   = 1 - shotProb
+    pShotOff   = shotProb * (1 - onTargetProb)
+    pShotSaved = shotProb * onTargetProb * (1 - goalProb)
+    pGoal      = shotProb * onTargetProb * goalProb
 
-        events = ["nothing", "shot", "shot on target", "goal"]
-        probs  = [pNothing, pShotOff, pShotSaved, pGoal]
+    events = ["nothing", "shot", "shot on target", "goal"]
+    probs  = [pNothing, pShotOff, pShotSaved, pGoal]
 
-        return random.choices(events, weights = probs, k = 1)[0]
+    return random.choices(events, weights = probs, k = 1)[0]
 
 def foulChances(avgSharpnessWthKeeper, severity):
     severity_map = {"low": 0.7, "medium": 1.0, "high": 1.4}

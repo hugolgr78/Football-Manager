@@ -226,11 +226,8 @@ class Match():
 
         oppKeeper = Players.get_player_by_id(oppLineup["Goalkeeper"]) if "Goalkeeper" in oppLineup else None
 
-        attackingPlayers = [playerID for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS + ["Attacking Midfielder"]]
-        defendingPlayers = [playerID for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS + ["Goalkeeper", "Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]]
-
-        # attackingLevel = sum([Players.get_player_by_id(playerID).current_ability for playerID in attackingPlayers]) / len(attackingPlayers) if len(attackingPlayers) > 0 else 0
-        # defendingLevel = sum([Players.get_player_by_id(playerID).current_ability for playerID in defendingPlayers]) / len(defendingPlayers) if len(defendingPlayers) > 0 else 0
+        attackingPlayers = [playerID for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS]
+        defendingPlayers = [playerID for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS]
 
         attackingLevel = teamStrength(attackingPlayers, role = "attack")
         defendingLevel = teamStrength(defendingPlayers, role = "defend")
@@ -810,7 +807,7 @@ class Match():
                 rating += random.choice(ASSIST_RATINGS)
         
         if not scorerFlag:
-            if position == "Goalkeeper" or position in DEFENSIVE_POSITIONS:
+            if position == "Goalkeeper" or position in DEFENDER_POSITIONS:
                 if oppositionGoals <= 1:
                     rating += random.choice(DEFENDER_GOALS_1)
                 elif oppositionGoals <= 3:

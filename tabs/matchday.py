@@ -767,8 +767,8 @@ class MatchDay(ctk.CTkFrame):
 
         oppKeeper = Players.get_player_by_id(oppLineup["Goalkeeper"]) if "Goalkeeper" in oppLineup else None
 
-        attackingPlayers = [playerID for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS + ["Attacking Midfielder"]]
-        defendingPlayers = [playerID for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS + ["Goalkeeper", "Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]]
+        attackingPlayers = [playerID for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS]
+        defendingPlayers = [playerID for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS]
 
         attackingLevel = teamStrength(attackingPlayers, role = "attack")
         defendingLevel = teamStrength(defendingPlayers, role = "defend")

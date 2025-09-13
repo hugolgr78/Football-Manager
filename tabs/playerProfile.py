@@ -70,10 +70,14 @@ class PlayerProfile(ctk.CTkFrame):
         img = ctk.CTkImage(src, None, (src.width, src.height))
         self.helpButton = ctk.CTkButton(self.tabsFrame, text = "", image = img, fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, corner_radius = 5, height = 30, width = 30)
         self.helpButton.place(relx = 0.975, rely = 0, anchor = "ne")
-        self.helpButton.bind("<Enter>", lambda e: self.legendFrame.place(relx = 0.96, rely = 0.05, anchor = "ne"))
+        self.helpButton.bind("<Enter>", lambda e: self.showLegend(e))
         self.helpButton.bind("<Leave>", lambda e: self.legendFrame.place_forget())
 
         self.legend()
+
+    def showLegend(self, event):
+        self.legendFrame.place(relx = 0.975, rely = 0.1, anchor = "ne")
+        self.legendFrame.lift()
 
     def canvas(self, width, height, relx):
         canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)

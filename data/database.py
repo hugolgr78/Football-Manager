@@ -5310,9 +5310,9 @@ def score_formation(sortedPlayers, positions, teamID, compID):
             lineup[pos] = chosen.id
             used.add(chosen.id)
 
-        if pos in ATTACKING_POSITIONS + ["Attacking Midfielder"]:
+        if pos in ATTACKING_POSITIONS:
             attackingScore += effective_ability(chosen)
-        elif pos in DEFENSIVE_POSITIONS + ["Goalkeeper", "Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]:
+        elif pos in DEFENSIVE_POSITIONS:
             defendingScore += effective_ability(chosen)
 
     # Check if all positions are filled
@@ -5371,7 +5371,7 @@ def getSubstitutes(teamID, lineup, compID):
 
     if defender_count != 2:
         for _ in range(2 - defender_count):
-            specific_position = random.choice(DEFENSIVE_POSITIONS)
+            specific_position = random.choice(DEFENDER_POSITIONS)
             youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
             substitutes.append(youthID) if youthID else None
 
@@ -5397,7 +5397,7 @@ def getSubstitutes(teamID, lineup, compID):
 
     if attacker_count != 2:
         for _ in range(2 - attacker_count):
-            specific_position = random.choice(ATTACKING_POSITIONS)
+            specific_position = random.choice(FORWARD_POSITIONS)
             youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
             substitutes.append(youthID) if youthID else None
 

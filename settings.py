@@ -238,9 +238,11 @@ FORMATIONS_POSITIONS = {
               "Center Forward"],
 }
 
-DEFENSIVE_POSITIONS = ["Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back"]
+DEFENDER_POSITIONS = ["Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back"]
+DEFENSIVE_POSITIONS = DEFENDER_POSITIONS + ["Goalkeeper", "Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]
 MIDFIELD_POSITIONS = ["Defensive Midfielder", "Central Midfielder", "Central Midfielder Left", "Central Midfielder Right", "Left Midfielder", "Right Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left", "Attacking Midfielder"]
-ATTACKING_POSITIONS = ["Left Winger", "Right Winger", "Striker Left", "Striker Right", "Center Forward"]
+FORWARD_POSITIONS = ["Left Winger", "Right Winger", "Striker Left", "Striker Right", "Center Forward"]
+ATTACKING_POSITIONS = FORWARD_POSITIONS + ["Attacking Midfielder"]
 
 SCORER_CHANCES = {
     'defender': 0.05,

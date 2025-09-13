@@ -697,19 +697,29 @@ class Match():
                             frame = frame[0]
 
                         frame.removeFitness()
+                
+                if playerPosition == "Goalkeeper" and not managing_team:
+                    players = [player.id for player in players_dict.values() if player.position == "forward"]
+
+                    if len(players) == 0:
+                        newKeeper = random.choices(list(lineup.values()), k = 1)[0]
+                    else:
+                        newKeeper = random.choices(list(players), k = 1)[0]
+
+                    newKeeperPosition = list(lineup.keys())[list(lineup.values()).index(newKeeper)]
+                    lineup.pop(newKeeperPosition)
+                    lineup["Goalkeeper"] = newKeeper
+
+                    if teamMatch:
+                        if home:
+                            teamMatch.homeLineupPitch.removePlayer(newKeeperPosition)
+                            teamMatch.homeLineupPitch.addPlayer("Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
+                        else:
+                            teamMatch.awayLineupPitch.removePlayer(newKeeperPosition)
+                            teamMatch.awayLineupPitch.addPlayer("Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
 
         elif event["type"] == "substitution" and not managing_team:
 
-            # redCardKeeper = True
-            # if not event["player_off"]:
-            #     redCardKeeper = False
-            #     players = [player for player in players_dict.values() if player.position != "goalkeeper"]
-
-            #     weights = [fitnessWeight(player, fitness[player.id]) for player in players]
-
-            #     playerOffID = random.choices(players, weights = weights, k = 1)[0].id
-            #     playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
-            # else:
             playerOffID = event["player_off"]
             redCardKeeper = event["keeper"] if "keeper" in event else False
 

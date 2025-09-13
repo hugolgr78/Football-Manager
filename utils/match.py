@@ -257,7 +257,7 @@ class Match():
             statsToAdd.append(event)
 
         # ------------------ FOUL ------------------
-        event = foulChances(avgSharpnessWthKeeper)
+        event = foulChances(avgSharpnessWthKeeper, self.referee.severity)
 
         if event in ["yellow_card", "red_card"]:
             eventsToAdd.append(event)
@@ -313,9 +313,8 @@ class Match():
                 else:
                     self.awaySubs = subsCount
 
-                matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"].id if "Goalkeeper" in oppLineup else None}
             elif event == "penalty_miss":
-                matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"].id if "Goalkeeper" in oppLineup else None}
+                matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"] if "Goalkeeper" in oppLineup else None}
             else:
                 matchEvents[eventTime] = {"type": event, "extra": extraTime}
 

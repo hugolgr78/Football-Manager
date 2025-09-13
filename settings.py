@@ -265,8 +265,10 @@ BASE_FOUL = 0.07
 BASE_YELLOW = 0.02 
 BASE_RED = 0.001
 
-BASE_INJURY = 0.0005
-MAX_INJURY_PROB = 0.0015 # This gives P(X = 1) = 20%, P(X > 1) = 3%
+# BASE_INJURY = 0.0005
+BASE_INJURY = 1
+# MAX_INJURY_PROB = 0.0015 # This gives P(X = 1) = 20%, P(X > 1) = 3%
+MAX_INJURY_PROB = 1
 
 SUB_PROB_THRESHOLDS = {
     10: 0.001,  # almost impossible before 10’

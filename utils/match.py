@@ -313,32 +313,7 @@ class Match():
                 else:
                     self.awaySubs = subsCount
 
-            elif event == "injury":
-                matchEvents[eventTime] = {"type": "injury", "extra": extraTime}
-
-                # Create a substitution 10s after injury if possible
-                subsAvailable = MAX_SUBS - subsCount
-                if subsAvailable > 0:
-                    subsCount += 1
-
-                    if side == "home":
-                        self.homeSubs = subsCount
-                    else:
-                        self.awaySubs = subsCount
-
-                    subTotalSecs = eventTotalSecs + 10
-
-                    # Ensure the subs event is at least 10s after the next tick
-                    if currTotalSecs + 30 < subTotalSecs < currTotalSecs + 40:
-                        subTotalSecs = currTotalSecs + 40
-
-                    if subTotalSecs <= maxTotalSecs:
-                        subMin = subTotalSecs // 60
-                        subSec = subTotalSecs % 60
-                        subTime = f"{subMin}:{subSec:02d}"
-                        matchEvents[subTime] = {"type": "substitution", "extra": extraTime, "player": None, "player_off": None, "player_on": None, "injury": True}
-                    elif maxTotalSecs == 45 * 60 or (extraTime and self.halfTime):
-                        matchEvents[f"45:10"] = {"type": "substitution", "extra": False, "player": None, "player_off": None, "player_on": None, "injury": True}
+                matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"].id if "Goalkeeper" in oppLineup else None}
             elif event == "penalty_miss":
                 matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"].id if "Goalkeeper" in oppLineup else None}
             else:
@@ -522,15 +497,7 @@ class Match():
             if playerPosition == "Goalkeeper" and not managing_team:
 
                 # Find out if the team can make a substitution
-                subPossible = False
-                if subsCount == MAX_SUBS:
-                    for event_time, event_data in events.items():
-                        if event_data["type"] == "substitution" and not event_data["injury"] and event_time not in processedEvents:
-                            subPossible = True
-                            events.pop(event_time)
-                            break
-                else:
-                    subPossible = True
+                subPossible = subsCount < MAX_SUBS
 
                 if not subPossible:
                     players = [player.id for player in players_dict.values() if player.position == "forward"]
@@ -564,7 +531,6 @@ class Match():
                     minute = minute + 1
 
                 newTime = str(minute) + ":" + str(newSeconds)
-
                 extra = self.halfTime or self.fullTime
 
                 # Take a random forward off
@@ -594,33 +560,9 @@ class Match():
             event["player"] = injuredPlayerID
 
             playerPosition = list(lineup.keys())[list(lineup.values()).index(injuredPlayerID)]
-            if not managing_team:
-                lineup.pop(playerPosition)
-                finalLineup.append((playerPosition, injuredPlayerID))
 
-            if teamMatch:
-                if home:
-                    teamMatch.homeLineupPitch.removePlayer(playerPosition)
-                    frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == injuredPlayerID]
+            if not managing_team and subsCount < MAX_SUBS:
 
-                    if len(frame) == 0:
-                        frame = teamMatch.addPlayerFrame(teamMatch.homePlayersFrame, injuredPlayerID)
-                    else:
-                        frame = frame[0]
-
-                    frame.removeFitness()
-                else:
-                    teamMatch.awayLineupPitch.removePlayer(playerPosition)
-                    frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == injuredPlayerID]
-
-                    if len(frame) == 0:
-                        frame = teamMatch.addPlayerFrame(teamMatch.awayPlayersFrame, injuredPlayerID)
-                    else:
-                        frame = frame[0]
-
-                    frame.removeFitness()
-
-            if not managing_team:
                 # currMinute and currSec from the match clock
                 currMinute, currSec = map(int, time.split(":"))
                 currTotalSecs = currMinute * 60 + currSec
@@ -635,19 +577,27 @@ class Match():
 
                 subTotalSecs = currTotalSecs + 10  # 10 seconds after the injury
 
-                # Handle normal case or first-half 45:10 special case
+                if currTotalSecs + 30 < subTotalSecs < currTotalSecs + 40:
+                    subTotalSecs = currTotalSecs + 40
+
+                # Create the substitution event
                 if subTotalSecs <= maxTotalSecs:
                     subMin = subTotalSecs // 60
                     subSec = subTotalSecs % 60
                     sub_time = f"{subMin}:{subSec:02d}"
-
-                    self.findSubstitute(events[sub_time], injuredPlayerID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
-
                 elif (extraTime and self.halfTime) or maxTotalSecs == 45*60:
                     sub_time = "45:10"
-                    self.findSubstitute(events[sub_time], injuredPlayerID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
 
-        elif event["type"] == "substitution" and not event["injury"] and not managing_team:
+                events[sub_time] = {
+                    "type": "substitution",
+                    "player": None,
+                    "player_off": injuredPlayerID,
+                    "player_on": None,
+                    "injury": True,
+                    "extra": extraTime
+                }
+
+        elif event["type"] == "substitution" and not managing_team:
 
             redCardKeeper = True
             if not event["player_off"]:
@@ -660,6 +610,7 @@ class Match():
                 playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
             else:
                 playerOffID = event["player_off"]
+                redCardKeeper = not event["injury"]
 
             playerPosition = list(lineup.keys())[list(lineup.values()).index(playerOffID)]
             lineup.pop(playerPosition)
@@ -772,7 +723,7 @@ class Match():
     def getPlayerRatings(self, team, finalLineup, currentLineup, events):
 
         oppositionEvents = self.awayEvents if team == self.homeTeam else self.homeEvents
-        oppositionGoals = self.score.getScore()[1] if team == self.homeTeam else self.score.getScore()[0]
+        oppositionGoals = self.score[1] if team == self.homeTeam else self.score[0]
 
         ratingsDict = {}
 
@@ -873,8 +824,8 @@ class Match():
                     1 if self.winner == self.homeTeam else 0,
                     1 if self.winner is None else 0,
                     1 if self.winner == self.awayTeam else 0,
-                    self.score.getScore()[0],
-                    self.score.getScore()[1]
+                    self.score[0],
+                    self.score[1]
                 ))
 
                 futures.append(executor.submit(
@@ -884,8 +835,8 @@ class Match():
                     1 if self.winner == self.awayTeam else 0,
                     1 if self.winner is None else 0,
                     1 if self.winner == self.homeTeam else 0,
-                    self.score.getScore()[1],
-                    self.score.getScore()[0]
+                    self.score[1],
+                    self.score[0]
                 ))
 
                 # Managers updates
@@ -1005,8 +956,8 @@ class Match():
                 futures.append(executor.submit(MatchEvents.batch_add_events, events_to_add))
 
                 # Matches update
-                logger.debug(f"Submitting match score update: {self.score.getScore()[0]} -> {self.score.getScore()[1]}")
-                futures.append(executor.submit(Matches.update_score, self.match.id, self.score.getScore()[0], self.score.getScore()[1]))
+                logger.debug(f"Submitting match score update: {self.score[0]} -> {self.score[1]}")
+                futures.append(executor.submit(Matches.update_score, self.match.id, self.score[0], self.score[1]))
 
                 # Players updates
                 fitness_to_update = []
@@ -1314,7 +1265,7 @@ class Match():
         # reason == "unavailable": no morale change, just log the lineup entry
 
     def returnWinner(self):
-        finalScore = self.score.getScore()
+        finalScore = self.score
         self.goalDiffHome = finalScore[0] - finalScore[1]
         self.goalDiffAway = finalScore[1] - finalScore[0]
         if finalScore[0] > finalScore[1]:

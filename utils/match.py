@@ -563,7 +563,6 @@ class Match():
 
             if not managing_team and subsCount < MAX_SUBS:
 
-                # currMinute and currSec from the match clock
                 currMinute, currSec = map(int, time.split(":"))
                 currTotalSecs = currMinute * 60 + currSec
                 extraTime = self.halfTime or self.fullTime
@@ -577,8 +576,11 @@ class Match():
 
                 subTotalSecs = currTotalSecs + 10  # 10 seconds after the injury
 
-                if currTotalSecs + 30 < subTotalSecs < currTotalSecs + 40:
-                    subTotalSecs = currTotalSecs + 40
+                TICK = 30
+                next_tick = ((currTotalSecs // TICK) + 1) * TICK
+
+                if subTotalSecs > next_tick:
+                    subTotalSecs = next_tick + 10
 
                 # Create the substitution event
                 if subTotalSecs <= maxTotalSecs:
@@ -596,6 +598,40 @@ class Match():
                     "injury": True,
                     "extra": extraTime
                 }
+
+                subsCount += 1
+
+                if home:
+                    self.homeSubs = subsCount
+                else:
+                    self.awaySubs = subsCount
+
+            elif not managing_team and subsCount == MAX_SUBS:
+                # Remove the injured player from the lineup if no subs are left
+                lineup.pop(playerPosition)
+                finalLineup.append((playerPosition, injuredPlayerID))
+
+                if teamMatch:
+                    if home:
+                        teamMatch.homeLineupPitch.removePlayer(playerPosition)
+                        frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == injuredPlayerID]
+
+                        if len(frame) == 0:
+                            frame = teamMatch.addPlayerFrame(teamMatch.homePlayersFrame, injuredPlayerID)
+                        else:
+                            frame = frame[0]
+
+                        frame.removeFitness()
+                    else:
+                        teamMatch.awayLineupPitch.removePlayer(playerPosition)
+                        frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == injuredPlayerID]
+
+                        if len(frame) == 0:
+                            frame = teamMatch.addPlayerFrame(teamMatch.awayPlayersFrame, injuredPlayerID)
+                        else:
+                            frame = frame[0]
+
+                        frame.removeFitness()
 
         elif event["type"] == "substitution" and not managing_team:
 

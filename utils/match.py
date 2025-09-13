@@ -210,6 +210,8 @@ class Match():
         fitness = self.homeFitness if side == "home" else self.awayFitness
         subsCount = self.homeSubs if side == "home" else self.awaySubs
         stats = self.homeStats if side == "home" else self.awayStats
+        subs = self.homeCurrentSubs if side == "home" else self.awayCurrentSubs
+        events = self.homeProcessedEvents if side == "home" else self.awayProcessedEvents
 
         sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
@@ -278,9 +280,9 @@ class Match():
         if event == "injury":
             eventsToAdd.append(event)
 
-        numSubs = substitutionChances(subsCount, self.minutes)
+        subsChosen = substitutionChances(lineup, subsCount, subs, events, self.minutes, fitness)
 
-        for _ in range(numSubs):
+        for _ in range(len(subsChosen)):
             eventsToAdd.append("substitution")
 
         # ------------------ TIMES and ADDING ------------------
@@ -300,6 +302,7 @@ class Match():
 
         endTotalSecs = min(futureTotalSecs, maxTotalSecs)
 
+        subsChosenCount = 0
         for event in eventsToAdd:
             eventTotalSecs = random.randint(currTotalSecs + 10, endTotalSecs)
 
@@ -309,8 +312,9 @@ class Match():
             eventTime = f"{eventMin}:{eventSec:02d}"
 
             if event == "substitution":
-                matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player": None, "player_off": None, "player_on": None, "injury": False}
+                matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player": None, "player_off": subsChosen[subsChosenCount], "player_on": None, "injury": False}
                 subsCount += 1
+                subsChosenCount += 1
 
                 if side == "home":
                     self.homeSubs = subsCount
@@ -511,7 +515,8 @@ class Match():
                             "player_off": playerOffID,
                             "player_on": None,
                             "injury": False,
-                            "extra": extra
+                            "extra": extra,
+                            "keeper": True
                         }
 
         elif event["type"] == "red_card":
@@ -610,7 +615,8 @@ class Match():
                     "player_off": playerOffID,
                     "player_on": None,
                     "injury": False,
-                    "extra": extra
+                    "extra": extra,
+                    "keeper": True
                 }
 
         elif event["type"] == "injury":
@@ -694,18 +700,18 @@ class Match():
 
         elif event["type"] == "substitution" and not managing_team:
 
-            redCardKeeper = True
-            if not event["player_off"]:
-                redCardKeeper = False
-                players = [player for player in players_dict.values() if player.position != "goalkeeper"]
+            # redCardKeeper = True
+            # if not event["player_off"]:
+            #     redCardKeeper = False
+            #     players = [player for player in players_dict.values() if player.position != "goalkeeper"]
 
-                weights = [fitnessWeight(player, fitness[player.id]) for player in players]
+            #     weights = [fitnessWeight(player, fitness[player.id]) for player in players]
 
-                playerOffID = random.choices(players, weights = weights, k = 1)[0].id
-                playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
-            else:
-                playerOffID = event["player_off"]
-                redCardKeeper = not event["injury"]
+            #     playerOffID = random.choices(players, weights = weights, k = 1)[0].id
+            #     playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
+            # else:
+            playerOffID = event["player_off"]
+            redCardKeeper = event["keeper"] if "keeper" in event else False
 
             playerPosition = list(lineup.keys())[list(lineup.values()).index(playerOffID)]
             lineup.pop(playerPosition)

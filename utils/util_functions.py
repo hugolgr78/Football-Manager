@@ -605,38 +605,67 @@ def injuryChances(avgFitness):
 
     return random.choices(events, weights = probs, k = 1)[0]
 
-def substitutionChances(subsMade, currMin):
+def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness):
+    from data.database import Players
     subsAvailable = MAX_SUBS - subsMade
 
     # No substitutions possible
     if subsAvailable <= 0:
-        return 0
-    
-    baseProb = getSubProb(currMin)
-    decayFactor = max(0.2, 1 - (subsMade * 0.2))  
-    subProb = baseProb * decayFactor
+        return []
 
-    # Scale multi-sub chances with time
-    if currMin < 60:
-        multiFactor = 0.2   # very rare before 60 mins
-    elif currMin < 75:
-        multiFactor = 0.6   # somewhat more common
+    # --- Step 1: build candidates ---
+    candidates = []
+    for pos, playerID in lineup.items():
+        # check if this player has been on the pitch > 30 mins
+        played_minutes = 0
+        for event_time, event_data in events.items():
+            if event_data["type"] == "substitution" and event_data["player_on"] == playerID:
+                eventMinute = int(event_time.split(":")[0])
+                played_minutes = currMinute - eventMinute
+                break
+        else:
+            # started the match
+            played_minutes = currMinute
+
+        if played_minutes >= 30:
+            prob = sub_probability(fitness[playerID])
+            if prob > 0:
+                has_replacement = any(Players.get_player_by_id(pID).specific_positions.split(",") == POSITION_CODES[pos] for pID in subs)
+                candidates.append((prob, playerID, pos, has_replacement))
+
+    if not candidates:
+        return []
+
+    # --- Step 2: sort by lowest fitness first ---
+    candidates.sort(key = lambda x: (not x[3], fitness[x[1]]))
+
+    # --- Step 3: decide how many subs to attempt ---
+    outcomes = [1, 2, 3]
+    weights = [0.65, 0.25, 0.10]
+    num_to_sub = random.choices(outcomes, weights = weights, k = 1)[0]
+
+    # cannot sub more than available players or slots
+    num_to_sub = min(num_to_sub, subsAvailable, len(candidates))
+
+    # --- Step 4: roll substitutions ---
+    chosen = []
+    for prob, playerID, pos, has_replacement in candidates:
+        if len(chosen) >= num_to_sub:
+            break
+        if random.random() < prob:
+            chosen.append(playerID)
+
+    return chosen
+
+def sub_probability(fitness: float) -> float:
+    if fitness > 50:
+        return 0.0
+    elif fitness > 20:
+        # scales 50 -> 0%, 20 -> 60%
+        return (50 - fitness) / 30 * 0.6
+    elif fitness > 10:
+        # scales 20 -> 60%, 10 -> 85%
+        return 0.6 + (20 - fitness) / 10 * 0.25
     else:
-        multiFactor = 1.0   # normal weighting in last 15+
-
-    probs = {
-        0: 1 - subProb,
-        1: subProb * 0.75,  # keep single-sub most likely
-        2: subProb * 0.20 * multiFactor if subsAvailable >= 2 else 0,
-        3: subProb * 0.05 * multiFactor if subsAvailable >= 3 else 0,
-    }
-
-    # Normalise for random.choices
-    outcomes = list(probs.keys())
-    weights = list(probs.values())
-    numSubs = random.choices(outcomes, weights=weights, k=1)[0]
-
-    if numSubs > subsAvailable:
-        numSubs = subsAvailable
-
-    return numSubs
+        # below 10 -> 85–100%
+        return 0.85 + (10 - max(fitness, 0)) / 10 * 0.15

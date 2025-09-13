@@ -215,9 +215,9 @@ class MatchDay(ctk.CTkFrame):
     def addMatches(self):
         for match in self.matchDay:
             if match.home_id == self.team.id or match.away_id == self.team.id:
+                # TEAM MATCH
                 self.teamMatch = match
                 self.matchFrame = MatchDayMatchFrame(self.teamMatchFrame, match, TKINTER_BACKGROUND, 150, 400, imageSize = 70, relx =  0.5, rely =  0.03, anchor = "n", border_width = 3, border_color = GREY_BACKGROUND, pack = False)
-                self.matchFrame.matchInstance.createScore()
                 
                 self.matchDataFrame = ctk.CTkScrollableFrame(self.teamMatchFrame, width = 370, height = 300, fg_color = TKINTER_BACKGROUND, border_width = 3, border_color = GREY_BACKGROUND)
                 self.matchDataFrame.place(relx = 0.5, rely = 0.27, anchor = "n")
@@ -237,12 +237,7 @@ class MatchDay(ctk.CTkFrame):
                     self.matchFrame.matchInstance.homeStartLineup = self.teamLineup.copy()
                     self.matchFrame.matchInstance.homeFitness = {playerID: Players.get_player_by_id(playerID).fitness for playerID in list(self.teamLineup.values()) + self.teamSubstitutes}
             else:
-                frame = MatchDayMatchFrame(self.otherMatchesFrame, match, TKINTER_BACKGROUND, 60, 300)
-
-                if frame.matchInstance:
-                    frame.matchInstance.createTeamLineup(match.home_id, True)
-                    frame.matchInstance.createTeamLineup(match.away_id, False)
-                    frame.matchInstance.generateScore()
+                MatchDayMatchFrame(self.otherMatchesFrame, match, TKINTER_BACKGROUND, 60, 300)
 
     def addTime(self):
         self.timeLabel = ctk.CTkLabel(self.timeFrame, text = "00:00", font = (APP_FONT_BOLD, 50), fg_color = TKINTER_BACKGROUND)
@@ -597,8 +592,13 @@ class MatchDay(ctk.CTkFrame):
                     print(self.matchFrame.matchInstance.awayStats)
 
             if seconds % 30 == 0:
-                self.generateEvents("home")
-                self.generateEvents("away")
+                self.generateEvents("home", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
+                self.generateEvents("away", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
+
+                for frame in self.otherMatchesFrame.winfo_children():
+                    if frame.matchInstance:
+                        self.generateEvents("home", matchInstance = frame.matchInstance)
+                        self.generateEvents("away", matchInstance = frame.matchInstance)
 
             ## ----------- substitution end ------------
             if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
@@ -741,16 +741,16 @@ class MatchDay(ctk.CTkFrame):
 
             time.sleep(self.speed)
 
-    def generateEvents(self, side):
+    def generateEvents(self, side, matchInstance = None, teamMatch = False):
         eventsToAdd = []
         statsToAdd = []
 
-        lineup = self.matchFrame.matchInstance.homeCurrentLineup if side == "home" else self.matchFrame.matchInstance.awayCurrentLineup
-        oppLineup = self.matchFrame.matchInstance.awayCurrentLineup if side == "home" else self.matchFrame.matchInstance.homeCurrentLineup
-        matchEvents = self.matchFrame.matchInstance.homeEvents if side == "home" else self.matchFrame.matchInstance.awayEvents
-        fitness = self.matchFrame.matchInstance.homeFitness if side == "home" else self.matchFrame.matchInstance.awayFitness
-        subsCount = self.matchFrame.matchInstance.homeSubs if side == "home" else self.matchFrame.matchInstance.awaySubs
-        stats = self.matchFrame.matchInstance.homeStats if side == "home" else self.matchFrame.matchInstance.awayStats
+        lineup = matchInstance.homeCurrentLineup if side == "home" else matchInstance.awayCurrentLineup
+        oppLineup = matchInstance.awayCurrentLineup if side == "home" else matchInstance.homeCurrentLineup
+        matchEvents = matchInstance.homeEvents if side == "home" else matchInstance.awayEvents
+        fitness = matchInstance.homeFitness if side == "home" else matchInstance.awayFitness
+        subsCount = matchInstance.homeSubs if side == "home" else matchInstance.awaySubs
+        stats = matchInstance.homeStats if side == "home" else matchInstance.awayStats
 
         sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
@@ -771,7 +771,7 @@ class MatchDay(ctk.CTkFrame):
         defendingLevel = sum(Players.get_player_by_id(playerID).current_ability for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS + ["Goalkeeper", "Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"])
 
         # ------------------ GOAL ------------------
-        event = self.goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper)
+        event = goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper)
 
         if event == "goal":
 
@@ -780,13 +780,13 @@ class MatchDay(ctk.CTkFrame):
             if goalType == "penalty":
                 if random.random() < PENALTY_SCORE_CHANCE or "Goalkeeper" not in oppLineup:
                     goalType = "penalty_goal"
-                    self.matchFrame.matchInstance.score.appendScore(1, True if side == "home" else False)
+                    self.matchFrame.matchInstance.appendScore(1, True if side == "home" else False)
                 else:
                     goalType = "penalty_miss"
             elif event == "own_goal":
-                self.matchFrame.matchInstance.score.appendScore(1, False if side == "home" else True)
+                self.matchFrame.matchInstance.appendScore(1, False if side == "home" else True)
             else:
-                self.matchFrame.matchInstance.score.appendScore(1, True if side == "home" else False)
+                self.matchFrame.matchInstance.appendScore(1, True if side == "home" else False)
 
             eventsToAdd.append(goalType)
             statsToAdd.append("shot")
@@ -798,7 +798,7 @@ class MatchDay(ctk.CTkFrame):
             statsToAdd.append(event)
 
         # ------------------ FOUL ------------------
-        event = self.foulChances(avgSharpnessWthKeeper)
+        event = foulChances(avgSharpnessWthKeeper, self.matchFrame.matchInstance.referee.severity)
 
         if event in ["yellow_card", "red_card"]:
             eventsToAdd.append(event)
@@ -811,16 +811,22 @@ class MatchDay(ctk.CTkFrame):
             statsToAdd.append(event)
 
         # ------------------ INJURY ------------------
-        event = self.injuryChances(avgFitness)
+        event = injuryChances(avgFitness)
 
         if event == "injury":
             eventsToAdd.append(event)
 
-        if (self.home and side == "away") or (not self.home and side == "home"):
-            numSubs = self.substitutionChances(subsCount, int(self.currTimeLabel.cget("text").split(":")[0]))
-
+        # ------------------ SUBSTITUTIONS ------------------
+        if not teamMatch:
+            numSubs = substitutionChances(subsCount, int(self.timeLabel.cget("text").split(":")[0]))
             for _ in range(numSubs):
                 eventsToAdd.append("substitution")
+
+        else:
+            if (self.home and side == "away") or (not self.home and side == "home"):
+                numSubs = substitutionChances(subsCount, int(self.timeLabel.cget("text").split(":")[0]))
+                for _ in range(numSubs):
+                    eventsToAdd.append("substitution")
 
         # ------------------ TIMES and ADDING ------------------
         currMin, currSec = map(int, self.timeLabel.cget("text").split(":"))
@@ -851,9 +857,9 @@ class MatchDay(ctk.CTkFrame):
                 subsCount += 1
 
                 if side == "home":
-                    self.matchFrame.matchInstance.homeSubs = subsCount
+                    matchInstance.homeSubs = subsCount
                 else:
-                    self.matchFrame.matchInstance.awaySubs = subsCount
+                    matchInstance.awaySubs = subsCount
 
             elif event == "injury":
                 matchEvents[eventTime] = {"type": "injury", "extra": extraTime}
@@ -866,9 +872,9 @@ class MatchDay(ctk.CTkFrame):
                         subsCount += 1
 
                         if side == "home":
-                            self.matchFrame.matchInstance.homeSubs = subsCount
+                            matchInstance.homeSubs = subsCount
                         else:
-                            self.matchFrame.matchInstance.awaySubs = subsCount
+                            matchInstance.awaySubs = subsCount
 
                         subTotalSecs = eventTotalSecs + 10
 

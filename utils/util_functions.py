@@ -522,7 +522,7 @@ def fitnessWeight(p, fitness):
     fitness_factor = (100 - fitness) / 100.0
     return max(fitness_factor, 0.01)  # avoid 0 prob
 
-def goalChances(self, attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
+def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
         attackRatio = attackingLevel / defendingLevel
         attackModifier = (avgSharpness / 100 + avgMorale / 100) / 2
 
@@ -562,9 +562,7 @@ def goalChances(self, attackingLevel, defendingLevel, avgSharpness, avgMorale, o
 
         return random.choices(events, weights = probs, k = 1)[0]
 
-def foulChances(self, avgSharpnessWthKeeper):
-    severity = self.matchFrame.matchInstance.referee.severity
-
+def foulChances(avgSharpnessWthKeeper, severity):
     severity_map = {"low": 0.7, "medium": 1.0, "high": 1.4}
     severity = severity_map.get(severity, 1.0)
 
@@ -595,7 +593,7 @@ def foulChances(self, avgSharpnessWthKeeper):
 
     return random.choices(events, weights = probs, k = 1)[0]
 
-def injuryChances(self, avgFitness):
+def injuryChances(avgFitness):
 
     injuryProb = BASE_INJURY * (100 / avgFitness)
     injuryProb = min(max(injuryProb, 0.0001), MAX_INJURY_PROB)
@@ -609,8 +607,7 @@ def injuryChances(self, avgFitness):
 
     return random.choices(events, weights = probs, k = 1)[0]
 
-def substitutionChances(self, subsMade, currMin):
-    currMin = int(self.timeLabel.cget("text").split(":")[0])
+def substitutionChances(subsMade, currMin):
     subsAvailable = MAX_SUBS - subsMade
 
     # No substitutions possible

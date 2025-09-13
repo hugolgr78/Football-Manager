@@ -2295,7 +2295,7 @@ class MatchDayMatchFrame(ctk.CTkFrame):
             self.laterGame = False
 
         if not self.played and not self.laterGame:
-            self.matchInstance = Match(self.match, managingTeam = not self.packFrame)
+            self.matchInstance = Match(self.match, teamMatch = not self.packFrame)
         else:
             self.matchInstance = None
 

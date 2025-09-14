@@ -245,7 +245,7 @@ class MatchDay(ctk.CTkFrame):
 
         self.extraTimeLabel = ctk.CTkLabel(self.timeFrame, text = "ET", font = (APP_FONT, 18), fg_color = TKINTER_BACKGROUND)
 
-        self.pauseButton = ctk.CTkButton(self.timeFrame, text = "Simulate", font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, command = self.simulateMatch)
+        self.pauseButton = ctk.CTkButton(self.timeFrame, text = "Kick-Off", font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, command = self.simulateMatch)
         self.pauseButton.place(relx = 0.5, rely = 0.8, anchor = "center")
 
     def addLineups(self):

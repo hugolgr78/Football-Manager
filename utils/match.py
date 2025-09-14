@@ -28,7 +28,7 @@ class Match():
         self.awaySubs = 0
 
         self.homeEvents = {}
-        self.awayEvents = {}
+        self.awayEvents = {"88:2": {"type": "injury", "extra": False}}
         self.homeProcessedEvents = {}
         self.awayProcessedEvents = {}
 
@@ -698,7 +698,7 @@ class Match():
 
                         frame.removeFitness()
                 
-                if playerPosition == "Goalkeeper" and not managing_team:
+                if playerPosition == "Goalkeeper":
                     players = [player.id for player in players_dict.values() if player.position == "forward"]
 
                     if len(players) == 0:
@@ -800,7 +800,6 @@ class Match():
         self.addPlayerToLineup(event, playerID, playerOffID, playerPosition, subs, lineup, teamMatch, home)
 
     def addPlayerToLineup(self, event, playerOnID, playerOffID, playerPosition, subs, lineup, teamMatch, home, managing_team = False):
-        event["player_off"] = playerOffID
         event["player_on"] = playerOnID
 
         # remove the player from the subs list

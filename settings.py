@@ -145,6 +145,20 @@ POSITIONS_PITCH_POSITIONS = {
     "Center Forward": (0.5, 0.1),  # Center Forward
 }
 
+COMPATIBLE_POSITIONS = {
+    "CB": ["CB", "LB", "RB", "DM"],
+    "LB": ["LB", "CB", "LM"],
+    "RB": ["RB", "CB", "RM"],
+    "DM": ["DM", "CM", "CB"],
+    "CM": ["CM", "DM", "AM"],
+    "AM": ["AM", "CM", "ST"],
+    "LM": ["LM", "LW", "CM"],
+    "RM": ["RM", "RW", "CM"],
+    "LW": ["LW", "LM", "ST"],
+    "RW": ["RW", "RM", "ST"],
+    "ST": ["ST", "AM", "LW", "RW"],
+}
+
 POSITIONS_MAX = {
     "CB": 3,
     "DM": 3,
@@ -159,22 +173,6 @@ RELATED_POSITIONS = {
     "Defensive Midfielder": ["Defensive Midfielder Right", "Defensive Midfielder Left"],
     "Defensive Midfielder Right": ["Defensive Midfielder"],
     "Defensive Midfielder Left": ["Defensive Midfielder"],
-}
-
-FORMATIONS_CHANCES = {
-    "4-4-2 CM": 0.10,
-    "4-4-2 DM": 0.10,
-    "4-3-3 CM": 0.25,
-    "4-3-3 DM": 0.25,
-    "4-5-1 DM": 0.05,
-    "4-5-1 AM": 0.025,
-    "4-5-1 CM": 0.025,
-    "3-4-3": 0.15,
-    "3-5-2 CM": 0.04,
-    "3-5-2 AM": 0.04,
-    "5-3-2": 0.02,
-    "5-4-1": 0.02,
-    "4-2-4": 0.02,
 }
 
 FORMATIONS_POSITIONS = {
@@ -271,25 +269,6 @@ BASE_INJURY = 0.0005
 MAX_INJURY_PROB = 0.0015 # This gives P(X = 1) = 20%, P(X > 1) = 3%
 
 TICK = 30
-
-SUB_PROB_THRESHOLDS = {
-    10: 0.001,  # almost impossible before 10’
-    20: 0.002,  # still extremely rare
-    30: 0.005,  # very low
-    40: 0.01,   # slightly higher
-    45: 0.02,   # just before HT, still low
-    50: 0.02,   # second half start, still rare
-    60: 0.10,
-    70: 0.20,
-    75: 0.30,
-    80: 0.40,
-    85: 0.50,
-    90: 0.60,   # FT
-    105: 0.70,  # Extra time 1st half
-    110: 0.75,
-    115: 0.80,
-    120: 0.85   # Extra time 2nd half
-}
 
 PENALTY_SCORE_CHANCE = 0.8
 

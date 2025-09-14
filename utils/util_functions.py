@@ -493,20 +493,12 @@ def getFitnessDrop(player, fitness):
 
     # return a random float in the range for that position
     drop = random.uniform(*position_ranges[player.position])
-    scaled_drop = drop * (fitness / 100.0) ** 0.5
+    scaled_drop = drop * (fitness / 100.0) ** 0.25
     return scaled_drop
 
 def getDayIndex(date):
     day, _, _ = format_datetime_split(date)
     return list(calendar.day_name).index(day)
-
-def getSubProb(currMin: int) -> float:
-    prob = 0.0
-    for minute in sorted(SUB_PROB_THRESHOLDS.keys()):
-        if currMin < minute:
-            return prob
-        prob = SUB_PROB_THRESHOLDS[minute]
-    return prob
 
 def ownGoalFoulWeight(p):
     # Lower ability and sharpness → higher chance
@@ -561,7 +553,7 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
     return random.choices(events, weights = probs, k = 1)[0]
 
 def foulChances(avgSharpnessWthKeeper, severity):
-    severity_map = {"low": 0.85, "medium": 1.0, "high": 1.15}
+    severity_map = {"low": 0.95, "medium": 1.0, "high": 1.05}
     severity = severity_map.get(severity, 1.0)
 
     gamma = 0.5
@@ -637,7 +629,7 @@ def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness):
 
     if not candidates:
         return []
-
+    
     # --- Step 2: sort by lowest fitness first ---
     candidates.sort(key = lambda x: fitness[x[1]])
 

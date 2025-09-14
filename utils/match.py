@@ -28,7 +28,7 @@ class Match():
         self.awaySubs = 0
 
         self.homeEvents = {}
-        self.awayEvents = {"88:2": {"type": "injury", "extra": False}}
+        self.awayEvents = {}
         self.homeProcessedEvents = {}
         self.awayProcessedEvents = {}
 
@@ -280,7 +280,7 @@ class Match():
         if event == "injury":
             eventsToAdd.append(event)
 
-        subsChosen = substitutionChances(lineup, subsCount, subs, events, self.minutes, fitness)
+        subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, self.minutes, fitness)
 
         for _ in range(len(subsChosen)):
             eventsToAdd.append("substitution")
@@ -721,15 +721,16 @@ class Match():
         elif event["type"] == "substitution" and not managing_team:
 
             playerOffID = event["player_off"]
-            redCardKeeper = event["keeper"] if "keeper" in event else False
+            playerOnID = event["player_on"]
+            oldPosition = event["old_position"]
+            newPosition = event["new_position"]
 
-            playerPosition = list(lineup.keys())[list(lineup.values()).index(playerOffID)]
-            lineup.pop(playerPosition)
-            finalLineup.append((playerPosition, playerOffID))
+            lineup.pop(oldPosition)
+            finalLineup.append((oldPosition, playerOffID))
 
             if teamMatch:
                 if home:
-                    teamMatch.homeLineupPitch.removePlayer(playerPosition)
+                    teamMatch.homeLineupPitch.removePlayer(oldPosition)
                     frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerOffID]
 
                     if len(frame) == 0:
@@ -739,7 +740,7 @@ class Match():
 
                     frame.removeFitness()
                 else:
-                    teamMatch.awayLineupPitch.removePlayer(playerPosition)
+                    teamMatch.awayLineupPitch.removePlayer(oldPosition)
                     frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerOffID]
 
                     if len(frame) == 0:
@@ -749,8 +750,7 @@ class Match():
 
                     frame.removeFitness()
 
-            playerPosition = "Goalkeeper" if redCardKeeper else playerPosition
-            self.findSubstitute(event, playerOffID, playerPosition, lineup, subs, home, teamMatch = teamMatch)
+            self.addPlayerToLineup(playerOnID, playerOffID, newPosition, subs, lineup, teamMatch, home)
         
         if teamMatch:
             return event
@@ -780,33 +780,15 @@ class Match():
 
         return playerID  # No substitution event found for the player
 
-    def findSubstitute(self, event, playerOffID, playerPosition, lineup, subs, home, teamMatch = None):
-        for playerID in subs:
-            player = Players.get_player_by_id(playerID)
-            if POSITION_CODES[playerPosition] in player.specific_positions.split(","):
-                self.addPlayerToLineup(event, playerID, playerOffID, playerPosition, subs, lineup, teamMatch, home)
-                return
-
-        ## if no player was found to have a good position, add a player with the same overall position (defender, midfielder, forward)
-        for playerID in subs:
-            playerOff = Players.get_player_by_id(playerOffID)
-            player = Players.get_player_by_id(playerID)
-            if player.position == playerOff.position:
-                self.addPlayerToLineup(event, playerID, playerOffID, playerPosition, subs, lineup, teamMatch, home)
-                return
-            
-        ## if no player was found to have the same overall position, add a random player
-        playerID = random.choices(subs, k = 1)[0]
-        self.addPlayerToLineup(event, playerID, playerOffID, playerPosition, subs, lineup, teamMatch, home)
-
-    def addPlayerToLineup(self, event, playerOnID, playerOffID, playerPosition, subs, lineup, teamMatch, home, managing_team = False):
-        event["player_on"] = playerOnID
+    def addPlayerToLineup(self, playerOnID, playerOffID, playerPosition, subs, lineup, teamMatch, home, managing_team = False):
 
         # remove the player from the subs list
         for playerID in subs:
             if playerID == playerOnID:
                 subs.remove(playerID)
                 break
+
+        print(subs)
 
         if not managing_team:
             lineup[playerPosition] = playerOnID # add the player on to the lineup

@@ -115,6 +115,10 @@ POSITION_CODES = {
     "Striker Right": "CF",
 }
 
+REVERSE_POSITION_CODES = {}
+for full, code in POSITION_CODES.items():
+    REVERSE_POSITION_CODES.setdefault(code, []).append(full)
+
 POSITION_ORDER = {
     "goalkeeper": 0,
     "defender": 1,

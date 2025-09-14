@@ -5342,75 +5342,93 @@ def effective_ability(p):
 def getSubstitutes(teamID, lineup, compID):
     allPlayers = PlayerBans.get_all_non_banned_players_for_comp(teamID, compID)
     usedPlayers = set(lineup.values())
-
     substitutes = []
 
-    goalkeepers = [player for player in allPlayers if player.position == "goalkeeper" and player.id not in usedPlayers]
-    defenders = [player for player in allPlayers if player.position == "defender" and player.id not in usedPlayers]
-    midfielders = [player for player in allPlayers if player.position == "midfielder" and player.id not in usedPlayers]
-    attackers = [player for player in allPlayers if player.position == "forward" and player.id not in usedPlayers]
+    # positions already covered (from lineup and subs)
+    covered_positions = set(lineup.keys())
 
-    # Order each list with effective ability
-    goalkeepers.sort(key = effective_ability, reverse = True)
-    defenders.sort(key = effective_ability, reverse = True)
-    midfielders.sort(key = effective_ability, reverse = True)
-    attackers.sort(key = effective_ability, reverse = True)
+    # helper to pick a sub for a given general position
+    def pick_sub(players, count, position_pool):
+        nonlocal covered_positions
+        added = 0
+        for p in players:
+            if p.id in usedPlayers or p.id in substitutes:
+                continue
 
-    if len(goalkeepers) > 0:
-        substitutes.append(goalkeepers[0].id)
-    else:
+            # find sub positions not already covered
+            sub_positions = [REVERSE_POSITION_CODES[code][0] for code in p.specific_positions.split(",")]
+            available_positions = [pos for pos in sub_positions if pos not in covered_positions and pos in position_pool]
+
+            if available_positions:
+                substitutes.append(p.id)
+                covered_positions.add(available_positions[0])
+                added += 1
+                if added >= count:
+                    break
+        return added
+
+    # --- Split players by general position ---
+    goalkeepers = [p for p in allPlayers if p.position == "goalkeeper"]
+    defenders   = [p for p in allPlayers if p.position == "defender"]
+    midfielders = [p for p in allPlayers if p.position == "midfielder"]
+    attackers   = [p for p in allPlayers if p.position == "forward"]
+
+    # Order by effective ability
+    goalkeepers.sort(key=effective_ability, reverse=True)
+    defenders.sort(key=effective_ability, reverse=True)
+    midfielders.sort(key=effective_ability, reverse=True)
+    attackers.sort(key=effective_ability, reverse=True)
+
+    # --- Pick subs as we go ---
+    if pick_sub(goalkeepers, 1, DEFENSIVE_POSITIONS) < 1:
         youthID = getYouthPlayer(teamID, "Goalkeeper", compID, substitutes)
-        substitutes.append(youthID) if youthID else None
+        if youthID:
+            substitutes.append(youthID)
+            covered_positions.add("Goalkeeper")
 
-    # Add 2 defenders to substitutes
-    defender_count = 0
-    for defender in defenders:
-        if defender_count < 2:
-            substitutes.append(defender.id)
-            defender_count += 1
+    if pick_sub(defenders, 2, DEFENDER_POSITIONS) < 2:
+        for _ in range(2 - len([s for s in substitutes if s in [p.id for p in defenders]])):
+            uncovered_positions = [p for p in DEFENDER_POSITIONS if p not in covered_positions]
+            if uncovered_positions:
+                specific_position = random.choice(uncovered_positions)
+                youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
+                if youthID:
+                    substitutes.append(youthID)
+                    covered_positions.add(specific_position)
 
-    if defender_count != 2:
-        for _ in range(2 - defender_count):
-            specific_position = random.choice(DEFENDER_POSITIONS)
-            youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
-            substitutes.append(youthID) if youthID else None
+    if pick_sub(midfielders, 2, MIDFIELD_POSITIONS) < 2:
+        for _ in range(2 - len([s for s in substitutes if s in [p.id for p in midfielders]])):
+            uncovered_positions = [p for p in MIDFIELD_POSITIONS if p not in covered_positions]
+            if uncovered_positions:
+                specific_position = random.choice(uncovered_positions)
+                youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
+                if youthID:
+                    substitutes.append(youthID)
+                    covered_positions.add(specific_position)
 
-    # Add 2 midfielders to substitutes
-    midfielder_count = 0
-    for midfielder in midfielders:
-        if midfielder_count < 2:
-            substitutes.append(midfielder.id)
-            midfielder_count += 1
+    if pick_sub(attackers, 2, FORWARD_POSITIONS) < 2:
+        for _ in range(2 - len([s for s in substitutes if s in [p.id for p in attackers]])):
+            uncovered_positions = [p for p in FORWARD_POSITIONS if p not in covered_positions]
+            if uncovered_positions:
+                specific_position = random.choice(uncovered_positions)
+                youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
+                if youthID:
+                    substitutes.append(youthID)
+                    covered_positions.add(specific_position)
 
-    if midfielder_count != 2:
-        for _ in range(2 - midfielder_count):
-            specific_position = random.choice(MIDFIELD_POSITIONS)
-            youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
-            substitutes.append(youthID) if youthID else None
+    # --- SAFETY NET: Fill remaining subs if fewer than 7 ---
+    all_available_ids = [p.id for p in allPlayers if p.id not in usedPlayers and p.id not in substitutes]
+    while len(substitutes) < 7 and all_available_ids:
+        substitutes.append(all_available_ids.pop(0))
 
-    # Add 2 attackers to substitutes
-    attacker_count = 0
-    for attacker in attackers:
-        if attacker_count < 2:
-            substitutes.append(attacker.id)
-            attacker_count += 1
-
-    if attacker_count != 2:
-        for _ in range(2 - attacker_count):
-            specific_position = random.choice(FORWARD_POSITIONS)
-            youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
-            substitutes.append(youthID) if youthID else None
-
-    # If there are any None left in substitute, fill the rest up with the best remaining players:
-    players = defenders + midfielders + attackers
-    players.sort(key = effective_ability, reverse = True)
-
-    for player in players:
-        if None not in substitutes:
-            break
-
-        if player.id not in substitutes:
-            substitutes[substitutes.index(None)] = player.id
+    # Final fallback: fill remaining slots with youth players if still not full
+    while len(substitutes) < 7:
+        pos_choice = random.choice(DEFENSIVE_POSITIONS + MIDFIELD_POSITIONS + FORWARD_POSITIONS)
+        youthID = getYouthPlayer(teamID, pos_choice, compID, substitutes)
+        if youthID:
+            substitutes.append(youthID)
+        else:
+            break  # can't fill more
 
     return substitutes
 

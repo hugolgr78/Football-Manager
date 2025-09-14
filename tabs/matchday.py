@@ -591,7 +591,7 @@ class MatchDay(ctk.CTkFrame):
                     print(self.matchFrame.matchInstance.homeStats)
                     print(self.matchFrame.matchInstance.awayStats)
 
-            if total_seconds % TICK == 0:
+            if total_seconds % TICK == 0 and self.currTime.cget("text") != "HT":
                 self.generateEvents("home", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
                 self.generateEvents("away", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
 
@@ -823,13 +823,13 @@ class MatchDay(ctk.CTkFrame):
 
         # ------------------ SUBSTITUTIONS ------------------
         if not teamMatch:
-            subsChosen = substitutionChances(lineup, subsCount, subs, events, int(self.timeLabel.cget("text").split(":")[0]), fitness)
+            subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness)
             for _ in range(len(subsChosen)):
                 eventsToAdd.append("substitution")
 
         else:
             if (self.home and side == "away") or (not self.home and side == "home"):
-                subsChosen = substitutionChances(lineup, subsCount, subs, events, int(self.timeLabel.cget("text").split(":")[0]), fitness)
+                subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness)
                 for _ in range(len(subsChosen)):
                     eventsToAdd.append("substitution")
 
@@ -860,7 +860,7 @@ class MatchDay(ctk.CTkFrame):
             eventTime = f"{eventMin}:{eventSec:02d}"
 
             if event == "substitution":
-                matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player": None, "player_off": subsChosen[subsChosenCount], "player_on": None, "injury": False}
+                matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player_off": subsChosen[subsChosenCount][0], "player_on": subsChosen[subsChosenCount][2], "old_position": subsChosen[subsChosenCount][1], "new_position": subsChosen[subsChosenCount][3], "injury": False}
                 subsCount += 1
                 subsChosenCount += 1
 
@@ -1847,7 +1847,10 @@ class MatchDay(ctk.CTkFrame):
         if event_type == "assister":
             return sum(1 for e in events.values() if e.get("assister") == player_id)
         else:
-            return sum(1 for e in events.values() if e["player"] == player_id and e["type"] in group)
+            return sum(
+                1 for e in events.values()
+                if e.get("player") == player_id and e.get("type") in group
+            )
 
     def endSimulation(self):
 

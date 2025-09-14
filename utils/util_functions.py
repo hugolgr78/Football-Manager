@@ -599,55 +599,92 @@ def injuryChances(avgFitness):
 
 def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness):
     from data.database import Players
-    subsAvailable = MAX_SUBS - subsMade
 
-    # No substitutions possible
+    subsAvailable = MAX_SUBS - subsMade
     if subsAvailable <= 0:
         return []
 
-    # --- Step 1: build candidates ---
     candidates = []
     for pos, playerID in lineup.items():
-        # check if this player has been on the pitch > 30 mins
-        played_minutes = 0
+        played_minutes = currMinute
         for event_time, event_data in events.items():
             if event_data["type"] == "substitution" and event_data["player_on"] == playerID:
                 eventMinute = int(event_time.split(":")[0])
                 played_minutes = currMinute - eventMinute
                 break
-        else:
-            # started the match
-            played_minutes = currMinute
 
-        if played_minutes >= 30:
+        if played_minutes >= 30:  # don’t sub too early
             prob = sub_probability(fitness[playerID])
             if prob > 0:
-                has_replacement = any(POSITION_CODES[pos] in Players.get_player_by_id(pID).specific_positions.split(",") for pID in subs)
-
-                if has_replacement:
-                    candidates.append((prob, playerID, pos))
+                candidates.append((prob, playerID, pos))
 
     if not candidates:
         return []
-    
-    # --- Step 2: sort by lowest fitness first ---
-    candidates.sort(key = lambda x: fitness[x[1]])
 
-    # --- Step 3: decide how many subs to attempt ---
+    # sort lowest fitness first
+    candidates.sort(key=lambda x: fitness[x[1]])
+
+    # how many subs
     outcomes = [1, 2, 3]
     weights = [0.65, 0.25, 0.10]
-    num_to_sub = random.choices(outcomes, weights = weights, k = 1)[0]
-
-    # cannot sub more than available players or slots
+    num_to_sub = random.choices(outcomes, weights=weights, k=1)[0]
     num_to_sub = min(num_to_sub, subsAvailable, len(candidates))
 
-    # --- Step 4: roll substitutions ---
     chosen = []
+
+    # make substitutions
     for prob, playerID, pos in candidates:
         if len(chosen) >= num_to_sub:
             break
         if random.random() < prob:
-            chosen.append(playerID)
+            out_code = POSITION_CODES[pos]
+
+            replacement_id = None
+            replacement_pos = None
+            reason = None
+
+            # --- Exact / compatible replacement ---
+            for subID in subs:
+                player = Players.get_player_by_id(subID)
+                subPositions = [s for s in player.specific_positions.split(",")]
+
+                # Direct match: outgoing code is explicitly listed in sub's positions
+                if out_code in subPositions:
+                    replacement_id = subID
+                    replacement_pos = pos
+                    reason = "direct"
+                    break
+
+                # Compatible match: sub can play a compatible position
+                compatible_codes = COMPATIBLE_POSITIONS.get(out_code, [])
+                compatible_subs = [sp for sp in subPositions if sp in compatible_codes]
+                if compatible_subs:
+                    replacement_id = subID
+                    replacement_pos = pos
+                    reason = "compatible"
+                    break
+
+            # --- Fallback if no compatible found ---
+            if not replacement_id and subs:
+                for subID in subs:
+                    sub_player = Players.get_player_by_id(subID)
+                    subPositions = [REVERSE_POSITION_CODES[s][0] for s in sub_player.specific_positions.split(",")]
+
+                    # pick the first full position not already in lineup.keys()
+                    for full_pos in subPositions:
+                        if full_pos not in lineup:
+                            replacement_id = subID
+                            replacement_pos = full_pos
+                            reason = "formation_change"
+                            break
+
+                    if replacement_id:
+                        break
+
+            if replacement_id:
+                # player off id, old position, player on id, new position, reason
+                chosen.append((playerID, pos, replacement_id, replacement_pos, reason))
+                subs.remove(replacement_id)
 
     return chosen
 

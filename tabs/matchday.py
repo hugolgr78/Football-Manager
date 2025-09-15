@@ -1073,6 +1073,7 @@ class MatchDay(ctk.CTkFrame):
 
             else:
                 self.confirmButton.configure(state = "disabled")
+                self.cancelButton.configure(state = "disabled")
 
         self.addSubstitutePlayers()
 
@@ -1510,7 +1511,6 @@ class MatchDay(ctk.CTkFrame):
                     "player": None,
                     "player_off": None,
                     "player_on": None,
-                    "injury": False,
                     "extra": True if self.halfTime else False
                 }
 
@@ -1522,7 +1522,7 @@ class MatchDay(ctk.CTkFrame):
                 # Find the player in playersOn that suits the position of playerOff the most
                 for positionOn, playerOnID in list(self.playersOn.items()):
                     if positionOn == positionOff:
-                        self.matchFrame.matchInstance.addPlayerToLineup(event, playerOnID, playerOffID, positionOn, subs, lineup, self, self.home, managing_team = True)
+                        self.matchFrame.matchInstance.addPlayerToLineup(playerOnID, playerOffID, positionOn, positionOff, subs, lineup, self, self.home, managing_event = event)
                         del self.playersOn[positionOn]
                         break
                 else:
@@ -1531,13 +1531,13 @@ class MatchDay(ctk.CTkFrame):
                         playerOn = Players.get_player_by_id(playerOnID)
                         playerOff = Players.get_player_by_id(playerOffID)
                         if playerOn.position == playerOff.position:
-                            self.matchFrame.matchInstance.addPlayerToLineup(event, playerOnID, playerOffID, positionOn, subs, lineup, self, self.home, managing_team = True)
+                            self.matchFrame.matchInstance.addPlayerToLineup(playerOnID, playerOffID, positionOn, positionOff, subs, lineup, self, self.home, managing_event = event)
                             del self.playersOn[positionOn]
                             break
                     else:
                         # Use a random player from the playersOn
                         positionOn, playerOnID = random.choice(list(self.playersOn.items()))
-                        self.matchFrame.matchInstance.addPlayerToLineup(event, playerOnID, playerOffID, positionOn, subs, lineup, self, self.home, managing_team = True)
+                        self.matchFrame.matchInstance.addPlayerToLineup(playerOnID, playerOffID, positionOn, positionOff, subs, lineup, self, self.home, managing_event = event)
                         del self.playersOn[positionOn]
 
         self.substitutionFrame.place_forget()

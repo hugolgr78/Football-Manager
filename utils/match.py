@@ -28,7 +28,7 @@ class Match():
         self.awaySubs = 0
 
         self.homeEvents = {}
-        self.awayEvents = {}
+        self.awayEvents = {"82:2": {"type": "injury", "extra": False}}
         self.homeProcessedEvents = {}
         self.awayProcessedEvents = {}
 
@@ -505,7 +505,7 @@ class Match():
             if teamMatch:
                 self.updateTeamMatch(playerOffID, oldPosition, teamMatch, home)
 
-            self.addPlayerToLineup(playerOnID, playerOffID, newPosition, subs, lineup, teamMatch, home)
+            self.addPlayerToLineup(playerOnID, playerOffID, newPosition, oldPosition, subs, lineup, teamMatch, home)
         
         if teamMatch:
             return event
@@ -641,7 +641,7 @@ class Match():
 
         return playerID  # No substitution event found for the player
 
-    def addPlayerToLineup(self, playerOnID, playerOffID, playerPosition, subs, lineup, teamMatch, home, managing_team = False):
+    def addPlayerToLineup(self, playerOnID, playerOffID, playerPosition, posOff, subs, lineup, teamMatch, home, managing_event = None):
 
         # remove the player from the subs list
         for playerID in subs:
@@ -649,8 +649,13 @@ class Match():
                 subs.remove(playerID)
                 break
 
-        if not managing_team:
+        if not managing_event:
             lineup[playerPosition] = playerOnID # add the player on to the lineup
+        else:
+            managing_event["player_on"] = playerOnID
+            managing_event["new_position"] = playerPosition
+            managing_event["player_off"] = playerOffID
+            managing_event["old_position"] = posOff
 
         if teamMatch:
             teamMatch.updateSubFrame(home, playerOnID, playerOffID)
@@ -664,7 +669,7 @@ class Match():
 
             frame.removeFitness()
 
-            if not managing_team:
+            if not managing_event:
                 playerOn = Players.get_player_by_id(playerOnID)
                 if home:
                     teamMatch.homeLineupPitch.addPlayer(playerPosition, playerOn.last_name)

@@ -565,8 +565,6 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
     events = ["nothing", "shot", "shot on target", "goal"]
     probs  = [pNothing, pShotOff, pShotSaved, pGoal]
 
-    print(probs)
-
     return random.choices(events, weights = probs, k = 1)[0]
 
 def foulChances(avgSharpnessWthKeeper, severity):

@@ -1067,7 +1067,7 @@ class MatchDay(ctk.CTkFrame):
                 pitch = self.homeLineupPitch if self.home else self.awayLineupPitch
                 playersFrame = self.homePlayersFrame if self.home else self.awayPlayersFrame
 
-                pitch.removePlayer(self.injuredPosition)
+                pitch.removePlayer(self.injuredPosition, Players.get_player_by_id(self.injuredPlayer.id).last_name)
                 lineup.pop(self.injuredPosition)
                 self.teamSubstitutes.append(self.injuredPlayer.id)
                 finalLineup.append((self.injuredPosition, self.injuredPlayer.id))
@@ -1475,19 +1475,32 @@ class MatchDay(ctk.CTkFrame):
         pitch = self.homeLineupPitch if self.home else self.awayLineupPitch
 
         ## Adding / removing players from the lineup and lineup pitch (checking differences between startTeamLineup and teamLineup)
-        for position, playerID in self.startTeamLineup.items(): # changing a player's position 
+        for position, playerID in self.startTeamLineup.items():
             if position in self.teamLineup and playerID != self.teamLineup[position]:
+                # Swapping positions of two players
                 lineupPlayer = Players.get_player_by_id(self.teamLineup[position])
-                pitch.removePlayer(position)
-                pitch.addPlayer(position, lineupPlayer.last_name)
+                oldPosition = [pos for pos, pid in self.startTeamLineup.items() if pid == self.teamLineup[position]][0]
+                pitch.movePlayer(oldPosition, position, lineupPlayer.last_name)
                 
                 lineup[position] = self.teamLineup[position]
-            elif position not in self.teamLineup: # removing a player from the lineup
-                pitch.removePlayer(position)
-                lineup.pop(position)
+            elif position not in self.teamLineup: 
+                # removing a player from the lineup
+                lineupPlayer = Players.get_player_by_id(playerID)
+                if playerID in self.teamLineup.values():
+                    # player has been moved to another position
+                    lineup.pop(position)
+                    newPosition = [pos for pos, pid in self.teamLineup.items() if pid == playerID][0]
+                    lineup[newPosition] = playerID
+
+                    pitch.movePlayer(position, newPosition, lineupPlayer.last_name)
+                else:
+                    # player has been taken off the pitch
+                    pitch.removePlayer(position, lineupPlayer.last_name)
+                    lineup.pop(position)
 
         for position, playerID in list(self.teamLineup.items()):
-            if position not in self.startTeamLineup: # adding a player to the lineup
+            if position not in self.startTeamLineup and playerID not in self.startTeamLineup.values(): 
+                # adding a new player to the lineup
                 player = Players.get_player_by_id(playerID)
                 pitch.addPlayer(position, player.last_name)
                 lineup[position] = playerID
@@ -1518,7 +1531,7 @@ class MatchDay(ctk.CTkFrame):
                     "extra": True if self.halfTime else False
                 }
 
-            ## Substitution events
+            ## Populating the events with the correct players
             for i, (positionOff, playerOffID) in enumerate(list(self.playersOff.items()), 1):
                 event = events[times[i - 1]]
                 finalLineup.append((positionOff, playerOffID))
@@ -1827,6 +1840,7 @@ class MatchDay(ctk.CTkFrame):
             
             events = self.matchFrame.matchInstance.homeProcessedEvents if home else self.matchFrame.matchInstance.awayProcessedEvents
             playerID = event["player"] if event["type"] != "substitution" else event["player_on"]
+            playerData = Players.get_player_by_id(playerID)
 
             # Find the player (value) position (key) from the lineup
             position = list(lineup.keys())[list(lineup.values()).index(playerID)]
@@ -1834,7 +1848,7 @@ class MatchDay(ctk.CTkFrame):
             srcWB.thumbnail((12, 12))
             image = ImageTk.PhotoImage(srcWB)
             num = self.countPlayerEvents(playerID, events, event["type"])
-            pitch.addIcon(EVENTS_TO_ICONS[event["type"]], image, position, num)
+            pitch.addIcon(EVENTS_TO_ICONS[event["type"]], image, position, playerData.last_name, num)
 
             if event["type"] == "goal":
                 playerID = event["assister"]
@@ -1843,7 +1857,7 @@ class MatchDay(ctk.CTkFrame):
                 srcWB2.thumbnail((12, 12))
                 image = ImageTk.PhotoImage(srcWB2)
                 num = self.countPlayerEvents(playerID, events, "assister")
-                pitch.addIcon(EVENTS_TO_ICONS["assist"], image, position, num)
+                pitch.addIcon(EVENTS_TO_ICONS["assist"], image, position, playerData.last_name, num)
 
     def countPlayerEvents(self, player_id, events, event_type):
         group = EVENT_GROUPS.get(event_type, [event_type])

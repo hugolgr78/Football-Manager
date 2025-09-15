@@ -598,12 +598,29 @@ def injuryChances(avgFitness):
     return random.choices(events, weights = probs, k = 1)[0]
 
 def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness):
-    from data.database import Players
-
     subsAvailable = MAX_SUBS - subsMade
     if subsAvailable <= 0:
         return []
 
+    candidates = get_sub_candidates(lineup, currMinute, events, fitness)
+
+    if not candidates:
+        return []
+
+    # sort lowest fitness first
+    candidates.sort(key = lambda x: fitness[x[1]])
+
+    # how many subs
+    outcomes = [1, 2, 3]
+    weights = [0.65, 0.25, 0.10]
+    num_to_sub = random.choices(outcomes, weights=weights, k=1)[0]
+    num_to_sub = min(num_to_sub, subsAvailable, len(candidates))
+
+    chosen = find_substitute(lineup, candidates, subs, num_to_sub)
+
+    return chosen
+
+def get_sub_candidates(lineup, currMinute, events, fitness):
     candidates = []
     for pos, playerID in lineup.items():
         played_minutes = currMinute
@@ -618,20 +635,12 @@ def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness):
             if prob > 0:
                 candidates.append((prob, playerID, pos))
 
-    if not candidates:
-        return []
+    return candidates
 
-    # sort lowest fitness first
-    candidates.sort(key=lambda x: fitness[x[1]])
-
-    # how many subs
-    outcomes = [1, 2, 3]
-    weights = [0.65, 0.25, 0.10]
-    num_to_sub = random.choices(outcomes, weights=weights, k=1)[0]
-    num_to_sub = min(num_to_sub, subsAvailable, len(candidates))
+def find_substitute(lineup, candidates, subs, num_to_sub):
+    from data.database import Players
 
     chosen = []
-
     # make substitutions
     for prob, playerID, pos in candidates:
         if len(chosen) >= num_to_sub:

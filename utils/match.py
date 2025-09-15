@@ -513,8 +513,9 @@ class Match():
             return event
 
     def updateTeamMatch(self, playerOffID, oldPosition, teamMatch, home):
+        playerData = Players.get_player_by_id(playerOffID)
         if home:
-            teamMatch.homeLineupPitch.removePlayer(oldPosition)
+            teamMatch.homeLineupPitch.removePlayer(oldPosition, playerData.last_name)
             frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerOffID]
 
             if len(frame) == 0:
@@ -524,7 +525,7 @@ class Match():
 
             frame.removeFitness()
         else:
-            teamMatch.awayLineupPitch.removePlayer(oldPosition)
+            teamMatch.awayLineupPitch.removePlayer(oldPosition, playerData.last_name)
             frame = [f for f in teamMatch.awayPlayersFrame.winfo_children() if f.playerID == playerOffID]
 
             if len(frame) == 0:
@@ -551,12 +552,9 @@ class Match():
 
             if teamMatch:
                 if home:
-                    teamMatch.homeLineupPitch.removePlayer(newKeeperPosition)
-                    teamMatch.homeLineupPitch.addPlayer("Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
+                    teamMatch.homeLineupPitch.movePlayer(newKeeperPosition, "Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
                 else:
-                    teamMatch.awayLineupPitch.removePlayer(newKeeperPosition)
-                    teamMatch.awayLineupPitch.addPlayer("Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
-
+                    teamMatch.awayLineupPitch.movePlayer(newKeeperPosition, "Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
         else:
             self.createSubEvent(home, lineup, players_dict, processedEvents, time, events, None, subs, keeperSub = True)
 

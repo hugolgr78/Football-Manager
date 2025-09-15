@@ -184,16 +184,63 @@ class MatchProfile(ctk.CTkFrame):
         allHomeGoalPlayers = list(allHomeGoalPlayers.keys())
         allAwayGoalPlayers = list(allAwayGoalPlayers.keys())
     
+        # Helper: weight an entry (extra-time entries count as 2, regular as 1, (OG) as 1)
+        def entry_weight(entry):
+            try:
+                if entry == "(OG)":
+                    return 1
+                # treat strings like "45+2'" or numeric-like values; look for '+' in the text
+                if "+" in str(entry):
+                    return 2
+            except Exception:
+                pass
+            return 1
+
+        # Pack a list of time entries into chunks using capacities (first line and subsequent lines)
+        def pack_weighted(entries, first_cap, subsequent_cap):
+            chunks = []
+            cap = first_cap
+            current = []
+            remaining = cap
+            for item in entries:
+                w = entry_weight(item)
+                # If this single item is heavier than the cap, force it into its own line
+                if w > cap and not current:
+                    chunks.append([item])
+                    # after first line, switch to subsequent cap
+                    cap = subsequent_cap
+                    remaining = cap
+                    current = []
+                    continue
+
+                if w <= remaining:
+                    current.append(item)
+                    remaining -= w
+                else:
+                    # start new chunk
+                    chunks.append(current)
+                    current = [item]
+                    cap = subsequent_cap
+                    remaining = cap - w
+
+            if current:
+                chunks.append(current)
+
+            return chunks
+
         # Calculate events considering multi-line players count as multiple events
         homeEventCount = 0
         for player in allHomeGoalPlayers:
+            # Build the display entries as they will be shown (times with apostrophes, and (OG) where applicable)
             if player in homeGoals:
-                goalCount = len(homeGoals[player])
-                # Regular goals - use normal limits
+                entries = [str(t) + "'" for t in homeGoals[player]]
             else:
-                # Own goals have times + separate (OG) line
-                goalCount = len(homeOwnGoals[player]) + 1  # +1 for the (OG) line
-            
+                entries = [str(t) + "'" for t in homeOwnGoals[player]]
+                entries.append("(OG)")
+
+            # Count weighted entries (each extra-time entry counts as 2)
+            goalCount = sum(entry_weight(e) for e in entries)
+
             # Calculate how many lines this player needs
             if goalCount <= maxTimesFirstLine:
                 linesNeeded = 1
@@ -201,18 +248,19 @@ class MatchProfile(ctk.CTkFrame):
                 remainingGoals = goalCount - maxTimesFirstLine
                 additionalLines = (remainingGoals + maxTimesSubsequentLines - 1) // maxTimesSubsequentLines
                 linesNeeded = 1 + additionalLines
+
             homeEventCount += linesNeeded
 
         awayEventCount = 0
         for player in allAwayGoalPlayers:
             if player in awayGoals:
-                goalCount = len(awayGoals[player])
-                # Regular goals - use normal limits
+                entries = [str(t) + "'" for t in awayGoals[player]]
             else:
-                # Own goals have times + separate (OG) line
-                goalCount = len(awayOwnGoals[player]) + 1  # +1 for the (OG) line
-            
-            # Calculate how many lines this player needs
+                entries = [str(t) + "'" for t in awayOwnGoals[player]]
+                entries.append("(OG)")
+
+            goalCount = sum(entry_weight(e) for e in entries)
+
             if goalCount <= maxTimesFirstLine:
                 linesNeeded = 1
             else:
@@ -286,17 +334,8 @@ class MatchProfile(ctk.CTkFrame):
                     # Add (OG) as a separate "time" entry for display
                     homeTimeStrings.append("(OG)")
                 
-                # Split goals using the normal limits
-                goalChunks = []
-                if len(homeTimeStrings) <= maxTimesFirstLine:
-                    goalChunks = [homeTimeStrings]
-                else:
-                    # First chunk: use maxTimesFirstLine
-                    goalChunks.append(homeTimeStrings[:maxTimesFirstLine])
-                    # Remaining chunks: use maxTimesSubsequentLines each
-                    remaining = homeTimeStrings[maxTimesFirstLine:]
-                    for i in range(0, len(remaining), maxTimesSubsequentLines):
-                        goalChunks.append(remaining[i:i + maxTimesSubsequentLines])
+                # Split goals using weighted packing so extra-time entries take 2 slots
+                goalChunks = pack_weighted(homeTimeStrings, maxTimesFirstLine, maxTimesSubsequentLines)
                 
                 for lineIndex, chunk in enumerate(goalChunks):
                     if lineIndex == 0:
@@ -337,17 +376,8 @@ class MatchProfile(ctk.CTkFrame):
                     # Add (OG) as a separate "time" entry for display
                     awayTimeStrings.append("(OG)")
                 
-                # Split goals using the normal limits
-                goalChunks = []
-                if len(awayTimeStrings) <= maxTimesFirstLine:
-                    goalChunks = [awayTimeStrings]
-                else:
-                    # First chunk: use maxTimesFirstLine
-                    goalChunks.append(awayTimeStrings[:maxTimesFirstLine])
-                    # Remaining chunks: use maxTimesSubsequentLines each
-                    remaining = awayTimeStrings[maxTimesFirstLine:]
-                    for i in range(0, len(remaining), maxTimesSubsequentLines):
-                        goalChunks.append(remaining[i:i + maxTimesSubsequentLines])
+                # Split goals using weighted packing so extra-time entries take 2 slots
+                goalChunks = pack_weighted(awayTimeStrings, maxTimesFirstLine, maxTimesSubsequentLines)
 
                 for lineIndex, chunk in enumerate(goalChunks):
                     if lineIndex == 0:

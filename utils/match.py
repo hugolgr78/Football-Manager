@@ -718,7 +718,7 @@ class Match():
 
         scorerFlag = False
         for _, event in events.items():
-            if event["player"] == playerID:
+            if "player" in event and event["player"] == playerID:
                 if event["type"] in EVENT_RATINGS:
                     rating += random.choice(EVENT_RATINGS[event["type"]])
                     if event["type"] in ["goal", "penalty_goal"]:

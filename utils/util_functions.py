@@ -516,30 +516,45 @@ def fitnessWeight(p, fitness):
 
 def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
     attackRatio = attackingLevel / max(1, defendingLevel)
-    attackModifier = (avgSharpness / 100 + avgMorale / 100) / 2
+    attackModifier = min(((avgSharpness / 100 + avgMorale / 100)) ** 0.5, 1.2)
+
+    # Dampening factor so even matchups (attackRatio ~= 1) produce lower goal
+    # probabilities. ratio_factor is in (0..1), ~0.5 for attackRatio==1.
+    ratio_factor = attackRatio / (attackRatio + 1) if attackRatio > 0 else 0.5
+
+    # Make attackRatio more influential than attackModifier. Use a weighted
+    # combination so that attackRatio dominates the effective attacking input.
+    weight_ratio = 0.75
+    weight_modifier = 1 - weight_ratio
+    effective_attack = attackRatio * weight_ratio + attackModifier * weight_modifier
 
     if oppKeeper:
         if oppKeeper.position == "goalkeeper":
             keeperModifier = (oppKeeper.current_ability / 200) * (oppKeeper.sharpness / 100)
 
-            shot_base = BASE_SHOT * attackRatio * attackModifier
-            shotProb = min(max(shot_base, 0.05), MAX_SHOT_PROB)
+            # Reduce keeper impact slightly on shot/on-target but keep it strong
+            shot_base = BASE_SHOT * effective_attack
+            shotProb = shot_base * (1 - keeperModifier * 0.4)
+            shotProb = min(max(shotProb, 0.05), MAX_SHOT_PROB)
 
-            onTarget_base = BASE_ON_TARGET * attackModifier
-            onTargetProb = min(max(onTarget_base, 0.25), MAX_TARGET_PROB)
+            onTarget_base = BASE_ON_TARGET * effective_attack
+            onTargetProb = onTarget_base * (1 - keeperModifier * 0.4)
+            onTargetProb = min(max(onTargetProb, 0.20), MAX_TARGET_PROB)
 
-            goal_base = BASE_GOAL * attackModifier
+            # Damp goal probability for even matchups via ratio_factor and scale
+            goal_base = BASE_GOAL * effective_attack * ratio_factor
             goalProb = goal_base * (1 - keeperModifier)
-            goalProb = min(max(goalProb, 0.05), MAX_GOAL_PROB)
+            goalProb = min(max(goalProb, 0.01), MAX_GOAL_PROB)
         else:
-            # Outfield player in goal
-            shotProb = min(max(BASE_SHOT * attackRatio * attackModifier * 1.2, 0.15), 0.7)
-            onTargetProb = min(max(BASE_ON_TARGET * attackModifier * 1.2, 0.40), 0.8)
-            goalProb = min(max(BASE_GOAL * attackModifier * 1.5, 0.50), 0.9)
+            # Outfield player in goal - use effective_attack so ratio remains influential
+            shotProb = min(max(BASE_SHOT * effective_attack * 1.2, 0.15), 0.7)
+            onTargetProb = min(max(BASE_ON_TARGET * effective_attack * 1.2, 0.40), 0.8)
+            goalProb = min(max(BASE_GOAL * effective_attack * 1.5, 0.50), 0.9)
     else:
-        shotProb = min(max(BASE_SHOT * attackRatio * attackModifier * 1.5, 0.25), 0.75)
-        onTargetProb = min(max(BASE_ON_TARGET * attackModifier * 1.5, 0.60), 0.85)
-        goalProb = min(max(BASE_GOAL * attackModifier * 2.0, 0.80), 0.95)
+        # No keeper present: use effective_attack to weight ratio higher
+        shotProb = min(max(BASE_SHOT * effective_attack * 1.5, 0.25), 0.75)
+        onTargetProb = min(max(BASE_ON_TARGET * effective_attack * 1.5, 0.60), 0.85)
+        goalProb = min(max(BASE_GOAL * effective_attack * 2.0, 0.80), 0.95)
 
     # Final distribution
     pNothing   = 1 - shotProb
@@ -549,6 +564,8 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
 
     events = ["nothing", "shot", "shot on target", "goal"]
     probs  = [pNothing, pShotOff, pShotSaved, pGoal]
+
+    print(probs)
 
     return random.choices(events, weights = probs, k = 1)[0]
 
@@ -581,8 +598,6 @@ def foulChances(avgSharpnessWthKeeper, severity):
 
     events = ["nothing", "foul", "yellow_card", "red_card"]
     probs = [pNothing, foulProb, yellowProb, redProb]
-
-    print(probs)
 
     return random.choices(events, weights = probs, k = 1)[0]
 

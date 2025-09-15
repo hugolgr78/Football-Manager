@@ -553,11 +553,12 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
     return random.choices(events, weights = probs, k = 1)[0]
 
 def foulChances(avgSharpnessWthKeeper, severity):
-    severity_map = {"low": 0.95, "medium": 1.0, "high": 1.05}
+    severity_map = {"low": 0.8, "medium": 1.0, "high": 1.2}
     severity = severity_map.get(severity, 1.0)
 
     gamma = 0.5
-    sf = ((100.0 - max(0.0, min(99.9, avgSharpnessWthKeeper))) / 20.0) ** gamma
+    sf = ((100.0 - avgSharpnessWthKeeper) / 50.0) ** gamma
+    sf = max(0.5, min(sf, 2.0))  # keep it realistic
 
     foulProb   = BASE_FOUL   * sf
     yellowProb = BASE_YELLOW * sf * severity
@@ -580,6 +581,8 @@ def foulChances(avgSharpnessWthKeeper, severity):
 
     events = ["nothing", "foul", "yellow_card", "red_card"]
     probs = [pNothing, foulProb, yellowProb, redProb]
+
+    print(probs)
 
     return random.choices(events, weights = probs, k = 1)[0]
 

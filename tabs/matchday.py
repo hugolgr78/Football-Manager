@@ -591,15 +591,6 @@ class MatchDay(ctk.CTkFrame):
                     print(self.matchFrame.matchInstance.homeStats)
                     print(self.matchFrame.matchInstance.awayStats)
 
-            if total_seconds % TICK == 0 and self.timeLabel.cget("text") != "HT":
-                self.generateEvents("home", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
-                self.generateEvents("away", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
-
-                for frame in self.otherMatchesFrame.winfo_children():
-                    if frame.matchInstance:
-                        self.generateEvents("home", matchInstance = frame.matchInstance)
-                        self.generateEvents("away", matchInstance = frame.matchInstance)
-
             ## ----------- substitution end ------------
             if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
                 self.substitutionButton.configure(state = "disabled")
@@ -670,6 +661,16 @@ class MatchDay(ctk.CTkFrame):
 
                 self.matchDataFrame.update_idletasks()
                 self.matchDataFrame._parent_canvas.yview_moveto(1)
+
+            if total_seconds % TICK == 0 and self.timeLabel.cget("text") != "HT":
+                self.generateEvents("home", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
+                self.generateEvents("away", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
+
+                for frame in self.otherMatchesFrame.winfo_children():
+                    if frame.matchInstance:
+                        self.generateEvents("home", matchInstance = frame.matchInstance)
+                        self.generateEvents("away", matchInstance = frame.matchInstance)
+
 
             ## ----------- managing team match ------------
             for event_time, event_details in list(self.matchFrame.matchInstance.homeEvents.items()):
@@ -852,7 +853,10 @@ class MatchDay(ctk.CTkFrame):
 
         subsChosenCount = 0
         for event in eventsToAdd:
-            eventTotalSecs = random.randint(currTotalSecs + 10, endTotalSecs)
+            try:
+                eventTotalSecs = random.randint(currTotalSecs + 10, endTotalSecs)
+            except ValueError:
+                break
 
             # Convert back to mm:ss
             eventMin = eventTotalSecs // 60

@@ -28,7 +28,7 @@ class Match():
         self.awaySubs = 0
 
         self.homeEvents = {}
-        self.awayEvents = {"82:2": {"type": "injury", "extra": False}}
+        self.awayEvents = {}
         self.homeProcessedEvents = {}
         self.awayProcessedEvents = {}
 
@@ -304,7 +304,10 @@ class Match():
 
         subsChosenCount = 0
         for event in eventsToAdd:
-            eventTotalSecs = random.randint(currTotalSecs + 10, endTotalSecs)
+            try:
+                eventTotalSecs = random.randint(currTotalSecs + 10, endTotalSecs)
+            except ValueError:
+                break
 
             # Convert back to mm:ss
             eventMin = eventTotalSecs // 60
@@ -423,9 +426,7 @@ class Match():
             event["player"] = playerID
 
         elif event["type"] == "yellow_card":
-
             weights = [ownGoalFoulWeight(player) for player in players_dict.values()]
-
             playerID = random.choices(list(players_dict.values()), weights = weights, k = 1)[0].id
             event["player"] = playerID
 
@@ -443,9 +444,10 @@ class Match():
                         self.updateTeamMatch(playerID, playerPosition, teamMatch, home)
                     
                     if playerPosition == "Goalkeeper" and not managing_team:
-                        self.keeperSub(subsCount, lineup, players_dict, processedEvents, time, events, teamMatch, home)
+                        self.keeperSub(subsCount, lineup, players_dict, processedEvents, time, events, teamMatch, subs, home)
 
         elif event["type"] == "red_card":
+
             redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
             players = [player for player in players_dict.values() if player.position == redCardPosition]
 
@@ -468,7 +470,7 @@ class Match():
                 self.updateTeamMatch(playerID, playerPosition, teamMatch, home)
 
             if playerPosition == "Goalkeeper" and not managing_team:
-                self.keeperSub(subsCount, lineup, players_dict, processedEvents, time, events, teamMatch, home)
+                self.keeperSub(subsCount, lineup, players_dict, processedEvents, time, events, teamMatch, subs, home)
 
         elif event["type"] == "injury":
 

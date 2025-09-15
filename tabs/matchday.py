@@ -1475,35 +1475,52 @@ class MatchDay(ctk.CTkFrame):
         pitch = self.homeLineupPitch if self.home else self.awayLineupPitch
 
         ## Adding / removing players from the lineup and lineup pitch (checking differences between startTeamLineup and teamLineup)
-        for position, playerID in self.startTeamLineup.items():
-            if position in self.teamLineup and playerID != self.teamLineup[position]:
-                # Swapping positions of two players
-                lineupPlayer = Players.get_player_by_id(self.teamLineup[position])
-                oldPosition = [pos for pos, pid in self.startTeamLineup.items() if pid == self.teamLineup[position]][0]
-                pitch.movePlayer(oldPosition, position, lineupPlayer.last_name)
-                
-                lineup[position] = self.teamLineup[position]
-            elif position not in self.teamLineup: 
-                # removing a player from the lineup
-                lineupPlayer = Players.get_player_by_id(playerID)
-                if playerID in self.teamLineup.values():
-                    # player has been moved to another position
-                    lineup.pop(position)
-                    newPosition = [pos for pos, pid in self.teamLineup.items() if pid == playerID][0]
-                    lineup[newPosition] = playerID
+        for position, playerID in list(self.startTeamLineup.items()):
+            if position in self.teamLineup:
+                newPlayerID = self.teamLineup[position]
 
+                if playerID != newPlayerID:
+                    # Case 1: Player swap (position change)
+                    if newPlayerID in self.startTeamLineup.values():
+                        # Swapping positions
+                        oldPosition = [pos for pos, pid in self.startTeamLineup.items() if pid == newPlayerID][0]
+                        lineupPlayer = Players.get_player_by_id(newPlayerID)
+                        pitch.movePlayer(oldPosition, position, lineupPlayer.last_name)
+
+                        lineup[position] = newPlayerID
+                    else:
+                        # Case 2: Old player removed, new player added
+                        oldPlayer = Players.get_player_by_id(playerID)
+                        pitch.removePlayer(position, oldPlayer.last_name)
+                        lineup.pop(position)
+
+                        newPlayer = Players.get_player_by_id(newPlayerID)
+                        pitch.addPlayer(position, newPlayer.last_name)
+                        lineup[position] = newPlayerID
+            else:
+                # Case 3: Player removed or moved elsewhere
+                if playerID in self.teamLineup.values():
+                    # Player moved to another position
+                    newPosition = [pos for pos, pid in self.teamLineup.items() if pid == playerID][0]
+                    lineupPlayer = Players.get_player_by_id(playerID)
                     pitch.movePlayer(position, newPosition, lineupPlayer.last_name)
+
+                    lineup.pop(position)
+                    lineup[newPosition] = playerID
                 else:
-                    # player has been taken off the pitch
+                    # Player taken off the pitch
+                    lineupPlayer = Players.get_player_by_id(playerID)
                     pitch.removePlayer(position, lineupPlayer.last_name)
                     lineup.pop(position)
 
-        for position, playerID in list(self.teamLineup.items()):
-            if position not in self.startTeamLineup and playerID not in self.startTeamLineup.values(): 
-                # adding a new player to the lineup
+        # Handle brand new players
+        for position, playerID in self.teamLineup.items():
+            if position not in self.startTeamLineup and playerID not in self.startTeamLineup.values():
+                # Case 4: New player added
                 player = Players.get_player_by_id(playerID)
                 pitch.addPlayer(position, player.last_name)
                 lineup[position] = playerID
+
 
         if self.currentSubs != 0:
             times = []
@@ -1800,6 +1817,7 @@ class MatchDay(ctk.CTkFrame):
         elif event["type"] == "penalty_miss":
             src = Image.open("Images/missed_penalty.png")
             srcWB = Image.open("Images/missed_penalty_wb.png")
+            srcWB2 = Image.open("Images/saved_penalty_wb.png")
             subText = "Missed Penalty"
         elif event["type"] == "injury":
             src = Image.open("Images/injury.png")
@@ -1852,18 +1870,35 @@ class MatchDay(ctk.CTkFrame):
 
             if event["type"] == "goal":
                 playerID = event["assister"]
+                playerData = Players.get_player_by_id(playerID)
                 position = list(lineup.keys())[list(lineup.values()).index(playerID)]
 
                 srcWB2.thumbnail((12, 12))
                 image = ImageTk.PhotoImage(srcWB2)
                 num = self.countPlayerEvents(playerID, events, "assister")
                 pitch.addIcon(EVENTS_TO_ICONS["assist"], image, position, playerData.last_name, num)
+            elif event["type"] == "penalty_miss":
+                pitch = self.awayLineupPitch if home else self.homeLineupPitch
+                playerID = event["keeper"]
+                playerData = Players.get_player_by_id(playerID)
+
+                srcWB2.thumbnail((12, 12))
+                image = ImageTk.PhotoImage(srcWB2)
+                num = self.countPlayerEvents(playerID, events, event["type"])
+                pitch.addIcon(EVENTS_TO_ICONS[event["type"]], image, "Goalkeeper", playerData.last_name, num)
 
     def countPlayerEvents(self, player_id, events, event_type):
         group = EVENT_GROUPS.get(event_type, [event_type])
 
         if event_type == "assister":
             return sum(1 for e in events.values() if e.get("assister") == player_id)
+        elif event_type == "penalty_miss":
+            return sum(
+                1
+                for e in events.values()
+                if e.get("type") == "penalty_miss"
+                and (e.get("player") == player_id or e.get("keeper") == player_id)
+            )
         else:
             return sum(
                 1 for e in events.values()

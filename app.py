@@ -65,11 +65,17 @@ class FootballManager(ctk.CTk):
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         signal.signal(signal.SIGINT, self.on_close)
+
+        self.creatingManager = False
         self.loginMenu = StartMenu(self)
 
         self.mainloop()
 
     def on_close(self, *args):
+
+        if self.creatingManager:
+            return
+
         # List all files in the data folder ending with _copy.db
         copy_files = [f for f in os.listdir("data") if f.endswith("_copy.db")]
 

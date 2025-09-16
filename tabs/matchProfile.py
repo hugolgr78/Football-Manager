@@ -189,7 +189,6 @@ class MatchProfile(ctk.CTkFrame):
             try:
                 if entry == "(OG)":
                     return 1
-                # treat strings like "45+2'" or numeric-like values; look for '+' in the text
                 if "+" in str(entry):
                     return 2
             except Exception:

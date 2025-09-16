@@ -865,13 +865,7 @@ class MatchDay(ctk.CTkFrame):
 
             if event == "substitution":
                 matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player_off": subsChosen[subsChosenCount][0], "player_on": subsChosen[subsChosenCount][2], "old_position": subsChosen[subsChosenCount][1], "new_position": subsChosen[subsChosenCount][3], "injury": False}
-                subsCount += 1
                 subsChosenCount += 1
-
-                if side == "home":
-                    matchInstance.homeSubs = subsCount
-                else:
-                    matchInstance.awaySubs = subsCount
             elif event == "penalty_miss":
                 matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"] if "Goalkeeper" in oppLineup else None}
             else:

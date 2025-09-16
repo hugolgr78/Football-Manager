@@ -5417,9 +5417,11 @@ def getSubstitutes(teamID, lineup, compID):
                     covered_positions.add(specific_position)
 
     # --- SAFETY NET: Fill remaining subs if fewer than 7 ---
-    all_available_ids = [p.id for p in allPlayers if p.id not in usedPlayers and p.id not in substitutes]
-    while len(substitutes) < 7 and all_available_ids:
-        substitutes.append(all_available_ids.pop(0))
+    all_available = [p for p in allPlayers if p.id not in usedPlayers and p.id not in substitutes]
+    all_available.sort(key = effective_ability, reverse = True)
+    while len(substitutes) < 7 and all_available:
+        sub = all_available.pop(0)
+        substitutes.append(sub.id)
 
     # Final fallback: fill remaining slots with youth players if still not full
     while len(substitutes) < 7:

@@ -551,6 +551,49 @@ TEMPLATES_2 = [
     ["Intense Training", "Team Building"]
 ]
 
+MATCH_STATS = [
+    "Possession",
+    "Shots",
+    "Shots on target",
+    "Big chances created",
+    "Big chances missed",
+    "Shots in the box",
+    "Shots outside the box",
+    "Shots blocked",
+    "Shots on woodwork",
+    "Passes",
+    "Tackles",
+    "Interceptions",
+    "Saves",
+    "Fouls",
+    "Yellow cards",
+    "Red cards"
+]
+
+PLAYER_STATS = [
+    # "Shots",
+    # "Shots on target",
+    "Big chances created",
+    "Big chances missed",
+    "Shots in the box",
+    "Shots outside the box",
+    "Passes",
+    "Tackles",
+    "Interceptions",
+    # "Saves",
+    "Fouls"
+]
+
+CARD_FOUL_CHANCE = 0.7
+
+SHOT_CHANCES = {"Shots blocked": 0.3, "Shots on woodwork": 0.05, "wide": 0.65}
+SHOT_DIRECTION_CHANCES = {"Shots in the box": 0.7, "Shots outside the box": 0.3}
+DEFENSIVE_ACTIONS_CHANCES = {"Tackles": 0.0833, "Interceptions": 0.05, "nothing": 0.8667}
+
+SHOT_BIG_CHANCE = 0.3
+SHOT_TARGET_BIG_CHANCE = 0.5
+GOAL_BIG_CHANCE = 0.8
+
 from data.database import StatsManager
 
 STAT_FUNCTIONS = {

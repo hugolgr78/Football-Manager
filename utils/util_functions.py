@@ -562,7 +562,7 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
     pShotSaved = shotProb * onTargetProb * (1 - goalProb)
     pGoal      = shotProb * onTargetProb * goalProb
 
-    events = ["nothing", "shot", "shot on target", "goal"]
+    events = ["nothing", "Shots", "Shots on target", "goal"]
     probs  = [pNothing, pShotOff, pShotSaved, pGoal]
 
     return random.choices(events, weights = probs, k = 1)[0]
@@ -594,7 +594,7 @@ def foulChances(avgSharpnessWthKeeper, severity):
 
     pNothing = 1.0 - (foulProb + yellowProb + redProb)
 
-    events = ["nothing", "foul", "yellow_card", "red_card"]
+    events = ["nothing", "Fouls", "yellow_card", "red_card"]
     probs = [pNothing, foulProb, yellowProb, redProb]
 
     return random.choices(events, weights = probs, k = 1)[0]

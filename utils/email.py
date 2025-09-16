@@ -1148,7 +1148,7 @@ class CalendarEventsEmail():
 
         self.cellsFrame.place(relx = 0.05, rely = 0.25, anchor = "nw")
 
-        ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.65, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.68, anchor = "w")
 
         self.calendarButton = ctk.CTkButton(self.frame, text = "Go to Calendar", font = (APP_FONT_BOLD, 15), command = lambda: self.goToCalendar(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
         self.calendarButton.place(relx = 0.95, rely = 0.95, anchor = "se")

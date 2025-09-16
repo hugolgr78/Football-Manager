@@ -6,7 +6,6 @@ from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitc
 from utils.shouts import ShoutFrame
 from utils.util_functions import *
 import threading, time
-import concurrent.futures
 from PIL import Image, ImageTk
 import math
 
@@ -216,6 +215,7 @@ class MatchDay(ctk.CTkFrame):
     def addMatches(self):
         for match in self.matchDay:
             if match.home_id == self.team.id or match.away_id == self.team.id:
+                # TEAM MATCH
                 self.teamMatch = match
                 self.matchFrame = MatchDayMatchFrame(self.teamMatchFrame, match, TKINTER_BACKGROUND, 150, 400, imageSize = 70, relx =  0.5, rely =  0.03, anchor = "n", border_width = 3, border_color = GREY_BACKGROUND, pack = False)
                 
@@ -237,12 +237,7 @@ class MatchDay(ctk.CTkFrame):
                     self.matchFrame.matchInstance.homeStartLineup = self.teamLineup.copy()
                     self.matchFrame.matchInstance.homeFitness = {playerID: Players.get_player_by_id(playerID).fitness for playerID in list(self.teamLineup.values()) + self.teamSubstitutes}
             else:
-                frame = MatchDayMatchFrame(self.otherMatchesFrame, match, TKINTER_BACKGROUND, 60, 300)
-
-                if frame.matchInstance:
-                    frame.matchInstance.createTeamLineup(match.home_id, True)
-                    frame.matchInstance.createTeamLineup(match.away_id, False)
-                    frame.matchInstance.generateScore()
+                MatchDayMatchFrame(self.otherMatchesFrame, match, TKINTER_BACKGROUND, 60, 300)
 
     def addTime(self):
         self.timeLabel = ctk.CTkLabel(self.timeFrame, text = "00:00", font = (APP_FONT_BOLD, 50), fg_color = TKINTER_BACKGROUND)
@@ -250,7 +245,7 @@ class MatchDay(ctk.CTkFrame):
 
         self.extraTimeLabel = ctk.CTkLabel(self.timeFrame, text = "ET", font = (APP_FONT, 18), fg_color = TKINTER_BACKGROUND)
 
-        self.pauseButton = ctk.CTkButton(self.timeFrame, text = "Simulate", font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, command = self.simulateMatch)
+        self.pauseButton = ctk.CTkButton(self.timeFrame, text = "Kick-Off", font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, command = self.simulateMatch)
         self.pauseButton.place(relx = 0.5, rely = 0.8, anchor = "center")
 
     def addLineups(self):
@@ -282,8 +277,6 @@ class MatchDay(ctk.CTkFrame):
             player = Players.get_player_by_id(playerID)
             ctk.CTkLabel(oppSubFrame, text = player.first_name + " " + player.last_name, font = (APP_FONT, 10), fg_color = GREY_BACKGROUND).place(relx = 0.1, rely = 0.25 + 0.11 * i, anchor = "w")
             ctk.CTkLabel(oppSubFrame, text = player.specific_positions, font = (APP_FONT, 10), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.25 + 0.11 * i, anchor = "e")
-
-        self.matchFrame.matchInstance.generateScore(teamMatch = True, home = self.home)
 
     def addPlayerFrame(self, frame, playerID):
         frame = InGamePlayerFrame(frame, playerID, 220, 18, GREY_BACKGROUND)
@@ -364,19 +357,31 @@ class MatchDay(ctk.CTkFrame):
                     if frame.matchInstance:
                         for playerID, fitness in frame.matchInstance.homeFitness.items():
                             if fitness > 0 and playerID in frame.matchInstance.homeCurrentLineup.values():
-                                frame.matchInstance.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
+                                frame.matchInstance.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID), fitness)
+
+                                if frame.matchInstance.homeFitness[playerID] < 0:
+                                    frame.matchInstance.homeFitness[playerID] = 0
 
                         for playerID, fitness in frame.matchInstance.awayFitness.items():
                             if fitness > 0 and playerID in frame.matchInstance.awayCurrentLineup.values():
-                                frame.matchInstance.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
+                                frame.matchInstance.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID), fitness)
+
+                                if frame.matchInstance.awayFitness[playerID] < 0:
+                                    frame.matchInstance.awayFitness[playerID] = 0
 
                 for playerID, fitness in self.matchFrame.matchInstance.homeFitness.items():
                     if fitness > 0 and playerID in self.matchFrame.matchInstance.homeCurrentLineup.values():
-                        self.matchFrame.matchInstance.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
+                        self.matchFrame.matchInstance.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID), fitness)
+
+                        if self.matchFrame.matchInstance.homeFitness[playerID] < 0:
+                            self.matchFrame.matchInstance.homeFitness[playerID] = 0
 
                 for playerID, fitness in self.matchFrame.matchInstance.awayFitness.items():
                     if fitness > 0 and playerID in self.matchFrame.matchInstance.awayCurrentLineup.values():
-                        self.matchFrame.matchInstance.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID))
+                        self.matchFrame.matchInstance.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID), fitness)
+
+                        if self.matchFrame.matchInstance.awayFitness[playerID] < 0:
+                            self.matchFrame.matchInstance.awayFitness[playerID] = 0
 
                 if self.homePlayersFrame.winfo_ismapped():
                     for playerID in self.matchFrame.matchInstance.homeCurrentLineup.values():
@@ -583,6 +588,9 @@ class MatchDay(ctk.CTkFrame):
                         self.matchDataFrame.update_idletasks()
                         self.matchDataFrame._parent_canvas.yview_moveto(1)
 
+                    print(self.matchFrame.matchInstance.homeStats)
+                    print(self.matchFrame.matchInstance.awayStats)
+
             ## ----------- substitution end ------------
             if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
                 self.substitutionButton.configure(state = "disabled")
@@ -654,6 +662,16 @@ class MatchDay(ctk.CTkFrame):
                 self.matchDataFrame.update_idletasks()
                 self.matchDataFrame._parent_canvas.yview_moveto(1)
 
+            if total_seconds % TICK == 0 and self.timeLabel.cget("text") != "HT":
+                self.generateEvents("home", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
+                self.generateEvents("away", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
+
+                for frame in self.otherMatchesFrame.winfo_children():
+                    if frame.matchInstance:
+                        self.generateEvents("home", matchInstance = frame.matchInstance)
+                        self.generateEvents("away", matchInstance = frame.matchInstance)
+
+
             ## ----------- managing team match ------------
             for event_time, event_details in list(self.matchFrame.matchInstance.homeEvents.items()):
                 if event_time == str(minutes) + ":" + str(seconds) and event_time not in self.matchFrame.matchInstance.homeProcessedEvents:
@@ -695,11 +713,11 @@ class MatchDay(ctk.CTkFrame):
                             self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
 
                             if not self.home and event_details["type"] == "injury":
-                                self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
+                                self.substitution(forceSub = True, injuredPlayer = event_details["player"])
                             if not self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer = newEvent["player"], redCardPosition = newEvent["position"])
+                                self.substitution(redCardPlayer = event_details["player"], redCardPosition = event_details["position"])
 
-                            self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
+                            self.after(0, self.updateMatchDataFrame, event_details, event_time, False)
                     else:
                         if not (self.halfTime or self.fullTime):
                             if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
@@ -708,11 +726,11 @@ class MatchDay(ctk.CTkFrame):
                             self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
 
                             if not self.home and event_details["type"] == "injury":
-                                self.substitution(forceSub = True, injuredPlayer = newEvent["player"])
+                                self.substitution(forceSub = True, injuredPlayer = event_details["player"])
                             if not self.home and event_details["type"] == "red_card":
-                                self.substitution(redCardPlayer = newEvent["player"], redCardPosition = newEvent["position"])
+                                self.substitution(redCardPlayer = event_details["player"], redCardPosition = event_details["position"])
 
-                            self.after(0, self.updateMatchDataFrame, newEvent, event_time, False)
+                            self.after(0, self.updateMatchDataFrame, event_details, event_time, False)
 
             if self.halfTimeEnded:
                 self.timeLabel.configure(text = "HT")
@@ -723,6 +741,141 @@ class MatchDay(ctk.CTkFrame):
                 self.after(0, self.updateTimeLabel, minutes, seconds)
 
             time.sleep(self.speed)
+
+    def generateEvents(self, side, matchInstance = None, teamMatch = False):
+        eventsToAdd = []
+        statsToAdd = []
+
+        lineup = matchInstance.homeCurrentLineup if side == "home" else matchInstance.awayCurrentLineup
+        oppLineup = matchInstance.awayCurrentLineup if side == "home" else matchInstance.homeCurrentLineup
+        matchEvents = matchInstance.homeEvents if side == "home" else matchInstance.awayEvents
+        fitness = matchInstance.homeFitness if side == "home" else matchInstance.awayFitness
+        subsCount = matchInstance.homeSubs if side == "home" else matchInstance.awaySubs
+        stats = matchInstance.homeStats if side == "home" else matchInstance.awayStats
+        subs = matchInstance.homeCurrentSubs if side == "home" else matchInstance.awayCurrentSubs
+        events = matchInstance.homeProcessedEvents if side == "home" else matchInstance.awayProcessedEvents
+
+        sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
+        avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
+
+        if "Goalkeeper" in lineup:
+            avgSharpness = (sum(sharpness) - Players.get_player_by_id(lineup["Goalkeeper"]).sharpness) / (len(sharpness) - 1)
+        else:
+            avgSharpness = avgSharpnessWthKeeper
+
+        avgFitness = sum(fitness[playerID] for playerID in lineup.values()) / len(lineup)
+        
+        morale = [Players.get_player_by_id(playerID).morale for pos, playerID in lineup.items() if pos != "Goalkeeper"]
+        avgMorale = sum(morale) / len(morale)
+
+        oppKeeper = Players.get_player_by_id(oppLineup["Goalkeeper"]) if "Goalkeeper" in oppLineup else None
+
+        attackingPlayers = [playerID for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS]
+        defendingPlayers = [playerID for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS]
+
+        attackingLevel = teamStrength(attackingPlayers, role = "attack")
+        defendingLevel = teamStrength(defendingPlayers, role = "defend")
+
+        # ------------------ GOAL ------------------
+        event = goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper)
+
+        if event == "goal":
+
+            goalType = random.choices(list(GOAL_TYPE_CHANCES.keys()), weights = list(GOAL_TYPE_CHANCES.values()), k = 1)[0]
+
+            if goalType == "penalty":
+                if random.random() < PENALTY_SCORE_CHANCE or "Goalkeeper" not in oppLineup:
+                    goalType = "penalty_goal"
+                    self.matchFrame.matchInstance.appendScore(1, True if side == "home" else False)
+                else:
+                    goalType = "penalty_miss"
+            elif event == "own_goal":
+                self.matchFrame.matchInstance.appendScore(1, False if side == "home" else True)
+            else:
+                self.matchFrame.matchInstance.appendScore(1, True if side == "home" else False)
+
+            eventsToAdd.append(goalType)
+            statsToAdd.append("shot")
+            statsToAdd.append("shot on target")
+        elif event == "shot_on_target":
+            statsToAdd.append("shot")
+            statsToAdd.append(event)
+        elif event == "shot":
+            statsToAdd.append(event)
+
+        # ------------------ FOUL ------------------
+        event = foulChances(avgSharpnessWthKeeper, self.matchFrame.matchInstance.referee.severity)
+
+        if event in ["yellow_card", "red_card"]:
+            eventsToAdd.append(event)
+
+            # 70% chance of foul too
+            if random.random() < 0.7:
+                statsToAdd.append("foul")
+
+        elif event == "foul":
+            statsToAdd.append(event)
+
+        # ------------------ INJURY ------------------
+        event = injuryChances(avgFitness)
+
+        if event == "injury":
+            eventsToAdd.append(event)
+
+        # ------------------ SUBSTITUTIONS ------------------
+        if not teamMatch:
+            subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness)
+            for _ in range(len(subsChosen)):
+                eventsToAdd.append("substitution")
+
+        else:
+            if (self.home and side == "away") or (not self.home and side == "home"):
+                subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness)
+                for _ in range(len(subsChosen)):
+                    eventsToAdd.append("substitution")
+
+        # ------------------ TIMES and ADDING ------------------
+        currMin, currSec = map(int, self.timeLabel.cget("text").split(":"))
+        extraTime = self.halfTime or self.fullTime
+        
+        currTotalSecs = currMin * 60 + currSec
+        futureTotalSecs = currTotalSecs + 30
+
+        if extraTime:
+            maxMinute = self.matchFrame.matchInstance.extraTimeHalf if self.halfTime else self.matchFrame.matchInstance.extraTimeFull
+            finalMinute = 45 if self.halfTime else 90
+            maxTotalSecs = (finalMinute + maxMinute) * 60
+        else:
+            maxMinute = 45 if self.halfTime else 90
+            maxTotalSecs = maxMinute * 60
+
+        endTotalSecs = min(futureTotalSecs, maxTotalSecs)
+
+        subsChosenCount = 0
+        for event in eventsToAdd:
+            try:
+                eventTotalSecs = random.randint(currTotalSecs + 10, endTotalSecs)
+            except ValueError:
+                break
+
+            # Convert back to mm:ss
+            eventMin = eventTotalSecs // 60
+            eventSec = eventTotalSecs % 60
+            eventTime = f"{eventMin}:{eventSec:02d}"
+
+            if event == "substitution":
+                matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player_off": subsChosen[subsChosenCount][0], "player_on": subsChosen[subsChosenCount][2], "old_position": subsChosen[subsChosenCount][1], "new_position": subsChosen[subsChosenCount][3], "injury": False}
+                subsChosenCount += 1
+            elif event == "penalty_miss":
+                matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"] if "Goalkeeper" in oppLineup else None}
+            else:
+                matchEvents[eventTime] = {"type": event, "extra": extraTime}
+
+        for stat in statsToAdd:
+            if not stat in stats:
+                stats[stat] = 0
+
+            stats[stat] += 1
 
     def shouts(self):
 
@@ -908,7 +1061,7 @@ class MatchDay(ctk.CTkFrame):
                 pitch = self.homeLineupPitch if self.home else self.awayLineupPitch
                 playersFrame = self.homePlayersFrame if self.home else self.awayPlayersFrame
 
-                pitch.removePlayer(self.injuredPosition)
+                pitch.removePlayer(self.injuredPosition, Players.get_player_by_id(self.injuredPlayer.id).last_name)
                 lineup.pop(self.injuredPosition)
                 self.teamSubstitutes.append(self.injuredPlayer.id)
                 finalLineup.append((self.injuredPosition, self.injuredPlayer.id))
@@ -918,6 +1071,7 @@ class MatchDay(ctk.CTkFrame):
 
             else:
                 self.confirmButton.configure(state = "disabled")
+                self.cancelButton.configure(state = "disabled")
 
         self.addSubstitutePlayers()
 
@@ -1315,22 +1469,52 @@ class MatchDay(ctk.CTkFrame):
         pitch = self.homeLineupPitch if self.home else self.awayLineupPitch
 
         ## Adding / removing players from the lineup and lineup pitch (checking differences between startTeamLineup and teamLineup)
-        for position, playerID in self.startTeamLineup.items(): # changing a player's position 
-            if position in self.teamLineup and playerID != self.teamLineup[position]:
-                lineupPlayer = Players.get_player_by_id(self.teamLineup[position])
-                pitch.removePlayer(position)
-                pitch.addPlayer(position, lineupPlayer.last_name)
-                
-                lineup[position] = self.teamLineup[position]
-            elif position not in self.teamLineup: # removing a player from the lineup
-                pitch.removePlayer(position)
-                lineup.pop(position)
+        for position, playerID in list(self.startTeamLineup.items()):
+            if position in self.teamLineup:
+                newPlayerID = self.teamLineup[position]
 
-        for position, playerID in list(self.teamLineup.items()):
-            if position not in self.startTeamLineup: # adding a player to the lineup
+                if playerID != newPlayerID:
+                    # Case 1: Player swap (position change)
+                    if newPlayerID in self.startTeamLineup.values():
+                        # Swapping positions
+                        oldPosition = [pos for pos, pid in self.startTeamLineup.items() if pid == newPlayerID][0]
+                        lineupPlayer = Players.get_player_by_id(newPlayerID)
+                        pitch.movePlayer(oldPosition, position, lineupPlayer.last_name)
+
+                        lineup[position] = newPlayerID
+                    else:
+                        # Case 2: Old player removed, new player added
+                        oldPlayer = Players.get_player_by_id(playerID)
+                        pitch.removePlayer(position, oldPlayer.last_name)
+                        lineup.pop(position)
+
+                        newPlayer = Players.get_player_by_id(newPlayerID)
+                        pitch.addPlayer(position, newPlayer.last_name)
+                        lineup[position] = newPlayerID
+            else:
+                # Case 3: Player removed or moved elsewhere
+                if playerID in self.teamLineup.values():
+                    # Player moved to another position
+                    newPosition = [pos for pos, pid in self.teamLineup.items() if pid == playerID][0]
+                    lineupPlayer = Players.get_player_by_id(playerID)
+                    pitch.movePlayer(position, newPosition, lineupPlayer.last_name)
+
+                    lineup.pop(position)
+                    lineup[newPosition] = playerID
+                else:
+                    # Player taken off the pitch
+                    lineupPlayer = Players.get_player_by_id(playerID)
+                    pitch.removePlayer(position, lineupPlayer.last_name)
+                    lineup.pop(position)
+
+        # Handle brand new players
+        for position, playerID in self.teamLineup.items():
+            if position not in self.startTeamLineup and playerID not in self.startTeamLineup.values():
+                # Case 4: New player added
                 player = Players.get_player_by_id(playerID)
                 pitch.addPlayer(position, player.last_name)
                 lineup[position] = playerID
+
 
         if self.currentSubs != 0:
             times = []
@@ -1355,11 +1539,10 @@ class MatchDay(ctk.CTkFrame):
                     "player": None,
                     "player_off": None,
                     "player_on": None,
-                    "injury": False,
                     "extra": True if self.halfTime else False
                 }
 
-            ## Substitution events
+            ## Populating the events with the correct players
             for i, (positionOff, playerOffID) in enumerate(list(self.playersOff.items()), 1):
                 event = events[times[i - 1]]
                 finalLineup.append((positionOff, playerOffID))
@@ -1367,7 +1550,7 @@ class MatchDay(ctk.CTkFrame):
                 # Find the player in playersOn that suits the position of playerOff the most
                 for positionOn, playerOnID in list(self.playersOn.items()):
                     if positionOn == positionOff:
-                        self.matchFrame.matchInstance.addPlayerToLineup(event, playerOnID, playerOffID, positionOn, subs, lineup, self, self.home, managing_team = True)
+                        self.matchFrame.matchInstance.addPlayerToLineup(playerOnID, playerOffID, positionOn, positionOff, subs, lineup, self, self.home, managing_event = event)
                         del self.playersOn[positionOn]
                         break
                 else:
@@ -1376,13 +1559,13 @@ class MatchDay(ctk.CTkFrame):
                         playerOn = Players.get_player_by_id(playerOnID)
                         playerOff = Players.get_player_by_id(playerOffID)
                         if playerOn.position == playerOff.position:
-                            self.matchFrame.matchInstance.addPlayerToLineup(event, playerOnID, playerOffID, positionOn, subs, lineup, self, self.home, managing_team = True)
+                            self.matchFrame.matchInstance.addPlayerToLineup(playerOnID, playerOffID, positionOn, positionOff, subs, lineup, self, self.home, managing_event = event)
                             del self.playersOn[positionOn]
                             break
                     else:
                         # Use a random player from the playersOn
                         positionOn, playerOnID = random.choice(list(self.playersOn.items()))
-                        self.matchFrame.matchInstance.addPlayerToLineup(event, playerOnID, playerOffID, positionOn, subs, lineup, self, self.home, managing_team = True)
+                        self.matchFrame.matchInstance.addPlayerToLineup(playerOnID, playerOffID, positionOn, positionOff, subs, lineup, self, self.home, managing_event = event)
                         del self.playersOn[positionOn]
 
         self.substitutionFrame.place_forget()
@@ -1628,6 +1811,7 @@ class MatchDay(ctk.CTkFrame):
         elif event["type"] == "penalty_miss":
             src = Image.open("Images/missed_penalty.png")
             srcWB = Image.open("Images/missed_penalty_wb.png")
+            srcWB2 = Image.open("Images/saved_penalty_wb.png")
             subText = "Missed Penalty"
         elif event["type"] == "injury":
             src = Image.open("Images/injury.png")
@@ -1668,6 +1852,7 @@ class MatchDay(ctk.CTkFrame):
             
             events = self.matchFrame.matchInstance.homeProcessedEvents if home else self.matchFrame.matchInstance.awayProcessedEvents
             playerID = event["player"] if event["type"] != "substitution" else event["player_on"]
+            playerData = Players.get_player_by_id(playerID)
 
             # Find the player (value) position (key) from the lineup
             position = list(lineup.keys())[list(lineup.values()).index(playerID)]
@@ -1675,24 +1860,44 @@ class MatchDay(ctk.CTkFrame):
             srcWB.thumbnail((12, 12))
             image = ImageTk.PhotoImage(srcWB)
             num = self.countPlayerEvents(playerID, events, event["type"])
-            pitch.addIcon(EVENTS_TO_ICONS[event["type"]], image, position, num)
+            pitch.addIcon(EVENTS_TO_ICONS[event["type"]], image, position, playerData.last_name, num)
 
             if event["type"] == "goal":
                 playerID = event["assister"]
+                playerData = Players.get_player_by_id(playerID)
                 position = list(lineup.keys())[list(lineup.values()).index(playerID)]
 
                 srcWB2.thumbnail((12, 12))
                 image = ImageTk.PhotoImage(srcWB2)
                 num = self.countPlayerEvents(playerID, events, "assister")
-                pitch.addIcon(EVENTS_TO_ICONS["assist"], image, position, num)
+                pitch.addIcon(EVENTS_TO_ICONS["assist"], image, position, playerData.last_name, num)
+            elif event["type"] == "penalty_miss":
+                pitch = self.awayLineupPitch if home else self.homeLineupPitch
+                playerID = event["keeper"]
+                playerData = Players.get_player_by_id(playerID)
+
+                srcWB2.thumbnail((12, 12))
+                image = ImageTk.PhotoImage(srcWB2)
+                num = self.countPlayerEvents(playerID, events, event["type"])
+                pitch.addIcon(EVENTS_TO_ICONS[event["type"]], image, "Goalkeeper", playerData.last_name, num)
 
     def countPlayerEvents(self, player_id, events, event_type):
         group = EVENT_GROUPS.get(event_type, [event_type])
 
         if event_type == "assister":
             return sum(1 for e in events.values() if e.get("assister") == player_id)
+        elif event_type == "penalty_miss":
+            return sum(
+                1
+                for e in events.values()
+                if e.get("type") == "penalty_miss"
+                and (e.get("player") == player_id or e.get("keeper") == player_id)
+            )
         else:
-            return sum(1 for e in events.values() if e["player"] == player_id and e["type"] in group)
+            return sum(
+                1 for e in events.values()
+                if e.get("player") == player_id and e.get("type") in group
+            )
 
     def endSimulation(self):
 

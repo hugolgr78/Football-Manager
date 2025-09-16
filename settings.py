@@ -115,6 +115,10 @@ POSITION_CODES = {
     "Striker Right": "CF",
 }
 
+REVERSE_POSITION_CODES = {}
+for full, code in POSITION_CODES.items():
+    REVERSE_POSITION_CODES.setdefault(code, []).append(full)
+
 POSITION_ORDER = {
     "goalkeeper": 0,
     "defender": 1,
@@ -145,6 +149,20 @@ POSITIONS_PITCH_POSITIONS = {
     "Center Forward": (0.5, 0.1),  # Center Forward
 }
 
+COMPATIBLE_POSITIONS = {
+    "CB": ["CB", "LB", "RB", "DM"],
+    "LB": ["LB", "CB", "LM"],
+    "RB": ["RB", "CB", "RM"],
+    "DM": ["DM", "CM", "CB"],
+    "CM": ["CM", "DM", "AM"],
+    "AM": ["AM", "CM", "ST"],
+    "LM": ["LM", "LW", "CM"],
+    "RM": ["RM", "RW", "CM"],
+    "LW": ["LW", "LM", "ST"],
+    "RW": ["RW", "RM", "ST"],
+    "ST": ["ST", "AM", "LW", "RW"],
+}
+
 POSITIONS_MAX = {
     "CB": 3,
     "DM": 3,
@@ -159,22 +177,6 @@ RELATED_POSITIONS = {
     "Defensive Midfielder": ["Defensive Midfielder Right", "Defensive Midfielder Left"],
     "Defensive Midfielder Right": ["Defensive Midfielder"],
     "Defensive Midfielder Left": ["Defensive Midfielder"],
-}
-
-FORMATIONS_CHANCES = {
-    "4-4-2 CM": 0.10,
-    "4-4-2 DM": 0.10,
-    "4-3-3 CM": 0.25,
-    "4-3-3 DM": 0.25,
-    "4-5-1 DM": 0.05,
-    "4-5-1 AM": 0.025,
-    "4-5-1 CM": 0.025,
-    "3-4-3": 0.15,
-    "3-5-2 CM": 0.04,
-    "3-5-2 AM": 0.04,
-    "5-3-2": 0.02,
-    "5-4-1": 0.02,
-    "4-2-4": 0.02,
 }
 
 FORMATIONS_POSITIONS = {
@@ -238,9 +240,11 @@ FORMATIONS_POSITIONS = {
               "Center Forward"],
 }
 
-DEFENSIVE_POSITIONS = ["Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back"]
+DEFENDER_POSITIONS = ["Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back"]
+DEFENSIVE_POSITIONS = DEFENDER_POSITIONS + ["Goalkeeper", "Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]
 MIDFIELD_POSITIONS = ["Defensive Midfielder", "Central Midfielder", "Central Midfielder Left", "Central Midfielder Right", "Left Midfielder", "Right Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left", "Attacking Midfielder"]
-ATTACKING_POSITIONS = ["Left Winger", "Right Winger", "Striker Left", "Striker Right", "Center Forward"]
+FORWARD_POSITIONS = ["Left Winger", "Right Winger", "Striker Left", "Striker Right", "Center Forward"]
+ATTACKING_POSITIONS = FORWARD_POSITIONS + ["Attacking Midfielder"]
 
 SCORER_CHANCES = {
     'defender': 0.05,
@@ -253,6 +257,22 @@ GOAL_TYPE_CHANCES = {
     "penalty": 0.15,
     "own_goal": 0.05
 }
+
+BASE_SHOT = 0.2
+MAX_SHOT_PROB = BASE_SHOT + 0.1
+BASE_ON_TARGET = 0.6
+MAX_TARGET_PROB = BASE_ON_TARGET + 0.1
+BASE_GOAL = 0.7
+MAX_GOAL_PROB = BASE_GOAL + 0.1
+
+BASE_FOUL = 0.07 
+BASE_YELLOW = 0.02 
+BASE_RED = 0.001
+
+BASE_INJURY = 0.0005
+MAX_INJURY_PROB = 0.0015 # This gives P(X = 1) = 20%, P(X > 1) = 3%
+
+TICK = 30
 
 PENALTY_SCORE_CHANCE = 0.8
 

@@ -54,8 +54,8 @@ class Match():
 
         self.homeFitness = {}
         self.awayFitness = {}
-        self.homeStats = {}
-        self.awayStats = {}
+        self.homeStats = {stat: {} for stat in MATCH_STATS}
+        self.awayStats = {stat: {} for stat in MATCH_STATS}
 
         self.score = [0, 0]
 
@@ -210,6 +210,7 @@ class Match():
         fitness = self.homeFitness if side == "home" else self.awayFitness
         subsCount = self.homeSubs if side == "home" else self.awaySubs
         stats = self.homeStats if side == "home" else self.awayStats
+        oppStats = self.awayStats if side == "home" else self.homeStats
         subs = self.homeCurrentSubs if side == "home" else self.awayCurrentSubs
         events = self.homeProcessedEvents if side == "home" else self.awayProcessedEvents
 
@@ -234,7 +235,7 @@ class Match():
         attackingLevel = teamStrength(attackingPlayers, role = "attack")
         defendingLevel = teamStrength(defendingPlayers, role = "defend")
 
-        # ------------------ GOAL ------------------
+        # ------------------ GOALS ------------------
         event = goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper)
 
         if event == "goal":
@@ -253,33 +254,57 @@ class Match():
                 self.appendScore(1, True if side == "home" else False)
 
             eventsToAdd.append(goalType)
-            statsToAdd.append("shot")
-            statsToAdd.append("shot on target")
-        elif event == "shot_on_target":
-            statsToAdd.append("shot")
+
+            if random.random() < GOAL_BIG_CHANCE:
+                statsToAdd.append("Big chances created")
+
+        elif event == "Shots on target":
+            statsToAdd.append("Shots")
             statsToAdd.append(event)
-        elif event == "shot":
+            statsToAdd.append("Saves")
+
+            shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
+            statsToAdd.append(shotDirection)
+
+            if random.random() < SHOT_TARGET_BIG_CHANCE:
+                statsToAdd.append("Big chances created")
+                statsToAdd.append("Big chances missed")
+
+        elif event == "Shots":
             statsToAdd.append(event)
 
-        # ------------------ FOUL ------------------
+            shotOutcome = random.choices(population = list(SHOT_CHANCES.keys()), weights = list(SHOT_CHANCES.values()), k = 1)[0]
+            if shotOutcome != "wide":
+                statsToAdd.append(shotOutcome)
+
+            shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
+            statsToAdd.append(shotDirection)
+            
+            if random.random() < SHOT_BIG_CHANCE:
+                statsToAdd.append("Big chances created")
+                statsToAdd.append("Big chances missed")
+
+        # ------------------ FOULS ------------------
         event = foulChances(avgSharpnessWthKeeper, self.referee.severity)
 
         if event in ["yellow_card", "red_card"]:
             eventsToAdd.append(event)
-
-            # 70% chance of foul too
-            if random.random() < 0.7:
-                statsToAdd.append("foul")
-
-        elif event == "foul":
+        elif event == "Fouls":
             statsToAdd.append(event)
+        else:
+            # If nothing, get tackles and interceptions
+            tacklesInterceptions = random.choices(population = list(DEFENSIVE_ACTIONS_CHANCES.keys()), weights = list(DEFENSIVE_ACTIONS_CHANCES.values()), k = 1)[0]
 
-        # ------------------ INJURY ------------------
+            if tacklesInterceptions != "nothing":
+                statsToAdd.append(tacklesInterceptions)
+
+        # ------------------ INJURIES ------------------
         event = injuryChances(avgFitness)
 
         if event == "injury":
             eventsToAdd.append(event)
 
+        # ------------------ SUBSTITUTIONS ------------------
         subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, self.minutes, fitness)
 
         for _ in range(len(subsChosen)):
@@ -323,10 +348,24 @@ class Match():
                 matchEvents[eventTime] = {"type": event, "extra": extraTime}
 
         for stat in statsToAdd:
-            if not stat in stats:
-                stats[stat] = 0
 
-            stats[stat] += 1
+            statsDict = stats if stat != "Saves" else oppStats
+            if stat in PLAYER_STATS:
+                playerID = self.getStatPlayer(stat, True if side == "home" else False)
+
+                if not playerID:
+                    continue
+
+                if not playerID in stats[stat]:
+                    statsDict[stat][playerID] = 0
+
+                statsDict[stat][playerID] += 1
+
+            else:
+                if not stat in statsDict:
+                    statsDict[stat] = 0
+
+                statsDict[stat] += 1
 
     def join(self):
         if self.timerThread:
@@ -341,6 +380,7 @@ class Match():
         events = self.homeEvents if home else self.awayEvents
         subsCount = self.homeSubs if home else self.awaySubs
         fitness = self.homeFitness if home else self.awayFitness
+        stats = self.homeStats if home else self.awayStats
 
         # Fetch all players in the lineup with a single query
         player_ids = list(lineup.values())
@@ -362,6 +402,17 @@ class Match():
 
             playerID = random.choices(players, weights = weights, k = 1)[0]
             event["player"] = playerID
+
+            # Add the stats for the scorer
+            if playerID not in stats["Shots on target"]:
+                stats["Shots on target"][playerID] = 0
+            
+            stats["Shots on target"][playerID] += 1
+        
+            if playerID not in stats["Shots"]:
+                stats["Shots"][playerID] = 0
+            
+            stats["Shots"][playerID] += 1
 
             ## assister
             assisterPosition = random.choices(list(ASSISTER_CHANCES.keys()), weights = list(ASSISTER_CHANCES.values()), k = 1)[0]
@@ -423,6 +474,17 @@ class Match():
             playerID = random.choices(list(players_dict.values()), weights = weights, k = 1)[0].id
             event["player"] = playerID
 
+            if playerID not in stats["Yellow cards"]:
+                stats["Yellow cards"][playerID] = 0
+            
+            stats["Yellow cards"][playerID] += 1
+
+            if random.random() < CARD_FOUL_CHANCE:
+                if playerID not in stats["Fouls"]:
+                    stats["Fouls"][playerID] = 0
+                
+                stats["Fouls"][playerID] += 1
+
             for _, processedEvent in processedEvents.items():
                 if processedEvent["type"] == "yellow_card" and processedEvent["player"] == playerID:
                     event["type"] = "red_card"
@@ -452,6 +514,17 @@ class Match():
 
             playerID = random.choices(players, weights = weights, k = 1)[0].id
             event["player"] = playerID
+
+            if playerID not in stats["Red cards"]:
+                stats["Red cards"][playerID] = 0
+            
+            stats["Red cards"][playerID] += 1
+
+            if random.random() < CARD_FOUL_CHANCE:
+                if playerID not in stats["Fouls"]:
+                    stats["Fouls"][playerID] = 0
+                
+                stats["Fouls"][playerID] += 1
 
             playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
             lineup.pop(playerPosition)
@@ -508,6 +581,29 @@ class Match():
         
         if teamMatch:
             return event
+
+    def getStatPlayer(self, stat, home):
+        lineup = self.homeCurrentLineup if home else self.awayCurrentLineup
+
+        match stat:
+            case "Saves":
+                return lineup["Goalkeeper"] if "Goalkeeper" in lineup else None
+            case "Shots" | "Shots on target":
+                scorerPosition = random.choices(list(SCORER_CHANCES.keys()), weights = list(SCORER_CHANCES.values()), k = 1)[0]
+                players = [playerID for playerID in lineup.values() if Players.get_player_by_id(playerID).position == scorerPosition]
+
+                while len(players) == 0:
+                    scorerPosition = random.choices(list(SCORER_CHANCES.keys()), weights = list(SCORER_CHANCES.values()), k = 1)[0]
+                    players = [playerID for playerID in lineup.values() if Players.get_player_by_id(playerID).position == scorerPosition]
+
+                weights = [effective_ability(Players.get_player_by_id(playerID)) for playerID in players]
+                if sum(weights) == 0:
+                    weights = [1] * len(players)
+
+                return random.choices(players, weights = weights, k = 1)[0]
+
+    def getStatNum(self, stat):
+        return sum(playerValue for playerValue in stat.values())
 
     def updateTeamMatch(self, playerOffID, oldPosition, teamMatch, home):
         playerData = Players.get_player_by_id(playerOffID)

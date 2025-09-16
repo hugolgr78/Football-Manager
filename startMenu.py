@@ -391,11 +391,13 @@ class StartMenu(ctk.CTkFrame):
 
         setUpProgressBar(self.progressBar, self.progressLabel, self.progressFrame, self.percentageLabel)
         
+        self.parent.creatingManager = True
         self.db_manager = DatabaseManager()
         self.db_manager.set_database(f"{self.first_name}{self.last_name}", create_tables = True)
         self.chosenManagerID = Managers.add_manager(self.first_name, self.last_name, self.selectedCountry, self.dob, True, self.selectedTeam)
 
         Game.add_game(self.chosenManagerID, self.first_name,self.last_name)
+        self.parent.creatingManager = False
 
         self.startGame(created = True)
 

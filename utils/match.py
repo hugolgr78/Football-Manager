@@ -316,14 +316,7 @@ class Match():
 
             if event == "substitution":
                 matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player_off": subsChosen[subsChosenCount][0], "player_on": subsChosen[subsChosenCount][2], "old_position": subsChosen[subsChosenCount][1], "new_position": subsChosen[subsChosenCount][3]}
-                subsCount += 1
                 subsChosenCount += 1
-
-                if side == "home":
-                    self.homeSubs = subsCount
-                else:
-                    self.awaySubs = subsCount
-
             elif event == "penalty_miss":
                 matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"] if "Goalkeeper" in oppLineup else None}
             else:
@@ -447,7 +440,7 @@ class Match():
                         self.keeperSub(subsCount, lineup, players_dict, processedEvents, time, events, teamMatch, subs, home)
 
         elif event["type"] == "red_card":
-
+            
             redCardPosition = random.choices(list(RED_CARD_CHANCES.keys()), weights = list(RED_CARD_CHANCES.values()), k = 1)[0]
             players = [player for player in players_dict.values() if player.position == redCardPosition]
 
@@ -458,7 +451,6 @@ class Match():
             weights = [ownGoalFoulWeight(player) for player in players]
 
             playerID = random.choices(players, weights = weights, k = 1)[0].id
-
             event["player"] = playerID
 
             playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
@@ -482,7 +474,7 @@ class Match():
             playerPosition = list(lineup.keys())[list(lineup.values()).index(injuredPlayerID)]
 
             if not managing_team and subsCount < MAX_SUBS:
-                self.createSubEvent(home, lineup, players_dict, processedEvents, time, events, injuredPlayerID, subs, playerPos = playerPosition)
+                self.createSubEvent(lineup, players_dict, processedEvents, time, events, injuredPlayerID, subs, playerPos = playerPosition)
 
             elif not managing_team and subsCount == MAX_SUBS:
                 lineup.pop(playerPosition)
@@ -503,6 +495,11 @@ class Match():
 
             lineup.pop(oldPosition)
             finalLineup.append((oldPosition, playerOffID))
+
+            if home:
+                self.homeSubs += 1
+            else:
+                self.awaySubs += 1
 
             if teamMatch:
                 self.updateTeamMatch(playerOffID, oldPosition, teamMatch, home)
@@ -556,9 +553,9 @@ class Match():
                 else:
                     teamMatch.awayLineupPitch.movePlayer(newKeeperPosition, "Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
         else:
-            self.createSubEvent(home, lineup, players_dict, processedEvents, time, events, None, subs, keeperSub = True)
+            self.createSubEvent(lineup, players_dict, processedEvents, time, events, None, subs, keeperSub = True)
 
-    def createSubEvent(self, home, lineup, players_dict, processedEvents, time, events, playerOffID, subs, keeperSub = False, playerPos = None):
+    def createSubEvent(self, lineup, players_dict, processedEvents, time, events, playerOffID, subs, keeperSub = False, playerPos = None):
         # Create the substitution event
         minute = int(time.split(":")[0])
         seconds = int(time.split(":")[1])
@@ -610,11 +607,6 @@ class Match():
             "new_position": newPosition,
             "extra": extraTime,
         }
-
-        if home:
-            self.homeSubs += 1
-        else:
-            self.awaySubs += 1
 
     def checkPlayerOff(self, playerID, processEvents, time, lineup, checked_players = None):
         if checked_players is None:

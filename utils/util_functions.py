@@ -278,34 +278,47 @@ def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius = 10, **kwargs):
 def generate_CA(age: int, team_strength: float, min_level: int = 150) -> int:
     """
     Generate a player's Current Ability (CA) based on age and team strength.
-    Skewed distribution: high chance near min_level, very low chance near max_level.
-    
-    team_strength > 1.0 makes stronger teams more likely to get higher CAs
+    Young players (<21) are very likely to be within +10 of min_level,
+    but it's still (rarely) possible to exceed it.
     """
     max_level = min_level + 50
     CAs = list(range(min_level, max_level + 1))
 
-    # Age factor
-    if age <= 21:
-        age_factor = 0.8
+    # Age factor & skew
+    if age < 21:
+        age_factor = 0.1 + 0.02 * age
+        # Penalize CAs above +10 extra heavily
+        def penalty(ca):
+            if ca <= min_level + 10:
+                return 1.0
+            else:
+                # exponential penalty for > +10
+                return math.exp(-0.5 * (ca - (min_level + 10)))
+        skew_power = 4  # strong bias toward low values
     elif age <= 25:
-        age_factor = 1.05
+        age_factor = 1.15
+        penalty = lambda ca: 1.0
+        skew_power = 3
     elif age <= 30:
-        age_factor = 1.0
+        age_factor = 1.05
+        penalty = lambda ca: 1.0
+        skew_power = 3
     else:
         age_factor = 0.9
+        penalty = lambda ca: 1.0
+        skew_power = 3
 
     # Skewed weights: lower CA more likely
-    weights = [(max_level - ca + 1) ** 3 * age_factor for ca in CAs]
+    weights = [(max_level - ca + 1) ** skew_power * age_factor * penalty(ca)
+               for ca in CAs]
 
     # Apply team strength: shift distribution toward higher CAs
     if team_strength != 1.0:
-            # scale factor determines how much stronger/weaker the curve is
-            scale = 15 * (team_strength - 1)   # stronger teams get exponential boost
-            weights = [w * math.exp(scale * ((ca - min_level) / (max_level - min_level)))
-                    for ca, w in zip(CAs, weights)]
+        scale = 15 * (team_strength - 1)
+        weights = [w * math.exp(scale * ((ca - min_level) / (max_level - min_level)))
+                   for ca, w in zip(CAs, weights)]
 
-    level = random.choices(CAs, weights = weights, k = 1)[0]
+    level = random.choices(CAs, weights=weights, k=1)[0]
     return level
 
 def generate_youth_player_level(max_level: int = 150) -> int:
@@ -360,16 +373,16 @@ def calculate_potential_ability(age: int, CA: int) -> int:
 
     if age <= 18:
         max_gap = 200 - CA
-        min_gap = 10
+        min_gap = 25
     elif age <= 21:
         max_gap = min(60, 200 - CA)
-        min_gap = 5
+        min_gap = 15
     elif age <= 24:
         max_gap = min(40, 200 - CA)
-        min_gap = 2
+        min_gap = 10
     elif age <= 27:
         max_gap = min(25, 200 - CA)
-        min_gap = 1
+        min_gap = 5
     elif age <= 30:
         max_gap = min(15, 200 - CA)
         min_gap = 0
@@ -469,7 +482,7 @@ def player_gametime(avg_minutes, player):
 
     return False
 
-def getFitnessDrop(player):
+def getFitnessDrop(player, fitness):
 
     position_ranges = {
         "goalkeeper": (0.1, 0.35),
@@ -479,8 +492,236 @@ def getFitnessDrop(player):
     }
 
     # return a random float in the range for that position
-    return random.uniform(*position_ranges[player.position])
+    drop = random.uniform(*position_ranges[player.position])
+    scaled_drop = drop * (fitness / 100.0) ** 0.25
+    return scaled_drop
 
 def getDayIndex(date):
     day, _, _ = format_datetime_split(date)
     return list(calendar.day_name).index(day)
+
+def ownGoalFoulWeight(p):
+    # Lower ability and sharpness → higher chance
+    ability_factor = (200 - p.current_ability) / 200.0
+    sharpness_factor = (100 - p.sharpness) / 100.0
+
+    # Combine factors
+    base = 0.5 * ability_factor + 0.5 * sharpness_factor
+    return max(base, 0.01)  # avoid zero probability
+
+def fitnessWeight(p, fitness):
+    # Low fitness → higher chance
+    fitness_factor = (100 - fitness) / 100.0
+    return max(fitness_factor, 0.01)  # avoid 0 prob
+
+def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
+    attackRatio = attackingLevel / max(1, defendingLevel)
+    attackModifier = min(((avgSharpness / 100 + avgMorale / 100)) ** 0.5, 1.2)
+
+    # Dampening factor so even matchups (attackRatio ~= 1) produce lower goal
+    # probabilities. ratio_factor is in (0..1), ~0.5 for attackRatio==1.
+    ratio_factor = attackRatio / (attackRatio + 1) if attackRatio > 0 else 0.5
+
+    # Make attackRatio more influential than attackModifier. Use a weighted
+    # combination so that attackRatio dominates the effective attacking input.
+    weight_ratio = 0.75
+    weight_modifier = 1 - weight_ratio
+    effective_attack = attackRatio * weight_ratio + attackModifier * weight_modifier
+
+    if oppKeeper:
+        if oppKeeper.position == "goalkeeper":
+            keeperModifier = (oppKeeper.current_ability / 200) * (oppKeeper.sharpness / 100)
+
+            # Reduce keeper impact slightly on shot/on-target but keep it strong
+            shot_base = BASE_SHOT * effective_attack
+            shotProb = shot_base * (1 - keeperModifier * 0.4)
+            shotProb = min(max(shotProb, 0.05), MAX_SHOT_PROB)
+
+            onTarget_base = BASE_ON_TARGET * effective_attack
+            onTargetProb = onTarget_base * (1 - keeperModifier * 0.4)
+            onTargetProb = min(max(onTargetProb, 0.20), MAX_TARGET_PROB)
+
+            # Damp goal probability for even matchups via ratio_factor and scale
+            goal_base = BASE_GOAL * effective_attack * ratio_factor
+            goalProb = goal_base * (1 - keeperModifier)
+            goalProb = min(max(goalProb, 0.01), MAX_GOAL_PROB)
+        else:
+            # Outfield player in goal - use effective_attack so ratio remains influential
+            shotProb = min(max(BASE_SHOT * effective_attack * 1.2, 0.15), 0.7)
+            onTargetProb = min(max(BASE_ON_TARGET * effective_attack * 1.2, 0.40), 0.8)
+            goalProb = min(max(BASE_GOAL * effective_attack * 1.5, 0.50), 0.9)
+    else:
+        # No keeper present: use effective_attack to weight ratio higher
+        shotProb = min(max(BASE_SHOT * effective_attack * 1.5, 0.25), 0.75)
+        onTargetProb = min(max(BASE_ON_TARGET * effective_attack * 1.5, 0.60), 0.85)
+        goalProb = min(max(BASE_GOAL * effective_attack * 2.0, 0.80), 0.95)
+
+    # Final distribution
+    pNothing   = 1 - shotProb
+    pShotOff   = shotProb * (1 - onTargetProb)
+    pShotSaved = shotProb * onTargetProb * (1 - goalProb)
+    pGoal      = shotProb * onTargetProb * goalProb
+
+    events = ["nothing", "shot", "shot on target", "goal"]
+    probs  = [pNothing, pShotOff, pShotSaved, pGoal]
+
+    return random.choices(events, weights = probs, k = 1)[0]
+
+def foulChances(avgSharpnessWthKeeper, severity):
+    severity_map = {"low": 0.8, "medium": 1.0, "high": 1.2}
+    severity = severity_map.get(severity, 1.0)
+
+    gamma = 0.5
+    sf = ((100.0 - avgSharpnessWthKeeper) / 50.0) ** gamma
+    sf = max(0.5, min(sf, 2.0))  # keep it realistic
+
+    foulProb   = BASE_FOUL   * sf
+    yellowProb = BASE_YELLOW * sf * severity
+    redProb    = BASE_RED    * sf * severity
+
+    # realistic clamps
+    foulProb   = min(max(foulProb, 0.01), 0.20)
+    yellowProb = min(max(yellowProb, 0.002), 0.05)
+    redProb    = min(max(redProb, 0.0001), 0.02)
+
+    # ensure total <= 1
+    total = foulProb + yellowProb + redProb
+    if total > 1:
+        scale = 1.0 / total
+        foulProb *= scale
+        yellowProb *= scale
+        redProb *= scale
+
+    pNothing = 1.0 - (foulProb + yellowProb + redProb)
+
+    events = ["nothing", "foul", "yellow_card", "red_card"]
+    probs = [pNothing, foulProb, yellowProb, redProb]
+
+    return random.choices(events, weights = probs, k = 1)[0]
+
+def injuryChances(avgFitness):
+
+    injuryProb = BASE_INJURY * (100 / avgFitness)
+    injuryProb = min(max(injuryProb, 0.0001), MAX_INJURY_PROB)
+
+    # --- Final event distribution ---
+    pNothing = 1 - injuryProb
+    pInjury = injuryProb
+
+    events = ["nothing", "injury"]
+    probs = [pNothing, pInjury]
+
+    return random.choices(events, weights = probs, k = 1)[0]
+
+def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness):
+    subsAvailable = MAX_SUBS - subsMade
+    if subsAvailable <= 0:
+        return []
+
+    candidates = get_sub_candidates(lineup, currMinute, events, fitness)
+
+    if not candidates:
+        return []
+
+    # sort lowest fitness first
+    candidates.sort(key = lambda x: fitness[x[1]])
+
+    # how many subs
+    outcomes = [1, 2, 3]
+    weights = [0.65, 0.25, 0.10]
+    num_to_sub = random.choices(outcomes, weights=weights, k=1)[0]
+    num_to_sub = min(num_to_sub, subsAvailable, len(candidates))
+
+    chosen = find_substitute(lineup, candidates, subs, num_to_sub)
+
+    return chosen
+
+def get_sub_candidates(lineup, currMinute, events, fitness):
+    candidates = []
+    for pos, playerID in lineup.items():
+        played_minutes = currMinute
+        for event_time, event_data in events.items():
+            if event_data["type"] == "substitution" and event_data["player_on"] == playerID:
+                eventMinute = int(event_time.split(":")[0])
+                played_minutes = currMinute - eventMinute
+                break
+
+        if played_minutes >= 30:  # don’t sub too early
+            prob = sub_probability(fitness[playerID])
+            if prob > 0:
+                candidates.append((prob, playerID, pos))
+
+    return candidates
+
+def find_substitute(lineup, candidates, subs, num_to_sub):
+    from data.database import Players
+
+    chosen = []
+    # make substitutions
+    for prob, playerID, pos in candidates:
+        if len(chosen) >= num_to_sub:
+            break
+        if random.random() < prob:
+            out_code = POSITION_CODES[pos]
+
+            replacement_id = None
+            replacement_pos = None
+            reason = None
+
+            # --- Exact / compatible replacement ---
+            for subID in subs:
+                player = Players.get_player_by_id(subID)
+                subPositions = [s for s in player.specific_positions.split(",")]
+
+                # Direct match: outgoing code is explicitly listed in sub's positions
+                if out_code in subPositions:
+                    replacement_id = subID
+                    replacement_pos = pos
+                    reason = "direct"
+                    break
+
+                # Compatible match: sub can play a compatible position
+                compatible_codes = COMPATIBLE_POSITIONS.get(out_code, [])
+                compatible_subs = [sp for sp in subPositions if sp in compatible_codes]
+                if compatible_subs:
+                    replacement_id = subID
+                    replacement_pos = pos
+                    reason = "compatible"
+                    break
+
+            # --- Fallback if no compatible found ---
+            if not replacement_id and subs:
+                for subID in subs:
+                    sub_player = Players.get_player_by_id(subID)
+                    subPositions = [REVERSE_POSITION_CODES[s][0] for s in sub_player.specific_positions.split(",")]
+
+                    # pick the first full position not already in lineup.keys()
+                    for full_pos in subPositions:
+                        if full_pos not in lineup:
+                            replacement_id = subID
+                            replacement_pos = full_pos
+                            reason = "formation_change"
+                            break
+
+                    if replacement_id:
+                        break
+
+            if replacement_id:
+                # player off id, old position, player on id, new position, reason
+                chosen.append((playerID, pos, replacement_id, replacement_pos, reason))
+                subs.remove(replacement_id)
+
+    return chosen
+
+def sub_probability(fitness: float) -> float:
+    if fitness > 50:
+        return 0.0
+    elif fitness > 20:
+        # scales 50 -> 0%, 20 -> 60%
+        return (50 - fitness) / 30 * 0.6
+    elif fitness > 10:
+        # scales 20 -> 60%, 10 -> 85%
+        return 0.6 + (20 - fitness) / 10 * 0.25
+    else:
+        # below 10 -> 85–100%
+        return 0.85 + (10 - max(fitness, 0)) / 10 * 0.15

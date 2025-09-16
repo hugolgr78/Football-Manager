@@ -1703,26 +1703,26 @@ class FootballPitchMatchDay(FootballPitchVertical):
         self.icon_images = {}
 
         self.positions = {
-            "Goalkeeper": (0.5, 0.94),  # Goalkeeper
-            "Left Back": (0.12, 0.75),  # Left Back
-            "Right Back": (0.88, 0.75),  # Right Back
-            "Center Back Right": (0.675, 0.75),  # Center Back Right
-            "Center Back": (0.5, 0.75),  # Center Back
-            "Center Back Left": (0.325, 0.75),  # Center Back Left
-            "Defensive Midfielder": (0.5, 0.6),  # Defensive Midfielder
-            "Defensive Midfielder Right": (0.65, 0.6),  # Defensive Midfielder Right
-            "Defensive Midfielder Left": (0.35, 0.6),  # Defensive Midfielder Left
-            "Left Midfielder": (0.12, 0.4),  # Left Midfielder
-            "Central Midfielder Right": (0.65, 0.4),  # Center Midfielder Right
-            "Central Midfielder": (0.5, 0.4),  # Center Midfielder
-            "Central Midfielder Left": (0.35, 0.4),  # Center Midfielder Left
-            "Right Midfielder": (0.88, 0.4),  # Right Midfielder
-            "Left Winger": (0.12, 0.25),  # Left Winger
-            "Right Winger": (0.88, 0.25),  # Right Winger
-            "Attacking Midfielder": (0.5, 0.25),  # Attacking Midfielder
-            "Striker Left": (0.3, 0.15),  # Striker Left
-            "Striker Right": (0.7, 0.15),  # Striker Right
-            "Center Forward": (0.5, 0.05),  # Center Forward
+            "Goalkeeper": (0.5, 0.94),      
+            "Left Back": (0.12, 0.75),      
+            "Right Back": (0.88, 0.75),     
+            "Center Back Right": (0.675, 0.75),  
+            "Center Back": (0.5, 0.75),  
+            "Center Back Left": (0.325, 0.75),  
+            "Defensive Midfielder": (0.5, 0.6),     
+            "Defensive Midfielder Right": (0.65, 0.6),      
+            "Defensive Midfielder Left": (0.35, 0.6),   
+            "Left Midfielder": (0.12, 0.4),     
+            "Central Midfielder Right": (0.65, 0.4),    
+            "Central Midfielder": (0.5, 0.4),     
+            "Central Midfielder Left": (0.35, 0.4),     
+            "Right Midfielder": (0.88, 0.4),    
+            "Left Winger": (0.12, 0.25),    
+            "Right Winger": (0.88, 0.25),   
+            "Attacking Midfielder": (0.5, 0.25),    
+            "Striker Left": (0.3, 0.15),    
+            "Striker Right": (0.7, 0.15),   
+            "Center Forward": (0.5, 0.05),  
         }
 
         self.iconPositions = {
@@ -1733,7 +1733,7 @@ class FootballPitchMatchDay(FootballPitchVertical):
             "Missed Pens": [(1, 0.6), True],
         }
 
-    def addIcon(self, icon_type, image, position, num):
+    def addIcon(self, icon_type, image, position, playerName, num):
         # Add the icon relative the the position oval (so 0.1, 0.1 is the top left of the oval)
 
         positions, offsetDirection = self.iconPositions[icon_type]
@@ -1765,10 +1765,10 @@ class FootballPitchMatchDay(FootballPitchVertical):
         icon_x = oval_center_x + (positions[0] - 0.5) * (2 * self.player_radius)
         icon_y = oval_center_y + (positions[1] - 0.5) * (2 * self.player_radius)
 
-        position_tag = position.replace(" ", "_")
+        position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
         self.canvas.create_image(icon_x, icon_y, image = image, tags = (position_tag, "icon"))
 
-    def addRating(self, position, text, potm):
+    def addRating(self, position, playerName, text, potm):
         # Use positions from self.positions dictionary (these are relative coordinates)
         player_relx, player_rely = self.positions[position]
         
@@ -1796,7 +1796,7 @@ class FootballPitchMatchDay(FootballPitchVertical):
         if "." not in str(text):
             formatted_text = f"{text}.0"
 
-        position_tag = position.replace(" ", "_")
+        position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
 
         # === Font settings ===
         font_name = APP_FONT_BOLD
@@ -1838,12 +1838,13 @@ class FootballPitchMatchDay(FootballPitchVertical):
             tags = (position_tag, "rating_text")
         )
 
-    def addInjuryIcon(self, position, image):
+    def addInjuryIcon(self, position, playerName, image):
         # Store the image to prevent garbage collection
         key = f"injury_{position}"
         self.icon_images[key] = image
-        
-        text_tag = f"player_{position.replace(' ', '_')}_text"
+        position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
+
+        text_tag = f"player_{position_tag}_text"
         playerName = self.canvas.itemcget(text_tag, "text")
         self.canvas.delete(text_tag) 
 
@@ -1861,12 +1862,11 @@ class FootballPitchMatchDay(FootballPitchVertical):
             tags = text_tag
         )
 
-        position_tag = position.replace(" ", "_")
         self.canvas.create_image(text_x - 30, text_y, image = image, tags = (position_tag, "injury_icon"))
 
     def addPlayer(self, position, playerName):
         relx, rely = self.positions[position]
-        position_tag = position.replace(" ", "_")
+        position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
 
         oval_tag = f"player_{position_tag}_oval"
         text_tag = f"player_{position_tag}_text"
@@ -1890,8 +1890,8 @@ class FootballPitchMatchDay(FootballPitchVertical):
             tags = text_tag
         )
 
-    def removePlayer(self, position):
-        position_tag = position.replace(" ", "_")
+    def removePlayer(self, position, playerName):
+        position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
         oval_tag = f"player_{position_tag}_oval"
         text_tag = f"player_{position_tag}_text"
 
@@ -1906,6 +1906,142 @@ class FootballPitchMatchDay(FootballPitchVertical):
         for key in list(self.icon_images.keys()):
             if position_tag in key:
                 del self.icon_images[key]
+
+    def movePlayer(self, oldPosition, newPosition, playerName):
+
+        if oldPosition not in self.positions or newPosition not in self.positions:
+            return
+
+        old_pos_tag = f"{oldPosition.replace(' ', '_')}+{playerName.replace(' ', '_')}"
+        new_pos_tag = f"{newPosition.replace(' ', '_')}+{playerName.replace(' ', '_')}"
+
+        oval_tag_old = f"player_{old_pos_tag}_oval"
+        text_tag_old = f"player_{old_pos_tag}_text"
+        oval_tag_new = f"player_{new_pos_tag}_oval"
+        text_tag_new = f"player_{new_pos_tag}_text"
+
+        # Find the oval item for the old position (used to compute old centre)
+        oval_items = self.canvas.find_withtag(oval_tag_old)
+        if not oval_items:
+            return
+        oval_item = oval_items[0]
+
+        # Old centre: prefer coords() result if it gives 4 values, otherwise use bbox()
+        oval_coords = self.canvas.coords(oval_item)
+        if not oval_coords or len(oval_coords) != 4:
+            bbox = self.canvas.bbox(oval_item)
+            if not bbox:
+                return
+            ox0, oy0, ox1, oy1 = bbox
+        else:
+            ox0, oy0, ox1, oy1 = oval_coords
+
+        old_cx = (ox0 + ox1) / 2
+        old_cy = (oy0 + oy1) / 2
+
+        # New centre (based on relative position)
+        relx, rely = self.positions[newPosition]
+        new_cx = relx * self.pitch_width
+        new_cy = rely * self.pitch_height
+
+        # Collect all items that include the old position tag OR the old player tags
+        items_set = set()
+        items_set.update(self.canvas.find_withtag(old_pos_tag))
+        items_set.update(self.canvas.find_withtag(oval_tag_old))
+        items_set.update(self.canvas.find_withtag(text_tag_old))
+
+        for item in items_set:
+            # canvas.coords(item) may return None for some item types; normalize to a list
+            coords = self.canvas.coords(item)
+            if not coords:
+                coords = []
+
+            # Compute current item centre
+            item_cx = None
+            item_cy = None
+
+            if len(coords) == 4:
+                x0, y0, x1, y1 = coords
+                item_cx = (x0 + x1) / 2
+                item_cy = (y0 + y1) / 2
+                w = x1 - x0
+                h = y1 - y0
+            elif len(coords) == 2:
+                item_cx, item_cy = coords
+                w = None
+                h = None
+            else:
+                # Fallback: place at new centre
+                item_cx, item_cy = old_cx, old_cy
+
+            dx = item_cx - old_cx
+            dy = item_cy - old_cy
+
+            new_item_cx = new_cx + dx
+            new_item_cy = new_cy + dy
+
+            # Move item by delta to preserve item type semantics (works for images, ovals, text, polygons)
+            dx_move = new_item_cx - item_cx
+            dy_move = new_item_cy - item_cy
+            try:
+                # move works across item types and avoids coordinate arity errors
+                self.canvas.move(item, dx_move, dy_move)
+            except Exception:
+                # Fallback: if move fails and we have a bounding box, set coords explicitly
+                if len(coords) == 4 and w is not None and h is not None:
+                    nx0 = new_item_cx - w / 2
+                    ny0 = new_item_cy - h / 2
+                    nx1 = new_item_cx + w / 2
+                    ny1 = new_item_cy + h / 2
+                    try:
+                        self.canvas.coords(item, nx0, ny0, nx1, ny1)
+                    except Exception:
+                        # Last resort: ignore this item if we can't position it
+                        pass
+
+            # Update tags for the item: replace occurrences of old_pos_tag with new_pos_tag
+            tags = list(self.canvas.gettags(item))
+            if tags:
+                new_tags = []
+                for t in tags:
+                    if old_pos_tag in t:
+                        new_tags.append(t.replace(old_pos_tag, new_pos_tag))
+                    else:
+                        new_tags.append(t)
+                # Ensure player-specific text/oval tags get renamed fully
+                renamed_tags = []
+                for t in new_tags:
+                    if f"player_{old_pos_tag}_oval" in t:
+                        renamed_tags.append(t.replace(f"player_{old_pos_tag}_oval", oval_tag_new))
+                    elif f"player_{old_pos_tag}_text" in t:
+                        renamed_tags.append(t.replace(f"player_{old_pos_tag}_text", text_tag_new))
+                    else:
+                        renamed_tags.append(t)
+                # Apply new tags
+                try:
+                    self.canvas.itemconfig(item, tags=tuple(renamed_tags))
+                except Exception:
+                    # if itemconfig fails for some reason, ignore tag update for that item
+                    pass
+
+        # Update the explicit player text item to show the provided playerName
+        text_items = self.canvas.find_withtag(text_tag_old)
+        for t in text_items:
+            try:
+                self.canvas.itemconfig(t, text=playerName)
+            except Exception:
+                pass
+
+        # Update stored icon images keys to point to the new position
+        new_icon_images = {}
+        for key, img in list(self.icon_images.items()):
+            if (f"_{oldPosition}_" in key) or key.startswith(f"injury_{oldPosition}") or key.endswith(f"_{oldPosition}"):
+                new_key = key.replace(oldPosition, newPosition)
+                new_icon_images[new_key] = img
+            else:
+                new_icon_images[key] = img
+
+        self.icon_images = new_icon_images
 
     def placePitch(self):
         super().place(relx = self.relx, rely = self.rely, anchor = self.anchor)
@@ -2295,7 +2431,7 @@ class MatchDayMatchFrame(ctk.CTkFrame):
             self.laterGame = False
 
         if not self.played and not self.laterGame:
-            self.matchInstance = Match(self.match)
+            self.matchInstance = Match(self.match, teamMatch = not self.packFrame)
         else:
             self.matchInstance = None
 

@@ -70,10 +70,14 @@ class PlayerProfile(ctk.CTkFrame):
         img = ctk.CTkImage(src, None, (src.width, src.height))
         self.helpButton = ctk.CTkButton(self.tabsFrame, text = "", image = img, fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, corner_radius = 5, height = 30, width = 30)
         self.helpButton.place(relx = 0.975, rely = 0, anchor = "ne")
-        self.helpButton.bind("<Enter>", lambda e: self.legendFrame.place(relx = 0.96, rely = 0.05, anchor = "ne"))
+        self.helpButton.bind("<Enter>", lambda e: self.showLegend(e))
         self.helpButton.bind("<Leave>", lambda e: self.legendFrame.place_forget())
 
         self.legend()
+
+    def showLegend(self, event):
+        self.legendFrame.place(relx = 0.975, rely = 0.1, anchor = "ne")
+        self.legendFrame.lift()
 
     def canvas(self, width, height, relx):
         canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
@@ -192,6 +196,8 @@ class Profile(ctk.CTkFrame):
         caFrame.place(relx = 0.83, rely = 0.3, anchor = "center")
         ctk.CTkLabel(caFrame, text = "CA", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.6, anchor = "center")
 
+        ctk.CTkLabel(self, text = f"{self.player.current_ability}", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.95, rely = 0.3, anchor = "e")
+
         imageNames = star_images(self.parent.caStars)
 
         for i, imageName in enumerate(imageNames):
@@ -203,6 +209,8 @@ class Profile(ctk.CTkFrame):
         paFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 200, height = 30, corner_radius = 15)
         paFrame.place(relx = 0.83, rely = 0.36, anchor = "center")
         ctk.CTkLabel(paFrame, text = "PA", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.6, anchor = "center")
+
+        ctk.CTkLabel(self, text = f"{self.player.potential_ability}", font = (APP_FONT, 15), fg_color = TKINTER_BACKGROUND).place(relx = 0.95, rely = 0.36, anchor = "e")
 
         imageNames = star_images(paStars)
 
@@ -218,8 +226,6 @@ class Profile(ctk.CTkFrame):
         self.footballPitch = FootballPitchPlayerPos(self, 435, 250, 0.04, 0.43, "nw", TKINTER_BACKGROUND)
         positions = self.player.specific_positions.split(",")
         self.footballPitch.add_player_positions(positions)
-
-        # ctk.CTkLabel(self, text = self.player.position.capitalize(), font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.45, anchor = "center")
 
         self.attributesFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 350, height = 50, corner_radius = 15)
         self.attributesFrame.place(relx = 0.04, rely = 0.84, anchor = "sw")

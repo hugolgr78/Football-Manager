@@ -239,6 +239,7 @@ class MainMenu(ctk.CTkFrame):
                     try:
                         fut.result()
                     except Exception as e:
+                        traceback.print_exc()
                         print(e)
 
         self.currDate += overallTimeInBetween

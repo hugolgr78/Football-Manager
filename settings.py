@@ -552,7 +552,7 @@ TEMPLATES_2 = [
 ]
 
 MATCH_STATS = [
-    "Possession",
+    # "Possession",
     "Shots",
     "Shots on target",
     "Big chances created",
@@ -561,7 +561,7 @@ MATCH_STATS = [
     "Shots outside the box",
     "Shots blocked",
     "Shots on woodwork",
-    "Passes",
+    # "Passes",
     "Tackles",
     "Interceptions",
     "Saves",
@@ -571,18 +571,32 @@ MATCH_STATS = [
 ]
 
 PLAYER_STATS = [
-    # "Shots",
-    # "Shots on target",
+    "Shots",
+    "Shots on target",
     "Big chances created",
     "Big chances missed",
     "Shots in the box",
     "Shots outside the box",
-    "Passes",
+    # "Passes",
     "Tackles",
     "Interceptions",
-    # "Saves",
+    "Saves",
     "Fouls"
 ]
+
+DEFENSIVE_ACTION_POSITIONS = {
+    "goalkeeper": 0.15,
+    "defender": 0.7,
+    "midfielder": 0.1,
+    "forward": 0.05
+}
+
+BIG_CHANCES_POSITIONS = {
+    "goalkeeper": 0.01,
+    "defender": 0.1,
+    "midfielder": 0.45,
+    "forward": 0.44
+}
 
 CARD_FOUL_CHANCE = 0.7
 

@@ -752,6 +752,7 @@ class MatchDay(ctk.CTkFrame):
         fitness = matchInstance.homeFitness if side == "home" else matchInstance.awayFitness
         subsCount = matchInstance.homeSubs if side == "home" else matchInstance.awaySubs
         stats = matchInstance.homeStats if side == "home" else matchInstance.awayStats
+        oppStats = matchInstance.awayStats if side == "home" else matchInstance.homeStats
         subs = matchInstance.homeCurrentSubs if side == "home" else matchInstance.awayCurrentSubs
         events = matchInstance.homeProcessedEvents if side == "home" else matchInstance.awayProcessedEvents
 
@@ -789,18 +790,17 @@ class MatchDay(ctk.CTkFrame):
                     self.matchFrame.matchInstance.appendScore(1, True if side == "home" else False)
                 else:
                     goalType = "penalty_miss"
+                    statsToAdd.append("Saved")
             elif event == "own_goal":
                 self.matchFrame.matchInstance.appendScore(1, False if side == "home" else True)
             else:
                 self.matchFrame.matchInstance.appendScore(1, True if side == "home" else False)
-
+            
             eventsToAdd.append(goalType)
-            statsToAdd.append("shot")
-            statsToAdd.append("shot on target")
-        elif event == "shot_on_target":
-            statsToAdd.append("shot")
-            statsToAdd.append(event)
-        elif event == "shot":
+
+            if random.random() < GOAL_BIG_CHANCE:
+                statsToAdd.append("Big chances created")
+        elif event != "nothing":
             statsToAdd.append(event)
 
         # ------------------ FOUL ------------------
@@ -808,13 +808,14 @@ class MatchDay(ctk.CTkFrame):
 
         if event in ["yellow_card", "red_card"]:
             eventsToAdd.append(event)
-
-            # 70% chance of foul too
-            if random.random() < 0.7:
-                statsToAdd.append("foul")
-
-        elif event == "foul":
+        elif event == "Fouls":
             statsToAdd.append(event)
+        else:
+            # If nothing, get tackles and interceptions
+            tacklesInterceptions = random.choices(population = list(DEFENSIVE_ACTIONS_CHANCES.keys()), weights = list(DEFENSIVE_ACTIONS_CHANCES.values()), k = 1)[0]
+
+            if tacklesInterceptions != "nothing":
+                statsToAdd.append(tacklesInterceptions)
 
         # ------------------ INJURY ------------------
         event = injuryChances(avgFitness)
@@ -872,10 +873,111 @@ class MatchDay(ctk.CTkFrame):
                 matchEvents[eventTime] = {"type": event, "extra": extraTime}
 
         for stat in statsToAdd:
-            if not stat in stats:
-                stats[stat] = 0
 
-            stats[stat] += 1
+            statsDict = stats if stat != "Saves" else oppStats
+            lineup = lineup if stat != "Saves" else oppLineup
+            if stat in PLAYER_STATS:
+                playerID = self.getStatPlayer(stat, lineup)
+
+                if not playerID:
+                    continue
+
+                if not playerID in stats[stat]:
+                    statsDict[stat][playerID] = 0
+
+                statsDict[stat][playerID] += 1
+
+                match stat:
+                    case "Shots":
+
+                        if playerID not in statsDict["Shots"]:
+                            statsDict["Shots"][playerID] = 0
+                        
+                        statsDict["Shots"][playerID] += 1
+
+                        shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
+                        if not playerID in statsDict[shotDirection]:
+                            statsDict[shotDirection][playerID] = 0
+
+                        statsDict[shotDirection][playerID] += 1
+
+                        shotOutcome = random.choices(population = list(SHOT_CHANCES.keys()), weights = list(SHOT_CHANCES.values()), k = 1)[0]
+                        if shotOutcome != "wide":
+                            statsDict[shotOutcome] += 1
+
+                        if random.random() < SHOT_BIG_CHANCE:
+                            if not playerID in statsDict["Big chances missed"]:
+                                statsDict["Big chances missed"][playerID] = 0
+
+                            statsDict["Big chances missed"][playerID] += 1
+
+                            playerID = self.getStatPlayer("Big chances created", lineup)
+                            if not playerID in statsDict["Big chances created"]:
+                                statsDict["Big chances created"][playerID] = 0
+
+                            statsDict["Big chances created"][playerID] += 1
+                    case "Shots on target":
+                        if playerID not in statsDict["Shots"]:
+                            statsDict["Shots"][playerID] = 0
+                        
+                        statsDict["Shots"][playerID] += 1
+
+                        playerID = self.getStatPlayer("Saves", oppLineup)
+                        if playerID not in statsDict["Saves"]:
+                            statsDict["Saves"][playerID] = 0
+                        
+                        statsDict["Saves"][playerID] += 1
+
+                        shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
+                        if not playerID in statsDict[shotDirection]:
+                            statsDict[shotDirection][playerID] = 0
+                        
+                        statsDict[shotDirection][playerID] += 1
+
+                        if random.random() < SHOT_BIG_CHANCE:
+                            if not playerID in statsDict["Big chances missed"]:
+                                statsDict["Big chances missed"][playerID] = 0
+
+                            statsDict["Big chances missed"][playerID] += 1
+
+                            playerID = self.getStatPlayer("Big chances created", lineup)
+                            if not playerID in statsDict["Big chances created"]:
+                                statsDict["Big chances created"][playerID] = 0
+
+                            statsDict["Big chances created"][playerID] += 1
+            else:
+                statsDict[stat] += 1
+
+        print(f"Generated events for {side} team: {eventsToAdd}, stats: {stats}")
+
+    def getStatPlayer(self, stat, lineup):
+        match stat:
+            case "Saves":
+                return lineup["Goalkeeper"] if "Goalkeeper" in lineup else None
+            case "Shots" | "Shots on target" | "Shots in the box" | "Shots outside the box":
+                return self.choosePlayerFromDict(lineup, SCORER_CHANCES)
+            case "Fouls":
+                weights = [ownGoalFoulWeight(Players.get_player_by_id(playerID)) for playerID in lineup.values()]
+                return random.choices(list(lineup.values()), weights = weights, k = 1)[0]
+            case "Tackles" | "Interceptions":
+                return self.choosePlayerFromDict(lineup, DEFENSIVE_ACTION_POSITIONS)
+            case "Big chances created" | "Big chances missed":
+                return self.choosePlayerFromDict(lineup, BIG_CHANCES_POSITIONS)
+
+    def choosePlayerFromDict(self, lineup, dict_):
+        playerPosition = random.choices(list(dict_.keys()), weights = list(dict_.values()), k = 1)[0]
+        players = [playerID for playerID in lineup.values() if Players.get_player_by_id(playerID).position == playerPosition]
+
+        while len(players) == 0:
+            playerPosition = random.choices(list(dict_.keys()), weights = list(dict_.values()), k = 1)[0]
+            players = [playerID for playerID in lineup.values() if Players.get_player_by_id(playerID).position == playerPosition]
+
+        weights = [effective_ability(Players.get_player_by_id(playerID)) for playerID in players]
+        if sum(weights) == 0:
+            weights = [1] * len(players)
+
+        return random.choices(players, weights = weights, k = 1)[0]
+
 
     def shouts(self):
 

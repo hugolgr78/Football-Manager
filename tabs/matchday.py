@@ -709,8 +709,6 @@ class MatchDay(ctk.CTkFrame):
 
                         passesAndPossession(matchInstance = frame.matchInstance)
 
-                print(f"{self.matchFrame.matchInstance.awayStats}, {self.matchFrame.matchInstance.homeStats}")
-
             ## ----------- managing team match ------------
             for event_time, event_details in list(self.matchFrame.matchInstance.homeEvents.items()):
                 if event_time == str(minutes) + ":" + str(seconds) and event_time not in self.matchFrame.matchInstance.homeProcessedEvents:

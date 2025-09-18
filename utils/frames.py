@@ -2859,20 +2859,22 @@ class InGameStatFrame(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = self.statName, font = (APP_FONT, 12), fg_color = fgColor, height = height, text_color = "white", width = 30).place(relx = 0.05, rely = 0.5, anchor = "w")
 
+        pill_height = 24
         self.valueLabel = ctk.CTkLabel(
             self,
             text = f"{self.statValue}",
             font = (APP_FONT, 12),
             fg_color = self.fgColor,
             text_color = "white",
-            padx = 10,   # horizontal padding inside the label
-            pady = 4,    # vertical padding
-            corner_radius = 12
+            height = pill_height,
+            corner_radius = pill_height // 2,
+            padx = 8
         )
-        self.valueLabel.pack(side = "right", padx = 5, pady = 5)
+        self.valueLabel.place(relx = 0.8, rely = 0.5, anchor = "center")
 
     def updateValue(self, value, color):
         self.statValue = value
+        self.valueLabel.configure(text = f"{self.statValue}")
 
         if color:
             self.valueLabel.configure(fg_color = "white", text_color = "black")

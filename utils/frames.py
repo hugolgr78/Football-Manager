@@ -2847,3 +2847,34 @@ class InGamePlayerFrame(ctk.CTkFrame):
         self.fitnessLabel.destroy()
 
         self.nameLabel.configure(text_color = GREY)
+
+class InGameStatFrame(ctk.CTkFrame):
+    def __init__(self, parent, statName, width, height, fgColor):
+        super().__init__(parent, fg_color = fgColor, width = width, height = height)
+        self.pack(pady = 5, padx = 2)
+
+        self.statName = statName
+        self.statValue = 0
+        self.fgColor = fgColor
+
+        ctk.CTkLabel(self, text = self.statName, font = (APP_FONT, 12), fg_color = fgColor, height = height, text_color = "white", width = 30).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+        self.valueLabel = ctk.CTkLabel(
+            self,
+            text = f"{self.statValue}",
+            font = (APP_FONT, 12),
+            fg_color = self.fgColor,
+            text_color = "white",
+            padx = 10,   # horizontal padding inside the label
+            pady = 4,    # vertical padding
+            corner_radius = 12
+        )
+        self.valueLabel.pack(side = "right", padx = 5, pady = 5)
+
+    def updateValue(self, value, color):
+        self.statValue = value
+
+        if color:
+            self.valueLabel.configure(fg_color = "white", text_color = "black")
+        else:
+            self.valueLabel.configure(fg_color = self.fgColor, text_color = "white")

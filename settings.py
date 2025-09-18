@@ -584,6 +584,13 @@ PLAYER_STATS = [
     "Fouls"
 ]
 
+NEGATIVE_STATS = [
+    "Big chances missed",
+    "Fouls",
+    "Yellow cards",
+    "Red cards"
+]
+
 DEFENSIVE_ACTION_POSITIONS = {
     "goalkeeper": 0.15,
     "defender": 0.7,

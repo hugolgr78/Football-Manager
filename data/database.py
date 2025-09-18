@@ -5333,12 +5333,6 @@ def getYouthPlayer(teamID, position, compID, players):
     available_youths.sort(key = effective_ability, reverse = True)
     return available_youths[0].id if available_youths else None
 
-def effective_ability(p):
-    # weights: morale 20%, fitness 40%, sharpness 40%
-    weighted = (0.2 * p.morale + 0.4 * p.fitness + 0.4 * p.sharpness) / 100.0
-    multiplier = 0.75 + (weighted * 0.5)
-    return p.current_ability * multiplier
-
 def getSubstitutes(teamID, lineup, compID):
     allPlayers = PlayerBans.get_all_non_banned_players_for_comp(teamID, compID)
     usedPlayers = set(lineup.values())

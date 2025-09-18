@@ -186,6 +186,7 @@ class Match():
                 if total_seconds % TICK == 0:
                     self.generateEvents("home")
                     self.generateEvents("away")
+                    passesAndPossession(self)
 
                 # ----------- home events ------------
                 for event_time, event_details in list(self.homeEvents.items()):
@@ -340,7 +341,7 @@ class Match():
             statsDict = stats if stat != "Saves" else oppStats
             lineup = lineup if stat != "Saves" else oppLineup
             if stat in PLAYER_STATS:
-                playerID = self.getStatPlayer(stat, lineup)
+                playerID = getStatPlayer(stat, lineup)
 
                 if not playerID:
                     continue
@@ -368,7 +369,7 @@ class Match():
 
                             statsDict["Big chances missed"][playerID] += 1
 
-                            playerID = self.getStatPlayer("Big chances created", lineup)
+                            playerID = getStatPlayer("Big chances created", lineup)
                             if not playerID in statsDict["Big chances created"]:
                                 statsDict["Big chances created"][playerID] = 0
 
@@ -391,13 +392,13 @@ class Match():
 
                             statsDict["Big chances missed"][playerID] += 1
 
-                            playerID = self.getStatPlayer("Big chances created", lineup)
+                            playerID = getStatPlayer("Big chances created", lineup)
                             if not playerID in statsDict["Big chances created"]:
                                 statsDict["Big chances created"][playerID] = 0
 
                             statsDict["Big chances created"][playerID] += 1
 
-                        playerID = self.getStatPlayer("Saves", oppLineup)
+                        playerID = getStatPlayer("Saves", oppLineup)
                         if playerID not in statsDict["Saves"]:
                             statsDict["Saves"][playerID] = 0
                         
@@ -509,10 +510,11 @@ class Match():
 
             stats["Shots"][playerID] += 1
         
-            if event["type"] == "penalty_miss" and event["keeper"] not in oppStats["Saves"]:
-                oppStats["Saves"][event["keeper"]] = 0
+            if event["type"] == "penalty_miss":
+                if event["keeper"] not in oppStats["Saves"]:
+                    oppStats["Saves"][event["keeper"]] = 0
             
-            oppStats["Saves"][event["keeper"]] += 1
+                oppStats["Saves"][event["keeper"]] += 1
 
         elif event["type"] == "own_goal":
             ownGoalPosition = random.choices(list(OWN_GOAL_CHANCES.keys()), weights = list(OWN_GOAL_CHANCES.values()), k = 1)[0]
@@ -635,37 +637,6 @@ class Match():
         
         if teamMatch:
             return event
-
-    def getStatPlayer(self, stat, lineup):
-        match stat:
-            case "Saves":
-                return lineup["Goalkeeper"] if "Goalkeeper" in lineup else None
-            case "Shots" | "Shots on target" | "Shots in the box" | "Shots outside the box":
-                return self.choosePlayerFromDict(lineup, SCORER_CHANCES)
-            case "Fouls":
-                weights = [ownGoalFoulWeight(Players.get_player_by_id(playerID)) for playerID in lineup.values()]
-                return random.choices(list(lineup.values()), weights = weights, k = 1)[0]
-            case "Tackles" | "Interceptions":
-                return self.choosePlayerFromDict(lineup, DEFENSIVE_ACTION_POSITIONS)
-            case "Big chances created" | "Big chances missed":
-                return self.choosePlayerFromDict(lineup, BIG_CHANCES_POSITIONS)
-
-    def choosePlayerFromDict(self, lineup, dict_):
-        playerPosition = random.choices(list(dict_.keys()), weights = list(dict_.values()), k = 1)[0]
-        players = [playerID for playerID in lineup.values() if Players.get_player_by_id(playerID).position == playerPosition]
-
-        while len(players) == 0:
-            playerPosition = random.choices(list(dict_.keys()), weights = list(dict_.values()), k = 1)[0]
-            players = [playerID for playerID in lineup.values() if Players.get_player_by_id(playerID).position == playerPosition]
-
-        weights = [effective_ability(Players.get_player_by_id(playerID)) for playerID in players]
-        if sum(weights) == 0:
-            weights = [1] * len(players)
-
-        return random.choices(players, weights = weights, k = 1)[0]
-
-    def getStatNum(self, stat):
-        return sum(playerValue for playerValue in stat.values())
 
     def updateTeamMatch(self, playerOffID, oldPosition, teamMatch, home):
         playerData = Players.get_player_by_id(playerOffID)

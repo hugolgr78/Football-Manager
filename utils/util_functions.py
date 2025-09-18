@@ -772,29 +772,34 @@ def passesAndPossession(matchInstance):
     awayPassesAttempted = matchInstance.awayPassesAttempted
 
     homePasses, awayPasses = getPasses(homeLineup, awayLineup)
-    homePassesAttempted += homePasses
-    awayPassesAttempted += awayPasses
+    matchInstance.homePassesAttempted = homePassesAttempted + homePasses
+    matchInstance.awayPassesAttempted = awayPassesAttempted + awayPasses
 
+    # Compute pass completion probability from sharpness with a lower baseline and an upper cap
+    # We scale sharpness into a range [0.60, 0.90] so even low-sharpness players have at least 60%
+    # and very high sharpness caps at ~90%.
     for _ in range(homePasses):
         playerID = choosePlayerFromDict(homeLineup, PASSING_POSITIONS)
 
-        passCompleteProb = Players.get_player_by_id(playerID).sharpness / 100
+        raw = Players.get_player_by_id(playerID).sharpness / 100.0
+        passCompleteProb = 0.60 + raw * (0.90 - 0.60)
 
         if random.random() < passCompleteProb:
-            if playerID not in homeStats["Passes"]:
-                homeStats["Passes"][playerID] = 0
-
+            # ensure the Passes dict exists and the player key is initialized
+            homeStats.setdefault("Passes", {})
+            homeStats["Passes"].setdefault(playerID, 0)
             homeStats["Passes"][playerID] += 1
 
     for _ in range(awayPasses):
         playerID = choosePlayerFromDict(awayLineup, PASSING_POSITIONS)
 
-        passCompleteProb = Players.get_player_by_id(playerID).sharpness / 100
+        raw = Players.get_player_by_id(playerID).sharpness / 100.0
+        passCompleteProb = 0.60 + raw * (0.90 - 0.60)
 
         if random.random() < passCompleteProb:
-            if playerID not in awayStats["Passes"]:
-                awayStats["Passes"][playerID] = 0
-
+            # ensure the Passes dict exists and the player key is initialized
+            awayStats.setdefault("Passes", {})
+            awayStats["Passes"].setdefault(playerID, 0)
             awayStats["Passes"][playerID] += 1
 
     homeCompleted = getStatNum(homeStats["Passes"])

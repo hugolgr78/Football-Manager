@@ -54,7 +54,7 @@ class Match():
 
         self.homeFitness = {}
         self.awayFitness = {}
-        # Initialize per-player stats (dicts) and match-level stats (ints)
+
         self.homeStats = {stat: {} for stat in PLAYER_STATS}
         for stat in MATCH_STATS:
             if stat not in PLAYER_STATS:

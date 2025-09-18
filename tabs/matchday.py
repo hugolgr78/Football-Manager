@@ -2,7 +2,7 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
-from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame, SubstitutePlayer, FormGraph, InGamePlayerFrame
+from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame, SubstitutePlayer, FormGraph, InGamePlayerFrame, InGameStatFrame
 from utils.shouts import ShoutFrame
 from utils.util_functions import *
 import threading, time
@@ -86,6 +86,7 @@ class MatchDay(ctk.CTkFrame):
         self.homePlayersFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 460, fg_color = GREY_BACKGROUND)
         self.homePlayersFrame.pack_propagate(False)
         self.homeStatsFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 460, fg_color = GREY_BACKGROUND)
+        self.homeStatsFrame.pack_propagate(False)
 
         self.awayDropDown = ctk.CTkComboBox(
             self.teamMatchFrame,
@@ -109,6 +110,7 @@ class MatchDay(ctk.CTkFrame):
         self.awayPlayersFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 460, fg_color = GREY_BACKGROUND)
         self.awayPlayersFrame.pack_propagate(False)
         self.awayStatsFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 460, fg_color = GREY_BACKGROUND)
+        self.awayStatsFrame.pack_propagate(False)
 
         self.homeSubstituteFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 180, fg_color = GREY_BACKGROUND)
         self.homeSubstituteFrame.place(relx = 0.02, rely = 0.73, anchor = "nw")
@@ -162,7 +164,10 @@ class MatchDay(ctk.CTkFrame):
             InGamePlayerFrame(frame, playerID, 220, 18, GREY_BACKGROUND)
 
     def createStatsFrame(self, frame):
-        pass
+        stats = self.matchFrame.matchInstance.homeStats if frame == self.homeStatsFrame else self.matchFrame.matchInstance.awayStats
+
+        for stat in stats.keys():
+            InGameStatFrame(frame, stat, 220, 18, GREY_BACKGROUND)
 
     def changeData(self, side, selection):
 
@@ -588,9 +593,6 @@ class MatchDay(ctk.CTkFrame):
                         self.matchDataFrame.update_idletasks()
                         self.matchDataFrame._parent_canvas.yview_moveto(1)
 
-                    print(self.matchFrame.matchInstance.homeStats)
-                    print(self.matchFrame.matchInstance.awayStats)
-
             ## ----------- substitution end ------------
             if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
                 self.substitutionButton.configure(state = "disabled")
@@ -667,6 +669,39 @@ class MatchDay(ctk.CTkFrame):
                 self.generateEvents("away", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
                 passesAndPossession(matchInstance = self.matchFrame.matchInstance)
 
+                for stat in MATCH_STATS:
+                    homeStats = self.matchFrame.matchInstance.homeStats
+                    awayStats = self.matchFrame.matchInstance.awayStats
+
+                    if stat == "Possession":
+                        valueH, valueA = homeStats[stat], awayStats[stat]
+                        textH, textA = f"{valueH}%", f"{valueA}%"
+                    elif stat == "Passes":
+                        valueH, valueA = getStatNum(homeStats[stat]), getStatNum(awayStats[stat])
+                        textH, textA = f"{valueH} ({self.matchFrame.matchInstance.homePassesAttempted})", f"{valueA} ({self.matchFrame.matchInstance.awayPassesAttempted})"
+                    elif stat in PLAYER_STATS:
+                        valueH, valueA = getStatNum(homeStats[stat]), getStatNum(awayStats[stat])
+                        textH, textA = f"{valueH}", f"{valueA}"
+                    else:
+                        valueH, valueA = homeStats[stat], awayStats[stat]
+                        textH, textA = f"{valueH}", f"{valueA}"
+
+                    for frame in self.homeStatsFrame.winfo_children():
+                        if frame.statName == stat:
+                            if stat in NEGATIVE_STATS:
+                                color = False if valueH > valueA else True if valueA > valueH else None
+                            else:
+                                color = True if valueH > valueA else False if valueA > valueH else None
+                            frame.updateValue(textH, color)
+
+                    for frame in self.awayStatsFrame.winfo_children():
+                        if frame.statName == stat:
+                            if stat in NEGATIVE_STATS:
+                                color = False if valueA > valueH else True if valueH > valueA else None
+                            else:
+                                color = True if valueA > valueH else False if valueH > valueA else None
+                            frame.updateValue(textA, color)
+
                 for frame in self.otherMatchesFrame.winfo_children():
                     if frame.matchInstance:
                         self.generateEvents("home", matchInstance = frame.matchInstance)
@@ -675,7 +710,6 @@ class MatchDay(ctk.CTkFrame):
                         passesAndPossession(matchInstance = frame.matchInstance)
 
                 print(f"{self.matchFrame.matchInstance.awayStats}, {self.matchFrame.matchInstance.homeStats}")
-
 
             ## ----------- managing team match ------------
             for event_time, event_details in list(self.matchFrame.matchInstance.homeEvents.items()):
@@ -879,8 +913,6 @@ class MatchDay(ctk.CTkFrame):
 
         for stat in statsToAdd:
 
-            statsDict = stats if stat != "Saves" else oppStats
-            lineup = lineup if stat != "Saves" else oppLineup
             if stat in PLAYER_STATS:
                 playerID = getStatPlayer(stat, lineup)
 
@@ -888,64 +920,64 @@ class MatchDay(ctk.CTkFrame):
                     continue
 
                 if not playerID in stats[stat]:
-                    statsDict[stat][playerID] = 0
+                    stats[stat][playerID] = 0
 
-                statsDict[stat][playerID] += 1
+                stats[stat][playerID] += 1
 
                 match stat:
                     case "Shots":
                         shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
-                        if not playerID in statsDict[shotDirection]:
-                            statsDict[shotDirection][playerID] = 0
+                        if not playerID in stats[shotDirection]:
+                            stats[shotDirection][playerID] = 0
 
-                        statsDict[shotDirection][playerID] += 1
+                        stats[shotDirection][playerID] += 1
 
                         shotOutcome = random.choices(population = list(SHOT_CHANCES.keys()), weights = list(SHOT_CHANCES.values()), k = 1)[0]
                         if shotOutcome != "wide":
-                            statsDict[shotOutcome] += 1
+                            stats[shotOutcome] += 1
 
                         if random.random() < SHOT_BIG_CHANCE:
-                            if not playerID in statsDict["Big chances missed"]:
-                                statsDict["Big chances missed"][playerID] = 0
+                            if not playerID in stats["Big chances missed"]:
+                                stats["Big chances missed"][playerID] = 0
 
-                            statsDict["Big chances missed"][playerID] += 1
+                            stats["Big chances missed"][playerID] += 1
 
                             playerID = getStatPlayer("Big chances created", lineup)
-                            if not playerID in statsDict["Big chances created"]:
-                                statsDict["Big chances created"][playerID] = 0
+                            if not playerID in stats["Big chances created"]:
+                                stats["Big chances created"][playerID] = 0
 
-                            statsDict["Big chances created"][playerID] += 1
+                            stats["Big chances created"][playerID] += 1
                     case "Shots on target":
-                        if playerID not in statsDict["Shots"]:
-                            statsDict["Shots"][playerID] = 0
+                        if playerID not in stats["Shots"]:
+                            stats["Shots"][playerID] = 0
                         
-                        statsDict["Shots"][playerID] += 1
+                        stats["Shots"][playerID] += 1
 
                         shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
-                        if not playerID in statsDict[shotDirection]:
-                            statsDict[shotDirection][playerID] = 0
+                        if not playerID in stats[shotDirection]:
+                            stats[shotDirection][playerID] = 0
                         
-                        statsDict[shotDirection][playerID] += 1
+                        stats[shotDirection][playerID] += 1
 
                         if random.random() < SHOT_BIG_CHANCE:
-                            if not playerID in statsDict["Big chances missed"]:
-                                statsDict["Big chances missed"][playerID] = 0
+                            if not playerID in stats["Big chances missed"]:
+                                stats["Big chances missed"][playerID] = 0
 
-                            statsDict["Big chances missed"][playerID] += 1
+                            stats["Big chances missed"][playerID] += 1
 
                             playerID = getStatPlayer("Big chances created", lineup)
-                            if not playerID in statsDict["Big chances created"]:
-                                statsDict["Big chances created"][playerID] = 0
+                            if not playerID in stats["Big chances created"]:
+                                stats["Big chances created"][playerID] = 0
 
-                            statsDict["Big chances created"][playerID] += 1
+                            stats["Big chances created"][playerID] += 1
 
                         playerID = getStatPlayer("Saves", oppLineup)
-                        if playerID not in statsDict["Saves"]:
-                            statsDict["Saves"][playerID] = 0
+                        if playerID not in oppStats["Saves"]:
+                            oppStats["Saves"][playerID] = 0
                         
-                        statsDict["Saves"][playerID] += 1
+                        oppStats["Saves"][playerID] += 1
             else:
-                statsDict[stat] += 1
+                stats[stat] += 1
 
     def shouts(self):
 

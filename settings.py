@@ -552,7 +552,7 @@ TEMPLATES_2 = [
 ]
 
 MATCH_STATS = [
-    # "Possession",
+    "Possession",
     "Shots",
     "Shots on target",
     "Big chances created",
@@ -561,7 +561,7 @@ MATCH_STATS = [
     "Shots outside the box",
     "Shots blocked",
     "Shots on woodwork",
-    # "Passes",
+    "Passes",
     "Tackles",
     "Interceptions",
     "Saves",
@@ -577,7 +577,7 @@ PLAYER_STATS = [
     "Big chances missed",
     "Shots in the box",
     "Shots outside the box",
-    # "Passes",
+    "Passes",
     "Tackles",
     "Interceptions",
     "Saves",
@@ -607,6 +607,13 @@ DEFENSIVE_ACTIONS_CHANCES = {"Tackles": 0.0833, "Interceptions": 0.05, "nothing"
 SHOT_BIG_CHANCE = 0.3
 SHOT_TARGET_BIG_CHANCE = 0.5
 GOAL_BIG_CHANCE = 0.8
+
+PASSING_POSITIONS = {
+    "£goalkeeper": 0.03,
+    "defender": 0.3,
+    "midfielder": 0.5,
+    "forward": 0.17
+}
 
 from data.database import StatsManager
 

@@ -889,12 +889,6 @@ class MatchDay(ctk.CTkFrame):
 
                 match stat:
                     case "Shots":
-
-                        if playerID not in statsDict["Shots"]:
-                            statsDict["Shots"][playerID] = 0
-                        
-                        statsDict["Shots"][playerID] += 1
-
                         shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
                         if not playerID in statsDict[shotDirection]:
                             statsDict[shotDirection][playerID] = 0
@@ -922,12 +916,6 @@ class MatchDay(ctk.CTkFrame):
                         
                         statsDict["Shots"][playerID] += 1
 
-                        playerID = self.getStatPlayer("Saves", oppLineup)
-                        if playerID not in statsDict["Saves"]:
-                            statsDict["Saves"][playerID] = 0
-                        
-                        statsDict["Saves"][playerID] += 1
-
                         shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
                         if not playerID in statsDict[shotDirection]:
                             statsDict[shotDirection][playerID] = 0
@@ -945,10 +933,14 @@ class MatchDay(ctk.CTkFrame):
                                 statsDict["Big chances created"][playerID] = 0
 
                             statsDict["Big chances created"][playerID] += 1
+
+                        playerID = self.getStatPlayer("Saves", oppLineup)
+                        if playerID not in statsDict["Saves"]:
+                            statsDict["Saves"][playerID] = 0
+                        
+                        statsDict["Saves"][playerID] += 1
             else:
                 statsDict[stat] += 1
-
-        print(f"Generated events for {side} team: {eventsToAdd}, stats: {stats}")
 
     def getStatPlayer(self, stat, lineup):
         match stat:

@@ -65,6 +65,9 @@ class Match():
             if stat not in PLAYER_STATS:
                 self.awayStats[stat] = 0
 
+        self.homePassesAttempted = 0
+        self.awayPassesAttempted = 0
+
         self.score = [0, 0]
 
         if self.auto:
@@ -349,12 +352,6 @@ class Match():
 
                 match stat:
                     case "Shots":
-
-                        if playerID not in statsDict["Shots"]:
-                            statsDict["Shots"][playerID] = 0
-                        
-                        statsDict["Shots"][playerID] += 1
-
                         shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
                         if not playerID in statsDict[shotDirection]:
                             statsDict[shotDirection][playerID] = 0
@@ -382,16 +379,10 @@ class Match():
                         
                         statsDict["Shots"][playerID] += 1
 
-                        playerID = self.getStatPlayer("Saves", oppLineup)
-                        if playerID not in statsDict["Saves"]:
-                            statsDict["Saves"][playerID] = 0
-                        
-                        statsDict["Saves"][playerID] += 1
-
                         shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
                         if not playerID in statsDict[shotDirection]:
                             statsDict[shotDirection][playerID] = 0
-                        
+
                         statsDict[shotDirection][playerID] += 1
 
                         if random.random() < SHOT_BIG_CHANCE:
@@ -405,6 +396,12 @@ class Match():
                                 statsDict["Big chances created"][playerID] = 0
 
                             statsDict["Big chances created"][playerID] += 1
+
+                        playerID = self.getStatPlayer("Saves", oppLineup)
+                        if playerID not in statsDict["Saves"]:
+                            statsDict["Saves"][playerID] = 0
+                        
+                        statsDict["Saves"][playerID] += 1
             else:
                 statsDict[stat] += 1
 
@@ -495,6 +492,13 @@ class Match():
             penaltyPosition = random.choices(list(PENALTY_TAKER_CHANCES.keys()), weights = list(PENALTY_TAKER_CHANCES.values()), k = 1)[0]
             players = [player.id for player in players_dict.values() if player.position == penaltyPosition]
 
+            while len(players) == 0:
+                penaltyPosition = random.choices(list(PENALTY_TAKER_CHANCES.keys()), weights = list(PENALTY_TAKER_CHANCES.values()), k = 1)[0]
+                players = [player.id for player in players_dict.values() if player.position == penaltyPosition]
+
+            playerID = random.choices(players, k = 1)[0]
+            event["player"] = playerID
+
             if playerID not in stats["Shots on target"]:
                 stats["Shots on target"][playerID] = 0
             
@@ -509,13 +513,6 @@ class Match():
                 oppStats["Saves"][event["keeper"]] = 0
             
             oppStats["Saves"][event["keeper"]] += 1
-
-            while len(players) == 0:
-                penaltyPosition = random.choices(list(PENALTY_TAKER_CHANCES.keys()), weights = list(PENALTY_TAKER_CHANCES.values()), k = 1)[0]
-                players = [player.id for player in players_dict.values() if player.position == penaltyPosition]
-
-            playerID = random.choices(players, k = 1)[0]
-            event["player"] = playerID
 
         elif event["type"] == "own_goal":
             ownGoalPosition = random.choices(list(OWN_GOAL_CHANCES.keys()), weights = list(OWN_GOAL_CHANCES.values()), k = 1)[0]

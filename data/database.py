@@ -261,6 +261,9 @@ class Managers(Base):
                 session.commit()
             else:
                 return None
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
             session.close()
 
@@ -902,6 +905,7 @@ class Players(Base):
             session.commit()
         except Exception as e:
             session.rollback()
+            print("[DB ERROR] Batch update morales failed:", e)
             raise e
         finally:
             session.close()
@@ -919,6 +923,7 @@ class Players(Base):
             session.commit()
         except Exception as e:
             session.rollback()
+            print("[DB ERROR] Batch update sharpnesses failed:", e)
             raise e
         finally:
             session.close()
@@ -1077,6 +1082,7 @@ class Players(Base):
             session.commit()
         except Exception as e:
             session.rollback()
+            print("[DB ERROR] Batch update fitness failed:", e)
             raise e
         finally:
             session.close()
@@ -1349,6 +1355,10 @@ class Matches(Base):
                 session.commit()
             else:
                 return None
+        except Exception as e:
+            session.rollback()
+            print("[DB ERROR] Update match score failed:", e)
+            raise e
         finally:
             session.close()
 
@@ -1590,6 +1600,7 @@ class TeamLineup(Base):
             session.commit()
         except Exception as e:
             session.rollback()
+            print(f"Error in batch_add_lineups: {e}")
             raise e
         finally:
             session.close()
@@ -1848,6 +1859,7 @@ class MatchEvents(Base):
             session.commit()
         except Exception as e:
             session.rollback()
+            print(f"Error in batch_add_events: {e}")
             raise e
         finally:
             session.close()
@@ -2407,6 +2419,7 @@ class MatchStats(Base):
             session.commit()
         except Exception as e:
             session.rollback()
+            print(f"Error in batch_add_stats: {e}")
             raise e
         finally:
             session.close()
@@ -2466,7 +2479,7 @@ class MatchStats(Base):
     def get_team_stat_in_match(cls, match_id, team_id, stat_type):
         session = DatabaseManager().get_session()
         try:
-            total = session.query(func.sum(MatchStats.value)).filter(
+            total = session.query(MatchStats).filter(
                 MatchStats.match_id == match_id,
                 MatchStats.team_id == team_id,
                 MatchStats.stat_type == stat_type
@@ -2798,6 +2811,10 @@ class LeagueTeams(Base):
                 session.commit()
             else:
                 return None
+        except Exception as e:
+            session.rollback()
+            print(f"Error in update_team: {e}")
+            raise e
         finally:
             session.close()
 

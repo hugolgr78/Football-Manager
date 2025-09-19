@@ -622,6 +622,8 @@ BIG_CHANCES_POSITIONS = {
     "forward": 0.44
 }
 
+MAX_XG = 0.15
+
 CARD_FOUL_CHANCE = 0.7
 
 SHOT_CHANCES = {"Shots blocked": 0.3, "Shots on woodwork": 0.05, "wide": 0.65}

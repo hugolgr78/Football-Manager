@@ -553,6 +553,7 @@ TEMPLATES_2 = [
 
 MATCH_STATS = [
     "Possession",
+    "xG",
     "Shots",
     "Shots on target",
     "Big chances created",
@@ -568,6 +569,22 @@ MATCH_STATS = [
     "Fouls",
     "Yellow cards",
     "Red cards"
+]
+
+SAVED_STATS = [
+    "Possession",
+    "xG",
+    "Shots",
+    "Shots on target",
+    "Big chances created",
+    "Big chances missed",
+    "Shots in the box",
+    "Shots outside the box",
+    "Passes",
+    "Tackles",
+    "Interceptions",
+    "Saves",
+    "Fouls",
 ]
 
 PLAYER_STATS = [

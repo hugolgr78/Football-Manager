@@ -60,10 +60,20 @@ class Match():
             if stat not in PLAYER_STATS:
                 self.homeStats[stat] = 0
 
+        # Order them as they in MATCH_STATS
+        for stat in MATCH_STATS:
+            if stat in self.homeStats:
+                self.homeStats[stat] = self.homeStats.pop(stat)
+
         self.awayStats = {stat: {} for stat in PLAYER_STATS}
         for stat in MATCH_STATS:
             if stat not in PLAYER_STATS:
                 self.awayStats[stat] = 0
+
+        # Order them as they in MATCH_STATS
+        for stat in MATCH_STATS:
+            if stat in self.awayStats:
+                self.awayStats[stat] = self.awayStats.pop(stat)
 
         self.homePassesAttempted = 0
         self.awayPassesAttempted = 0
@@ -374,6 +384,9 @@ class Match():
                                 statsDict["Big chances created"][playerID] = 0
 
                             statsDict["Big chances created"][playerID] += 1
+
+                        statsDict["xG"] += round(random.uniform(0.02, 0.30), 2)
+                        statsDict["xG"] = round(statsDict["xG"], 2)
                     case "Shots on target":
                         if playerID not in statsDict["Shots"]:
                             statsDict["Shots"][playerID] = 0
@@ -403,6 +416,9 @@ class Match():
                             statsDict["Saves"][playerID] = 0
                         
                         statsDict["Saves"][playerID] += 1
+
+                        statsDict["xG"] += round(random.uniform(0.02, 0.30), 2)
+                        statsDict["xG"] = round(statsDict["xG"], 2)
             else:
                 statsDict[stat] += 1
 
@@ -460,6 +476,9 @@ class Match():
             
             stats[shotDirection][playerID] += 1
 
+            stats["xG"] += round(random.uniform(0.02, 0.30), 2)
+            stats["xG"] = round(stats["xG"], 2)
+
             ## assister
             assisterPosition = random.choices(list(ASSISTER_CHANCES.keys()), weights = list(ASSISTER_CHANCES.values()), k = 1)[0]
             players = [player.id for player in players_dict.values() if player.position == assisterPosition]
@@ -515,6 +534,8 @@ class Match():
                     oppStats["Saves"][event["keeper"]] = 0
             
                 oppStats["Saves"][event["keeper"]] += 1
+
+            stats["xG"] += 0.8
 
         elif event["type"] == "own_goal":
             ownGoalPosition = random.choices(list(OWN_GOAL_CHANCES.keys()), weights = list(OWN_GOAL_CHANCES.values()), k = 1)[0]

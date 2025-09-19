@@ -413,7 +413,7 @@ PROMPT_TO_TEXT = {
     "Motivate": MOTIVATE
 }
 
-ATTACK_STATS = ["Attack", "Goals scored", "Penalties scored", "Goals scored in the first 15", "Goals scored in the last 15", "Goals by substitutes", "Fastest goal scored", "Latest goal scored"]
+ATTACK_STATS = ["Attack", "Goals scored", "Penalties scored", "Goals scored in the first 15", "Goals scored in the last 15", "Goals by substitutes", "Fastest goal scored", "Latest goal scored", "Highest Possession", "Lowest Possession", "Highest xG", "Lowest xG"]
 DEFENSIVE_STATS = ["Defense", "Goals conceded", "Clean sheets", "Yellow cards", "Red cards", "Own goals", "Penalties saved", "Goal conceded in the first 15", "Goal conceded in the last 15", "Fastest goal conceded", "Latest goal conceded"]
 MISC_STATS = ["Misc", "Goal difference", "Winning from losing position", "Losing from winning position", "Biggest win", "Biggest loss", "Home performance", "Away performance"]
 STREAK_STATS = ["Streaks", "Longest unbeaten run", "Longest winning streak", "Longest losing streak", "Longest winless streak", "Longest scoring streak", "Longest scoreless streak"]
@@ -649,6 +649,10 @@ STAT_FUNCTIONS = {
     "Goals by substitutes": StatsManager.get_goals_by_substitutes,
     "Fastest goal scored": StatsManager.get_fastest_goal_scored,
     "Latest goal scored": StatsManager.get_latest_goal_scored,
+    "Highest Possession": StatsManager.get_highest_possession,
+    "Lowest Possession": StatsManager.get_lowest_possession,
+    "Highest xG": StatsManager.get_highest_xg,
+    "Lowest xG": StatsManager.get_lowest_xg,
     "Goals conceded": StatsManager.get_goals_conceded,
     "Clean sheets": StatsManager.get_clean_sheets,
     "Yellow cards": StatsManager.get_yellow_cards,

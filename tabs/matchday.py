@@ -167,7 +167,7 @@ class MatchDay(ctk.CTkFrame):
         stats = self.matchFrame.matchInstance.homeStats if frame == self.homeStatsFrame else self.matchFrame.matchInstance.awayStats
 
         for stat in stats.keys():
-            InGameStatFrame(frame, stat, 220, 18, GREY_BACKGROUND)
+            InGameStatFrame(frame, stat, 220, 17, GREY_BACKGROUND)
 
     def changeData(self, side, selection):
 
@@ -945,6 +945,9 @@ class MatchDay(ctk.CTkFrame):
                                 stats["Big chances created"][playerID] = 0
 
                             stats["Big chances created"][playerID] += 1
+
+                        stats["xG"] += round(random.uniform(0.02, 0.30), 2)
+                        stats["xG"] = round(stats["xG"], 2)
                     case "Shots on target":
                         if playerID not in stats["Shots"]:
                             stats["Shots"][playerID] = 0
@@ -974,6 +977,9 @@ class MatchDay(ctk.CTkFrame):
                             oppStats["Saves"][playerID] = 0
                         
                         oppStats["Saves"][playerID] += 1
+
+                        stats["xG"] += round(random.uniform(0.02, 0.30), 2)
+                        stats["xG"] = round(stats["xG"], 2)
             else:
                 stats[stat] += 1
 

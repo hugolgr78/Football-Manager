@@ -2857,7 +2857,7 @@ class InGameStatFrame(ctk.CTkFrame):
         self.statValue = 0
         self.fgColor = fgColor
 
-        ctk.CTkLabel(self, text = self.statName, font = (APP_FONT, 12), fg_color = fgColor, height = height, text_color = "white", width = 30).place(relx = 0.05, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(self, text = self.statName, font = (APP_FONT, 12), fg_color = fgColor, height = height, text_color = "white", width = 0).place(relx = 0.05, rely = 0.5, anchor = "w")
 
         pill_height = 24
         self.valueLabel = ctk.CTkLabel(

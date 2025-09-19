@@ -2355,6 +2355,15 @@ class MatchEvents(Base):
         finally:
             session.close()
 
+class MatchStats(Base):
+    __tablename__ = 'match_stats'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    match_id = Column(String(128), ForeignKey('matches.id'))
+    stat_type = Column(Enum(*SAVED_STATS), nullable = False)
+    value = Column(Integer, nullable = False)
+    player_id = Column(String(128), ForeignKey('players.id'))
+    
 class League(Base):
     __tablename__ = 'leagues'
     

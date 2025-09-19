@@ -2363,6 +2363,117 @@ class MatchStats(Base):
     stat_type = Column(Enum(*SAVED_STATS), nullable = False)
     value = Column(Integer, nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))
+    team_id = Column(String(128), ForeignKey('teams.id'))
+
+    @classmethod
+    def add_stat(cls, match_id, stat_type, value, player_id = None, team_id = None):
+        session = DatabaseManager().get_session()
+        try:
+            new_stat = MatchStats(
+                match_id = match_id,
+                stat_type = stat_type,
+                value = value,
+                player_id = player_id,
+                team_id = team_id
+            )
+            session.add(new_stat)
+            session.commit()
+            return new_stat
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+    
+    @classmethod
+    def batch_add_stats(cls, stats):
+        session = DatabaseManager().get_session()
+        try:
+            # Create a list of dictionaries representing each stat
+            stat_dicts = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "match_id": stat[0],
+                    "stat_type": stat[1],
+                    "value": stat[2],
+                    "player_id": stat[3],
+                    "team_id": stat[4]
+                }
+                for stat in stats
+            ]
+
+            # Use session.execute with an insert statement
+            session.execute(insert(MatchStats), stat_dicts)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_stat_by_id(cls, id):
+        session = DatabaseManager().get_session()
+        try:
+            stat = session.query(MatchStats).filter(MatchStats.id == id).first()
+            return stat
+        finally:
+            session.close()
+
+    @classmethod
+    def get_stats_by_match(cls, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            stats = session.query(MatchStats).filter(MatchStats.match_id == match_id).all()
+            return stats
+        finally:
+            session.close()
+    
+    @classmethod
+    def get_stats_by_player(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            stats = session.query(MatchStats).filter(MatchStats.player_id == player_id).all()
+            return stats
+        finally:
+            session.close()
+
+    @classmethod
+    def get_stat_by_players(cls, league_id, stat_type):
+        session = DatabaseManager().get_session()
+        try:
+            MatchAlias = aliased(Matches)
+            stats = (
+                session.query(
+                    MatchStats.player_id,
+                    func.sum(MatchStats.value).label('stat_count')
+                )
+                .join(MatchAlias, MatchStats.match_id == MatchAlias.id)
+                .filter(
+                    MatchAlias.league_id == league_id,
+                    MatchStats.stat_type == stat_type
+                )
+                .group_by(MatchStats.player_id)
+                .having(func.sum(MatchStats.value) > 0)
+                .order_by(func.sum(MatchStats.value).desc())
+                .all()
+            )
+            return stats
+        finally:
+            session.close()
+
+    @classmethod
+    def get_team_stat_in_match(cls, match_id, team_id, stat_type):
+        session = DatabaseManager().get_session()
+        try:
+            total = session.query(func.sum(MatchStats.value)).filter(
+                MatchStats.match_id == match_id,
+                MatchStats.team_id == team_id,
+                MatchStats.stat_type == stat_type
+            ).scalar()
+            return total if total else 0
+        finally:
+            session.close()
     
 class League(Base):
     __tablename__ = 'leagues'
@@ -4789,6 +4900,74 @@ class StatsManager:
                 scoreless_streak = current_streak
             results.append((team.team_id, scoreless_streak))
         results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
+    @staticmethod
+    def get_highest_possession(leagueTeams, league_id):
+        results = []
+        for team in leagueTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+            highest_possession = 0
+            for match in matches:
+                possession_stat = (
+                    MatchStats.get_team_stat_in_match(match.id, team.team_id, "Possession")
+                )
+                if possession_stat:
+                    highest_possession = max(highest_possession, possession_stat.value)
+            results.append((team.team_id, highest_possession))
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
+    @staticmethod
+    def get_lowest_possession(leagueTeams, league_id):
+        results = []
+        for team in leagueTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+            lowest_possession = 100
+            for match in matches:
+                possession_stat = (
+                    MatchStats.get_team_stat_in_match(match.id, team.team_id, "Possession")
+                )
+                if possession_stat:
+                    lowest_possession = min(lowest_possession, possession_stat.value)
+            if lowest_possession == 100:
+                lowest_possession = 0
+            results.append((team.team_id, lowest_possession))
+        results.sort(key=lambda x: x[1])
+        return results
+
+    @staticmethod
+    def get_highest_xg(leagueTeams, league_id):
+        results = []
+        for team in leagueTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+            highest_xg = 0
+            for match in matches:
+                xg_stat = (
+                    MatchStats.get_team_stat_in_match(match.id, team.team_id, "xG")
+                )
+                if xg_stat:
+                    highest_xg = max(highest_xg, xg_stat.value)
+            results.append((team.team_id, highest_xg))
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
+    @staticmethod
+    def get_lowest_xg(leagueTeams, league_id):
+        results = []
+        for team in leagueTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+            lowest_xg = float('inf')
+            for match in matches:
+                xg_stat = (
+                    MatchStats.get_team_stat_in_match(match.id, team.team_id, "xG")
+                )
+                if xg_stat:
+                    lowest_xg = min(lowest_xg, xg_stat.value)
+            if lowest_xg == float('inf'):
+                lowest_xg = 0
+            results.append((team.team_id, lowest_xg))
+        results.sort(key=lambda x: x[1])
         return results
 
     @staticmethod

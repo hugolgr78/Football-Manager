@@ -270,7 +270,6 @@ class Match():
                     self.appendScore(1, True if side == "home" else False)
                 else:
                     goalType = "penalty_miss"
-                    statsToAdd.append("Saved")
             elif event == "own_goal":
                 self.appendScore(1, False if side == "home" else True)
             else:
@@ -1271,6 +1270,25 @@ class Match():
 
                 # extra debug: how many rating entries we will store
                 logger.debug(f"Ratings stored: home={len(self.homeRatings)} away={len(self.awayRatings)}")
+
+                # Stats
+                stats_to_add = []
+                for stat, data in self.homeStats.items():
+                    if stat in PLAYER_STATS:
+                        for player_id, value in data.items():
+                            stats_to_add.append((self.match.id, stat, value, player_id, None))
+                    else:
+                        stats_to_add.append((self.match.id, stat, data, None, self.homeTeam.id))
+
+                for stat, data in self.awayStats.items():
+                    if stat in PLAYER_STATS:
+                        for player_id, value in data.items():
+                            stats_to_add.append((self.match.id, stat, value, player_id, None))
+                    else:
+                        stats_to_add.append((self.match.id, stat, data, None, self.awayTeam.id))
+
+                logger.debug(f"Submitting {len(stats_to_add)} match stats for insertion")
+                # futures.append(executor.submit(MatchStats.batch_add_stats, stats_to_add))
 
                 # debug total DB tasks
                 logger.debug(f"Total DB tasks submitted: {len(futures)}")

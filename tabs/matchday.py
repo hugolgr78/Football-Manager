@@ -827,7 +827,6 @@ class MatchDay(ctk.CTkFrame):
                     self.matchFrame.matchInstance.appendScore(1, True if side == "home" else False)
                 else:
                     goalType = "penalty_miss"
-                    statsToAdd.append("Saved")
             elif event == "own_goal":
                 self.matchFrame.matchInstance.appendScore(1, False if side == "home" else True)
             else:

@@ -945,7 +945,7 @@ class MatchDay(ctk.CTkFrame):
 
                             stats["Big chances created"][playerID] += 1
 
-                        stats["xG"] += round(random.uniform(0.02, 0.30), 2)
+                        stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
                         stats["xG"] = round(stats["xG"], 2)
                     case "Shots on target":
                         if playerID not in stats["Shots"]:
@@ -977,7 +977,7 @@ class MatchDay(ctk.CTkFrame):
                         
                         oppStats["Saves"][playerID] += 1
 
-                        stats["xG"] += round(random.uniform(0.02, 0.30), 2)
+                        stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
                         stats["xG"] = round(stats["xG"], 2)
             else:
                 stats[stat] += 1

@@ -384,7 +384,7 @@ class Match():
 
                             statsDict["Big chances created"][playerID] += 1
 
-                        statsDict["xG"] += round(random.uniform(0.02, 0.30), 2)
+                        statsDict["xG"] += round(random.uniform(0.02, MAX_XG), 2)
                         statsDict["xG"] = round(statsDict["xG"], 2)
                     case "Shots on target":
                         if playerID not in statsDict["Shots"]:
@@ -416,7 +416,7 @@ class Match():
                         
                         statsDict["Saves"][playerID] += 1
 
-                        statsDict["xG"] += round(random.uniform(0.02, 0.30), 2)
+                        statsDict["xG"] += round(random.uniform(0.02, MAX_XG), 2)
                         statsDict["xG"] = round(statsDict["xG"], 2)
             else:
                 statsDict[stat] += 1
@@ -475,7 +475,7 @@ class Match():
             
             stats[shotDirection][playerID] += 1
 
-            stats["xG"] += round(random.uniform(0.02, 0.30), 2)
+            stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
             stats["xG"] = round(stats["xG"], 2)
 
             ## assister
@@ -1265,6 +1265,7 @@ class Match():
                         )
 
                 # submit morales update
+                logger.debug(f"Submitting {len(morales_to_update)} morale updates")
                 futures.append(executor.submit(Players.batch_update_morales, morales_to_update))
                 futures.append(executor.submit(Players.batch_update_sharpnesses, sharpnesses_to_update))
 
@@ -1274,29 +1275,35 @@ class Match():
                 # Stats
                 stats_to_add = []
                 for stat, data in self.homeStats.items():
+
+                    if stat not in SAVED_STATS:
+                        continue
+
                     if stat in PLAYER_STATS:
                         for player_id, value in data.items():
                             stats_to_add.append((self.match.id, stat, value, player_id, None))
-                    else:
+                    elif data != 0:
                         stats_to_add.append((self.match.id, stat, data, None, self.homeTeam.id))
 
                 for stat, data in self.awayStats.items():
+
+                    if stat not in SAVED_STATS:
+                        continue
+
                     if stat in PLAYER_STATS:
                         for player_id, value in data.items():
                             stats_to_add.append((self.match.id, stat, value, player_id, None))
-                    else:
+                    elif data != 0:
                         stats_to_add.append((self.match.id, stat, data, None, self.awayTeam.id))
 
                 logger.debug(f"Submitting {len(stats_to_add)} match stats for insertion")
-                # futures.append(executor.submit(MatchStats.batch_add_stats, stats_to_add))
+                futures.append(executor.submit(MatchStats.batch_add_stats, stats_to_add))
 
                 # debug total DB tasks
                 logger.debug(f"Total DB tasks submitted: {len(futures)}")
 
                 logger.debug(f"Submitting {len(lineups_to_add)} lineups for insertion")
                 futures.append(executor.submit(TeamLineup.batch_add_lineups, lineups_to_add))
-
-                logger.debug(f"Submitting {len(morales_to_update)} morale updates")
 
                 concurrent.futures.wait(futures)
                 logger.debug("All DB futures completed")

@@ -824,13 +824,13 @@ class MatchDay(ctk.CTkFrame):
             if goalType == "penalty":
                 if random.random() < PENALTY_SCORE_CHANCE or "Goalkeeper" not in oppLineup:
                     goalType = "penalty_goal"
-                    self.matchFrame.matchInstance.appendScore(1, True if side == "home" else False)
+                    matchInstance.appendScore(1, True if side == "home" else False)
                 else:
                     goalType = "penalty_miss"
             elif event == "own_goal":
-                self.matchFrame.matchInstance.appendScore(1, False if side == "home" else True)
+                matchInstance.appendScore(1, False if side == "home" else True)
             else:
-                self.matchFrame.matchInstance.appendScore(1, True if side == "home" else False)
+                matchInstance.appendScore(1, True if side == "home" else False)
             
             eventsToAdd.append(goalType)
 

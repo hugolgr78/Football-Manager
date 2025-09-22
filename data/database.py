@@ -2476,15 +2476,55 @@ class MatchStats(Base):
             session.close()
 
     @classmethod
-    def get_team_stat_in_match(cls, match_id, team_id, stat_type):
+    def get_team_stats_in_match(cls, match_id, team_id):
         session = DatabaseManager().get_session()
         try:
-            total = session.query(MatchStats).filter(
-                MatchStats.match_id == match_id,
-                MatchStats.team_id == team_id,
-                MatchStats.stat_type == stat_type
-            ).scalar()
-            return total if total else 0
+            # Aggregate team-level stats for all stat types (team entries where player_id is NULL)
+            team_agg = (
+                session.query(
+                    MatchStats.stat_type,
+                    func.coalesce(func.sum(MatchStats.value), 0).label('total')
+                )
+                .filter(
+                    MatchStats.match_id == match_id,
+                    MatchStats.team_id == team_id,
+                    MatchStats.player_id == None
+                )
+                .group_by(MatchStats.stat_type)
+                .all()
+            )
+
+            # Aggregate player-level stats per stat_type for players who belong to this team
+            # and actually participated in the match (i.e., appear in TeamLineup for the match).
+            player_agg = (
+                session.query(
+                    MatchStats.stat_type,
+                    func.coalesce(func.sum(MatchStats.value), 0).label('total')
+                )
+                .join(Players, MatchStats.player_id == Players.id)
+                .join(TeamLineup, TeamLineup.player_id == MatchStats.player_id)
+                .filter(
+                    MatchStats.match_id == match_id,
+                    TeamLineup.match_id == match_id,
+                    Players.team_id == team_id,
+                    MatchStats.player_id != None
+                )
+                .group_by(MatchStats.stat_type)
+                .all()
+            )
+
+            # Combine both aggregations into a dict { stat_type: total }
+            totals = defaultdict(int)
+            for s_type, total in team_agg:
+                totals[s_type] += int(total or 0)
+            for s_type, total in player_agg:
+                totals[s_type] += int(total or 0)
+
+            # Ensure all known saved stats are present with a zero default for predictable UI ordering
+            for s in SAVED_STATS:
+                totals.setdefault(s, 0)
+
+            return dict(totals)
         finally:
             session.close()
     

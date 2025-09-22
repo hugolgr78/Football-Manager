@@ -840,7 +840,7 @@ class MatchDay(ctk.CTkFrame):
             statsToAdd.append(event)
 
         # ------------------ FOUL ------------------
-        event = foulChances(avgSharpnessWthKeeper, self.matchFrame.matchInstance.referee.severity)
+        event = foulChances(avgSharpnessWthKeeper, matchInstance.referee.severity)
 
         if event in ["yellow_card", "red_card"]:
             eventsToAdd.append(event)
@@ -879,7 +879,7 @@ class MatchDay(ctk.CTkFrame):
         futureTotalSecs = currTotalSecs + 30
 
         if extraTime:
-            maxMinute = self.matchFrame.matchInstance.extraTimeHalf if self.halfTime else self.matchFrame.matchInstance.extraTimeFull
+            maxMinute = matchInstance.extraTimeHalf if self.halfTime else matchInstance.extraTimeFull
             finalMinute = 45 if self.halfTime else 90
             maxTotalSecs = (finalMinute + maxMinute) * 60
         else:

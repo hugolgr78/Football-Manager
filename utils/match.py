@@ -45,8 +45,6 @@ class Match():
         self.numHomeReds = 0
         self.numAwayReds = 0
 
-        self.score = None
-
         self.extraTimeHalf = 0
         self.extraTimeFull = 0
         self.halfTime = False

@@ -770,6 +770,8 @@ def passesAndPossession(matchInstance):
     awayStats = matchInstance.awayStats
     homePassesAttempted = matchInstance.homePassesAttempted
     awayPassesAttempted = matchInstance.awayPassesAttempted
+    homeRatings = matchInstance.homeRatings
+    awayRatings = matchInstance.awayRatings
 
     homePasses, awayPasses = getPasses(homeLineup, awayLineup)
     matchInstance.homePassesAttempted = homePassesAttempted + homePasses
@@ -790,6 +792,9 @@ def passesAndPossession(matchInstance):
             homeStats["Passes"].setdefault(playerID, 0)
             homeStats["Passes"][playerID] += 1
 
+            rating = random.uniform(PASS_RATING[0], PASS_RATING[1])
+            homeRatings[playerID] += rating
+
     for _ in range(awayPasses):
         playerID = choosePlayerFromDict(awayLineup, PASSING_POSITIONS)
 
@@ -801,6 +806,9 @@ def passesAndPossession(matchInstance):
             awayStats.setdefault("Passes", {})
             awayStats["Passes"].setdefault(playerID, 0)
             awayStats["Passes"][playerID] += 1
+
+            rating = random.uniform(PASS_RATING[0], PASS_RATING[1])
+            awayRatings[playerID] += rating
 
     homeCompleted = getStatNum(homeStats["Passes"])
     awayCompleted = getStatNum(awayStats["Passes"])
@@ -833,13 +841,18 @@ def getStatPlayer(stat, lineup):
     from data.database import Players
     match stat:
         case "Saves":
-            return lineup["Goalkeeper"] if "Goalkeeper" in lineup else None
+            rating = random.uniform(SAVE_RATING[0], SAVE_RATING[1])
+            return lineup["Goalkeeper"] if "Goalkeeper" in lineup else None, rating if "Goalkeeper" in lineup else 0
         case "Shots" | "Shots on target" | "Shots in the box" | "Shots outside the box":
-            return choosePlayerFromDict(lineup, SCORER_CHANCES)
+            rating = random.uniform(SHOT_RATING[0], SHOT_RATING[1]) if stat != "Shots on target" else random.uniform(SHOT_TARGET_RATING[0], SHOT_TARGET_RATING[1])
+            return choosePlayerFromDict(lineup, SCORER_CHANCES), rating
         case "Fouls":
             weights = [ownGoalFoulWeight(Players.get_player_by_id(playerID)) for playerID in lineup.values()]
-            return random.choices(list(lineup.values()), weights = weights, k = 1)[0]
+            rating = random.uniform(FOUL_RATING[0], FOUL_RATING[1])
+            return random.choices(list(lineup.values()), weights = weights, k = 1)[0], rating
         case "Tackles" | "Interceptions":
-            return choosePlayerFromDict(lineup, DEFENSIVE_ACTION_POSITIONS)
+            rating = random.uniform(DEFENSIVE_ACTION_RATING[0], DEFENSIVE_ACTION_RATING[1])
+            return choosePlayerFromDict(lineup, DEFENSIVE_ACTION_POSITIONS[0], DEFENSIVE_ACTION_RATING[1]), rating
         case "Big chances created" | "Big chances missed":
-            return choosePlayerFromDict(lineup, BIG_CHANCES_POSITIONS)
+            rating = random.uniform(BIG_CHANCE_CREATED_RATING[0], BIG_CHANCE_CREATED_RATING[1]) if stat == "Big chances created" else random.uniform(BIG_CHANCE_MISSED_RATING[0], BIG_CHANCE_MISSED_RATING[1])
+            return choosePlayerFromDict(lineup, BIG_CHANCES_POSITIONS), rating

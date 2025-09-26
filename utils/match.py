@@ -85,6 +85,13 @@ class Match():
             self.createTeamLineup(self.homeTeam.id, True)
             self.createTeamLineup(self.awayTeam.id, False)
 
+            self.homeRatings = {playerID: 6.0 for playerID in list(self.homeCurrentLineup.values()) + self.homeCurrentSubs}
+            self.awayRatings = {playerID: 6.0 for playerID in list(self.awayCurrentLineup.values()) + self.awayCurrentSubs}
+
+    def setUpRatings(self):
+        self.homeRatings = {playerID: 6.0 for playerID in list(self.homeCurrentLineup.values()) + self.homeCurrentSubs}
+        self.awayRatings = {playerID: 6.0 for playerID in list(self.awayCurrentLineup.values()) + self.awayCurrentSubs}
+
     def createTeamLineup(self, teamID, home):
         opponentID = self.match.away_id if home else self.match.home_id
         lineup = getProposedLineup(teamID, opponentID, self.league.league_id, Game.get_game_date(Managers.get_all_user_managers()[0].id))
@@ -233,6 +240,8 @@ class Match():
         oppStats = self.awayStats if side == "home" else self.homeStats
         subs = self.homeCurrentSubs if side == "home" else self.awayCurrentSubs
         events = self.homeProcessedEvents if side == "home" else self.awayProcessedEvents
+        ratings = self.homeRatings if side == "home" else self.awayRatings
+        oppRatings = self.awayRatings if side == "home" else self.homeRatings
 
         sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
@@ -345,79 +354,83 @@ class Match():
 
         for stat in statsToAdd:
 
-            statsDict = stats if stat != "Saves" else oppStats
-            lineup = lineup if stat != "Saves" else oppLineup
             if stat in PLAYER_STATS:
-                playerID = getStatPlayer(stat, lineup)
+                playerID, rating = getStatPlayer(stat, lineup)
+                ratings[playerID] += rating
 
                 if not playerID:
                     continue
 
                 if not playerID in stats[stat]:
-                    statsDict[stat][playerID] = 0
+                    stats[stat][playerID] = 0
 
-                statsDict[stat][playerID] += 1
+                stats[stat][playerID] += 1
 
                 match stat:
                     case "Shots":
                         shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
-                        if not playerID in statsDict[shotDirection]:
-                            statsDict[shotDirection][playerID] = 0
+                        if not playerID in stats[shotDirection]:
+                            stats[shotDirection][playerID] = 0
 
-                        statsDict[shotDirection][playerID] += 1
+                        stats[shotDirection][playerID] += 1
 
                         shotOutcome = random.choices(population = list(SHOT_CHANCES.keys()), weights = list(SHOT_CHANCES.values()), k = 1)[0]
                         if shotOutcome != "wide":
-                            statsDict[shotOutcome] += 1
+                            stats[shotOutcome] += 1
 
                         if random.random() < SHOT_BIG_CHANCE:
-                            if not playerID in statsDict["Big chances missed"]:
-                                statsDict["Big chances missed"][playerID] = 0
+                            if not playerID in stats["Big chances missed"]:
+                                stats["Big chances missed"][playerID] = 0
 
-                            statsDict["Big chances missed"][playerID] += 1
+                            stats["Big chances missed"][playerID] += 1
 
-                            playerID = getStatPlayer("Big chances created", lineup)
-                            if not playerID in statsDict["Big chances created"]:
-                                statsDict["Big chances created"][playerID] = 0
+                            playerID, rating = getStatPlayer("Big chances created", lineup)
+                            ratings[playerID] += rating
+                            if not playerID in stats["Big chances created"]:
+                                stats["Big chances created"][playerID] = 0
 
-                            statsDict["Big chances created"][playerID] += 1
+                            stats["Big chances created"][playerID] += 1
 
-                        statsDict["xG"] += round(random.uniform(0.02, MAX_XG), 2)
-                        statsDict["xG"] = round(statsDict["xG"], 2)
+                        stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
+                        stats["xG"] = round(stats["xG"], 2)
                     case "Shots on target":
-                        if playerID not in statsDict["Shots"]:
-                            statsDict["Shots"][playerID] = 0
+                        if playerID not in stats["Shots"]:
+                            stats["Shots"][playerID] = 0
                         
-                        statsDict["Shots"][playerID] += 1
+                        stats["Shots"][playerID] += 1
 
                         shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
-                        if not playerID in statsDict[shotDirection]:
-                            statsDict[shotDirection][playerID] = 0
+                        if not playerID in stats[shotDirection]:
+                            stats[shotDirection][playerID] = 0
 
-                        statsDict[shotDirection][playerID] += 1
+                        stats[shotDirection][playerID] += 1
 
                         if random.random() < SHOT_BIG_CHANCE:
-                            if not playerID in statsDict["Big chances missed"]:
-                                statsDict["Big chances missed"][playerID] = 0
+                            if not playerID in stats["Big chances missed"]:
+                                stats["Big chances missed"][playerID] = 0
 
-                            statsDict["Big chances missed"][playerID] += 1
+                            stats["Big chances missed"][playerID] += 1
 
-                            playerID = getStatPlayer("Big chances created", lineup)
-                            if not playerID in statsDict["Big chances created"]:
-                                statsDict["Big chances created"][playerID] = 0
+                            playerID, rating = getStatPlayer("Big chances created", lineup)
+                            ratings[playerID] += rating
+                            if not playerID in stats["Big chances created"]:
+                                stats["Big chances created"][playerID] = 0
 
-                            statsDict["Big chances created"][playerID] += 1
+                            stats["Big chances created"][playerID] += 1
 
-                        playerID = getStatPlayer("Saves", oppLineup)
-                        if playerID not in statsDict["Saves"]:
-                            statsDict["Saves"][playerID] = 0
-                        
-                        statsDict["Saves"][playerID] += 1
+                        # Opponent keeper stats
+                        playerID, rating = getStatPlayer("Saves", oppLineup)
+                        if playerID:
+                            if playerID not in oppStats["Saves"]:
+                                oppStats["Saves"][playerID] = 0
+                            oppStats["Saves"][playerID] += 1
 
-                        statsDict["xG"] += round(random.uniform(0.02, MAX_XG), 2)
-                        statsDict["xG"] = round(statsDict["xG"], 2)
+                            oppRatings[playerID] += rating
+
+                        stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
+                        stats["xG"] = round(stats["xG"], 2)
             else:
-                statsDict[stat] += 1
+                stats[stat] += 1
 
     def join(self):
         if self.timerThread:
@@ -434,6 +447,8 @@ class Match():
         fitness = self.homeFitness if home else self.awayFitness
         stats = self.homeStats if home else self.awayStats
         oppStats = self.awayStats if home else self.homeStats
+        ratings = self.homeRatings if home else self.awayRatings
+        oppRatings = self.awayRatings if home else self.homeRatings
 
         # Fetch all players in the lineup with a single query
         player_ids = list(lineup.values())
@@ -476,6 +491,10 @@ class Match():
             stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
             stats["xG"] = round(stats["xG"], 2)
 
+            # Add rating for scoring
+            rating = random.uniform(GOAL_RATINGS[0], GOAL_RATINGS[1])
+            ratings[playerID] += rating
+
             ## assister
             assisterPosition = random.choices(list(ASSISTER_CHANCES.keys()), weights = list(ASSISTER_CHANCES.values()), k = 1)[0]
             players = [player.id for player in players_dict.values() if player.position == assisterPosition]
@@ -505,6 +524,9 @@ class Match():
 
             event["assister"] = playerID
 
+            rating = random.uniform(ASSIST_RATINGS[0], ASSIST_RATINGS[1])
+            ratings[playerID] += rating
+
         elif event["type"] == "penalty_goal" or event["type"] == "penalty_miss":
             penaltyPosition = random.choices(list(PENALTY_TAKER_CHANCES.keys()), weights = list(PENALTY_TAKER_CHANCES.values()), k = 1)[0]
             players = [player.id for player in players_dict.values() if player.position == penaltyPosition]
@@ -531,6 +553,14 @@ class Match():
                     oppStats["Saves"][event["keeper"]] = 0
             
                 oppStats["Saves"][event["keeper"]] += 1
+                rating = PENALTY_MISS_RATING
+
+                keeperRating = PENALTY_SAVED_RATING
+                oppRatings[event["keeper"]] += keeperRating
+            else:
+                rating = PENALTY_SCORE_RATING
+
+            ratings[playerID] += rating
 
             stats["xG"] += 0.8
 
@@ -549,6 +579,9 @@ class Match():
 
             event["player"] = playerID
 
+            rating = random.uniform(OWN_GOAL_RATINGS[0], OWN_GOAL_RATINGS[1])
+            oppRatings[playerID] += rating
+
         elif event["type"] == "yellow_card":
             weights = [ownGoalFoulWeight(player) for player in players_dict.values()]
             playerID = random.choices(list(players_dict.values()), weights = weights, k = 1)[0].id
@@ -561,11 +594,14 @@ class Match():
                 
                 stats["Fouls"][playerID] += 1
 
+            secondYellow = False
             for _, processedEvent in processedEvents.items():
                 if processedEvent["type"] == "yellow_card" and processedEvent["player"] == playerID:
                     event["type"] = "red_card"
                     stats["Yellow cards"] -= 1
                     stats["Red cards"] += 1
+
+                    secondYellow = True
 
                     playerPosition = list(lineup.keys())[list(lineup.values()).index(playerID)]
                     lineup.pop(playerPosition)
@@ -578,6 +614,14 @@ class Match():
                     
                     if playerPosition == "Goalkeeper" and not managing_team:
                         self.keeperSub(subsCount, lineup, players_dict, processedEvents, time, events, teamMatch, subs, home)
+
+                    rating = random.uniform(RED_CARD_RATINGS[0], RED_CARD_RATINGS[1])
+                    ratings[playerID] += rating
+                    break
+
+            if not secondYellow:
+                rating = random.uniform(YELLOW_CARD_RATINGS[0], YELLOW_CARD_RATINGS[1])
+                ratings[playerID] += rating
 
         elif event["type"] == "red_card":
             
@@ -593,6 +637,9 @@ class Match():
             playerID = random.choices(players, weights = weights, k = 1)[0].id
             event["player"] = playerID
             stats["Red cards"] += 1
+
+            rating = random.uniform(RED_CARD_RATINGS[0], RED_CARD_RATINGS[1])
+            ratings[playerID] += rating
 
             if random.random() < CARD_FOUL_CHANCE:
                 if playerID not in stats["Fouls"]:
@@ -814,73 +861,6 @@ class Match():
                     teamMatch.homeLineupPitch.addPlayer(playerPosition, playerOn.last_name)
                 else:
                     teamMatch.awayLineupPitch.addPlayer(playerPosition, playerOn.last_name)
-
-    def getPlayerRatings(self, team, finalLineup, currentLineup, events):
-
-        oppositionEvents = self.awayEvents if team == self.homeTeam else self.homeEvents
-        oppositionGoals = self.score[1] if team == self.homeTeam else self.score[0]
-
-        ratingsDict = {}
-
-        if team == self.homeTeam:
-            venue = "home"
-        else:
-            venue = "away"
-        
-        if self.winner == team:
-            rating = 7.00
-        elif self.winner == None:
-            rating = 6.50
-        else:
-            rating = 6.00
-
-        if oppositionGoals == 0:
-            if team == self.homeTeam:
-                self.homeCleanSheet = True
-            else:
-                self.awayCleanSheet = True
-
-        for i, (position, playerID) in enumerate(finalLineup):
-            self.getRating(venue, rating, ratingsDict, events, playerID, position, oppositionEvents, oppositionGoals, i)
-
-        for i, (position, playerID) in enumerate(currentLineup.items()):
-            self.getRating(venue, rating, ratingsDict, events, playerID, position, oppositionEvents, oppositionGoals, i + len(finalLineup))
-
-        if team == self.homeTeam:
-            self.homeRatings = ratingsDict
-        else:
-            self.awayRatings = ratingsDict
-
-    def getRating(self, venue, rating, ratingsDict, events, playerID, position, oppositionEvents, oppositionGoals, i):
-
-        scorerFlag = False
-        for _, event in events.items():
-            if "player" in event and event["player"] == playerID:
-                if event["type"] in EVENT_RATINGS:
-                    rating += random.choice(EVENT_RATINGS[event["type"]])
-                    if event["type"] in ["goal", "penalty_goal"]:
-                        scorerFlag = True
-
-            if "assister" in event and event["assister"] == playerID:
-                rating += random.choice(ASSIST_RATINGS)
-        
-        if not scorerFlag:
-            if position == "Goalkeeper" or position in DEFENDER_POSITIONS:
-                if oppositionGoals <= 1:
-                    rating += random.choice(DEFENDER_GOALS_1)
-                elif oppositionGoals <= 3:
-                    rating += random.choice(DEFENDER_GOALS_3)
-                else:
-                    rating -= random.choice(DEFENDER_GOALS_MORE)
-            else:  # mids and fwds that didn't score
-                rating += random.choice(NON_SCORER_RATINGS)
-
-        for _, event in oppositionEvents.items():
-            if event["type"] == "own_goal" and event["player"] == playerID: # own goal
-                rating -= random.choice([1.46, 1.49, 1.52, 1.57, 1.60, 1.63, 1.69, 1.78])
-
-        finalRating = round(rating + 0.5, 2) if self.ratingsBoost == venue else round(rating - 0.5, 2) if self.ratingsDecay == venue else round(rating, 2)
-        ratingsDict[playerID] = min(finalRating, 10)
 
     def saveData(self, managing_team = None):
 

@@ -121,6 +121,7 @@ class MatchDay(ctk.CTkFrame):
         ctk.CTkLabel(self.awaySubstituteFrame, text = "Substitutes", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.03, anchor = "n")
 
         self.addLineups()
+        self.matchFrame.matchInstance.setUpRatings()
 
         self.substitutionButton = ctk.CTkButton(self.teamMatchFrame, text = "Make Substitution", width = 400, height = 65, font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, state = "disabled", command = self.substitution)
         self.substitutionButton.place(relx = 0.5, rely = 0.73, anchor = "n")
@@ -356,6 +357,7 @@ class MatchDay(ctk.CTkFrame):
             else:
                 seconds += 1
 
+            ## ----------- fotness changes ------------
             total_seconds = minutes * 60 + seconds
             if total_seconds % 90 == 0:
                 for frame in self.otherMatchesFrame.winfo_children():
@@ -567,6 +569,7 @@ class MatchDay(ctk.CTkFrame):
                 self.matchDataFrame.update_idletasks()
                 self.matchDataFrame._parent_canvas.yview_moveto(1)
 
+            ## Full time for every time now
             if self.fullTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
                 if minutes == 90 + self.maxExtraTimeFull and seconds == 0:
@@ -673,6 +676,7 @@ class MatchDay(ctk.CTkFrame):
                     homeStats = self.matchFrame.matchInstance.homeStats
                     awayStats = self.matchFrame.matchInstance.awayStats
 
+                    # Update stats frames
                     if stat == "Possession":
                         valueH, valueA = homeStats[stat], awayStats[stat]
                         textH, textA = f"{valueH}%", f"{valueA}%"
@@ -708,6 +712,9 @@ class MatchDay(ctk.CTkFrame):
                         self.generateEvents("away", matchInstance = frame.matchInstance)
 
                         passesAndPossession(matchInstance = frame.matchInstance)
+
+                # print(f"Home: {self.matchFrame.matchInstance.homeRatings}")
+                # print(f"Away: {self.matchFrame.matchInstance.awayRatings}")
 
             ## ----------- managing team match ------------
             for event_time, event_details in list(self.matchFrame.matchInstance.homeEvents.items()):
@@ -792,6 +799,8 @@ class MatchDay(ctk.CTkFrame):
         oppStats = matchInstance.awayStats if side == "home" else matchInstance.homeStats
         subs = matchInstance.homeCurrentSubs if side == "home" else matchInstance.awayCurrentSubs
         events = matchInstance.homeProcessedEvents if side == "home" else matchInstance.awayProcessedEvents
+        ratings = matchInstance.homeRatings if side == "home" else matchInstance.awayRatings
+        oppRatings = matchInstance.awayRatings if side == "home" else matchInstance.homeRatings
 
         sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
@@ -911,7 +920,9 @@ class MatchDay(ctk.CTkFrame):
         for stat in statsToAdd:
 
             if stat in PLAYER_STATS:
-                playerID = getStatPlayer(stat, lineup)
+                playerID, rating = getStatPlayer(stat, lineup)
+                ratings[playerID] += rating
+                print(self.matchFrame.matchInstance.homeRatings if side == "home" else self.matchFrame.matchInstance.awayRatings)
 
                 if not playerID:
                     continue
@@ -939,7 +950,8 @@ class MatchDay(ctk.CTkFrame):
 
                             stats["Big chances missed"][playerID] += 1
 
-                            playerID = getStatPlayer("Big chances created", lineup)
+                            playerID, rating = getStatPlayer("Big chances created", lineup)
+                            ratings[playerID] += rating
                             if not playerID in stats["Big chances created"]:
                                 stats["Big chances created"][playerID] = 0
 
@@ -965,17 +977,20 @@ class MatchDay(ctk.CTkFrame):
 
                             stats["Big chances missed"][playerID] += 1
 
-                            playerID = getStatPlayer("Big chances created", lineup)
+                            playerID, rating = getStatPlayer("Big chances created", lineup)
+                            ratings[playerID] += rating
                             if not playerID in stats["Big chances created"]:
                                 stats["Big chances created"][playerID] = 0
 
                             stats["Big chances created"][playerID] += 1
 
-                        playerID = getStatPlayer("Saves", oppLineup)
-                        if playerID not in oppStats["Saves"]:
-                            oppStats["Saves"][playerID] = 0
-                        
-                        oppStats["Saves"][playerID] += 1
+                        playerID, rating = getStatPlayer("Saves", oppLineup)
+                        if playerID:
+                            if playerID not in oppStats["Saves"]:
+                                oppStats["Saves"][playerID] = 0
+                            oppStats["Saves"][playerID] += 1
+
+                            oppRatings[playerID] += rating
 
                         stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
                         stats["xG"] = round(stats["xG"], 2)

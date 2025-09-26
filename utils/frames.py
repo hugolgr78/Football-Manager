@@ -1838,6 +1838,12 @@ class FootballPitchMatchDay(FootballPitchVertical):
             tags = (position_tag, "rating_text")
         )
 
+    def updateRating(self, position, playerName, newRating):
+        position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
+        self.canvas.delete(f"{position_tag}_rating_oval")
+        self.canvas.delete(f"{position_tag}_rating_text")
+        self.addRating(position, playerName, newRating, False)
+
     def addInjuryIcon(self, position, playerName, image):
         # Store the image to prevent garbage collection
         key = f"injury_{position}"
@@ -1864,7 +1870,7 @@ class FootballPitchMatchDay(FootballPitchVertical):
 
         self.canvas.create_image(text_x - 30, text_y, image = image, tags = (position_tag, "injury_icon"))
 
-    def addPlayer(self, position, playerName):
+    def addPlayer(self, position, playerName, matchday = False):
         relx, rely = self.positions[position]
         position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
 
@@ -1889,6 +1895,9 @@ class FootballPitchMatchDay(FootballPitchVertical):
             font = (APP_FONT, 10),
             tags = text_tag
         )
+
+        if matchday:
+            self.addRating(position, playerName, 6.0, False)
 
     def removePlayer(self, position, playerName):
         position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"

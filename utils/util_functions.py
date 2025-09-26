@@ -793,7 +793,7 @@ def passesAndPossession(matchInstance):
             homeStats["Passes"][playerID] += 1
 
             rating = random.uniform(PASS_RATING[0], PASS_RATING[1])
-            homeRatings[playerID] += rating
+            homeRatings[playerID] = round(homeRatings.get(playerID, 0) + rating, 2)
 
     for _ in range(awayPasses):
         playerID = choosePlayerFromDict(awayLineup, PASSING_POSITIONS)
@@ -808,7 +808,7 @@ def passesAndPossession(matchInstance):
             awayStats["Passes"][playerID] += 1
 
             rating = random.uniform(PASS_RATING[0], PASS_RATING[1])
-            awayRatings[playerID] += rating
+            awayRatings[playerID] = round(awayRatings.get(playerID, 0) + rating, 2)
 
     homeCompleted = getStatNum(homeStats["Passes"])
     awayCompleted = getStatNum(awayStats["Passes"])
@@ -852,7 +852,7 @@ def getStatPlayer(stat, lineup):
             return random.choices(list(lineup.values()), weights = weights, k = 1)[0], rating
         case "Tackles" | "Interceptions":
             rating = random.uniform(DEFENSIVE_ACTION_RATING[0], DEFENSIVE_ACTION_RATING[1])
-            return choosePlayerFromDict(lineup, DEFENSIVE_ACTION_POSITIONS[0], DEFENSIVE_ACTION_RATING[1]), rating
+            return choosePlayerFromDict(lineup, DEFENSIVE_ACTION_POSITIONS), rating
         case "Big chances created" | "Big chances missed":
             rating = random.uniform(BIG_CHANCE_CREATED_RATING[0], BIG_CHANCE_CREATED_RATING[1]) if stat == "Big chances created" else random.uniform(BIG_CHANCE_MISSED_RATING[0], BIG_CHANCE_MISSED_RATING[1])
             return choosePlayerFromDict(lineup, BIG_CHANCES_POSITIONS), rating

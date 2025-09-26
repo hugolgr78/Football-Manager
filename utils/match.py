@@ -356,7 +356,7 @@ class Match():
 
             if stat in PLAYER_STATS:
                 playerID, rating = getStatPlayer(stat, lineup)
-                ratings[playerID] += rating
+                ratings[playerID] = round(ratings.get(playerID, 0) + rating, 2)
 
                 if not playerID:
                     continue
@@ -385,7 +385,7 @@ class Match():
                             stats["Big chances missed"][playerID] += 1
 
                             playerID, rating = getStatPlayer("Big chances created", lineup)
-                            ratings[playerID] += rating
+                            ratings[playerID] = round(ratings.get(playerID, 0) + rating, 2)
                             if not playerID in stats["Big chances created"]:
                                 stats["Big chances created"][playerID] = 0
 
@@ -412,7 +412,7 @@ class Match():
                             stats["Big chances missed"][playerID] += 1
 
                             playerID, rating = getStatPlayer("Big chances created", lineup)
-                            ratings[playerID] += rating
+                            ratings[playerID] = round(ratings.get(playerID, 0) + rating, 2)
                             if not playerID in stats["Big chances created"]:
                                 stats["Big chances created"][playerID] = 0
 
@@ -425,7 +425,7 @@ class Match():
                                 oppStats["Saves"][playerID] = 0
                             oppStats["Saves"][playerID] += 1
 
-                            oppRatings[playerID] += rating
+                            oppRatings[playerID] = round(oppRatings.get(playerID, 0) + rating, 2)
 
                         stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
                         stats["xG"] = round(stats["xG"], 2)
@@ -493,7 +493,7 @@ class Match():
 
             # Add rating for scoring
             rating = random.uniform(GOAL_RATINGS[0], GOAL_RATINGS[1])
-            ratings[playerID] += rating
+            ratings[playerID] = round(ratings.get(playerID, 0) + rating, 2)
 
             ## assister
             assisterPosition = random.choices(list(ASSISTER_CHANCES.keys()), weights = list(ASSISTER_CHANCES.values()), k = 1)[0]
@@ -525,7 +525,7 @@ class Match():
             event["assister"] = playerID
 
             rating = random.uniform(ASSIST_RATINGS[0], ASSIST_RATINGS[1])
-            ratings[playerID] += rating
+            ratings[playerID] = round(ratings.get(playerID, 0) + rating, 2)
 
         elif event["type"] == "penalty_goal" or event["type"] == "penalty_miss":
             penaltyPosition = random.choices(list(PENALTY_TAKER_CHANCES.keys()), weights = list(PENALTY_TAKER_CHANCES.values()), k = 1)[0]
@@ -556,11 +556,11 @@ class Match():
                 rating = PENALTY_MISS_RATING
 
                 keeperRating = PENALTY_SAVED_RATING
-                oppRatings[event["keeper"]] += keeperRating
+                oppRatings[event["keeper"]] = round(oppRatings.get(event["keeper"], 0) + keeperRating, 2)
             else:
                 rating = PENALTY_SCORE_RATING
 
-            ratings[playerID] += rating
+            ratings[playerID] = round(ratings.get(playerID, 0) + rating, 2)
 
             stats["xG"] += 0.8
 
@@ -580,7 +580,7 @@ class Match():
             event["player"] = playerID
 
             rating = random.uniform(OWN_GOAL_RATINGS[0], OWN_GOAL_RATINGS[1])
-            oppRatings[playerID] += rating
+            oppRatings[playerID] = oppRatings.get(playerID, 0) + round(rating, 2)
 
         elif event["type"] == "yellow_card":
             weights = [ownGoalFoulWeight(player) for player in players_dict.values()]
@@ -616,12 +616,12 @@ class Match():
                         self.keeperSub(subsCount, lineup, players_dict, processedEvents, time, events, teamMatch, subs, home)
 
                     rating = random.uniform(RED_CARD_RATINGS[0], RED_CARD_RATINGS[1])
-                    ratings[playerID] += rating
+                    ratings[playerID] = round(ratings.get(playerID, 0) + rating, 2)
                     break
 
             if not secondYellow:
                 rating = random.uniform(YELLOW_CARD_RATINGS[0], YELLOW_CARD_RATINGS[1])
-                ratings[playerID] += rating
+                ratings[playerID] = round(ratings.get(playerID, 0) + rating, 2)
 
         elif event["type"] == "red_card":
             
@@ -639,7 +639,7 @@ class Match():
             stats["Red cards"] += 1
 
             rating = random.uniform(RED_CARD_RATINGS[0], RED_CARD_RATINGS[1])
-            ratings[playerID] += rating
+            ratings[playerID] = round(ratings.get(playerID, 0) + rating, 2)
 
             if random.random() < CARD_FOUL_CHANCE:
                 if playerID not in stats["Fouls"]:

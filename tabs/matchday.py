@@ -121,7 +121,6 @@ class MatchDay(ctk.CTkFrame):
         ctk.CTkLabel(self.awaySubstituteFrame, text = "Substitutes", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.03, anchor = "n")
 
         self.addLineups()
-        self.matchFrame.matchInstance.setUpRatings()
 
         self.substitutionButton = ctk.CTkButton(self.teamMatchFrame, text = "Make Substitution", width = 400, height = 65, font = (APP_FONT, 20), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, state = "disabled", command = self.substitution)
         self.substitutionButton.place(relx = 0.5, rely = 0.73, anchor = "n")
@@ -266,9 +265,11 @@ class MatchDay(ctk.CTkFrame):
         self.oppositionLineup = self.matchFrame.matchInstance.awayCurrentLineup if self.home else self.matchFrame.matchInstance.homeCurrentLineup
         oppositionSubstitutes = self.matchFrame.matchInstance.awayCurrentSubs if self.home else self.matchFrame.matchInstance.homeCurrentSubs
 
+        self.matchFrame.matchInstance.setUpRatings()
+
         for position, playerID, in self.teamLineup.items():
             player = Players.get_player_by_id(playerID)
-            teamPitch.addPlayer(position, player.last_name)
+            teamPitch.addPlayer(position, player.last_name, matchday = True)
 
         for i, playerID in enumerate(self.teamSubstitutes):
             player = Players.get_player_by_id(playerID)
@@ -277,7 +278,7 @@ class MatchDay(ctk.CTkFrame):
 
         for position, playerID in self.oppositionLineup.items():
             player = Players.get_player_by_id(playerID)
-            oppPitch.addPlayer(position, player.last_name)
+            oppPitch.addPlayer(position, player.last_name, matchday = True)
 
         for i, playerID in enumerate(oppositionSubstitutes):
             player = Players.get_player_by_id(playerID)
@@ -799,6 +800,10 @@ class MatchDay(ctk.CTkFrame):
         ratings = matchInstance.homeRatings if side == "home" else matchInstance.awayRatings
         oppRatings = matchInstance.awayRatings if side == "home" else matchInstance.homeRatings
 
+        if teamMatch:
+            pitch = self.homeLineupPitch if side == "home" else self.awayLineupPitch
+            oppPitch = self.awayLineupPitch if side == "home" else self.homeLineupPitch
+
         sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
 
@@ -918,7 +923,10 @@ class MatchDay(ctk.CTkFrame):
 
             if stat in PLAYER_STATS:
                 playerID, rating = getStatPlayer(stat, lineup)
-                ratings[playerID] = round(ratings.get(playerID, 0) + rating, 2)
+                ratings[playerID] = min(10, max(0, round(ratings.get(playerID, 0) + rating, 2)))
+            
+                if teamMatch:
+                    self.updateRatingOval(pitch, playerID, lineup, ratings)
 
                 if not playerID:
                     continue
@@ -947,7 +955,11 @@ class MatchDay(ctk.CTkFrame):
                             stats["Big chances missed"][playerID] += 1
 
                             playerID, rating = getStatPlayer("Big chances created", lineup)
-                            ratings[playerID] = round(ratings.get(playerID, 0) + rating, 2)
+                            ratings[playerID] = min(10, max(0, round(ratings.get(playerID, 0) + rating, 2)))
+
+                            if teamMatch:
+                                self.updateRatingOval(pitch, playerID, lineup, ratings)
+                    
                             if not playerID in stats["Big chances created"]:
                                 stats["Big chances created"][playerID] = 0
 
@@ -974,7 +986,11 @@ class MatchDay(ctk.CTkFrame):
                             stats["Big chances missed"][playerID] += 1
 
                             playerID, rating = getStatPlayer("Big chances created", lineup)
-                            ratings[playerID] = round(ratings.get(playerID, 0) + rating, 2)
+                            ratings[playerID] = min(10, max(0, round(ratings.get(playerID, 0) + rating, 2)))
+
+                            if teamMatch:
+                                self.updateRatingOval(pitch, playerID, lineup, ratings)
+
                             if not playerID in stats["Big chances created"]:
                                 stats["Big chances created"][playerID] = 0
 
@@ -986,7 +1002,10 @@ class MatchDay(ctk.CTkFrame):
                                 oppStats["Saves"][playerID] = 0
                             oppStats["Saves"][playerID] += 1
 
-                            oppRatings[playerID] = round(oppRatings.get(playerID, 0) + rating, 2)
+                            oppRatings[playerID] = min(10, max(0, round(oppRatings.get(playerID, 0) + rating, 2)))
+
+                            if teamMatch:
+                                self.updateRatingOval(oppPitch, playerID, oppLineup, oppRatings)
 
                         stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
                         stats["xG"] = round(stats["xG"], 2)
@@ -1996,6 +2015,27 @@ class MatchDay(ctk.CTkFrame):
                 image = ImageTk.PhotoImage(srcWB2)
                 num = self.countPlayerEvents(playerID, events, event["type"])
                 pitch.addIcon(EVENTS_TO_ICONS[event["type"]], image, "Goalkeeper", playerData.last_name, num)
+
+        if event["type"] not in ["injury", "substitution", "red_card"]:
+
+            if event["type"] == "own_goal":
+                pitch = self.awayLineupPitch if home else self.homeLineupPitch
+                ratings = self.matchFrame.matchInstance.awayRatings if home else self.matchFrame.matchInstance.homeRatings
+                lineup = self.matchFrame.matchInstance.awayCurrentLineup if home else self.matchFrame.matchInstance.homeCurrentLineup
+            else:
+                pitch = self.homeLineupPitch if home else self.awayLineupPitch
+                ratings = self.matchFrame.matchInstance.homeRatings if home else self.matchFrame.matchInstance.awayRatings
+                lineup = self.matchFrame.matchInstance.homeCurrentLineup if home else self.matchFrame.matchInstance.awayCurrentLineup
+
+            self.updateRatingOval(pitch, event["player"], lineup, ratings)
+
+            if event["type"] == "goal":
+                self.updateRatingOval(pitch, event["assister"], lineup, ratings)
+
+    def updateRatingOval(self, pitch, playerID, lineup, ratings):
+        position = list(lineup.keys())[list(lineup.values()).index(playerID)]
+        playerData = Players.get_player_by_id(playerID)
+        pitch.updateRating(position, playerData.last_name, ratings[playerID])
 
     def countPlayerEvents(self, player_id, events, event_type):
         group = EVENT_GROUPS.get(event_type, [event_type])

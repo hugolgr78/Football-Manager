@@ -333,7 +333,7 @@ FOUL_RATING = (-0.1, -0.05)
 DEFENSIVE_ACTION_RATING = (0.05, 0.1)
 BIG_CHANCE_CREATED_RATING = (0.2, 0.4)
 BIG_CHANCE_MISSED_RATING = (-0.2, -0.1)
-PASS_RATING = (0.01, 0.03)
+PASS_RATING = (0.005, 0.01)
 
 FAN_REACTIONS = {
     "big_win":     ["Ecstatic", "Very Happy", "Happy", "Very Happy", "Ecstatic"],

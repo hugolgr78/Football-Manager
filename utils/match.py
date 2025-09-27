@@ -502,9 +502,7 @@ class Match():
             oppKeeperRating = random.uniform(GOAL_CONCEDED_KEEPER_RATING[0], GOAL_CONCEDED_KEEPER_RATING[1])
             if "Goalkeeper" in oppLineup:
                 oppKeeperID = oppLineup["Goalkeeper"]
-                oldRating = oppRatings.get(oppKeeperID, 0)
                 oppRatings[oppKeeperID] = min(10, max(0, round(oppRatings.get(oppKeeperID, 0) + oppKeeperRating, 2)))
-                print(f"Updated keeper {oppKeeperID} rating from {oldRating} to {oppRatings[oppKeeperID]}")
 
             for pos, playerID in oppLineup.items():
                 if pos in DEFENDER_POSITIONS:
@@ -892,10 +890,6 @@ class Match():
             logger.debug(f"Reducing suspensions for home={self.homeTeam.id} away={self.awayTeam.id} league={self.match.league_id}")
             PlayerBans.reduce_suspensions_for_team(self.homeTeam.id, self.match.league_id)
             PlayerBans.reduce_suspensions_for_team(self.awayTeam.id, self.match.league_id)
-
-            logger.debug("Calculating player ratings for home and away teams")
-            self.getPlayerRatings(self.homeTeam, self.homeFinalLineup, self.homeCurrentLineup, self.homeProcessedEvents)
-            self.getPlayerRatings(self.awayTeam, self.awayFinalLineup, self.awayCurrentLineup, self.awayProcessedEvents)
 
             homeManager = Managers.get_manager_by_id(self.homeTeam.manager_id)
             awayManager = Managers.get_manager_by_id(self.awayTeam.manager_id)

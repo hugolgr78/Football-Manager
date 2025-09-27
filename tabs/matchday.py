@@ -2026,11 +2026,18 @@ class MatchDay(ctk.CTkFrame):
                 pitch = self.homeLineupPitch if home else self.awayLineupPitch
                 ratings = self.matchFrame.matchInstance.homeRatings if home else self.matchFrame.matchInstance.awayRatings
                 lineup = self.matchFrame.matchInstance.homeCurrentLineup if home else self.matchFrame.matchInstance.awayCurrentLineup
+                oppLineup = self.matchFrame.matchInstance.awayCurrentLineup if home else self.matchFrame.matchInstance.homeCurrentLineup
+                oppRatings = self.matchFrame.matchInstance.awayRatings if home else self.matchFrame.matchInstance.homeRatings
+                oppPitch = self.awayLineupPitch if home else self.homeLineupPitch
 
             self.updateRatingOval(pitch, event["player"], lineup, ratings)
 
             if event["type"] == "goal":
                 self.updateRatingOval(pitch, event["assister"], lineup, ratings)
+
+                for pos, playerID in oppLineup.items():
+                    if pos in DEFENDER_POSITIONS + ["Goalkeeper"]:
+                        self.updateRatingOval(oppPitch, playerID, oppLineup, oppRatings)
 
     def updateRatingOval(self, pitch, playerID, lineup, ratings):
         position = list(lineup.keys())[list(lineup.values()).index(playerID)]

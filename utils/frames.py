@@ -1795,6 +1795,8 @@ class FootballPitchMatchDay(FootballPitchVertical):
         formatted_text = text
         if "." not in str(text):
             formatted_text = f"{text}.0"
+        elif len(str(text).split(".")[1]) == 1:
+            formatted_text = f"{text}0"
 
         position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
 

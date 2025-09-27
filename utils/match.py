@@ -441,6 +441,7 @@ class Match():
     def getEventPlayer(self, event, home, time, teamMatch = None, managing_team = False):
 
         lineup = self.homeCurrentLineup if home else self.awayCurrentLineup
+        oppLineup = self.awayCurrentLineup if home else self.homeCurrentLineup
         subs = self.homeCurrentSubs if home else self.awayCurrentSubs
         finalLineup = self.homeFinalLineup if home else self.awayFinalLineup
         processedEvents = self.homeProcessedEvents if home else self.awayProcessedEvents
@@ -496,6 +497,19 @@ class Match():
             # Add rating for scoring
             rating = random.uniform(GOAL_RATINGS[0], GOAL_RATINGS[1])
             ratings[playerID] = min(10, max(0, round(ratings.get(playerID, 0) + rating, 2)))
+
+            # Reduce rating for the opposition defence and keeper
+            oppKeeperRating = random.uniform(GOAL_CONCEDED_KEEPER_RATING[0], GOAL_CONCEDED_KEEPER_RATING[1])
+            if "Goalkeeper" in oppLineup:
+                oppKeeperID = oppLineup["Goalkeeper"]
+                oldRating = oppRatings.get(oppKeeperID, 0)
+                oppRatings[oppKeeperID] = min(10, max(0, round(oppRatings.get(oppKeeperID, 0) + oppKeeperRating, 2)))
+                print(f"Updated keeper {oppKeeperID} rating from {oldRating} to {oppRatings[oppKeeperID]}")
+
+            for pos, playerID in oppLineup.items():
+                if pos in DEFENDER_POSITIONS:
+                    defenderRating = random.uniform(GOAL_CONCEDED_DEFENCE_RATING[0], GOAL_CONCEDED_DEFENCE_RATING[1])
+                    oppRatings[playerID] = min(10, max(0, round(oppRatings.get(playerID, 0) + defenderRating, 2)))
 
             ## assister
             assisterPosition = random.choices(list(ASSISTER_CHANCES.keys()), weights = list(ASSISTER_CHANCES.values()), k = 1)[0]

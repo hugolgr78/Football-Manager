@@ -2479,18 +2479,17 @@ class MatchStats(Base):
     def get_team_stats_in_match(cls, match_id, team_id):
         session = DatabaseManager().get_session()
         try:
-            # Aggregate team-level stats for all stat types (team entries where player_id is NULL)
+            # Read team-level stats directly (there should be at most one stored value per stat_type)
             team_agg = (
                 session.query(
                     MatchStats.stat_type,
-                    func.coalesce(func.sum(MatchStats.value), 0).label('total')
+                    MatchStats.value
                 )
                 .filter(
                     MatchStats.match_id == match_id,
                     MatchStats.team_id == team_id,
                     MatchStats.player_id == None
                 )
-                .group_by(MatchStats.stat_type)
                 .all()
             )
 
@@ -2514,20 +2513,51 @@ class MatchStats(Base):
             )
 
             # Combine both aggregations into a dict { stat_type: total }
+            # One stat ("xG") is a float while the rest are integers. Keep types consistent
             totals = defaultdict(int)
-            for s_type, total in team_agg:
-                totals[s_type] += int(total or 0)
+            for s_type, value in team_agg:
+                # Use the stored team-level value as-is (don't sum multiple team rows)
+                if s_type == "xG":
+                    # preserve decimals and round to 2 places
+                    totals[s_type] = round(float(value or 0.0), 2)
+                else:
+                    totals[s_type] = int(value or 0)
+
             for s_type, total in player_agg:
-                totals[s_type] += int(total or 0)
+                if s_type == "xG":
+                    totals[s_type] = round(float(totals.get(s_type, 0.0)) + float(total or 0.0), 2)
+                else:
+                    totals[s_type] += int(total or 0)
 
             # Ensure all known saved stats are present with a zero default for predictable UI ordering
             for s in SAVED_STATS:
-                totals.setdefault(s, 0)
+                if s == "xG":
+                    totals.setdefault(s, 0.0)
+                else:
+                    totals.setdefault(s, 0)
 
             return dict(totals)
         finally:
             session.close()
-    
+
+    @classmethod
+    def get_team_stat_in_match(cls, match_id, team_id, stat_type):
+        session = DatabaseManager().get_session()
+        try:
+            # Sum team-level stats for the specific stat_type (team entries where player_id is NULL)
+            team_total = (
+                session.query(MatchStats)
+                .filter(
+                    MatchStats.match_id == match_id,
+                    MatchStats.team_id == team_id,
+                    MatchStats.player_id == None,
+                    MatchStats.stat_type == stat_type
+                ).first()
+            )
+
+            return team_total
+        finally:
+            session.close()
 class League(Base):
     __tablename__ = 'leagues'
     

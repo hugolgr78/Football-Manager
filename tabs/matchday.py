@@ -331,12 +331,16 @@ class MatchDay(ctk.CTkFrame):
             
             currTime = self.timeLabel.cget("text")
 
-            # After HT, once the player hits Resume
+            """
+            HALF TIME - After Half time, once the player hits the "Resume" button.
+            - Reset the time to 45:00
+            - Reset all the score labels to what they were before HT
+            - Allow shouts and substitutions again
+            """
             if currTime == "HT":
                 minutes = 45
                 seconds = 0
 
-                # reset all the score labels as they were before HT
                 for frame in self.otherMatchesFrame.winfo_children():
                     if frame.matchInstance:
                         frame.HTLabel(place = False)
@@ -352,13 +356,33 @@ class MatchDay(ctk.CTkFrame):
                 minutes = int(currTime[0])
                 seconds = int(currTime[1])
 
+            """
+            TIMER - Update the time every tick based on the speed selected
+            """
             if seconds == 59:
                 minutes += 1
                 seconds = 0
             else:
                 seconds += 1
 
-            ## ----------- fotness changes ------------
+            """
+            SHOUTS - Reset the shout button to enabled 10 minutes after the last shout
+            """
+            if minutes == self.lastShout + 10 and seconds == 0:
+                self.shoutsButton.configure(state = "normal")
+
+            """
+            SUBSTITUTIONS - Remove substitution button a minute before the end of the match
+            """
+            if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
+                self.substitutionButton.configure(state = "disabled")
+
+            """
+            FITNESS - Every 90 seconds, reduce the fitness of every player on the pitch
+            - Reduce fitness of players who are currently on the pitch for team game as well as other matches
+            - Reduce fitness based on player's fitness attribute and current fitness level (lower fitness = lower drop)
+            - Update the fitness icon and text in the player frames if the players frame is currently being shown
+            """
             total_seconds = minutes * 60 + seconds
             if total_seconds % 90 == 0:
                 for frame in self.otherMatchesFrame.winfo_children():
@@ -413,10 +437,12 @@ class MatchDay(ctk.CTkFrame):
                             fitness = self.matchFrame.matchInstance.awayFitness[playerID]
                             frame.updateFitness(fitness)
 
-            if minutes == self.lastShout + 10 and seconds == 0:
-                self.shoutsButton.configure(state = "normal")
-
-            ## ----------- half time ------------
+            """
+            HALF TIME - First Half time procedure
+            - Calculate extra time for every match based on events that have happened (team match and other matches)
+            - Get the maximum extra time from all matches and set that as the extra time for the first half
+            - Display the extra time label in the time frame
+            """
             if minutes == 45 and seconds == 0:
 
                 ## extra time
@@ -483,14 +509,20 @@ class MatchDay(ctk.CTkFrame):
                 self.matchDataFrame.update_idletasks()
                 self.matchDataFrame._parent_canvas.yview_moveto(1)
 
-            ## Half time for every time now
+            """
+            HALF TIME - Second Half time procedure
+            - Display the extra time label in the time frame
+            - Call the half time talks function to display the half time frame
+            - If the max time is reached, set half time to false and stop the timer
+            - Add HT labels to every match if not already there
+            - Remove the extra time label from the time frame
+            """
             if self.halfTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
                 if minutes == 45 + self.maxExtraTimeHalf and seconds == 0:
                     self.timerThread_running = False
                     self.halfTimeTalks()
 
-                    ## Add HT labels if they are not already there
                     for frame in self.otherMatchesFrame.winfo_children():
                         if not frame.halfTimeLabel.winfo_ismapped() and frame.matchInstance:
                             frame.HTLabel()
@@ -503,7 +535,12 @@ class MatchDay(ctk.CTkFrame):
                     self.halfTime = False
                     self.halfTimeEnded = True
 
-            ## ----------- full time ------------
+            """
+            FULL TIME - First Full time procedure
+            - Calculate extra time for every match based on events that have happened (team match and other matches)
+            - Get the maximum extra time from all matches and set that as the extra time for the full time
+            - Display the extra time label in the time frame
+            """
             if minutes == 90 and seconds == 0:
                
                 self.fullTime = True
@@ -570,7 +607,14 @@ class MatchDay(ctk.CTkFrame):
                 self.matchDataFrame.update_idletasks()
                 self.matchDataFrame._parent_canvas.yview_moveto(1)
 
-            ## Full time for every time now
+            """
+            FULL TIME - Second Full time procedure
+            - Display the extra time label in the time frame
+            - If the max time is reached, set full time to false and stop the timer
+            - Add FT labels to every match if not already there
+            - Remove the extra time label from the time frame
+            - Ensure the Full Time label is placed at the end of the match data frame
+            """
             if self.fullTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
                 if minutes == 90 + self.maxExtraTimeFull and seconds == 0:
@@ -597,11 +641,12 @@ class MatchDay(ctk.CTkFrame):
                         self.matchDataFrame.update_idletasks()
                         self.matchDataFrame._parent_canvas.yview_moveto(1)
 
-            ## ----------- substitution end ------------
-            if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
-                self.substitutionButton.configure(state = "disabled")
-
-            ## ----------- other matches ------------ 
+            """
+            EVENTS - Other matches
+            - Add the HT and FT labels at the correct times
+            - Check every match for events that need to be processed at the current time
+            - If goal, update the score label
+            """
             for frame in self.otherMatchesFrame.winfo_children():
                 
                 if not frame.matchInstance:
@@ -644,6 +689,12 @@ class MatchDay(ctk.CTkFrame):
                                 frame.matchInstance.getEventPlayer(event_details, False, event_time)
                                 frame.matchInstance.awayProcessedEvents[event_time] = event_details
 
+            """
+            HALF TIME - your team match has reached its half time
+            - Disable shouts and substitutions
+            - Add the HT label
+            - Add a half time separator in the match data frame
+            """
             if minutes == 45 + self.matchFrame.matchInstance.extraTimeHalf and self.halfTime and seconds == 0:
                 self.shoutsButton.configure(state = "disabled")
                 self.substitutionButton.configure(state = "disabled")
@@ -656,6 +707,12 @@ class MatchDay(ctk.CTkFrame):
                 self.matchDataFrame.update_idletasks()
                 self.matchDataFrame._parent_canvas.yview_moveto(1)
             
+            """
+            FULL TIME - your team match has reached its full time
+            - Disable shouts and substitutions
+            - Add the FT label
+            - Add a full time separator in the match data frame
+            """
             if minutes == 90 + self.matchFrame.matchInstance.extraTimeFull and self.fullTime and seconds == 0:
                 self.shoutsButton.configure(state = "disabled")
                 self.substitutionButton.configure(state = "disabled")
@@ -668,6 +725,13 @@ class MatchDay(ctk.CTkFrame):
                 self.matchDataFrame.update_idletasks()
                 self.matchDataFrame._parent_canvas.yview_moveto(1)
 
+            """
+            TICK - Every 30 seconds, generate events and statistics for every match
+            - Generate events and stats for both teams in your match
+            - Get the passes and possession stats for your match
+            - Update the stats frames with the new stats
+            - Get the events, stats and passes and possession for other matches
+            """
             if total_seconds % TICK == 0 and self.timeLabel.cget("text") != "HT":
                 self.generateEvents("home", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
                 self.generateEvents("away", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
@@ -714,7 +778,15 @@ class MatchDay(ctk.CTkFrame):
 
                         passesAndPossession(matchInstance = frame.matchInstance)
 
-            ## ----------- managing team match ------------
+            """
+            EVENTS - Home team events
+            - Check for events that need to be processed at the current time
+            - If an event is marked as extra time, only process it if half time or full
+            - If an event is not marked as extra time, only process it if not half time or full
+            - Update the match data frame with the new event
+            - If goal, update the score label
+            - If injury or red card and your team is the home team, make a substitution
+            """
             for event_time, event_details in list(self.matchFrame.matchInstance.homeEvents.items()):
                 if event_time == str(minutes) + ":" + str(seconds) and event_time not in self.matchFrame.matchInstance.homeProcessedEvents:
                     if event_details["extra"]:
@@ -745,6 +817,15 @@ class MatchDay(ctk.CTkFrame):
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, True)
 
+            """
+            EVENTS - Away team events
+            - Check for events that need to be processed at the current time
+            - If an event is marked as extra time, only process it if half time or full
+            - If an event is not marked as extra time, only process it if not half time or full
+            - Update the match data frame with the new event
+            - If goal, update the score label
+            - If injury or red card and your team is the away team, make a substitution
+            """
             for event_time, event_details in list(self.matchFrame.matchInstance.awayEvents.items()):
                 if event_time == str(minutes) + ":" + str(seconds) and event_time not in self.matchFrame.matchInstance.awayProcessedEvents:
                     if event_details["extra"]:
@@ -774,6 +855,12 @@ class MatchDay(ctk.CTkFrame):
 
                             self.after(0, self.updateMatchDataFrame, event_details, event_time, False)
 
+            """
+            TIMER - Configure the time label based on the current time
+            - If half time has just ended, set the label to HT
+            - If full time has just ended, set the label to FT
+            - Otherwise, update the label with the current time
+            """
             if self.halfTimeEnded:
                 self.timeLabel.configure(text = "HT")
                 self.halfTimeEnded = False

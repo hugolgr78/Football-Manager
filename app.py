@@ -10,20 +10,27 @@ from CTkMessagebox import CTkMessagebox
 # Enable debug mode if "debug" is passed as a command-line argument
 DEBUG_MODE = len(sys.argv) > 1 and sys.argv[1].lower() == "debug"
 
+# Configure root logging once at startup. In DEBUG_MODE we enable DEBUG level
+# and a simple stream handler so debug statements across modules are visible.
 if DEBUG_MODE:
-    # Create a dedicated handler for the utils.match logger so DEBUG records show
-    match_logger = logging.getLogger("utils.match")
+    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(name)s %(levelname)s: %(message)s")
+else:
+    logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(name)s %(levelname)s: %(message)s")
+
+# Keep custom behaviour for the heavy "utils.match" logger to avoid duplicate logs
+match_logger = logging.getLogger("utils.match")
+if DEBUG_MODE:
+    # ensure it emits debug records to stdout
     if not any(isinstance(h, logging.StreamHandler) for h in match_logger.handlers):
         match_handler = logging.StreamHandler(sys.stdout)
         match_handler.setLevel(logging.DEBUG)
         match_handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s"))
         match_logger.addHandler(match_handler)
     match_logger.setLevel(logging.DEBUG)
-    # Prevent duplicate propagation to root handlers
     match_logger.propagate = False
 else:
-    # Silence the logger if not in debug mode
-    logging.getLogger("utils.match").setLevel(logging.CRITICAL)
+    # keep it quiet at higher levels if not debugging
+    match_logger.setLevel(logging.CRITICAL)
 
 def backup_all_databases(data_dir, backup_dir):
     """Backup all .db files in the data directory"""

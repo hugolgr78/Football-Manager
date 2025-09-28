@@ -1,4 +1,5 @@
 import re, datetime, os, shutil, time, gc
+import logging
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
@@ -12,6 +13,8 @@ from settings import *
 from utils.util_functions import *
 
 Base = declarative_base()
+
+logger = logging.getLogger(__name__)
 
 progressBar = None
 progressLabel = None
@@ -123,7 +126,7 @@ class DatabaseManager:
                     try:
                         os.remove(path)
                     except PermissionError as e:
-                        print(f"[DB DEBUG] Could not delete {path}: {e}")
+                        logger.debug("[DB DEBUG] Could not delete %s: %s", path, e)
 
             # Reconnect to the original
             self._connect(self.original_path)
@@ -905,7 +908,7 @@ class Players(Base):
             session.commit()
         except Exception as e:
             session.rollback()
-            print("[DB ERROR] Batch update morales failed:", e)
+            logger.exception("[DB ERROR] Batch update morales failed")
             raise e
         finally:
             session.close()
@@ -923,7 +926,7 @@ class Players(Base):
             session.commit()
         except Exception as e:
             session.rollback()
-            print("[DB ERROR] Batch update sharpnesses failed:", e)
+            logger.exception("[DB ERROR] Batch update sharpnesses failed")
             raise e
         finally:
             session.close()
@@ -1082,7 +1085,7 @@ class Players(Base):
             session.commit()
         except Exception as e:
             session.rollback()
-            print("[DB ERROR] Batch update fitness failed:", e)
+            logger.exception("[DB ERROR] Batch update fitness failed")
             raise e
         finally:
             session.close()
@@ -1357,7 +1360,7 @@ class Matches(Base):
                 return None
         except Exception as e:
             session.rollback()
-            print("[DB ERROR] Update match score failed:", e)
+            logger.exception("[DB ERROR] Update match score failed")
             raise e
         finally:
             session.close()
@@ -1600,7 +1603,7 @@ class TeamLineup(Base):
             session.commit()
         except Exception as e:
             session.rollback()
-            print(f"Error in batch_add_lineups: {e}")
+            logger.exception("Error in batch_add_lineups: %s", e)
             raise e
         finally:
             session.close()
@@ -1859,7 +1862,7 @@ class MatchEvents(Base):
             session.commit()
         except Exception as e:
             session.rollback()
-            print(f"Error in batch_add_events: {e}")
+            logger.exception("Error in batch_add_events: %s", e)
             raise e
         finally:
             session.close()
@@ -2419,7 +2422,7 @@ class MatchStats(Base):
             session.commit()
         except Exception as e:
             session.rollback()
-            print(f"Error in batch_add_stats: {e}")
+            logger.exception("Error in batch_add_stats: %s", e)
             raise e
         finally:
             session.close()
@@ -2910,7 +2913,7 @@ class LeagueTeams(Base):
                 return None
         except Exception as e:
             session.rollback()
-            print(f"Error in update_team: {e}")
+            logger.exception("Error in update_team: %s", e)
             raise e
         finally:
             session.close()
@@ -5120,7 +5123,7 @@ class StatsManager:
                     except Exception:
                         stat_results[stat_name] = None
         except Exception as e:
-            print(e)
+            logger.exception("Error running stat threads: %s", e)
 
         # # Run slow stats (each in its own thread, but sequentially after fast stats)
         # for stat_name, stat_func in slow_items:

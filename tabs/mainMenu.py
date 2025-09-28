@@ -7,6 +7,7 @@ from utils.util_functions import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import traceback
 import logging
+import time
 
 from tabs.hub import Hub
 from tabs.inbox import Inbox
@@ -243,6 +244,7 @@ class MainMenu(ctk.CTkFrame):
 
             # Phase 2: run startGame in parallel with ThreadPoolExecutor
             self._logger.info("Starting parallel match simulation with %d workers", max(1, len(matches)))
+            sim_start = time.perf_counter()
             with ThreadPoolExecutor(max_workers = len(matches)) as ex:
                 # submit a wrapper that starts the match thread and then joins it
                 def _run_and_join(m):
@@ -264,6 +266,11 @@ class MainMenu(ctk.CTkFrame):
                     except Exception:
                         self._logger.exception("Match worker raised an exception")
                         traceback.print_exc()
+
+            sim_end = time.perf_counter()
+            elapsed = sim_end - sim_start
+            # Log elapsed time for the parallel match simulations
+            self._logger.info("Match simulation completed in %.3f seconds for %d matches", elapsed, len(matches))
 
         self.currDate += overallTimeInBetween
         Game.increment_game_date(self.manager_id, overallTimeInBetween)

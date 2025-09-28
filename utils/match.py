@@ -1,5 +1,6 @@
 import threading
 import logging
+logger = logging.getLogger(__name__)
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
@@ -116,13 +117,17 @@ class Match():
 
     def gameLoop(self):
         while self.timerThread_running:
+            # prepare a bracketed match id prefix for logs
+            prefix = f"[{getattr(self.match, 'id', None)}]"
 
+            # log current time each iteration (debug)
+            total_seconds = self.minutes * 60 + self.seconds
+            logger.debug("%s gameLoop tick: minutes=%s seconds=%s total_seconds=%s", prefix, self.minutes, self.seconds, total_seconds)
             if self.seconds == 59:
                 self.minutes += 1
                 self.seconds = 0
             else:
                 self.seconds += 1
-
             total_seconds = self.minutes * 60 + self.seconds
             if total_seconds % 90 == 0:
                 for playerID, fitness in self.homeFitness.items():
@@ -132,6 +137,8 @@ class Match():
                         if self.homeFitness[playerID] < 0:
                             self.homeFitness[playerID] = 0
 
+                        logger.debug("%s fitness reduced: player_id=%s new_fitness=%s", prefix, playerID, self.homeFitness[playerID])
+
                 for playerID, fitness in self.awayFitness.items():
                     if fitness > 0 and playerID in self.awayCurrentLineup.values():
                         self.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID), fitness)
@@ -139,10 +146,14 @@ class Match():
                         if self.awayFitness[playerID] < 0:
                             self.awayFitness[playerID] = 0
 
+                        logger.debug("%s fitness reduced: player_id=%s new_fitness=%s", prefix, playerID, self.awayFitness[playerID])
+
             # ----------- half time ------------
             if self.minutes == 45 and self.seconds == 0:
 
                 self.halfTime = True
+
+                logger.info("%s Half time reached at %02d:%02d", prefix, self.minutes, self.seconds)
 
                 eventsExtraTime, firstHalfEvents, maxMinute = 0, 0, 0
                 combined_events = {**self.homeEvents, **self.awayEvents}
@@ -164,15 +175,21 @@ class Match():
 
                 self.extraTimeHalf = extraTime
 
+                logger.debug("%s Computed extraTimeHalf=%s", prefix, self.extraTimeHalf)
+
             if self.halfTime and self.minutes == 45 + self.extraTimeHalf and self.seconds == 0:
                 self.halfTime = False
                 self.minutes = 45
                 self.seconds = 0
 
+                logger.info("%s End of half time, resume at %02d:%02d", prefix, self.minutes, self.seconds)
+
             # ----------- full time ------------
             if self.minutes == 90 and self.seconds == 0:
 
                 self.fullTime = True
+
+                logger.info("%s Full time reached at %02d:%02d", prefix, self.minutes, self.seconds)
 
                 eventsExtraTime, secondHalfEvents, maxMinute = 0, 0, 0
                 combined_events = {**self.homeEvents, **self.awayEvents}
@@ -194,11 +211,14 @@ class Match():
 
                 self.extraTimeFull = extraTime
 
+                logger.debug("%s Computed extraTimeFull=%s", prefix, self.extraTimeFull)
+
             if self.fullTime and self.minutes == 90 + self.extraTimeFull and self.seconds == 0:
                 self.fullTime = False
                 self.saveData()
             else:
                 if total_seconds % TICK == 0:
+                    logger.debug("%s TICK: generating events and updating possession at %02d:%02d", prefix, self.minutes, self.seconds)
                     self.generateEvents("home")
                     self.generateEvents("away")
                     passesAndPossession(self)
@@ -206,26 +226,32 @@ class Match():
                 # ----------- home events ------------
                 for event_time, event_details in list(self.homeEvents.items()):
                     if event_time == str(self.minutes) + ":" + str(self.seconds) and event_time not in self.homeProcessedEvents:
+                        logger.debug("%s Processing home event at %s: %s", prefix, event_time, event_details)
                         if event_details["extra"]:
                             if self.halfTime or self.fullTime:
                                 self.getEventPlayer(event_details, True, event_time)
                                 self.homeProcessedEvents[event_time] = event_details
+                                logger.info("%s Processed extra home event: %s at %s", prefix, event_details.get("type"), event_time)
                         else:
                             if not (self.halfTime or self.fullTime):
                                 self.getEventPlayer(event_details, True, event_time)
                                 self.homeProcessedEvents[event_time] = event_details
+                                logger.info("%s Processed home event: %s at %s", prefix, event_details.get("type"), event_time)
 
                 # ----------- away events ------------
                 for event_time, event_details in list(self.awayEvents.items()):
                     if event_time == str(self.minutes) + ":" + str(self.seconds) and event_time not in self.awayProcessedEvents:
+                        logger.debug("%s Processing away event at %s: %s", prefix, event_time, event_details)
                         if event_details["extra"]:
                             if self.halfTime or self.fullTime:
                                 self.getEventPlayer(event_details, False, event_time)
                                 self.awayProcessedEvents[event_time] = event_details
+                                logger.info("%s Processed extra away event: %s at %s", prefix, event_details.get("type"), event_time)
                         else:
                             if not (self.halfTime or self.fullTime):
                                 self.getEventPlayer(event_details, False, event_time)
                                 self.awayProcessedEvents[event_time] = event_details
+                                logger.info("%s Processed away event: %s at %s", prefix, event_details.get("type"), event_time)
 
     def generateEvents(self, side):
         eventsToAdd = []

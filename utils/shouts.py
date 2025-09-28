@@ -136,7 +136,7 @@ class Encourage():
                 self.parent.addGoal(not self.home)
 
         else:
-            if random.random() < 0.05: # team scores a goal
+            if random.random() < 1: # team scores a goal
                 self.parent.addGoal(self.home)
 
         self.parent.closeFunction() 

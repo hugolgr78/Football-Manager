@@ -39,7 +39,7 @@ class ShoutFrame(ctk.CTkFrame):
             extra = True
 
         events[str(minute) + ":" + str(second)] = {"type": type_, "extra": extra}
-        self.match.score.appendScore(1, home)
+        self.match.appendScore(1, home)
 
     def removeGoal(self, home):
         events = self.match.homeEvents if home else self.match.awayEvents
@@ -48,7 +48,7 @@ class ShoutFrame(ctk.CTkFrame):
             eventMinute = int(event_time.split(":")[0])
             if eventMinute < self.currMinute + 10 and eventMinute > self.currMinute and (event_data["type"] == "goal" or event_data["type"] == "penalty_goal" or event_data["type"] == "own_goal"):
                 del events[event_time]
-                self.match.score.appendScore(-1, home)
+                self.match.appendScore(-1, home)
                 break
 
     def getCurrResult(self, score):
@@ -136,7 +136,7 @@ class Encourage():
                 self.parent.addGoal(not self.home)
 
         else:
-            if random.random() < 1: # team scores a goal
+            if random.random() < 0.05: # team scores a goal
                 self.parent.addGoal(self.home)
 
         self.parent.closeFunction() 

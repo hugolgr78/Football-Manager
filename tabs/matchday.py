@@ -6,6 +6,7 @@ from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitc
 from utils.shouts import ShoutFrame
 from utils.util_functions import *
 import threading, time
+import logging
 from PIL import Image, ImageTk
 import math
 
@@ -2186,6 +2187,7 @@ class MatchDay(ctk.CTkFrame):
             db = DatabaseManager()
             db.commit_copy()
         except Exception as Ex:
-            print(f"Error occurred while saving game: {Ex}")
+            logger = logging.getLogger(__name__)
+            logger.exception("Error occurred while saving game: %s", Ex)
 
         self.parent.resetMenu()

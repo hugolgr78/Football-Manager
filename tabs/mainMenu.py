@@ -6,6 +6,7 @@ from PIL import Image
 from utils.util_functions import *
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import traceback
+import logging
 
 from tabs.hub import Hub
 from tabs.inbox import Inbox
@@ -71,6 +72,9 @@ class MainMenu(ctk.CTkFrame):
 
         self.createTabs()
         self.addDate()
+
+        # instance logger
+        self._logger = logging.getLogger(__name__)
 
     def createTabs(self):
 
@@ -164,6 +168,7 @@ class MainMenu(ctk.CTkFrame):
 
     def moveDate(self):
         self.currDate = Game.get_game_date(self.manager_id)
+        self._logger.debug("moveDate start - manager_id=%s currDate=%s", self.manager_id, self.currDate)
         teamIDs = Teams.get_all_teams()
 
         dates = []
@@ -171,8 +176,10 @@ class MainMenu(ctk.CTkFrame):
         dates.append(Emails.get_next_email(self.currDate).date)
         stopDate = min(dates)
         overallTimeInBetween = stopDate - self.currDate
+        self._logger.debug("Computed stopDate=%s overallTimeInBetween=%s", stopDate, overallTimeInBetween)
 
         # ------------------- Creating calendar events for other teams -------------------
+        self._logger.info("Starting calendar events generation from %s to %s", self.currDate, stopDate)
         current_day = self.currDate # + timedelta(days = 1)
         while current_day.date() <= stopDate.date():
             if current_day.weekday() == 0:
@@ -182,13 +189,17 @@ class MainMenu(ctk.CTkFrame):
                         if team_id != self.team.id or Settings.get_setting("events_delegated"):
                             create_events_for_other_teams(team_id, current_day, managing_team = team_id == self.team.id)
             current_day += timedelta(days = 1)
+        self._logger.debug("Created/checked calendar events between %s and %s for %d teams", self.currDate, stopDate, len(teamIDs))
 
         # -------------------Figuring out intervals -------------------
 
+        self._logger.debug("Computing intervals between %s and %s for %d teams", self.currDate, stopDate, len(teamIDs))
         intervals = self.getIntervals(self.currDate, stopDate, teamIDs)
+        self._logger.debug("Computed intervals count=%d", len(intervals))
 
         # ------------------- Update player attributes and carry out events -------------------
 
+        self._logger.info("Starting player attribute updates and event processing across %d intervals", len(intervals))
         for start, end in intervals:
             timeInBetween = end - start
 
@@ -196,16 +207,19 @@ class MainMenu(ctk.CTkFrame):
                 events = CalendarEvents.get_events_dates(teamID, start, end)
 
                 if len(events) == 0:
+                    self._logger.debug("No calendar events for team %s in interval %s - %s: updating sharpness/fitness", teamID, start, end)
                     Players.update_sharpness_and_fitness(timeInBetween, teamID)
                     continue
 
                 for event in events:
+                    self._logger.debug("Carrying out event %s for team %s", event.id if hasattr(event, 'id') else event, teamID)
                     self.carryOutEvent(event)
                     CalendarEvents.update_event(event.id)
 
             PlayerBans.reduce_injuries(timeInBetween, stopDate)
 
         update_ages(self.currDate, stopDate)
+        self._logger.debug("Updated player ages between %s and %s", self.currDate, stopDate)
 
         # ------------------- Matches simulation -------------------
 
@@ -216,31 +230,40 @@ class MainMenu(ctk.CTkFrame):
         matches = []
         matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
         if matchesToSim:
+            self._logger.info("Preparing to simulate %d matches", len(matchesToSim))
+            self._logger.info("Starting match initialization")
             # Phase 1: create all Match objects
             for game in matchesToSim:
                 try:
                     match = Match(game, auto = True)  # init only
                     matches.append(match)
-                except Exception as e:
+                except Exception:
+                    self._logger.exception("Error initializing Match for game %s", getattr(game, 'id', game))
                     traceback.print_exc()
-                    print(e)
 
             # Phase 2: run startGame in parallel with ThreadPoolExecutor
+            self._logger.info("Starting parallel match simulation with %d workers", max(1, len(matches)))
             with ThreadPoolExecutor(max_workers = len(matches)) as ex:
                 # submit a wrapper that starts the match thread and then joins it
                 def _run_and_join(m):
-                    m.startGame()
-                    m.join()
-                
+                    try:
+                        self._logger.debug("Starting simulation for %s", repr(m))
+                        m.startGame()
+                        m.join()
+                        self._logger.debug("Finished simulation for %s", repr(m))
+                    except Exception:
+                        self._logger.exception("Exception during simulation for %s", repr(m))
+                        raise
+
                 futures = [ex.submit(_run_and_join, match) for match in matches]
 
                 # Phase 3: wait for all to finish
                 for fut in as_completed(futures):
                     try:
                         fut.result()
-                    except Exception as e:
+                    except Exception:
+                        self._logger.exception("Match worker raised an exception")
                         traceback.print_exc()
-                        print(e)
 
         self.currDate += overallTimeInBetween
         Game.increment_game_date(self.manager_id, overallTimeInBetween)

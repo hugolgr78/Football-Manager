@@ -27,27 +27,19 @@ class ShoutFrame(ctk.CTkFrame):
 
     def addGoal(self, home):
         events = self.match.homeEvents if home else self.match.awayEvents
-        addEvent = True
-        for event_time, event_data in events.items():
-            eventMinute = int(event_time.split(":")[0])
-            if eventMinute < self.currMinute + 10 and eventMinute > self.currMinute and (event_data["type"] == "goal" or event_data["type"] == "penalty_goal" or event_data["type"] == "own_goal"):
-                addEvent = False
-                break
-        
-        if addEvent:
-            type_ = random.choices(list(GOAL_TYPE_CHANCES.keys()), weights = [GOAL_TYPE_CHANCES[goalType] for goalType in GOAL_TYPE_CHANCES])[0]
-            if type_ == "penalty":
-                type_ = "penalty_goal"
+        type_ = random.choices(list(GOAL_TYPE_CHANCES.keys()), weights = [GOAL_TYPE_CHANCES[goalType] for goalType in GOAL_TYPE_CHANCES])[0]
+        if type_ == "penalty":
+            type_ = "penalty_goal"
 
-            minute = self.currMinute + random.randint(1, 10)
-            second = random.randint(0, 59)
+        minute = self.currMinute + random.randint(1, 10)
+        second = random.randint(0, 59)
 
-            extra = False
-            if minute >= 90:
-                extra = True
+        extra = False
+        if minute >= 90:
+            extra = True
 
-            events[str(minute) + ":" + str(second)] = {"type": type_, "extra": extra}
-            self.match.score.appendScore(1, home)
+        events[str(minute) + ":" + str(second)] = {"type": type_, "extra": extra}
+        self.match.score.appendScore(1, home)
 
     def removeGoal(self, home):
         events = self.match.homeEvents if home else self.match.awayEvents

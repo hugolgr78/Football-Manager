@@ -1,12 +1,11 @@
-import threading
-import logging
-logger = logging.getLogger(__name__)
+import threading, os, time, gc, logging
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
 import concurrent.futures
 from utils.util_functions import *
 
+logger = logging.getLogger(__name__)
 class Match():
     def __init__(self, match, auto = False, teamMatch = False):
 
@@ -923,245 +922,395 @@ class Match():
             # debug counts
             logger.debug(f"Processed events counts: home={len(self.homeProcessedEvents)} away={len(self.awayProcessedEvents)}")
 
-            logger.debug("Submitting DB update tasks to ThreadPoolExecutor")
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = []
+            # --- Acquire write lock and switch DB connection to shared copy so all threads write to the shared copy ---
+            # This serializes writers across processes to avoid SQLite write conflicts.
+            dbm = DatabaseManager()
+            # Determine the shared per-manager copy filename (manager first+last)_copy.db
+            try:
+                user_mgr = Managers.get_all_user_managers()[0]
+                base_name_shared = f"{user_mgr.first_name}{user_mgr.last_name}"
+                shared_copy_path = f"data/{base_name_shared}_copy.db"
+            except Exception:
+                # Fallback to DatabaseManager.copy_path if user manager not available
+                shared_copy_path = dbm.copy_path or "data/unknown_copy.db"
 
-                # LeagueTeams updates
-                futures.append(executor.submit(
-                    LeagueTeams.update_team,
-                    self.homeTeam.id,
-                    3 if self.winner == self.homeTeam else 1 if self.winner is None else 0,
-                    1 if self.winner == self.homeTeam else 0,
-                    1 if self.winner is None else 0,
-                    1 if self.winner == self.awayTeam else 0,
-                    self.score[0],
-                    self.score[1]
-                ))
+            lockfile = shared_copy_path + ".write.lock"
+            lock_fd = None
+            acquired_lock = False
+            max_attempts = 200  # allow longer waits if many workers
+            for attempt_lock in range(max_attempts):
+                try:
+                    # atomic create
+                    flags = os.O_CREAT | os.O_EXCL | os.O_RDWR
+                    lock_fd = os.open(lockfile, flags)
+                    try:
+                        os.write(lock_fd, str(os.getpid()).encode('utf-8'))
+                    except Exception:
+                        pass
+                    acquired_lock = True
+                    logger.debug("Acquired DB write lock %s", lockfile)
+                    break
+                except FileExistsError:
+                    # wait a bit and retry
+                    if attempt_lock % 10 == 0:
+                        logger.debug("Waiting for DB write lock %s (attempt %d)", lockfile, attempt_lock)
+                    time.sleep(0.05)
+                except Exception as e:
+                    logger.exception("Unexpected error acquiring DB write lock: %s", e)
+                    time.sleep(0.05)
 
-                futures.append(executor.submit(
-                    LeagueTeams.update_team,
-                    self.awayTeam.id,
-                    3 if self.winner == self.awayTeam else 1 if self.winner is None else 0,
-                    1 if self.winner == self.awayTeam else 0,
-                    1 if self.winner is None else 0,
-                    1 if self.winner == self.homeTeam else 0,
-                    self.score[1],
-                    self.score[0]
-                ))
+            if not acquired_lock:
+                logger.error("Could not acquire DB write lock after %d attempts; aborting saveData for match %s", max_attempts, self.match.id)
+                return
 
-                # Managers updates
-                futures.append(executor.submit(Managers.update_games, homeManager.id,
-                                                1 if self.winner == self.homeTeam else 0,
-                                                1 if self.winner == self.awayTeam else 0))
+            # Perform DB writes while holding the lock. Ensure lock is always released and
+            # DatabaseManager is reconnected back to the original DB in the finally block.
+            try:
+                # Ensure there are no lingering sessions/engines pointing at other DBs
+                try:
+                    if dbm.scoped_session:
+                        dbm.scoped_session.remove()
+                except Exception:
+                    pass
+                try:
+                    if dbm.engine:
+                        dbm.engine.dispose()
+                except Exception:
+                    pass
+                gc.collect()
 
-                futures.append(executor.submit(Managers.update_games, awayManager.id,
-                                                1 if self.winner == self.awayTeam else 0,
-                                                1 if self.winner == self.homeTeam else 0))
+                # Reconnect to the shared copy (where writes should go)
+                # Switch connection to the shared per-manager copy so all processes write to the same shared copy
+                dbm.copy_path = shared_copy_path
+                try:
+                    dbm._connect(shared_copy_path)
+                    dbm.copy_active = True
+                    logger.debug("Switched DB connection to shared copy %s for writing", shared_copy_path)
+                except Exception as e:
+                    logger.exception("Failed to connect to shared copy %s: %s", shared_copy_path, e)
 
-                # Match events
-                events_to_add = []
-                for t, event in self.homeProcessedEvents.items():
-                    player_id = event.get("player") or None
-                    assister_id = event.get("assister") or None
-                    player_off_id = event.get("player_off") or None
-                    player_on_id = event.get("player_on") or None
-                    minute = int(t.split(":")[0]) + 1
+                # Submit DB update tasks to ThreadPoolExecutor
+                logger.debug("Submitting DB update tasks to ThreadPoolExecutor")
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    futures = []
 
-                    if event["extra"]:
-                        if minute <= 50:
-                            extraTime = minute - 45
-                            minute = f"45 + {extraTime}"
+                    # LeagueTeams updates
+                    futures.append(executor.submit(
+                        LeagueTeams.update_team,
+                        self.homeTeam.id,
+                        3 if self.winner == self.homeTeam else 1 if self.winner is None else 0,
+                        1 if self.winner == self.homeTeam else 0,
+                        1 if self.winner is None else 0,
+                        1 if self.winner == self.awayTeam else 0,
+                        self.score[0],
+                        self.score[1]
+                    ))
+
+                    futures.append(executor.submit(
+                        LeagueTeams.update_team,
+                        self.awayTeam.id,
+                        3 if self.winner == self.awayTeam else 1 if self.winner is None else 0,
+                        1 if self.winner == self.awayTeam else 0,
+                        1 if self.winner is None else 0,
+                        1 if self.winner == self.homeTeam else 0,
+                        self.score[1],
+                        self.score[0]
+                    ))
+
+                    # Managers updates
+                    futures.append(executor.submit(Managers.update_games, homeManager.id,
+                                                    1 if self.winner == self.homeTeam else 0,
+                                                    1 if self.winner == self.awayTeam else 0))
+
+                    futures.append(executor.submit(Managers.update_games, awayManager.id,
+                                                    1 if self.winner == self.awayTeam else 0,
+                                                    1 if self.winner == self.homeTeam else 0))
+
+                    # Match events
+                    events_to_add = []
+                    for t, event in self.homeProcessedEvents.items():
+                        player_id = event.get("player") or None
+                        assister_id = event.get("assister") or None
+                        player_off_id = event.get("player_off") or None
+                        player_on_id = event.get("player_on") or None
+                        minute = int(t.split(":")[0]) + 1
+
+                        if event["extra"]:
+                            if minute <= 50:
+                                extraTime = minute - 45
+                                minute = f"45 + {extraTime}"
+                            else:
+                                extraTime = minute - 90
+                                minute = f"90 + {extraTime}"
                         else:
-                            extraTime = minute - 90
-                            minute = f"90 + {extraTime}"
-                    else:
-                        minute = str(minute)
+                            minute = str(minute)
 
-                    if event["type"] == "goal":
-                        events_to_add.append((self.match.id, "goal", minute, player_id))
-                        events_to_add.append((self.match.id, "assist", minute, assister_id))
-                        logger.debug(f"Home goal event queued: match={self.match.id} player={player_id} minute={minute}")
-                    elif event["type"] == "penalty_miss":
-                        goalkeeper_id = event["keeper"]
-                        events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
-                        events_to_add.append((self.match.id, "penalty_saved", minute, goalkeeper_id))
-                        logger.debug(f"Home penalty miss queued: match={self.match.id} player={player_id} minute={minute}")
-                    elif event["type"] == "substitution":
-                        events_to_add.append((self.match.id, "sub_off", minute, player_off_id))
-                        events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
-                    elif event["type"] in ("injury", "red_card"):
-                        events_to_add.append((self.match.id, event["type"], minute, player_id))
-                        ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
-                        logger.debug(f"Computed ban length={ban} for player={player_id} type={event['type']}")
-                        sendEmail, _ = PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate)
+                        if event["type"] == "goal":
+                            events_to_add.append((self.match.id, "goal", minute, player_id))
+                            events_to_add.append((self.match.id, "assist", minute, assister_id))
+                            logger.debug(f"Home goal event queued: match={self.match.id} player={player_id} minute={minute}")
+                        elif event["type"] == "penalty_miss":
+                            goalkeeper_id = event["keeper"]
+                            events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
+                            events_to_add.append((self.match.id, "penalty_saved", minute, goalkeeper_id))
+                            logger.debug(f"Home penalty miss queued: match={self.match.id} player={player_id} minute={minute}")
+                        elif event["type"] == "substitution":
+                            events_to_add.append((self.match.id, "sub_off", minute, player_off_id))
+                            events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
+                        elif event["type"] in ("injury", "red_card"):
+                            events_to_add.append((self.match.id, event["type"], minute, player_id))
+                            ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
+                            logger.debug(f"Computed ban length={ban} for player={player_id} type={event['type']}")
+                            sendEmail, _ = PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate)
 
-                        if sendEmail:
-                            emailDate = currDate + timedelta(days = 1)
-                            if managing_team == "home" and event["type"] == "injury":
-                                Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
-                            elif managing_team == "home" and event["type"] == "red_card":
-                                Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                            if sendEmail:
+                                emailDate = currDate + timedelta(days = 1)
+                                if managing_team == "home" and event["type"] == "injury":
+                                    Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                                elif managing_team == "home" and event["type"] == "red_card":
+                                    Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
 
-                    elif event["type"] == "yellow_card":
-                        events_to_add.append((self.match.id, "yellow_card", minute, player_id))
-                        MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, YELLOW_THRESHOLD, Game.get_game_date(Managers.get_all_user_managers()[0].id))
-                    else:
-                        events_to_add.append((self.match.id, event["type"], minute, player_id))
+                    for t, event in self.awayProcessedEvents.items():
+                        player_id = event.get("player") or None
+                        assister_id = event.get("assister") or None
+                        player_off_id = event.get("player_off") or None
+                        player_on_id = event.get("player_on") or None
+                        minute = int(t.split(":")[0]) + 1
 
-                for t, event in self.awayProcessedEvents.items():
-                    player_id = event.get("player") or None
-                    assister_id = event.get("assister") or None
-                    player_off_id = event.get("player_off") or None
-                    player_on_id = event.get("player_on") or None
-                    minute = int(t.split(":")[0]) + 1
-
-                    if event["extra"]:
-                        if minute <= 50:
-                            extraTime = minute - 45
-                            minute = f"45 + {extraTime}"
+                        if event["extra"]:
+                            if minute <= 50:
+                                extraTime = minute - 45
+                                minute = f"45 + {extraTime}"
+                            else:
+                                extraTime = minute - 90
+                                minute = f"90 + {extraTime}"
                         else:
-                            extraTime = minute - 90
-                            minute = f"90 + {extraTime}"
-                    else:
-                        minute = str(minute)
+                            minute = str(minute)
 
-                    if event["type"] == "goal":
-                        events_to_add.append((self.match.id, "goal", minute, player_id))
-                        events_to_add.append((self.match.id, "assist", minute, assister_id))
-                        logger.debug(f"Away goal event queued: match={self.match.id} player={player_id} minute={minute}")
-                    elif event["type"] == "penalty_miss":
-                        goalkeeper_id = event["keeper"]
-                        events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
-                        events_to_add.append((self.match.id, "penalty_saved", minute, goalkeeper_id))
-                        logger.debug(f"Away penalty miss queued: match={self.match.id} player={player_id} minute={minute}")
-                    elif event["type"] == "substitution":
-                        events_to_add.append((self.match.id, "sub_off", minute, player_off_id))
-                        events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
-                    elif event["type"] in ("injury", "red_card"):
-                        events_to_add.append((self.match.id, event["type"], minute, player_id))
-                        ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
-                        logger.debug(f"Computed ban length={ban} for player={player_id} type={event['type']}")
-                        sendEmail, _ = PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate)
+                        if event["type"] == "goal":
+                            events_to_add.append((self.match.id, "goal", minute, player_id))
+                            events_to_add.append((self.match.id, "assist", minute, assister_id))
+                            logger.debug(f"Away goal event queued: match={self.match.id} player={player_id} minute={minute}")
+                        elif event["type"] == "penalty_miss":
+                            goalkeeper_id = event["keeper"]
+                            events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
+                            events_to_add.append((self.match.id, "penalty_saved", minute, goalkeeper_id))
+                            logger.debug(f"Away penalty miss queued: match={self.match.id} player={player_id} minute={minute}")
+                        elif event["type"] == "substitution":
+                            events_to_add.append((self.match.id, "sub_off", minute, player_off_id))
+                            events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
+                        elif event["type"] in ("injury", "red_card"):
+                            events_to_add.append((self.match.id, event["type"], minute, player_id))
+                            ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
+                            logger.debug(f"Computed ban length={ban} for player={player_id} type={event['type']}")
+                            sendEmail, _ = PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate)
 
-                        if sendEmail:
-                            emailDate = currDate + timedelta(days = 1)
-                            if managing_team == "away" and event["type"] == "injury":
-                                Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
-                            elif managing_team == "away" and event["type"] == "red_card":
-                                Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
-                                
-                    elif event["type"] == "yellow_card":
-                        events_to_add.append((self.match.id, "yellow_card", minute, player_id))
-                        MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, YELLOW_THRESHOLD, Game.get_game_date(Managers.get_all_user_managers()[0].id))
-                    else:
-                        events_to_add.append((self.match.id, event["type"], minute, player_id))
+                            if sendEmail:
+                                emailDate = currDate + timedelta(days = 1)
+                                if managing_team == "away" and event["type"] == "injury":
+                                    Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                                elif managing_team == "away" and event["type"] == "red_card":
+                                    Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                                    
+                    if self.homeCleanSheet:
+                        events_to_add.append((self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"]))
 
-                if self.homeCleanSheet:
-                    events_to_add.append((self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"]))
+                    if self.awayCleanSheet:
+                        events_to_add.append((self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"]))
 
-                if self.awayCleanSheet:
-                    events_to_add.append((self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"]))
+                    if len(events_to_add) > 0:
+                        logger.debug(f"Submitting {len(events_to_add)} match events for insertion")
+                        futures.append(executor.submit(MatchEvents.batch_add_events, events_to_add))
 
-                if len(events_to_add) > 0:
-                    logger.debug(f"Submitting {len(events_to_add)} match events for insertion")
-                    futures.append(executor.submit(MatchEvents.batch_add_events, events_to_add))
+                    # Matches update
+                    logger.debug(f"Submitting match score update: {self.score[0]} -> {self.score[1]}")
+                    futures.append(executor.submit(Matches.update_score, self.match.id, self.score[0], self.score[1]))
 
-                # Matches update
-                logger.debug(f"Submitting match score update: {self.score[0]} -> {self.score[1]}")
-                futures.append(executor.submit(Matches.update_score, self.match.id, self.score[0], self.score[1]))
+                    # Players updates
+                    fitness_to_update = []
+                    logger.debug("Preparing player fitness updates")
+                    for playerID, fitness in self.homeFitness.items():
+                        fitness_to_update.append((playerID, round(fitness)))
 
-                # Players updates
-                fitness_to_update = []
-                logger.debug("Preparing player fitness updates")
-                for playerID, fitness in self.homeFitness.items():
-                    fitness_to_update.append((playerID, round(fitness)))
+                    for playerID, fitness in self.awayFitness.items():
+                        fitness_to_update.append((playerID, round(fitness)))
 
-                for playerID, fitness in self.awayFitness.items():
-                    fitness_to_update.append((playerID, round(fitness)))
+                    logger.debug(f"Submitting fitness updates for {len(fitness_to_update)} players")
+                    futures.append(executor.submit(Players.batch_update_fitness, fitness_to_update))
 
-                logger.debug(f"Submitting fitness updates for {len(fitness_to_update)} players")
-                futures.append(executor.submit(Players.batch_update_fitness, fitness_to_update))
+                    # Lineups and morales
+                    lineups_to_add = []
+                    morales_to_update = []
+                    sharpnesses_to_update = []
 
-                # Lineups and morales
-                lineups_to_add = []
-                morales_to_update = []
-                sharpnesses_to_update = []
+                    homePlayers = Players.get_all_players_by_team(self.homeTeam.id)
+                    awayPlayers = Players.get_all_players_by_team(self.awayTeam.id)
 
-                homePlayers = Players.get_all_players_by_team(self.homeTeam.id)
-                awayPlayers = Players.get_all_players_by_team(self.awayTeam.id)
+                    for player in homePlayers:
+                        final_ids = {pl_id for _, pl_id in self.homeFinalLineup}
+                        playerAdded = False
 
-                for player in homePlayers:
-                    final_ids = {pl_id for _, pl_id in self.homeFinalLineup}
-                    playerAdded = False
+                        # Player was in final lineup (substituted off)
+                        if player.id in final_ids:
+                            playerAdded = True
+                            if player.id in self.homeStartLineup.values():
+                                start_position = list(self.homeStartLineup.keys())[list(self.homeStartLineup.values()).index(player.id)]
+                            else:
+                                start_position = None
 
-                    # Player was in final lineup (substituted off)
-                    if player.id in final_ids:
-                        playerAdded = True
-                        if player.id in self.homeStartLineup.values():
-                            start_position = list(self.homeStartLineup.keys())[list(self.homeStartLineup.values()).index(player.id)]
-                        else:
-                            start_position = None
+                            self.add_player_lineup(
+                                player=player,
+                                start_position=start_position,
+                                end_position=None,
+                                rating=self.homeRatings[player.id],
+                                reason=None,  # was selected
+                                morales_to_update=morales_to_update,
+                                lineups_to_add=lineups_to_add,
+                                sharpnesses_to_update=sharpnesses_to_update,
+                                processed_events=self.homeProcessedEvents,
+                                winner=self.winner,
+                                team=self.homeTeam,
+                                goal_diff=self.goalDiffHome
+                            )
 
-                        self.add_player_lineup(
-                            player=player,
-                            start_position=start_position,
-                            end_position=None,
-                            rating=self.homeRatings[player.id],
-                            reason=None,  # was selected
-                            morales_to_update=morales_to_update,
-                            lineups_to_add=lineups_to_add,
-                            sharpnesses_to_update=sharpnesses_to_update,
-                            processed_events=self.homeProcessedEvents,
-                            winner=self.winner,
-                            team=self.homeTeam,
-                            goal_diff=self.goalDiffHome
-                        )
+                        # Player was in current lineup (finished on pitch)
+                        if player.id in self.homeCurrentLineup.values():
+                            playerAdded = True
+                            if player.id in self.homeStartLineup.values():
+                                start_position = list(self.homeStartLineup.keys())[list(self.homeStartLineup.values()).index(player.id)]
+                            else:
+                                start_position = None
 
-                    # Player was in current lineup (finished on pitch)
-                    if player.id in self.homeCurrentLineup.values():
-                        playerAdded = True
-                        if player.id in self.homeStartLineup.values():
-                            start_position = list(self.homeStartLineup.keys())[list(self.homeStartLineup.values()).index(player.id)]
-                        else:
-                            start_position = None
+                            end_position = list(self.homeCurrentLineup.keys())[list(self.homeCurrentLineup.values()).index(player.id)]
 
-                        end_position = list(self.homeCurrentLineup.keys())[list(self.homeCurrentLineup.values()).index(player.id)]
+                            self.add_player_lineup(
+                                player=player,
+                                start_position=start_position,
+                                end_position=end_position,
+                                rating=self.homeRatings[player.id],
+                                reason=None,  # was selected
+                                morales_to_update=morales_to_update,
+                                lineups_to_add=lineups_to_add,
+                                sharpnesses_to_update=sharpnesses_to_update,
+                                processed_events=self.homeProcessedEvents,
+                                winner=self.winner,
+                                team=self.homeTeam,
+                                goal_diff=self.goalDiffHome
+                            )
 
-                        self.add_player_lineup(
-                            player=player,
-                            start_position=start_position,
-                            end_position=end_position,
-                            rating=self.homeRatings[player.id],
-                            reason=None,  # was selected
-                            morales_to_update=morales_to_update,
-                            lineups_to_add=lineups_to_add,
-                            sharpnesses_to_update=sharpnesses_to_update,
-                            processed_events=self.homeProcessedEvents,
-                            winner=self.winner,
-                            team=self.homeTeam,
-                            goal_diff=self.goalDiffHome
-                        )
+                        # Player not in final lineup OR current lineup
+                        if player.id not in self.homeCurrentLineup.values() and player.id not in final_ids and player.id in self.homeCurrentSubs:
+                            playerAdded = True
+                            
+                            # Player benched
+                            self.add_player_lineup(
+                                player=player,
+                                start_position=None,
+                                end_position=None,
+                                rating=None,
+                                reason="benched",
+                                morales_to_update=morales_to_update,
+                                lineups_to_add=lineups_to_add,
+                                sharpnesses_to_update=sharpnesses_to_update,
+                                processed_events=self.homeProcessedEvents,
+                                winner=self.winner,
+                                team=self.homeTeam,
+                                goal_diff=self.goalDiffHome
+                            )
 
-                    # Player not in final lineup OR current lineup
-                    if player.id not in self.homeCurrentLineup.values() and player.id not in final_ids and player.id in self.homeCurrentSubs:
-                        playerAdded = True
-                        
-                        # Player benched
-                        self.add_player_lineup(
-                            player=player,
-                            start_position=None,
-                            end_position=None,
-                            rating=None,
-                            reason="benched",
-                            morales_to_update=morales_to_update,
-                            lineups_to_add=lineups_to_add,
-                            sharpnesses_to_update=sharpnesses_to_update,
-                            processed_events=self.homeProcessedEvents,
-                            winner=self.winner,
-                            team=self.homeTeam,
-                            goal_diff=self.goalDiffHome
-                        )
+                            if player.player_role != "Youth Team" and not playerAdded:
+                                if PlayerBans.check_bans_for_player(player.id, self.league.league_id):
+                                    # Player unavailable (injury, suspension, etc.)
+                                    reason = "unavailable"
+                                else:
+                                    reason = "not_in_squad"
+
+                                self.add_player_lineup(
+                                    player=player,
+                                    start_position=None,
+                                    end_position=None,
+                                    rating=None,
+                                    reason=reason,
+                                    morales_to_update=morales_to_update,
+                                    lineups_to_add=lineups_to_add,
+                                    sharpnesses_to_update=sharpnesses_to_update,
+                                    processed_events=self.homeProcessedEvents,
+                                    winner=self.winner,
+                                    team=self.homeTeam,
+                                    goal_diff=self.goalDiffHome
+                                )
+
+                    for player in awayPlayers:
+                        final_ids = {pl_id for _, pl_id in self.awayFinalLineup}
+                        playerAdded = False
+
+                        # Player was in final lineup (substituted off)
+                        if player.id in final_ids:
+                            playerAdded = True
+                            if player.id in self.awayStartLineup.values():
+                                start_position = list(self.awayStartLineup.keys())[list(self.awayStartLineup.values()).index(player.id)]
+                            else:
+                                start_position = None
+
+                            self.add_player_lineup(
+                                player=player,
+                                start_position=start_position,
+                                end_position=None,
+                                rating=self.awayRatings[player.id],
+                                reason=None,  # was selected
+                                morales_to_update=morales_to_update,
+                                lineups_to_add=lineups_to_add,
+                                sharpnesses_to_update=sharpnesses_to_update,
+                                processed_events=self.awayProcessedEvents,
+                                winner=self.winner,
+                                team=self.awayTeam,
+                                goal_diff=self.goalDiffAway
+                            )
+
+                        # Player was in current lineup (finished on pitch)
+                        if player.id in self.awayCurrentLineup.values():
+                            playerAdded = True
+                            if player.id in self.awayStartLineup.values():
+                                start_position = list(self.awayStartLineup.keys())[list(self.awayStartLineup.values()).index(player.id)]
+                            else:
+                                start_position = None
+
+                            end_position = list(self.awayCurrentLineup.keys())[list(self.awayCurrentLineup.values()).index(player.id)]
+
+                            self.add_player_lineup(
+                                player=player,
+                                start_position=start_position,
+                                end_position=end_position,
+                                rating=self.awayRatings[player.id],
+                                reason=None,  # was selected
+                                morales_to_update=morales_to_update,
+                                lineups_to_add=lineups_to_add,
+                                sharpnesses_to_update=sharpnesses_to_update,
+                                processed_events=self.awayProcessedEvents,
+                                winner=self.winner,
+                                team=self.awayTeam,
+                                goal_diff=self.goalDiffAway
+                            )
+
+                        # Player not in final lineup OR current lineup
+                        if player.id not in self.awayCurrentLineup.values() and player.id not in final_ids and player.id in self.awayCurrentSubs:
+                            playerAdded = True
+                            
+                            # Player benched
+                            self.add_player_lineup(
+                                player=player,
+                                start_position=None,
+                                end_position=None,
+                                rating=None,
+                                reason="benched",
+                                morales_to_update=morales_to_update,
+                                lineups_to_add=lineups_to_add,
+                                sharpnesses_to_update=sharpnesses_to_update,
+                                processed_events=self.awayProcessedEvents,
+                                winner=self.winner,
+                                team=self.awayTeam,
+                                goal_diff=self.goalDiffAway
+                            )
 
                         if player.player_role != "Youth Team" and not playerAdded:
                             if PlayerBans.check_bans_for_player(player.id, self.league.league_id):
@@ -1179,150 +1328,94 @@ class Match():
                                 morales_to_update=morales_to_update,
                                 lineups_to_add=lineups_to_add,
                                 sharpnesses_to_update=sharpnesses_to_update,
-                                processed_events=self.homeProcessedEvents,
+                                processed_events=self.awayProcessedEvents,
                                 winner=self.winner,
-                                team=self.homeTeam,
-                                goal_diff=self.goalDiffHome
+                                team=self.awayTeam,
+                                goal_diff=self.goalDiffAway
                             )
 
-                for player in awayPlayers:
-                    final_ids = {pl_id for _, pl_id in self.awayFinalLineup}
-                    playerAdded = False
+                    # submit morales update
+                    logger.debug(f"Submitting {len(morales_to_update)} morale updates")
+                    futures.append(executor.submit(Players.batch_update_morales, morales_to_update))
+                    futures.append(executor.submit(Players.batch_update_sharpnesses, sharpnesses_to_update))
 
-                    # Player was in final lineup (substituted off)
-                    if player.id in final_ids:
-                        playerAdded = True
-                        if player.id in self.awayStartLineup.values():
-                            start_position = list(self.awayStartLineup.keys())[list(self.awayStartLineup.values()).index(player.id)]
-                        else:
-                            start_position = None
+                    # extra debug: how many rating entries we will store
+                    logger.debug(f"Ratings stored: home={len(self.homeRatings)} away={len(self.awayRatings)}")
 
-                        self.add_player_lineup(
-                            player=player,
-                            start_position=start_position,
-                            end_position=None,
-                            rating=self.awayRatings[player.id],
-                            reason=None,  # was selected
-                            morales_to_update=morales_to_update,
-                            lineups_to_add=lineups_to_add,
-                            sharpnesses_to_update=sharpnesses_to_update,
-                            processed_events=self.awayProcessedEvents,
-                            winner=self.winner,
-                            team=self.awayTeam,
-                            goal_diff=self.goalDiffAway
-                        )
+                    # Stats
+                    stats_to_add = []
+                    for stat, data in self.homeStats.items():
 
-                    # Player was in current lineup (finished on pitch)
-                    if player.id in self.awayCurrentLineup.values():
-                        playerAdded = True
-                        if player.id in self.awayStartLineup.values():
-                            start_position = list(self.awayStartLineup.keys())[list(self.awayStartLineup.values()).index(player.id)]
-                        else:
-                            start_position = None
+                        if stat not in SAVED_STATS:
+                            continue
 
-                        end_position = list(self.awayCurrentLineup.keys())[list(self.awayCurrentLineup.values()).index(player.id)]
+                        if stat in PLAYER_STATS:
+                            for player_id, value in data.items():
+                                stats_to_add.append((self.match.id, stat, value, player_id, None))
+                        elif data != 0:
+                            stats_to_add.append((self.match.id, stat, data, None, self.homeTeam.id))
 
-                        self.add_player_lineup(
-                            player=player,
-                            start_position=start_position,
-                            end_position=end_position,
-                            rating=self.awayRatings[player.id],
-                            reason=None,  # was selected
-                            morales_to_update=morales_to_update,
-                            lineups_to_add=lineups_to_add,
-                            sharpnesses_to_update=sharpnesses_to_update,
-                            processed_events=self.awayProcessedEvents,
-                            winner=self.winner,
-                            team=self.awayTeam,
-                            goal_diff=self.goalDiffAway
-                        )
+                    for stat, data in self.awayStats.items():
 
-                    # Player not in final lineup OR current lineup
-                    if player.id not in self.awayCurrentLineup.values() and player.id not in final_ids and player.id in self.awayCurrentSubs:
-                        playerAdded = True
-                        
-                        # Player benched
-                        self.add_player_lineup(
-                            player=player,
-                            start_position=None,
-                            end_position=None,
-                            rating=None,
-                            reason="benched",
-                            morales_to_update=morales_to_update,
-                            lineups_to_add=lineups_to_add,
-                            sharpnesses_to_update=sharpnesses_to_update,
-                            processed_events=self.awayProcessedEvents,
-                            winner=self.winner,
-                            team=self.awayTeam,
-                            goal_diff=self.goalDiffAway
-                        )
+                        if stat not in SAVED_STATS:
+                            continue
 
-                    if player.player_role != "Youth Team" and not playerAdded:
-                        if PlayerBans.check_bans_for_player(player.id, self.league.league_id):
-                            # Player unavailable (injury, suspension, etc.)
-                            reason = "unavailable"
-                        else:
-                            reason = "not_in_squad"
+                        if stat in PLAYER_STATS:
+                            for player_id, value in data.items():
+                                stats_to_add.append((self.match.id, stat, value, player_id, None))
+                        elif data != 0:
+                            stats_to_add.append((self.match.id, stat, data, None, self.awayTeam.id))
 
-                        self.add_player_lineup(
-                            player=player,
-                            start_position=None,
-                            end_position=None,
-                            rating=None,
-                            reason=reason,
-                            morales_to_update=morales_to_update,
-                            lineups_to_add=lineups_to_add,
-                            sharpnesses_to_update=sharpnesses_to_update,
-                            processed_events=self.awayProcessedEvents,
-                            winner=self.winner,
-                            team=self.awayTeam,
-                            goal_diff=self.goalDiffAway
-                        )
+                    if len(stats_to_add) > 0:
+                        logger.debug(f"Submitting {len(stats_to_add)} match stats for insertion")
+                        futures.append(executor.submit(MatchStats.batch_add_stats, stats_to_add))
 
-                # submit morales update
-                logger.debug(f"Submitting {len(morales_to_update)} morale updates")
-                futures.append(executor.submit(Players.batch_update_morales, morales_to_update))
-                futures.append(executor.submit(Players.batch_update_sharpnesses, sharpnesses_to_update))
+                    # debug total DB tasks
+                    logger.debug(f"Total DB tasks submitted: {len(futures)}")
 
-                # extra debug: how many rating entries we will store
-                logger.debug(f"Ratings stored: home={len(self.homeRatings)} away={len(self.awayRatings)}")
+                    logger.debug(f"Submitting {len(lineups_to_add)} lineups for insertion")
+                    futures.append(executor.submit(TeamLineup.batch_add_lineups, lineups_to_add))
 
-                # Stats
-                stats_to_add = []
-                for stat, data in self.homeStats.items():
+                    concurrent.futures.wait(futures)
+                    logger.debug("All DB futures completed")
+            except Exception as inner_e:
+                logger.exception("Error while performing DB writes: %s", inner_e)
+                raise
+            finally:
+                # Always release the lock and reconnect to the original DB
+                try:
+                    if acquired_lock and lock_fd is not None:
+                        try:
+                            os.close(lock_fd)
+                        except Exception:
+                            pass
+                        try:
+                            os.remove(lockfile)
+                        except Exception:
+                            pass
+                        logger.debug("Released DB write lock %s", lockfile)
+                except Exception as e:
+                    logger.debug("Failed during lock release: %s", e)
 
-                    if stat not in SAVED_STATS:
-                        continue
-
-                    if stat in PLAYER_STATS:
-                        for player_id, value in data.items():
-                            stats_to_add.append((self.match.id, stat, value, player_id, None))
-                    elif data != 0:
-                        stats_to_add.append((self.match.id, stat, data, None, self.homeTeam.id))
-
-                for stat, data in self.awayStats.items():
-
-                    if stat not in SAVED_STATS:
-                        continue
-
-                    if stat in PLAYER_STATS:
-                        for player_id, value in data.items():
-                            stats_to_add.append((self.match.id, stat, value, player_id, None))
-                    elif data != 0:
-                        stats_to_add.append((self.match.id, stat, data, None, self.awayTeam.id))
-
-                if len(stats_to_add) > 0:
-                    logger.debug(f"Submitting {len(stats_to_add)} match stats for insertion")
-                    futures.append(executor.submit(MatchStats.batch_add_stats, stats_to_add))
-
-                # debug total DB tasks
-                logger.debug(f"Total DB tasks submitted: {len(futures)}")
-
-                logger.debug(f"Submitting {len(lineups_to_add)} lineups for insertion")
-                futures.append(executor.submit(TeamLineup.batch_add_lineups, lineups_to_add))
-
-                concurrent.futures.wait(futures)
-                logger.debug("All DB futures completed")
+                # Reconnect DatabaseManager back to original DB path
+                try:
+                    if dbm.original_path:
+                        try:
+                            if dbm.scoped_session:
+                                dbm.scoped_session.remove()
+                        except Exception:
+                            pass
+                        try:
+                            if dbm.engine:
+                                dbm.engine.dispose()
+                        except Exception:
+                            pass
+                        dbm._connect(dbm.original_path)
+                        dbm.copy_active = False
+                        logger.debug("Reconnected DatabaseManager to original DB %s", dbm.original_path)
+                except Exception as e:
+                    logger.debug("Failed to reconnect to original DB: %s", e)
+            
         except Exception as e:
             logger.error(f"Exception in saveData: {str(e)}", exc_info = True)
         finally:

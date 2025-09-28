@@ -111,22 +111,30 @@ class Profile(ctk.CTkFrame):
         self.tableFrame.addLeagueTable()
 
         self.statsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 310, height = 480, corner_radius = 15)
-        self.statsFrame.place(relx = 0.65, rely = 0.2, anchor = "nw")
+        self.statsFrame.place(relx = 0.64, rely = 0.2, anchor = "nw")
         self.pack_propagate(False)
+
+        titleFrame = ctk.CTkFrame(self.statsFrame, fg_color = GREY_BACKGROUND, width = 310, height = 30, corner_radius = 15)
+        titleFrame.pack(pady = 5, padx = 5)
+        ctk.CTkLabel(titleFrame, text = "Player Stats", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        self.playerStatsFrame = ctk.CTkScrollableFrame(self.statsFrame, fg_color = GREY_BACKGROUND, width = 290, height = 400, corner_radius = 15)
+        self.playerStatsFrame.pack(pady = 5, padx = 5)
 
         self.addStats()
 
     def addStats(self):
-        ctk.CTkLabel(self.statsFrame, text = "Player stats", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).pack(pady = 10)
-
         self.topScorers = MatchEvents.get_all_goals(self.league.id)
         self.topAssisters = MatchEvents.get_all_assists(self.league.id)
         self.topCleanSheets = MatchEvents.get_all_clean_sheets(self.league.id)
         self.mostYellowCards = MatchEvents.get_all_yellow_cards(self.league.id)
         self.bestAverageRatings = TeamLineup.get_all_average_ratings(self.league.id)
-
+    
         self.stats = [self.topScorers, self.topAssisters, self.topCleanSheets, self.mostYellowCards, self.bestAverageRatings]
-        self.statNames = ["Top Scorer", "Top Assister", "Most Clean Sheets", "Most Yellow Cards", "Best Average Rating"]
+        self.statNames = ["Top Scorer", "Top Assister", "Most Clean Sheets", "Most Yellow Cards", "Best Average Rating"] + PLAYER_STATS
+
+        for stat in PLAYER_STATS:
+            self.stats.append(MatchStats.get_all_players_for_stat(self.league.id, stat))
 
         expandedImage = Image.open("Images/expand.png")
         expandedImage.thumbnail((30, 30))
@@ -134,7 +142,7 @@ class Profile(ctk.CTkFrame):
 
         for stat, statName in zip(self.stats, self.statNames):
 
-            frame = ctk.CTkFrame(self.statsFrame, fg_color = GREY_BACKGROUND, width = 280, height = 75, corner_radius = 15)
+            frame = ctk.CTkFrame(self.playerStatsFrame, fg_color = GREY_BACKGROUND, width = 280, height = 75, corner_radius = 15)
             frame.pack(pady = 5, padx = 5)
 
             expandButton = ctk.CTkButton(frame, text = "", image = self.expandEnabled, fg_color = GREY_BACKGROUND, corner_radius = 0, height = 30, width = 30, hover_color = GREY_BACKGROUND)

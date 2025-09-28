@@ -1,5 +1,4 @@
-import re, datetime, os, shutil, time, gc
-import logging
+import re, datetime, os, shutil, time, gc, logging
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
@@ -131,87 +130,6 @@ class DatabaseManager:
             # Reconnect to the original
             self._connect(self.original_path)
             self.copy_active = False
-
-    def merge_into_shared_copy(self, source_copy_path=None, dest_copy_path=None, retries=10, retry_delay=0.1):
-        """Merge a per-process source_copy_path into the shared dest_copy_path.
-
-        If the dest copy doesn't exist, the source will be moved into place. If it does exist,
-        this function ATTACHes the dest DB and runs INSERT OR REPLACE for each table found in the
-        source DB. It retries if the destination is locked.
-        """
-        import sqlite3
-
-        if source_copy_path is None:
-            source_copy_path = self.copy_path
-
-        if dest_copy_path is None:
-            # default shared copy naming (no pid suffix)
-            dest_copy_path = f"data/{self.database_name}_copy.db"
-
-        if not os.path.exists(source_copy_path):
-            logger.debug("merge_into_shared_copy: source copy does not exist: %s", source_copy_path)
-            return
-
-        # If dest doesn't exist, atomically move source to dest
-        if not os.path.exists(dest_copy_path):
-            try:
-                os.replace(source_copy_path, dest_copy_path)
-                logger.debug("merge_into_shared_copy: moved %s -> %s", source_copy_path, dest_copy_path)
-                return
-            except Exception as e:
-                logger.exception("Failed to move source copy to dest: %s", e)
-                raise
-
-        # Otherwise attempt SQL merge via ATTACH
-        attempt = 0
-        while attempt < retries:
-            try:
-                conn = sqlite3.connect(source_copy_path)
-                cur = conn.cursor()
-                # Attach destination DB as 'dest'
-                cur.execute(f"ATTACH DATABASE '{dest_copy_path}' AS dest")
-
-                # Begin transaction on source
-                cur.execute("BEGIN")
-
-                # Get all non-system tables from source
-                cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
-                tables = [r[0] for r in cur.fetchall()]
-
-                for t in tables:
-                    # Use INSERT OR REPLACE to copy rows; assumes compatible schemas and primary keys
-                    sql = f"INSERT OR REPLACE INTO dest.`{t}` SELECT * FROM main.`{t}`"
-                    cur.execute(sql)
-
-                cur.execute("COMMIT")
-                cur.execute("DETACH DATABASE dest")
-                conn.close()
-
-                # Remove the source copy now that its data has been merged
-                try:
-                    os.remove(source_copy_path)
-                except Exception:
-                    logger.debug("Could not remove source copy %s after merge", source_copy_path)
-
-                logger.debug("merge_into_shared_copy: merged %s into %s", source_copy_path, dest_copy_path)
-                return
-
-            except sqlite3.OperationalError as oe:
-                # Database locked; wait and retry
-                logger.debug("merge_into_shared_copy: OperationalError on attempt %d: %s", attempt, oe)
-                attempt += 1
-                time.sleep(retry_delay)
-                continue
-            except Exception as e:
-                logger.exception("Unexpected error during DB merge: %s", e)
-                try:
-                    conn.close()
-                except Exception:
-                    pass
-                raise
-
-        # If we exhausted retries, raise
-        raise RuntimeError(f"Failed to merge {source_copy_path} into {dest_copy_path} after {retries} attempts")
 
     def get_session(self):
         if not self.scoped_session:

@@ -1,5 +1,4 @@
-import cProfile
-import pstats
+import cProfile, pstats, gc, traceback, logging, time, os, random
 import customtkinter as ctk
 from settings import *
 from data.database import *
@@ -7,10 +6,6 @@ from data.gamesDatabase import *
 from PIL import Image
 from utils.util_functions import *
 from concurrent.futures import ProcessPoolExecutor, as_completed
-import traceback
-import logging
-import time
-import os
 
 from tabs.hub import Hub
 from tabs.inbox import Inbox
@@ -34,7 +29,9 @@ def _simulate_match(game, manager_base_name):
     dbm = DatabaseManager()
     dbm.set_database(base_name)
     try:
-        dbm.copy_path = f"data/{base_name}_copy_{os.getpid()}.db"
+        # create a per-process working copy and remember its path so we can delete it later
+        per_process_copy = f"data/{base_name}_copy_{os.getpid()}.db"
+        dbm.copy_path = per_process_copy
         dbm.start_copy()
     except Exception:
         logging.getLogger(__name__).exception("Failed to start DB copy for manager %s", base_name)
@@ -42,13 +39,29 @@ def _simulate_match(game, manager_base_name):
     match = Match(game, auto=True)
     match.startGame()
     match.join()
-    # After simulation, attempt to merge our per-process copy into the shared manager copy
+    # Clean up the per-process copy file created for this worker to avoid accumulating files
     try:
-        # dbm.copy_path was set earlier to a per-process filename
-        shared_dest = f"data/{base_name}_copy.db"
-        dbm.merge_into_shared_copy(source_copy_path=dbm.copy_path, dest_copy_path=shared_dest)
+        # Ensure any SQLAlchemy sessions/engines are removed/disposed
+        try:
+            if dbm.scoped_session:
+                dbm.scoped_session.remove()
+        except Exception:
+            pass
+        try:
+            if dbm.engine:
+                dbm.engine.dispose()
+        except Exception:
+            pass
+        gc.collect()
+
+        if 'per_process_copy' in locals() and per_process_copy and os.path.exists(per_process_copy):
+            try:
+                os.remove(per_process_copy)
+                logging.getLogger(__name__).debug("Removed per-process DB copy %s", per_process_copy)
+            except Exception:
+                logging.getLogger(__name__).exception("Failed to remove per-process DB copy %s", per_process_copy)
     except Exception:
-        logging.getLogger(__name__).exception("Failed to merge per-process copy into shared copy for %s", base_name)
+        logging.getLogger(__name__).exception("Error during per-process DB cleanup for %s", base_name)
     return {
         "id": getattr(game, "id", None),
         "score": match.score,

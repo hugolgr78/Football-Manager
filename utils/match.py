@@ -120,7 +120,6 @@ class Match():
             # prepare a bracketed match id prefix for logs
             prefix = f"[{getattr(self.match, 'id', None)}]"
 
-            # log current time each iteration (debug)
             total_seconds = self.minutes * 60 + self.seconds
             logger.debug("%s gameLoop tick: minutes=%s seconds=%s total_seconds=%s", prefix, self.minutes, self.seconds, total_seconds)
             if self.seconds == 59:
@@ -128,6 +127,7 @@ class Match():
                 self.seconds = 0
             else:
                 self.seconds += 1
+
             total_seconds = self.minutes * 60 + self.seconds
             if total_seconds % 90 == 0:
                 for playerID, fitness in self.homeFitness.items():
@@ -1063,8 +1063,9 @@ class Match():
                 if self.awayCleanSheet:
                     events_to_add.append((self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"]))
 
-                logger.debug(f"Submitting {len(events_to_add)} match events for insertion")
-                futures.append(executor.submit(MatchEvents.batch_add_events, events_to_add))
+                if len(events_to_add) > 0:
+                    logger.debug(f"Submitting {len(events_to_add)} match events for insertion")
+                    futures.append(executor.submit(MatchEvents.batch_add_events, events_to_add))
 
                 # Matches update
                 logger.debug(f"Submitting match score update: {self.score[0]} -> {self.score[1]}")
@@ -1310,8 +1311,9 @@ class Match():
                     elif data != 0:
                         stats_to_add.append((self.match.id, stat, data, None, self.awayTeam.id))
 
-                logger.debug(f"Submitting {len(stats_to_add)} match stats for insertion")
-                futures.append(executor.submit(MatchStats.batch_add_stats, stats_to_add))
+                if len(stats_to_add) > 0:
+                    logger.debug(f"Submitting {len(stats_to_add)} match stats for insertion")
+                    futures.append(executor.submit(MatchStats.batch_add_stats, stats_to_add))
 
                 # debug total DB tasks
                 logger.debug(f"Total DB tasks submitted: {len(futures)}")

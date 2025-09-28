@@ -2516,18 +2516,13 @@ class MatchStats(Base):
             # One stat ("xG") is a float while the rest are integers. Keep types consistent
             totals = defaultdict(int)
             for s_type, value in team_agg:
-                # Use the stored team-level value as-is (don't sum multiple team rows)
                 if s_type == "xG":
-                    # preserve decimals and round to 2 places
                     totals[s_type] = round(float(value or 0.0), 2)
                 else:
                     totals[s_type] = int(value or 0)
 
             for s_type, total in player_agg:
-                if s_type == "xG":
-                    totals[s_type] = round(float(totals.get(s_type, 0.0)) + float(total or 0.0), 2)
-                else:
-                    totals[s_type] += int(total or 0)
+                totals[s_type] += int(total or 0)
 
             # Ensure all known saved stats are present with a zero default for predictable UI ordering
             for s in SAVED_STATS:
@@ -2537,6 +2532,38 @@ class MatchStats(Base):
                     totals.setdefault(s, 0)
 
             return dict(totals)
+        finally:
+            session.close()
+
+    @classmethod
+    def get_all_players_for_stat(cls, league_id, stat_type):
+        session = DatabaseManager().get_session()
+        try:
+            PlayerAlias = aliased(Players)
+            MatchAlias = aliased(Matches)
+            # Sum the stored stat values for each player (some stats may be stored per-row)
+            rows = session.query(
+                MatchStats.player_id,
+                PlayerAlias.first_name,
+                PlayerAlias.last_name,
+                func.coalesce(func.sum(MatchStats.value), 0).label('total')
+            ).join(
+                PlayerAlias, MatchStats.player_id == PlayerAlias.id
+            ).join(
+                MatchAlias, MatchStats.match_id == MatchAlias.id
+            ).filter(
+                MatchStats.stat_type == stat_type,
+                MatchAlias.league_id == league_id
+            ).group_by(
+                MatchStats.player_id,
+                PlayerAlias.first_name,
+                PlayerAlias.last_name
+            ).having(
+                func.sum(MatchStats.value) > 0
+            ).order_by(
+                func.sum(MatchStats.value).desc()
+            ).all()
+            return rows
         finally:
             session.close()
 

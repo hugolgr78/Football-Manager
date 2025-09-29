@@ -292,8 +292,8 @@ class Match():
         attackingPlayers = [playerID for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS]
         defendingPlayers = [playerID for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS]
 
-        attackingLevel = teamStrength(attackingPlayers, role = "attack")
-        defendingLevel = teamStrength(defendingPlayers, role = "defend")
+        attackingLevel = teamStrength(attackingPlayers, "attack", playerOBJs)
+        defendingLevel = teamStrength(defendingPlayers, "defend", oppPlayersOBJs)
 
         # ------------------ GOALS ------------------
         event = goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper)
@@ -341,7 +341,7 @@ class Match():
             eventsToAdd.append(event)
 
         # ------------------ SUBSTITUTIONS ------------------
-        subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, self.minutes, fitness)
+        subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, self.minutes, fitness, playerOBJs)
 
         for _ in range(len(subsChosen)):
             eventsToAdd.append("substitution")
@@ -715,7 +715,7 @@ class Match():
                 playerPosition = list(lineup.keys())[list(lineup.values()).index(injuredPlayerID)]
 
                 if not managing_team and subsCount < MAX_SUBS:
-                    self.createSubEvent(lineup, players_dict, processedEvents, time, events, injuredPlayerID, subs, home, playerPos = playerPosition)
+                    self.createSubEvent(lineup, players_dict, processedEvents, time, events, injuredPlayerID, subs, home, playerOBJs, playerPos = playerPosition)
 
                 elif not managing_team and subsCount == MAX_SUBS:
                     lineup.pop(playerPosition)
@@ -802,9 +802,9 @@ class Match():
                 else:
                     teamMatch.awayLineupPitch.movePlayer(newKeeperPosition, "Goalkeeper", last_name)
         else:
-            self.createSubEvent(lineup, players_dict, processedEvents, time, events, None, subs, home, keeperSub = True)
+            self.createSubEvent(lineup, players_dict, processedEvents, time, events, None, subs, home, playerOBJs, keeperSub = True)
 
-    def createSubEvent(self, lineup, players_dict, processedEvents, time, events, playerOffID, subs, home, keeperSub = False, playerPos = None):
+    def createSubEvent(self, lineup, players_dict, processedEvents, time, events, playerOffID, subs, home, playerOBJs, keeperSub = False, playerPos = None):
         # Create the substitution event
         minute = int(time.split(":")[0])
         seconds = int(time.split(":")[1])
@@ -843,7 +843,7 @@ class Match():
             playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup, home)
             playerPos = "Goalkeeper"
 
-        subChoice = find_substitute(lineup, [(1, playerOffID, playerPos)], subs, 1)[0]
+        subChoice = find_substitute(lineup, [(1, playerOffID, playerPos)], subs, 1, playerOBJs)[0]
         playerOnID = subChoice[2]
         newPosition = subChoice[3]
 

@@ -21,36 +21,32 @@ log_filename = os.path.join(LOG_DIR, f"fm_log_{datetime.now().strftime('%Y-%m-%d
 
 # Configure root logging once at startup
 log_level = logging.DEBUG if DEBUG_MODE else logging.WARNING
+handlers = [logging.StreamHandler(sys.stdout)]
+if DEBUG_MODE:
+    # Only write logs to file when debug mode is explicitly enabled
+    handlers.append(logging.FileHandler(log_filename, encoding="utf-8"))
+
 logging.basicConfig(
     level=log_level,
     format="%(asctime)s %(name)s %(levelname)s: %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.stdout),             # print to terminal
-        logging.FileHandler(log_filename, encoding="utf-8")  # save to .log file
-    ]
+    handlers=handlers
 )
 
 # Keep custom behaviour for the heavy "utils.match" logger
 match_logger = logging.getLogger("utils.match")
 if DEBUG_MODE:
-    # ensure it emits debug records to stdout + file
+    # ensure it emits debug records to stdout (file writing is handled by root handlers when DEBUG_MODE)
     if not any(isinstance(h, logging.StreamHandler) for h in match_logger.handlers):
         match_handler = logging.StreamHandler(sys.stdout)
         match_handler.setLevel(logging.DEBUG)
         match_handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s"))
         match_logger.addHandler(match_handler)
 
-    # also send match logs into the same log file
-    if not any(isinstance(h, logging.FileHandler) for h in match_logger.handlers):
-        file_handler = logging.FileHandler(log_filename, encoding="utf-8")
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s"))
-        match_logger.addHandler(file_handler)
-
     match_logger.setLevel(logging.DEBUG)
-    match_logger.propagate = False
+    match_logger.propagate = True
 else:
     match_logger.setLevel(logging.CRITICAL)
+    match_logger.propagate = True
 
 def backup_all_databases(data_dir, backup_dir):
     """Backup all .db files in the data directory"""

@@ -5901,13 +5901,16 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
             endDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=endHour)
             CalendarEvents.add_event(team_id, event, startDate, endDate)
 
-def teamStrength(playerIDs, role):
+def teamStrength(playerIDs, role, playerOBJs = None):
     if not playerIDs:
         return 0
+
+    if not playerOBJs:
+        playerOBJs = {p.id: p for p in Players.get_players_by_ids(playerIDs)}
     
     weights = []
     for pid in playerIDs:
-        p = Players.get_player_by_id(pid)
+        p = playerOBJs[pid]
         ability = p.current_ability
 
         # attackers scale harder when more of them

@@ -613,7 +613,7 @@ def injuryChances(avgFitness):
 
     return random.choices(events, weights = probs, k = 1)[0]
 
-def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness):
+def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness, playerOBJs = None):
     subsAvailable = MAX_SUBS - subsMade
     if subsAvailable <= 0:
         return []
@@ -632,7 +632,11 @@ def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness):
     num_to_sub = random.choices(outcomes, weights=weights, k=1)[0]
     num_to_sub = min(num_to_sub, subsAvailable, len(candidates))
 
-    chosen = find_substitute(lineup, candidates, subs, num_to_sub)
+    if not playerOBJs:
+        from data.database import Players
+        playerOBJs = {pid: Players.get_player_by_id(pid) for pid in subs}
+
+    chosen = find_substitute(lineup, candidates, subs, num_to_sub, playerOBJs)
 
     return chosen
 
@@ -653,9 +657,7 @@ def get_sub_candidates(lineup, currMinute, events, fitness):
 
     return candidates
 
-def find_substitute(lineup, candidates, subs, num_to_sub):
-    from data.database import Players
-
+def find_substitute(lineup, candidates, subs, num_to_sub, playerOBJs):
     chosen = []
     # make substitutions
     for prob, playerID, pos in candidates:
@@ -670,7 +672,7 @@ def find_substitute(lineup, candidates, subs, num_to_sub):
 
             # --- Exact / compatible replacement ---
             for subID in subs:
-                player = Players.get_player_by_id(subID)
+                player = playerOBJs[subID]
                 subPositions = [s for s in player.specific_positions.split(",")]
 
                 # Direct match: outgoing code is explicitly listed in sub's positions
@@ -692,7 +694,7 @@ def find_substitute(lineup, candidates, subs, num_to_sub):
             # --- Fallback if no compatible found ---
             if not replacement_id and subs:
                 for subID in subs:
-                    sub_player = Players.get_player_by_id(subID)
+                    sub_player = playerOBJs[subID]
                     subPositions = [REVERSE_POSITION_CODES[s][0] for s in sub_player.specific_positions.split(",")]
 
                     # pick the first full position not already in lineup.keys()
@@ -726,8 +728,7 @@ def sub_probability(fitness: float) -> float:
         # below 10 -> 85–100%
         return 0.85 + (10 - max(fitness, 0)) / 10 * 0.15
     
-def getPasses(homeLineup, awayLineup, homeOBJs, awayOBJs):
-    from data.database import Players
+def getPasses(homeOBJs, awayOBJs):
 
     overallHome = sum(effective_ability(p) for p in homeOBJs.values())
     overallAway = sum(effective_ability(p) for p in awayOBJs.values())
@@ -784,7 +785,7 @@ def passesAndPossession(matchInstance, homePlayersOBJs = None, awayPlayersOBJs =
 
     awayRatings = matchInstance.awayRatings
 
-    homePasses, awayPasses = getPasses(homeLineup, awayLineup, homeOBJs, awayOBJs)
+    homePasses, awayPasses = getPasses(homeOBJs, awayOBJs)
     matchInstance.homePassesAttempted = homePassesAttempted + homePasses
     matchInstance.awayPassesAttempted = awayPassesAttempted + awayPasses
 

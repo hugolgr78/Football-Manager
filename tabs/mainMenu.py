@@ -253,7 +253,8 @@ class MainMenu(ctk.CTkFrame):
                 sim_end = time.perf_counter()
 
                 elapsed = sim_end - sim_start
-                self._logger.info("Match simulation completed in %.3f seconds for %d matches", elapsed, len(matchesToSim))
+                self._logger.info("Match smulation completed in %.3f seconds for %d matches", elapsed, len(matchesToSim))
+                # print(f"Match simulation completed in {elapsed:.3f} seconds for {len(matchesToSim)} matches")
 
             return matches
 

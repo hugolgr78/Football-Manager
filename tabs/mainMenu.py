@@ -307,6 +307,7 @@ class MainMenu(ctk.CTkFrame):
 
         self.currDate += overallTimeInBetween
         Game.increment_game_date(self.manager_id, overallTimeInBetween)
+        self._logger.debug("Updated game date to %s with %s difference", self.currDate, overallTimeInBetween)
 
         # ------------------- Post-match updates -------------------
 

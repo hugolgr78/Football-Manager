@@ -1,4 +1,4 @@
-import cProfile, pstats, gc, traceback, logging, time, os, random
+import cProfile, pstats, gc, traceback, logging, time, os, random, io
 import customtkinter as ctk
 from settings import *
 from data.database import *
@@ -20,16 +20,15 @@ from tabs.settingsTab import SettingsTab
 from utils.match import Match
 
 def _simulate_match(game, manager_base_name):
-    """Worker: build and simulate entirely inside the process.
+    """Worker: build and simulate entirely inside the process."""
+    pr = cProfile.Profile()
+    pr.enable()
 
-    manager_base_name should be the concatenation of first and last name used as the DB base filename.
-    """
-    # Configure our DatabaseManager to the correct original DB and create a unique per-process copy
+    # --- your existing code ---
     base_name = manager_base_name
     dbm = DatabaseManager()
     dbm.set_database(base_name)
     try:
-        # create a per-process working copy and remember its path so we can delete it later
         per_process_copy = f"data/{base_name}_copy_{os.getpid()}.db"
         dbm.copy_path = per_process_copy
         dbm.start_copy()
@@ -39,33 +38,42 @@ def _simulate_match(game, manager_base_name):
     match = Match(game, auto=True)
     match.startGame()
     match.join()
-    # Clean up the per-process copy file created for this worker to avoid accumulating files
-    try:
-        # Ensure any SQLAlchemy sessions/engines are removed/disposed
-        try:
-            if dbm.scoped_session:
-                dbm.scoped_session.remove()
-        except Exception:
-            pass
-        try:
-            if dbm.engine:
-                dbm.engine.dispose()
-        except Exception:
-            pass
-        gc.collect()
 
-        if 'per_process_copy' in locals() and per_process_copy and os.path.exists(per_process_copy):
-            try:
-                os.remove(per_process_copy)
-                logging.getLogger(__name__).debug("Removed per-process DB copy %s", per_process_copy)
-            except Exception:
-                logging.getLogger(__name__).exception("Failed to remove per-process DB copy %s", per_process_copy)
+    try:
+        if dbm.scoped_session:
+            dbm.scoped_session.remove()
     except Exception:
-        logging.getLogger(__name__).exception("Error during per-process DB cleanup for %s", base_name)
-    return {
+        pass
+    try:
+        if dbm.engine:
+            dbm.engine.dispose()
+    except Exception:
+        pass
+    gc.collect()
+
+    if 'per_process_copy' in locals() and per_process_copy and os.path.exists(per_process_copy):
+        try:
+            os.remove(per_process_copy)
+            logging.getLogger(__name__).debug("Removed per-process DB copy %s", per_process_copy)
+        except Exception:
+            logging.getLogger(__name__).exception("Failed to remove per-process DB copy %s", per_process_copy)
+
+    result = {
         "id": getattr(game, "id", None),
         "score": match.score,
     }
+    # --- end of your code ---
+
+    pr.disable()
+    s = io.StringIO()
+    ps = pstats.Stats(pr, stream=s).sort_stats("cumulative")
+    ps.print_stats(30)
+
+    # Each worker writes its own profile
+    with open(f"profile_worker_{os.getpid()}_{getattr(game, 'id', 'unknown')}.txt", "w") as f:
+        f.write(s.getvalue())
+
+    return result
 class MainMenu(ctk.CTkFrame):
     def __init__(self, parent, manager_id, created):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND)
@@ -216,38 +224,17 @@ class MainMenu(ctk.CTkFrame):
     
         def run_match_simulation(self, stopDate):
             matches = []
-            # games_data = []
             matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
             if matchesToSim:
                 self._logger.info("Preparing to simulate %d matches", len(matchesToSim))
                 self._logger.info("Starting match initialization")
 
-                # Phase 1: create all Match objects
-                for game in matchesToSim:
-                    try:
-                        match = Match(game, auto=True)
-                        matches.append(match)
+                self._logger.info("Starting parallel match simulation with %d workers", max(1, len(matchesToSim)))
 
-                        # game_data = {
-                        #     "id": game.id,
-                        #     "homeTeam": Teams.get_team_by_id(game.home_id),
-                        #     "awayTeam": Teams.get_team_by_id(game.away_id),
-                        #     "referee": Referees.get_referee_by_id(game.referee_id),
-                        #     "league": LeagueTeams.get_league_by_team(game.home_id),
-                        # }
-
-                    except Exception:
-                        self._logger.exception("Error initializing Match for game %s", getattr(game, 'id', game))
-                        traceback.print_exc()
-
-                self._logger.info("Starting parallel match simulation with %d workers", max(1, len(matches)))
-
-                # --- cProfile start ---
-                pr = cProfile.Profile()
-                pr.enable()
                 sim_start = time.perf_counter()
 
-                # Phase 2: run in ProcessPoolExecutor
+                # Run in ProcessPoolExecutor
+                matches = []
                 with ProcessPoolExecutor(max_workers=len(matchesToSim)) as ex:
                     # compute base name once (we're on the main process and DB is already set)
                     mgr = Managers.get_manager_by_id(self.manager_id)
@@ -257,21 +244,16 @@ class MainMenu(ctk.CTkFrame):
                     for fut in as_completed(futures):
                         try:
                             result = fut.result()
+                            matches.append(Matches.get_match_by_id(result["id"]))
                             self._logger.info("Finished match %s with score %s", result["id"], result["score"])
                         except Exception:
                             self._logger.exception("Match worker raised an exception")
                             traceback.print_exc()
 
                 sim_end = time.perf_counter()
-                pr.disable()
-                # --- cProfile end ---
 
                 elapsed = sim_end - sim_start
-                self._logger.info("Match simulation completed in %.3f seconds for %d matches", elapsed, len(matches))
-
-                # Print top 30 slowest functions
-                stats = pstats.Stats(pr).sort_stats("cumtime")
-                stats.print_stats(30)
+                self._logger.info("Match simulation completed in %.3f seconds for %d matches", elapsed, len(matchesToSim))
 
             return matches
 
@@ -334,50 +316,6 @@ class MainMenu(ctk.CTkFrame):
         if self.tabs[4]:
             SavedLineups.delete_current_lineup()
             self.tabs[4].saveLineup()
-
-        # matches = []
-        # matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
-        # if matchesToSim:
-        #     self._logger.info("Preparing to simulate %d matches", len(matchesToSim))
-        #     self._logger.info("Starting match initialization")
-        #     # Phase 1: create all Match objects
-        #     for game in matchesToSim:
-        #         try:
-        #             match = Match(game, auto = True)  # init only
-        #             matches.append(match)
-        #         except Exception:
-        #             self._logger.exception("Error initializing Match for game %s", getattr(game, 'id', game))
-        #             traceback.print_exc()
-
-        #     # Phase 2: run startGame in parallel with ThreadPoolExecutor
-        #     self._logger.info("Starting parallel match simulation with %d workers", max(1, len(matches)))
-        #     sim_start = time.perf_counter()
-        #     with ThreadPoolExecutor(max_workers = len(matches)) as ex:
-        #         # submit a wrapper that starts the match thread and then joins it
-        #         def _run_and_join(m):
-        #             try:
-        #                 self._logger.debug("Starting simulation for %s", repr(m))
-        #                 m.startGame()
-        #                 m.join()
-        #                 self._logger.debug("Finished simulation for %s", repr(m))
-        #             except Exception:
-        #                 self._logger.exception("Exception during simulation for %s", repr(m))
-        #                 raise
-
-        #         futures = [ex.submit(_run_and_join, match) for match in matches]
-
-        #         # Phase 3: wait for all to finish
-        #         for fut in as_completed(futures):
-        #             try:
-        #                 fut.result()
-        #             except Exception:
-        #                 self._logger.exception("Match worker raised an exception")
-        #                 traceback.print_exc()
-
-        #     sim_end = time.perf_counter()
-        #     elapsed = sim_end - sim_start
-        #     # Log elapsed time for the parallel match simulations
-        #     self._logger.info("Match simulation completed in %.3f seconds for %d matches", elapsed, len(matches))
     
         matches = run_match_simulation(self, stopDate)
 
@@ -386,7 +324,7 @@ class MainMenu(ctk.CTkFrame):
 
         # ------------------- Post-match updates -------------------
 
-        leagueIDs = list({match.league.league_id for match in matches})
+        leagueIDs = list({match.league_id for match in matches})
         for id_ in leagueIDs:
             LeagueTeams.update_team_positions(id_)
             if League.check_all_matches_complete(id_, self.currDate):
@@ -398,8 +336,8 @@ class MainMenu(ctk.CTkFrame):
 
         teams = []
         for match in matches:
-            teams.append(match.homeTeam)
-            teams.append(match.awayTeam)
+            teams.append(Teams.get_team_by_id(match.home_id))
+            teams.append(Teams.get_team_by_id(match.away_id))
 
         check_player_games_happy(teams, self.currDate)
 

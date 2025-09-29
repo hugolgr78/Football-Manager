@@ -726,11 +726,11 @@ def sub_probability(fitness: float) -> float:
         # below 10 -> 85–100%
         return 0.85 + (10 - max(fitness, 0)) / 10 * 0.15
     
-def getPasses(homeLineup, awayLineup):
+def getPasses(homeLineup, awayLineup, homeOBJs, awayOBJs):
     from data.database import Players
 
-    overallHome = sum(effective_ability(Players.get_player_by_id(pid)) for pid in homeLineup.values())
-    overallAway = sum(effective_ability(Players.get_player_by_id(pid)) for pid in awayLineup.values())
+    overallHome = sum(effective_ability(p) for p in homeOBJs.values())
+    overallAway = sum(effective_ability(p) for p in awayOBJs.values())
 
     total_passes = random.randint(3, 5)
     # soften big differences (alpha = 0.5)
@@ -761,7 +761,7 @@ def effective_ability(p):
 def getStatNum(stat):
     return sum(playerValue for playerValue in stat.values())
 
-def passesAndPossession(matchInstance):
+def passesAndPossession(matchInstance, homePlayersOBJs = None, awayPlayersOBJs = None):
     from data.database import Players
 
     homeLineup = matchInstance.homeCurrentLineup
@@ -771,9 +771,20 @@ def passesAndPossession(matchInstance):
     homePassesAttempted = matchInstance.homePassesAttempted
     awayPassesAttempted = matchInstance.awayPassesAttempted
     homeRatings = matchInstance.homeRatings
+
+    if homePlayersOBJs is None:
+        homeOBJs = {pid: Players.get_player_by_id(pid) for pid in homeLineup.values()}
+    else:
+        homeOBJs = {pid: p for pid, p in homePlayersOBJs.items() if pid in homeLineup.values()}
+
+    if awayPlayersOBJs is None:
+        awayOBJs = {pid: Players.get_player_by_id(pid) for pid in awayLineup.values()}
+    else:
+        awayOBJs = {pid: p for pid, p in awayPlayersOBJs.items() if pid in awayLineup.values()}
+
     awayRatings = matchInstance.awayRatings
 
-    homePasses, awayPasses = getPasses(homeLineup, awayLineup)
+    homePasses, awayPasses = getPasses(homeLineup, awayLineup, homeOBJs, awayOBJs)
     matchInstance.homePassesAttempted = homePassesAttempted + homePasses
     matchInstance.awayPassesAttempted = awayPassesAttempted + awayPasses
 
@@ -781,9 +792,9 @@ def passesAndPossession(matchInstance):
     # We scale sharpness into a range [0.60, 0.90] so even low-sharpness players have at least 60%
     # and very high sharpness caps at ~90%.
     for _ in range(homePasses):
-        playerID = choosePlayerFromDict(homeLineup, PASSING_POSITIONS)
+        playerID = choosePlayerFromDict(homeLineup, PASSING_POSITIONS, homeOBJs)
 
-        raw = Players.get_player_by_id(playerID).sharpness / 100.0
+        raw = homeOBJs[playerID].sharpness / 100.0
         passCompleteProb = 0.60 + raw * (0.90 - 0.60)
 
         if random.random() < passCompleteProb:
@@ -796,9 +807,9 @@ def passesAndPossession(matchInstance):
             homeRatings[playerID] = round(homeRatings.get(playerID, 0) + rating, 2)
 
     for _ in range(awayPasses):
-        playerID = choosePlayerFromDict(awayLineup, PASSING_POSITIONS)
+        playerID = choosePlayerFromDict(awayLineup, PASSING_POSITIONS, awayOBJs)
 
-        raw = Players.get_player_by_id(playerID).sharpness / 100.0
+        raw = awayOBJs[playerID].sharpness / 100.0
         passCompleteProb = 0.60 + raw * (0.90 - 0.60)
 
         if random.random() < passCompleteProb:
@@ -821,38 +832,40 @@ def passesAndPossession(matchInstance):
         homeStats["Possession"] = round((homeCompleted / totalCompleted) * 100)
         awayStats["Possession"] = 100 - homeStats["Possession"]
 
-def choosePlayerFromDict(lineup, dict_):
-    from data.database import Players
-
+def choosePlayerFromDict(lineup, dict_, playerOBJs):
     playerPosition = random.choices(list(dict_.keys()), weights = list(dict_.values()), k = 1)[0]
-    players = [playerID for playerID in lineup.values() if Players.get_player_by_id(playerID).position == playerPosition]
+    players = [playerID for playerID in lineup.values() if playerOBJs[playerID].position == playerPosition]
 
     while len(players) == 0:
         playerPosition = random.choices(list(dict_.keys()), weights = list(dict_.values()), k = 1)[0]
-        players = [playerID for playerID in lineup.values() if Players.get_player_by_id(playerID).position == playerPosition]
+        players = [playerID for playerID in lineup.values() if playerOBJs[playerID].position == playerPosition]
 
-    weights = [effective_ability(Players.get_player_by_id(playerID)) for playerID in players]
+    weights = [effective_ability(playerOBJs[playerID]) for playerID in players]
     if sum(weights) == 0:
         weights = [1] * len(players)
 
     return random.choices(players, weights = weights, k = 1)[0]
 
-def getStatPlayer(stat, lineup):
-    from data.database import Players
+def getStatPlayer(stat, lineup, playerOBJs = None):
+    
+    if playerOBJs is None:
+        from data.database import Players
+        playerOBJs = {pid: Players.get_player_by_id(pid) for pid in lineup.values()}
+    
     match stat:
         case "Saves":
             rating = random.uniform(SAVE_RATING[0], SAVE_RATING[1])
             return lineup["Goalkeeper"] if "Goalkeeper" in lineup else None, rating if "Goalkeeper" in lineup else 0
         case "Shots" | "Shots on target" | "Shots in the box" | "Shots outside the box":
             rating = random.uniform(SHOT_RATING[0], SHOT_RATING[1]) if stat != "Shots on target" else random.uniform(SHOT_TARGET_RATING[0], SHOT_TARGET_RATING[1])
-            return choosePlayerFromDict(lineup, SCORER_CHANCES), rating
+            return choosePlayerFromDict(lineup, SCORER_CHANCES, playerOBJs), rating
         case "Fouls":
-            weights = [ownGoalFoulWeight(Players.get_player_by_id(playerID)) for playerID in lineup.values()]
+            weights = [ownGoalFoulWeight(playerOBJs[playerID]) for playerID in lineup.values()]
             rating = random.uniform(FOUL_RATING[0], FOUL_RATING[1])
             return random.choices(list(lineup.values()), weights = weights, k = 1)[0], rating
         case "Tackles" | "Interceptions":
             rating = random.uniform(DEFENSIVE_ACTION_RATING[0], DEFENSIVE_ACTION_RATING[1])
-            return choosePlayerFromDict(lineup, DEFENSIVE_ACTION_POSITIONS), rating
+            return choosePlayerFromDict(lineup, DEFENSIVE_ACTION_POSITIONS, playerOBJs), rating
         case "Big chances created" | "Big chances missed":
             rating = random.uniform(BIG_CHANCE_CREATED_RATING[0], BIG_CHANCE_CREATED_RATING[1]) if stat == "Big chances created" else random.uniform(BIG_CHANCE_MISSED_RATING[0], BIG_CHANCE_MISSED_RATING[1])
-            return choosePlayerFromDict(lineup, BIG_CHANCES_POSITIONS), rating
+            return choosePlayerFromDict(lineup, BIG_CHANCES_POSITIONS, playerOBJs), rating

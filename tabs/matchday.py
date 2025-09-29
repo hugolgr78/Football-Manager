@@ -888,30 +888,33 @@ class MatchDay(ctk.CTkFrame):
         ratings = matchInstance.homeRatings if side == "home" else matchInstance.awayRatings
         oppRatings = matchInstance.awayRatings if side == "home" else matchInstance.homeRatings
 
+        playerOBJs = matchInstance.homePlayersOBJ if side == "home" else matchInstance.awayPlayersOBJ 
+        oppPlayersOBJ = matchInstance.awayPlayersOBJ if side == "home" else matchInstance.homePlayersOBJ
+
         if teamMatch:
             pitch = self.homeLineupPitch if side == "home" else self.awayLineupPitch
             oppPitch = self.awayLineupPitch if side == "home" else self.homeLineupPitch
 
-        sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
+        sharpness = [playerOBJs[playerID].sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
 
         if "Goalkeeper" in lineup:
-            avgSharpness = (sum(sharpness) - Players.get_player_by_id(lineup["Goalkeeper"]).sharpness) / (len(sharpness) - 1)
+            avgSharpness = (sum(sharpness) - playerOBJs[lineup["Goalkeeper"]].sharpness) / (len(sharpness) - 1)
         else:
             avgSharpness = avgSharpnessWthKeeper
 
         avgFitness = sum(fitness[playerID] for playerID in lineup.values()) / len(lineup)
-        
-        morale = [Players.get_player_by_id(playerID).morale for pos, playerID in lineup.items() if pos != "Goalkeeper"]
+
+        morale = [playerOBJs[playerID].morale for pos, playerID in lineup.items() if pos != "Goalkeeper"]
         avgMorale = sum(morale) / len(morale)
 
-        oppKeeper = Players.get_player_by_id(oppLineup["Goalkeeper"]) if "Goalkeeper" in oppLineup else None
+        oppKeeper = oppPlayersOBJ[oppLineup["Goalkeeper"]] if "Goalkeeper" in oppLineup else None
 
         attackingPlayers = [playerID for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS]
         defendingPlayers = [playerID for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS]
 
-        attackingLevel = teamStrength(attackingPlayers, role = "attack")
-        defendingLevel = teamStrength(defendingPlayers, role = "defend")
+        attackingLevel = teamStrength(attackingPlayers, "attack", playerOBJs)
+        defendingLevel = teamStrength(defendingPlayers, "defend", oppPlayersOBJ)
 
         # ------------------ GOAL ------------------
         event = goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper)
@@ -960,13 +963,13 @@ class MatchDay(ctk.CTkFrame):
 
         # ------------------ SUBSTITUTIONS ------------------
         if not teamMatch:
-            subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness)
+            subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness, playerOBJs)
             for _ in range(len(subsChosen)):
                 eventsToAdd.append("substitution")
 
         else:
             if (self.home and side == "away") or (not self.home and side == "home"):
-                subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness)
+                subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness, playerOBJs)
                 for _ in range(len(subsChosen)):
                     eventsToAdd.append("substitution")
 
@@ -1010,7 +1013,7 @@ class MatchDay(ctk.CTkFrame):
         for stat in statsToAdd:
 
             if stat in PLAYER_STATS:
-                playerID, rating = getStatPlayer(stat, lineup)
+                playerID, rating = getStatPlayer(stat, lineup, playerOBJs)
                 ratings[playerID] = min(10, max(0, round(ratings.get(playerID, 0) + rating, 2)))
             
                 if teamMatch:
@@ -1042,7 +1045,7 @@ class MatchDay(ctk.CTkFrame):
 
                             stats["Big chances missed"][playerID] += 1
 
-                            playerID, rating = getStatPlayer("Big chances created", lineup)
+                            playerID, rating = getStatPlayer("Big chances created", lineup, playerOBJs)
                             ratings[playerID] = min(10, max(0, round(ratings.get(playerID, 0) + rating, 2)))
 
                             if teamMatch:
@@ -1073,7 +1076,7 @@ class MatchDay(ctk.CTkFrame):
 
                             stats["Big chances missed"][playerID] += 1
 
-                            playerID, rating = getStatPlayer("Big chances created", lineup)
+                            playerID, rating = getStatPlayer("Big chances created", lineup, playerOBJs)
                             ratings[playerID] = min(10, max(0, round(ratings.get(playerID, 0) + rating, 2)))
 
                             if teamMatch:
@@ -1084,7 +1087,7 @@ class MatchDay(ctk.CTkFrame):
 
                             stats["Big chances created"][playerID] += 1
 
-                        playerID, rating = getStatPlayer("Saves", oppLineup)
+                        playerID, rating = getStatPlayer("Saves", oppLineup, oppPlayersOBJ)
                         if playerID:
                             if playerID not in oppStats["Saves"]:
                                 oppStats["Saves"][playerID] = 0

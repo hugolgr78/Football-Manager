@@ -225,7 +225,7 @@ class Match():
                     logger.debug("%s TICK: generating events and updating possession at %02d:%02d", prefix, self.minutes, self.seconds)
                     self.generateEvents("home")
                     self.generateEvents("away")
-                    passesAndPossession(self, self.homePlayersOBJ, self.awayPlayersOBJ)
+                    passesAndPossession(self)
 
                 # ----------- home events ------------
                 for event_time, event_details in list(self.homeEvents.items()):

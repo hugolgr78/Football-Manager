@@ -613,7 +613,7 @@ def injuryChances(avgFitness):
 
     return random.choices(events, weights = probs, k = 1)[0]
 
-def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness, playerOBJs = None):
+def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness, playerOBJs):
     subsAvailable = MAX_SUBS - subsMade
     if subsAvailable <= 0:
         return []
@@ -631,10 +631,6 @@ def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness, pla
     weights = [0.65, 0.25, 0.10]
     num_to_sub = random.choices(outcomes, weights=weights, k=1)[0]
     num_to_sub = min(num_to_sub, subsAvailable, len(candidates))
-
-    if not playerOBJs:
-        from data.database import Players
-        playerOBJs = {pid: Players.get_player_by_id(pid) for pid in subs}
 
     chosen = find_substitute(lineup, candidates, subs, num_to_sub, playerOBJs)
 
@@ -762,9 +758,7 @@ def effective_ability(p):
 def getStatNum(stat):
     return sum(playerValue for playerValue in stat.values())
 
-def passesAndPossession(matchInstance, homePlayersOBJs = None, awayPlayersOBJs = None):
-    from data.database import Players
-
+def passesAndPossession(matchInstance):
     homeLineup = matchInstance.homeCurrentLineup
     awayLineup = matchInstance.awayCurrentLineup
     homeStats = matchInstance.homeStats
@@ -772,16 +766,11 @@ def passesAndPossession(matchInstance, homePlayersOBJs = None, awayPlayersOBJs =
     homePassesAttempted = matchInstance.homePassesAttempted
     awayPassesAttempted = matchInstance.awayPassesAttempted
     homeRatings = matchInstance.homeRatings
+    homePlayersOBJs = matchInstance.homePlayersOBJs
+    awayPlayersOBJs = matchInstance.awayPlayersOBJs
 
-    if homePlayersOBJs is None:
-        homeOBJs = {pid: Players.get_player_by_id(pid) for pid in homeLineup.values()}
-    else:
-        homeOBJs = {pid: p for pid, p in homePlayersOBJs.items() if pid in homeLineup.values()}
-
-    if awayPlayersOBJs is None:
-        awayOBJs = {pid: Players.get_player_by_id(pid) for pid in awayLineup.values()}
-    else:
-        awayOBJs = {pid: p for pid, p in awayPlayersOBJs.items() if pid in awayLineup.values()}
+    homeOBJs = {pid: p for pid, p in homePlayersOBJs.items() if pid in homeLineup.values()}
+    awayOBJs = {pid: p for pid, p in awayPlayersOBJs.items() if pid in awayLineup.values()}
 
     awayRatings = matchInstance.awayRatings
 
@@ -847,7 +836,7 @@ def choosePlayerFromDict(lineup, dict_, playerOBJs):
 
     return random.choices(players, weights = weights, k = 1)[0]
 
-def getStatPlayer(stat, lineup, playerOBJs = None):
+def getStatPlayer(stat, lineup, playerOBJs):
     
     if playerOBJs is None:
         from data.database import Players

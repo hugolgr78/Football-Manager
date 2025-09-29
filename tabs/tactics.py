@@ -606,7 +606,9 @@ class Lineup(ctk.CTkFrame):
             lineupPositions = FORMATIONS_POSITIONS[lineupName]
             players = [Players.get_player_by_id(playerID) for playerID in self.players if not PlayerBans.check_bans_for_player(playerID, self.league.id)]
             sortedPlayers = sorted(players, key = effective_ability, reverse = True)
-            _, _, lineup = score_formation(sortedPlayers, lineupPositions, self.team.id, self.leagueID)
+
+            youths = PlayerBans.get_all_non_banned_youth_players_for_comp(self.team.id, self.league.id)
+            _, _, lineup = score_formation(sortedPlayers, lineupPositions, youths)
             lineup = {position: Players.get_player_by_id(pid) for position, pid in lineup.items()}
 
             self.importLineup(auto = lineup)

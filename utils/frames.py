@@ -1770,6 +1770,7 @@ class FootballPitchMatchDay(FootballPitchVertical):
 
     def addRating(self, position, playerName, text, potm):
         # Use positions from self.positions dictionary (these are relative coordinates)
+
         player_relx, player_rely = self.positions[position]
         
         # Calculate the center position of the oval
@@ -1847,6 +1848,7 @@ class FootballPitchMatchDay(FootballPitchVertical):
         self.addRating(position, playerName, newRating, False)
 
     def addInjuryIcon(self, position, playerName, image):
+
         # Store the image to prevent garbage collection
         key = f"injury_{position}"
         self.icon_images[key] = image
@@ -1873,9 +1875,6 @@ class FootballPitchMatchDay(FootballPitchVertical):
         self.canvas.create_image(text_x - 30, text_y, image = image, tags = (position_tag, "injury_icon"))
 
     def addPlayer(self, position, playerName, matchday = False):
-
-        if not position:
-            return
 
         relx, rely = self.positions[position]
         position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"

@@ -5413,15 +5413,14 @@ def searchResults(search, limit = SEARCH_LIMIT):
     finally:
         session.close()
 
-def getDefaultLineup(team, league, opponent_id):
+def getDefaultLineup(league, opponent_id, players, youths):
     bestLineup = None
     bestScore = 0
 
-    players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
     sortedPlayers = sorted(players, key = lambda p: effective_ability(p), reverse = True)
 
     for _, positions in FORMATIONS_POSITIONS.items():
-        _, _, lineup = score_formation(sortedPlayers, positions, opponent_id, league.league_id)
+        _, _, lineup = score_formation(sortedPlayers, positions, opponent_id, league.league_id, youths)
         formationScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
         if formationScore > bestScore:
             bestScore = formationScore
@@ -5435,8 +5434,11 @@ def getPredictedLineup(opponent_id, currDate):
     league = LeagueTeams.get_league_by_team(team.id)
     matches = Matches.get_team_last_5_matches(team.id, currDate)
 
+    available_players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
+    youths = PlayerBans.get_all_non_banned_youth_players_for_comp(team.id, league.league_id)
+
     if len(matches) == 0:
-        bestLineup = getDefaultLineup(team, league, opponent_id)
+        bestLineup = getDefaultLineup(league, opponent_id, available_players, youths)
         return bestLineup
 
     # Step 1: Find the most used formation
@@ -5455,11 +5457,8 @@ def getPredictedLineup(opponent_id, currDate):
 
     most_used_formation = max(formation_counts.items(), key = lambda x: x[1])[0] if formation_counts else None
     if not most_used_formation:
-        bestLineup = getDefaultLineup(team, league, opponent_id)
+        bestLineup = getDefaultLineup(league, opponent_id, available_players, youths)
         return bestLineup
-
-    # Step 2: Get all available players (excluding banned/injured)
-    available_players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
     
     # Step 3: For each position in the formation, find most started player
     predicted_lineup = {}
@@ -5474,7 +5473,7 @@ def getPredictedLineup(opponent_id, currDate):
 
         if not position_players:
             # Get a youth player if no senior players are available
-            youth = getYouthPlayer(team.id, position, league.league_id, predicted_lineup.values())
+            youth = getYouthPlayer(position, predicted_lineup.values(), youths)
             if youth:
                 predicted_lineup[position] = youth
         else:
@@ -5501,7 +5500,13 @@ def getPredictedLineup(opponent_id, currDate):
 
     return predicted_lineup
 
-def getProposedLineup(team_id, opponent_id, comp_id, currDate):
+def getProposedLineup(team_id, opponent_id, comp_id, currDate, players = None, youths = None):
+    if not players:
+        players = PlayerBans.get_all_non_banned_players_for_comp(team_id, comp_id)
+    
+    if not youths:
+        youths = PlayerBans.get_all_non_banned_youth_players_for_comp(team_id, comp_id)
+
     predictedLineup = getPredictedLineup(opponent_id, currDate)
 
     attackingScore = 0
@@ -5514,7 +5519,6 @@ def getProposedLineup(team_id, opponent_id, comp_id, currDate):
         elif position in ATTACKING_POSITIONS:
             attackingScore += effective_ability(player)
 
-    players = PlayerBans.get_all_non_banned_players_for_comp(team_id, comp_id)
     sortedPlayers = sorted(players, key = lambda p: effective_ability(p), reverse = True)
 
     bestLineup = None
@@ -5522,7 +5526,7 @@ def getProposedLineup(team_id, opponent_id, comp_id, currDate):
     lineupPositions = None
 
     for _, positions in FORMATIONS_POSITIONS.items():
-        aScore, dScore, lineup = score_formation(sortedPlayers, positions, team_id, comp_id)
+        aScore, dScore, lineup = score_formation(sortedPlayers, positions, team_id, comp_id, youths)
         if not lineup:
             continue  # skip incomplete formations
 
@@ -5541,7 +5545,7 @@ def getProposedLineup(team_id, opponent_id, comp_id, currDate):
     if not bestLineup:
         bestScore = -1
         for _, positions in FORMATIONS_POSITIONS.items():
-            _, _, lineup = score_formation(sortedPlayers, positions, team_id, comp_id)
+            _, _, lineup = score_formation(sortedPlayers, positions, team_id, comp_id, youths)
             formationScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
             if formationScore > bestScore:
                 bestScore = formationScore
@@ -5561,7 +5565,7 @@ def parse_formation_key(key: str):
 
     return defenders, mids, attackers
 
-def score_formation(sortedPlayers, positions, teamID, compID):
+def score_formation(sortedPlayers, positions, teamID, compID, youths):
     lineup = {}
     used = set()
 
@@ -5581,7 +5585,7 @@ def score_formation(sortedPlayers, positions, teamID, compID):
         candidates = [p for p in position_candidates[pos] if p.id not in used]
         
         if not candidates:
-            youthID = getYouthPlayer(teamID, pos, compID, lineup.values())
+            youthID = getYouthPlayer(pos, lineup.values(), youths)
 
             if not youthID:
                 return -1, {}
@@ -5625,8 +5629,7 @@ def score_formation(sortedPlayers, positions, teamID, compID):
 
     return attackingScore, defendingScore, lineup
 
-def getYouthPlayer(teamID, position, compID, players):
-    youthPlayers = PlayerBans.get_all_non_banned_youth_players_for_comp(teamID, compID)
+def getYouthPlayer(position, players, youthPlayers):
     available_youths = []
 
     if youthPlayers:
@@ -5637,8 +5640,13 @@ def getYouthPlayer(teamID, position, compID, players):
     available_youths.sort(key = effective_ability, reverse = True)
     return available_youths[0].id if available_youths else None
 
-def getSubstitutes(teamID, lineup, compID):
-    allPlayers = PlayerBans.get_all_non_banned_players_for_comp(teamID, compID)
+def getSubstitutes(teamID, lineup, compID, allPlayers = None, allYouths = None):
+    if not allPlayers:
+        allPlayers = PlayerBans.get_all_non_banned_players_for_comp(teamID, compID)
+
+    if not allYouths:
+        allYouths = PlayerBans.get_all_non_banned_youth_players_for_comp(teamID, compID)
+
     usedPlayers = set(lineup.values())
     substitutes = []
 
@@ -5679,7 +5687,7 @@ def getSubstitutes(teamID, lineup, compID):
 
     # --- Pick subs as we go ---
     if pick_sub(goalkeepers, 1, DEFENSIVE_POSITIONS) < 1:
-        youthID = getYouthPlayer(teamID, "Goalkeeper", compID, substitutes)
+        youthID = getYouthPlayer("Goalkeeper", substitutes, allYouths)
         if youthID:
             substitutes.append(youthID)
             covered_positions.add("Goalkeeper")
@@ -5689,7 +5697,7 @@ def getSubstitutes(teamID, lineup, compID):
             uncovered_positions = [p for p in DEFENDER_POSITIONS if p not in covered_positions]
             if uncovered_positions:
                 specific_position = random.choice(uncovered_positions)
-                youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
+                youthID = getYouthPlayer(specific_position, substitutes, allYouths)
                 if youthID:
                     substitutes.append(youthID)
                     covered_positions.add(specific_position)
@@ -5699,7 +5707,7 @@ def getSubstitutes(teamID, lineup, compID):
             uncovered_positions = [p for p in MIDFIELD_POSITIONS if p not in covered_positions]
             if uncovered_positions:
                 specific_position = random.choice(uncovered_positions)
-                youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
+                youthID = getYouthPlayer(specific_position, substitutes, allYouths)
                 if youthID:
                     substitutes.append(youthID)
                     covered_positions.add(specific_position)
@@ -5709,7 +5717,7 @@ def getSubstitutes(teamID, lineup, compID):
             uncovered_positions = [p for p in FORWARD_POSITIONS if p not in covered_positions]
             if uncovered_positions:
                 specific_position = random.choice(uncovered_positions)
-                youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
+                youthID = getYouthPlayer(specific_position, substitutes, allYouths)
                 if youthID:
                     substitutes.append(youthID)
                     covered_positions.add(specific_position)
@@ -5724,7 +5732,7 @@ def getSubstitutes(teamID, lineup, compID):
     # Final fallback: fill remaining slots with youth players if still not full
     while len(substitutes) < 7:
         pos_choice = random.choice(DEFENSIVE_POSITIONS + MIDFIELD_POSITIONS + FORWARD_POSITIONS)
-        youthID = getYouthPlayer(teamID, pos_choice, compID, substitutes)
+        youthID = getYouthPlayer(pos_choice, substitutes, allYouths)
         if youthID:
             substitutes.append(youthID)
         else:

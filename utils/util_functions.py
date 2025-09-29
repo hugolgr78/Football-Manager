@@ -766,8 +766,8 @@ def passesAndPossession(matchInstance):
     homePassesAttempted = matchInstance.homePassesAttempted
     awayPassesAttempted = matchInstance.awayPassesAttempted
     homeRatings = matchInstance.homeRatings
-    homePlayersOBJs = matchInstance.homePlayersOBJs
-    awayPlayersOBJs = matchInstance.awayPlayersOBJs
+    homePlayersOBJs = matchInstance.homePlayersOBJ
+    awayPlayersOBJs = matchInstance.awayPlayersOBJ
 
     homeOBJs = {pid: p for pid, p in homePlayersOBJs.items() if pid in homeLineup.values()}
     awayOBJs = {pid: p for pid, p in awayPlayersOBJs.items() if pid in awayLineup.values()}

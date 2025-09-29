@@ -1,4 +1,4 @@
-import cProfile, pstats, gc, traceback, logging, time, os, random, io
+import gc, traceback, logging, time, os, random, io
 import customtkinter as ctk
 from settings import *
 from data.database import *
@@ -20,11 +20,7 @@ from tabs.settingsTab import SettingsTab
 from utils.match import Match
 
 def _simulate_match(game, manager_base_name):
-    """Worker: build and simulate entirely inside the process."""
-    pr = cProfile.Profile()
-    pr.enable()
 
-    # --- your existing code ---
     base_name = manager_base_name
     dbm = DatabaseManager()
     dbm.set_database(base_name)
@@ -62,16 +58,6 @@ def _simulate_match(game, manager_base_name):
         "id": getattr(game, "id", None),
         "score": match.score,
     }
-    # --- end of your code ---
-
-    pr.disable()
-    s = io.StringIO()
-    ps = pstats.Stats(pr, stream=s).sort_stats("cumulative")
-    ps.print_stats(30)
-
-    # Each worker writes its own profile
-    with open(f"profile_worker_{os.getpid()}_{getattr(game, 'id', 'unknown')}.txt", "w") as f:
-        f.write(s.getvalue())
 
     return result
 class MainMenu(ctk.CTkFrame):
@@ -254,7 +240,6 @@ class MainMenu(ctk.CTkFrame):
 
                 elapsed = sim_end - sim_start
                 self._logger.info("Match smulation completed in %.3f seconds for %d matches", elapsed, len(matchesToSim))
-                # print(f"Match simulation completed in {elapsed:.3f} seconds for {len(matchesToSim)} matches")
 
             return matches
 

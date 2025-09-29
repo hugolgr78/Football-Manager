@@ -6,30 +6,50 @@ from data.gamesDatabase import GamesDatabaseManager
 from data.database import DatabaseManager
 import sys, signal, logging, os, glob, shutil
 from CTkMessagebox import CTkMessagebox
+from datetime import datetime
 
 # Enable debug mode if "debug" is passed as a command-line argument
 DEBUG_MODE = len(sys.argv) > 1 and sys.argv[1].lower() == "debug"
 
-# Configure root logging once at startup. In DEBUG_MODE we enable DEBUG level
-# and a simple stream handler so debug statements across modules are visible.
-if DEBUG_MODE:
-    logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(name)s %(levelname)s: %(message)s")
-else:
-    logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(name)s %(levelname)s: %(message)s")
+# Create a logs directory if it doesn't exist
+LOG_DIR = "logs"
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
 
-# Keep custom behaviour for the heavy "utils.match" logger to avoid duplicate logs
+# Log file path (rotates per run, timestamped)
+log_filename = os.path.join(LOG_DIR, f"fm_log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
+
+# Configure root logging once at startup
+log_level = logging.DEBUG if DEBUG_MODE else logging.WARNING
+logging.basicConfig(
+    level=log_level,
+    format="%(asctime)s %(name)s %(levelname)s: %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),             # print to terminal
+        logging.FileHandler(log_filename, encoding="utf-8")  # save to .log file
+    ]
+)
+
+# Keep custom behaviour for the heavy "utils.match" logger
 match_logger = logging.getLogger("utils.match")
 if DEBUG_MODE:
-    # ensure it emits debug records to stdout
+    # ensure it emits debug records to stdout + file
     if not any(isinstance(h, logging.StreamHandler) for h in match_logger.handlers):
         match_handler = logging.StreamHandler(sys.stdout)
         match_handler.setLevel(logging.DEBUG)
         match_handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s"))
         match_logger.addHandler(match_handler)
+
+    # also send match logs into the same log file
+    if not any(isinstance(h, logging.FileHandler) for h in match_logger.handlers):
+        file_handler = logging.FileHandler(log_filename, encoding="utf-8")
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s"))
+        match_logger.addHandler(file_handler)
+
     match_logger.setLevel(logging.DEBUG)
     match_logger.propagate = False
 else:
-    # keep it quiet at higher levels if not debugging
     match_logger.setLevel(logging.CRITICAL)
 
 def backup_all_databases(data_dir, backup_dir):

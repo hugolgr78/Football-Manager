@@ -17,6 +17,9 @@ class Match():
         self.league = LeagueTeams.get_league_by_team(self.homeTeam.id)
         self.referee = Referees.get_referee_by_id(self.match.referee_id)
 
+        self.homePlayersOBJ = {p.id: p for p in Players.get_all_players_by_team(self.homeTeam.id)}
+        self.awayPlayersOBJ = {p.id: p for p in Players.get_all_players_by_team(self.awayTeam.id)}
+
         self.homeFinalLineup = []
         self.awayFinalLineup = []
         self.homeCurrentLineup = None
@@ -101,12 +104,12 @@ class Match():
             self.homeCurrentLineup = lineup
             self.homeCurrentSubs = substitutes
             self.homeStartLineup = lineup.copy()
-            self.homeFitness = {playerID: Players.get_player_by_id(playerID).fitness for playerID in list(lineup.values()) + substitutes}
+            self.homeFitness = {playerID: self.homePlayersOBJ[playerID].fitness for playerID in list(lineup.values()) + substitutes}
         else:
             self.awayCurrentLineup = lineup
             self.awayCurrentSubs = substitutes
             self.awayStartLineup = lineup.copy()
-            self.awayFitness = {playerID: Players.get_player_by_id(playerID).fitness for playerID in list(lineup.values()) + substitutes}
+            self.awayFitness = {playerID: self.awayPlayersOBJ[playerID].fitness for playerID in list(lineup.values()) + substitutes}
 
     def startGame(self):
         self.timerThread_running = True
@@ -131,7 +134,7 @@ class Match():
             if total_seconds % 90 == 0:
                 for playerID, fitness in self.homeFitness.items():
                     if fitness > 0 and playerID in self.homeCurrentLineup.values():
-                        self.homeFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID), fitness)
+                        self.homeFitness[playerID] = fitness - getFitnessDrop(self.homePlayersOBJ[playerID], fitness)
 
                         if self.homeFitness[playerID] < 0:
                             self.homeFitness[playerID] = 0
@@ -140,7 +143,7 @@ class Match():
 
                 for playerID, fitness in self.awayFitness.items():
                     if fitness > 0 and playerID in self.awayCurrentLineup.values():
-                        self.awayFitness[playerID] = fitness - getFitnessDrop(Players.get_player_by_id(playerID), fitness)
+                        self.awayFitness[playerID] = fitness - getFitnessDrop(self.awayPlayersOBJ[playerID], fitness)
 
                         if self.awayFitness[playerID] < 0:
                             self.awayFitness[playerID] = 0
@@ -268,20 +271,23 @@ class Match():
         ratings = self.homeRatings if side == "home" else self.awayRatings
         oppRatings = self.awayRatings if side == "home" else self.homeRatings
 
-        sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
+        playerOBJs = self.homePlayersOBJ if side == "home" else self.awayPlayersOBJ
+        oppPlayersOBJs = self.awayPlayersOBJ if side == "home" else self.homePlayersOBJ
+
+        sharpness = [playerOBJs[playerID].sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
 
         if "Goalkeeper" in lineup:
-            avgSharpness = (sum(sharpness) - Players.get_player_by_id(lineup["Goalkeeper"]).sharpness) / (len(sharpness) - 1)
+            avgSharpness = (sum(sharpness) - playerOBJs[lineup["Goalkeeper"]].sharpness) / (len(sharpness) - 1)
         else:
             avgSharpness = avgSharpnessWthKeeper
 
         avgFitness = sum(fitness[playerID] for playerID in lineup.values()) / len(lineup)
-        
-        morale = [Players.get_player_by_id(playerID).morale for pos, playerID in lineup.items() if pos != "Goalkeeper"]
+
+        morale = [playerOBJs[playerID].morale for pos, playerID in lineup.items() if pos != "Goalkeeper"]
         avgMorale = sum(morale) / len(morale)
 
-        oppKeeper = Players.get_player_by_id(oppLineup["Goalkeeper"]) if "Goalkeeper" in oppLineup else None
+        oppKeeper = oppPlayersOBJs.get(oppLineup["Goalkeeper"]) if "Goalkeeper" in oppLineup else None
 
         attackingPlayers = [playerID for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS]
         defendingPlayers = [playerID for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS]
@@ -478,10 +484,11 @@ class Match():
         ratings = self.homeRatings if home else self.awayRatings
         oppRatings = self.awayRatings if home else self.homeRatings
 
+        playerOBJs = self.homePlayersOBJ if home else self.awayPlayersOBJ
+        oppPlayerOBJs = self.awayPlayersOBJ if home else self.homePlayersOBJ
+
         # Fetch all players in the lineup with a single query
-        player_ids = list(lineup.values())
-        players = Players.get_players_by_ids(player_ids)
-        players_dict = {player.id: player for player in players}
+        players_dict = {p.id: p for p in playerOBJs.values() if p.id in lineup.values()}
 
         if event["type"] == "goal":
             ## scorer
@@ -607,7 +614,7 @@ class Match():
             ownGoalPosition = random.choices(list(OWN_GOAL_CHANCES.keys()), weights = list(OWN_GOAL_CHANCES.values()), k = 1)[0]
             oppositionLineup = self.homeCurrentLineup if lineup == self.awayCurrentLineup else self.awayCurrentLineup
             
-            players = Players.get_players_by_ids(list(oppositionLineup.values()))
+            players = [p for p in oppPlayerOBJs.values() if p.id in oppositionLineup.values()]
             players_in_position = [player for player in players if player.position == ownGoalPosition]
 
             if not players_in_position:
@@ -707,7 +714,7 @@ class Match():
             playerPosition = list(lineup.keys())[list(lineup.values()).index(injuredPlayerID)]
 
             if not managing_team and subsCount < MAX_SUBS:
-                self.createSubEvent(lineup, players_dict, processedEvents, time, events, injuredPlayerID, subs, playerPos = playerPosition)
+                self.createSubEvent(lineup, players_dict, processedEvents, time, events, injuredPlayerID, subs, home, playerPos = playerPosition)
 
             elif not managing_team and subsCount == MAX_SUBS:
                 lineup.pop(playerPosition)
@@ -743,7 +750,10 @@ class Match():
             return event
 
     def updateTeamMatch(self, playerOffID, oldPosition, teamMatch, home):
-        playerData = Players.get_player_by_id(playerOffID)
+
+        playerOBJs = self.homePlayersOBJ if home else self.awayPlayersOBJ
+
+        playerData = playerOBJs[playerOffID] or Players.get_player_by_id(playerOffID)
         if home:
             teamMatch.homeLineupPitch.removePlayer(oldPosition, playerData.last_name)
             frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerOffID]
@@ -767,6 +777,7 @@ class Match():
 
     def keeperSub(self, subsCount, lineup, players_dict, processedEvents, time, events, teamMatch, subs, home):
         subPossible = subsCount < MAX_SUBS
+        playerOBJs = self.homePlayersOBJ if home else self.awayPlayersOBJ
 
         if not subPossible:
             players = [player.id for player in players_dict.values() if player.position == "forward"]
@@ -781,14 +792,15 @@ class Match():
             lineup["Goalkeeper"] = newKeeper
 
             if teamMatch:
+                last_name = playerOBJs[newKeeper].last_name or Players.get_player_by_id(newKeeper).last_name
                 if home:
-                    teamMatch.homeLineupPitch.movePlayer(newKeeperPosition, "Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
+                    teamMatch.homeLineupPitch.movePlayer(newKeeperPosition, "Goalkeeper", last_name)
                 else:
-                    teamMatch.awayLineupPitch.movePlayer(newKeeperPosition, "Goalkeeper", Players.get_player_by_id(newKeeper).last_name)
+                    teamMatch.awayLineupPitch.movePlayer(newKeeperPosition, "Goalkeeper", last_name)
         else:
-            self.createSubEvent(lineup, players_dict, processedEvents, time, events, None, subs, keeperSub = True)
+            self.createSubEvent(lineup, players_dict, processedEvents, time, events, None, subs, home, keeperSub = True)
 
-    def createSubEvent(self, lineup, players_dict, processedEvents, time, events, playerOffID, subs, keeperSub = False, playerPos = None):
+    def createSubEvent(self, lineup, players_dict, processedEvents, time, events, playerOffID, subs, home, keeperSub = False, playerPos = None):
         # Create the substitution event
         minute = int(time.split(":")[0])
         seconds = int(time.split(":")[1])
@@ -824,7 +836,7 @@ class Match():
             else:
                 playerOffID = random.choices(list(players), k = 1)[0]
 
-            playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup)
+            playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup, home)
             playerPos = "Goalkeeper"
 
         subChoice = find_substitute(lineup, [(1, playerOffID, playerPos)], subs, 1)[0]
@@ -841,7 +853,10 @@ class Match():
             "extra": extraTime,
         }
 
-    def checkPlayerOff(self, playerID, processEvents, time, lineup, checked_players = None):
+    def checkPlayerOff(self, playerID, processEvents, time, lineup, home, checked_players = None):
+
+        playerOBJs = self.homePlayersOBJ if home else self.awayPlayersOBJ
+
         if checked_players is None:
             checked_players = set()
 
@@ -854,19 +869,20 @@ class Match():
                 else:
                     checked_players.add(playerID)
 
-                    players = Players.get_players_by_ids(list(lineup.values()))
-                    players_dict = {player.id: player for player in players}
+                    players_dict = {p.id: p for p in playerOBJs.values() if p.id in lineup.values()}
 
                     available_players = [player.id for player in players_dict.values() if player.position != "goalkeeper" and player.id not in checked_players]
                     if not available_players:
                         return random.choices(list(lineup.values()), k = 1)[0]  # No available players, return a random player
                     
                     new_player = random.choices(available_players, k = 1)[0]
-                    return self.checkPlayerOff(new_player, processEvents, time, lineup, checked_players)
+                    return self.checkPlayerOff(new_player, processEvents, time, lineup, home, checked_players = checked_players)
 
         return playerID  # No substitution event found for the player
 
     def addPlayerToLineup(self, playerOnID, playerOffID, playerPosition, posOff, subs, lineup, teamMatch, home, managing_event = None):
+
+        playerOBJs = self.homePlayersOBJ if home else self.awayPlayersOBJ
 
         # remove the player from the subs list
         for playerID in subs:
@@ -895,7 +911,7 @@ class Match():
             frame.removeFitness()
 
             if not managing_event:
-                playerOn = Players.get_player_by_id(playerOnID)
+                playerOn = playerOBJs[playerOnID] or Players.get_player_by_id(playerOnID)
                 if home:
                     teamMatch.homeLineupPitch.addPlayer(playerPosition, playerOn.last_name)
                 else:
@@ -1143,10 +1159,8 @@ class Match():
                     morales_to_update = []
                     sharpnesses_to_update = []
 
-                    homePlayers = Players.get_all_players_by_team(self.homeTeam.id)
-                    awayPlayers = Players.get_all_players_by_team(self.awayTeam.id)
 
-                    for player in homePlayers:
+                    for player in self.homePlayersOBJ.values():
                         final_ids = {pl_id for _, pl_id in self.homeFinalLineup}
                         playerAdded = False
 
@@ -1240,7 +1254,7 @@ class Match():
                                     goal_diff=self.goalDiffHome
                                 )
 
-                    for player in awayPlayers:
+                    for player in self.awayPlayersOBJ.values():
                         final_ids = {pl_id for _, pl_id in self.awayFinalLineup}
                         playerAdded = False
 
@@ -1478,7 +1492,7 @@ class Match():
             playedEnough, game_time = self.getGameTime(player.id, processed_events)
             if not playedEnough:
                 # Played <20 minutes
-                full_player = Players.get_player_by_id(player.id)
+                full_player = self.homePlayersOBJ[player.id] if team == self.homeTeam else self.awayPlayersOBJ[player.id]
                 moraleChange = get_morale_decrease_role(full_player)
             else:
                 # Morale based on result & performance

@@ -5413,14 +5413,14 @@ def searchResults(search, limit = SEARCH_LIMIT):
     finally:
         session.close()
 
-def getDefaultLineup(league, opponent_id, players, youths):
+def getDefaultLineup(players, youths):
     bestLineup = None
     bestScore = 0
 
     sortedPlayers = sorted(players, key = lambda p: effective_ability(p), reverse = True)
 
     for _, positions in FORMATIONS_POSITIONS.items():
-        _, _, lineup = score_formation(sortedPlayers, positions, opponent_id, league.league_id, youths)
+        _, _, lineup = score_formation(sortedPlayers, positions, youths)
         formationScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
         if formationScore > bestScore:
             bestScore = formationScore
@@ -5438,7 +5438,7 @@ def getPredictedLineup(opponent_id, currDate):
     youths = PlayerBans.get_all_non_banned_youth_players_for_comp(team.id, league.league_id)
 
     if len(matches) == 0:
-        bestLineup = getDefaultLineup(league, opponent_id, available_players, youths)
+        bestLineup = getDefaultLineup(available_players, youths)
         return bestLineup
 
     # Step 1: Find the most used formation
@@ -5457,7 +5457,7 @@ def getPredictedLineup(opponent_id, currDate):
 
     most_used_formation = max(formation_counts.items(), key = lambda x: x[1])[0] if formation_counts else None
     if not most_used_formation:
-        bestLineup = getDefaultLineup(league, opponent_id, available_players, youths)
+        bestLineup = getDefaultLineup(available_players, youths)
         return bestLineup
     
     # Step 3: For each position in the formation, find most started player
@@ -5526,7 +5526,7 @@ def getProposedLineup(team_id, opponent_id, comp_id, currDate, players = None, y
     lineupPositions = None
 
     for _, positions in FORMATIONS_POSITIONS.items():
-        aScore, dScore, lineup = score_formation(sortedPlayers, positions, team_id, comp_id, youths)
+        aScore, dScore, lineup = score_formation(sortedPlayers, positions, youths)
         if not lineup:
             continue  # skip incomplete formations
 
@@ -5545,7 +5545,7 @@ def getProposedLineup(team_id, opponent_id, comp_id, currDate, players = None, y
     if not bestLineup:
         bestScore = -1
         for _, positions in FORMATIONS_POSITIONS.items():
-            _, _, lineup = score_formation(sortedPlayers, positions, team_id, comp_id, youths)
+            _, _, lineup = score_formation(sortedPlayers, positions, youths)
             formationScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
             if formationScore > bestScore:
                 bestScore = formationScore
@@ -5565,7 +5565,7 @@ def parse_formation_key(key: str):
 
     return defenders, mids, attackers
 
-def score_formation(sortedPlayers, positions, teamID, compID, youths):
+def score_formation(sortedPlayers, positions, youths):
     lineup = {}
     used = set()
 
@@ -5640,7 +5640,7 @@ def getYouthPlayer(position, players, youthPlayers):
     available_youths.sort(key = effective_ability, reverse = True)
     return available_youths[0].id if available_youths else None
 
-def getSubstitutes(teamID, lineup, compID, allPlayers = None, allYouths = None):
+def getSubstitutes(teamID, lineup, compID, allPlayers, allYouths):
     if not allPlayers:
         allPlayers = PlayerBans.get_all_non_banned_players_for_comp(teamID, compID)
 
@@ -5909,12 +5909,9 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
             endDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=endHour)
             CalendarEvents.add_event(team_id, event, startDate, endDate)
 
-def teamStrength(playerIDs, role, playerOBJs = None):
+def teamStrength(playerIDs, role, playerOBJs):
     if not playerIDs:
         return 0
-
-    if not playerOBJs:
-        playerOBJs = {p.id: p for p in Players.get_players_by_ids(playerIDs)}
     
     weights = []
     for pid in playerIDs:

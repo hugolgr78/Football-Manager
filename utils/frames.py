@@ -1873,6 +1873,10 @@ class FootballPitchMatchDay(FootballPitchVertical):
         self.canvas.create_image(text_x - 30, text_y, image = image, tags = (position_tag, "injury_icon"))
 
     def addPlayer(self, position, playerName, matchday = False):
+
+        if not position:
+            return
+
         relx, rely = self.positions[position]
         position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
 

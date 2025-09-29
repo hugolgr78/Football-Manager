@@ -97,9 +97,11 @@ class Match():
 
     def createTeamLineup(self, teamID, home):
         opponentID = self.match.away_id if home else self.match.home_id
-        lineup = getProposedLineup(teamID, opponentID, self.league.league_id, Game.get_game_date(Managers.get_all_user_managers()[0].id))
-        substitutes = getSubstitutes(teamID, lineup, self.league.league_id)
-        
+        nonBanned = PlayerBans.get_all_non_banned_players_for_comp(teamID, self.league.league_id)
+        nonBannedYouth = PlayerBans.get_all_non_banned_youth_players_for_comp(teamID, self.league.league_id)
+        lineup = getProposedLineup(teamID, opponentID, self.league.league_id, Game.get_game_date(Managers.get_all_user_managers()[0].id), nonBanned, nonBannedYouth)
+        substitutes = getSubstitutes(teamID, lineup, self.league.league_id, nonBanned, nonBannedYouth)
+
         if home:
             self.homeCurrentLineup = lineup
             self.homeCurrentSubs = substitutes

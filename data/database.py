@@ -5903,11 +5903,19 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
             weekly_usage[choice] += 1
 
         # Insert into DB
+        eventsToAdd = []
         for i, event in enumerate(events):
-            startHour, endHour = EVENT_TIMES[i]
-            startDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=startHour)
-            endDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=endHour)
-            CalendarEvents.add_event(team_id, event, startDate, endDate)
+
+            if event:
+                startHour, endHour = EVENT_TIMES[i]
+                startDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=startHour)
+                endDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=endHour)
+                # CalendarEvents.add_event(team_id, event, startDate, endDate)
+
+                eventsToAdd.append((team_id, event, startDate, endDate, True if event == "Travel" else False))
+
+        CalendarEvents.batch_add_events(eventsToAdd)
+
 
 def teamStrength(playerIDs, role, playerOBJs):
     if not playerIDs:

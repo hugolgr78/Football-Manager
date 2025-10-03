@@ -5,7 +5,7 @@ from data.database import *
 from data.gamesDatabase import *
 from PIL import Image
 from utils.util_functions import *
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExecutor
 
 from tabs.hub import Hub
 from tabs.inbox import Inbox
@@ -256,15 +256,40 @@ class MainMenu(ctk.CTkFrame):
 
         # ------------------- Creating calendar events for other teams -------------------
         self._logger.info("Starting calendar events generation from %s to %s", self.currDate, stopDate)
-        current_day = self.currDate # + timedelta(days = 1)
+        
+        current_day = self.currDate
+        createEvents = False
         while current_day.date() <= stopDate.date():
             if current_day.weekday() == 0:
                 monday_moment = datetime.datetime(current_day.year, current_day.month, current_day.day, 8, 59)
-                if monday_moment > self.currDate and monday_moment <= stopDate:
-                    for team_id in teamIDs:
-                        if team_id != self.team.id or Settings.get_setting("events_delegated"):
-                            create_events_for_other_teams(team_id, current_day, managing_team = team_id == self.team.id)
+                if monday_moment > current_day and monday_moment <= stopDate:
+                    createEvents = True
+                    break
             current_day += timedelta(days = 1)
+
+        if createEvents:
+            team_list = list(teamIDs)
+            if not Settings.get_setting("events_delegated") and self.team.id in team_list:
+                team_list.remove(self.team.id)
+
+            max_workers = min(len(team_list) or 1, (os.cpu_count() or 4))
+            # time the event creation work
+            events_start = time.perf_counter()
+            with ThreadPoolExecutor(max_workers = max_workers) as ex:
+                self._logger.info("Preparing futures for creating calendar events (count=%d)", len(team_list))
+                futures = [ex.submit(create_events_for_other_teams, team_id, current_day, managing_team = team_id == self.team.id) for team_id in team_list]
+                self._logger.info("Prepared futures for creating calendar events")
+
+                for fut in as_completed(futures):
+                    try:
+                        fut.result()
+                        self._logger.info("Finished creating events for a team")
+                    except Exception:
+                        self._logger.exception("Calendar events worker raised an exception")
+            events_end = time.perf_counter()
+            events_elapsed = events_end - events_start
+            self._logger.info("Calendar events creation completed in %.3f seconds for %d teams", events_elapsed, len(team_list))
+
         self._logger.debug("Created/checked calendar events between %s and %s for %d teams", self.currDate, stopDate, len(teamIDs))
 
         # -------------------Figuring out intervals -------------------

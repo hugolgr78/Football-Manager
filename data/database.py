@@ -69,6 +69,10 @@ class DatabaseManager:
 
     def start_copy(self):
         """Create working copies of BOTH player DB and games DB, then switch connections to player copy."""
+
+        if self.copy_active:
+            return
+
         shutil.copy(self.original_path, self.copy_path)
         if os.path.exists(self.game_original):
             shutil.copy(self.game_original, self.game_copy)

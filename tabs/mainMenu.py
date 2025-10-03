@@ -255,6 +255,7 @@ class MainMenu(ctk.CTkFrame):
         dates.append(Emails.get_next_email(self.currDate).date)
         stopDate = min(dates)
         overallTimeInBetween = stopDate - self.currDate
+        print(stopDate)
         self._logger.debug("Computed stopDate=%s overallTimeInBetween=%s", stopDate, overallTimeInBetween)
 
         # ------------------- Creating calendar events for other teams -------------------
@@ -327,9 +328,10 @@ class MainMenu(ctk.CTkFrame):
                         fitness, sharpness = EVENT_CHANGES[event.event_type]
                         update_fitness_dict_values(playerFitnesses, fitness, 0, 100)
                         update_dict_values(playerSharpnesses, sharpness, 10, 100)
+                
+                PlayerBans.reduce_injuries_for_team(timeInBetween, stopDate, teamID)
         
             CalendarEvents.batch_update_events(eventsToUpdate)
-            PlayerBans.reduce_injuries_for_team(timeInBetween, stopDate, teamID)
             Players.batch_update_player_stats(playerFitnesses, playerSharpnesses, playerMorales)
 
             team_elapsed = time.perf_counter() - team_start

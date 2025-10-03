@@ -535,6 +535,13 @@ EVENING_EVENT_TIMES = (15, 18)
 
 EVENT_TIMES = [MORNING_EVENT_TIMES, AFTERNOON_EVENT_TIMES, EVENING_EVENT_TIMES]
 
+EVENT_CHANGES = {
+    "Light Training": (-5, 5),   
+    "Medium Training": (-12, 10),  
+    "Intense Training": (-20, 15),   
+    "Recovery": (20, 0),        
+}
+
 TEMPLATES_3 = [
     ["Intense Training", "Medium Training", "Light Training"],
     ["Medium Training", "Team Building", "Recovery"],

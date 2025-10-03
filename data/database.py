@@ -879,17 +879,18 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def update_morale_with_values(cls, team_id, morale_value):
+    def batch_update_morales_fixed(cls, morales):
         session = DatabaseManager().get_session()
         try:
-            players = session.query(Players).filter(Players.team_id == team_id).all()
-            for player in players:
-                player.morale += morale_value
-                player.morale = min(100, max(0, player.morale))
+            for morale in morales:
+                player = session.query(Players).filter(Players.id == morale[0]).first()
+                if player:
+                    player.morale = morale[1]
 
             session.commit()
         except Exception as e:
             session.rollback()
+            logger.exception("[DB ERROR] Batch update morales failed")
             raise e
         finally:
             session.close()
@@ -921,6 +922,40 @@ class Players(Base):
                 if player:
                     player.sharpness += sharpness[1]
                     player.sharpness = min(100, max(MIN_SHARPNESS, player.sharpness))
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.exception("[DB ERROR] Batch update sharpnesses failed")
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_update_sharpnesses_fixed(cls, sharpnesses):
+        session = DatabaseManager().get_session()
+        try:
+            for sharpness in sharpnesses:
+                player = session.query(Players).filter(Players.id == sharpness[0]).first()
+                if player:
+                    player.sharpness = sharpness[1]
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.exception("[DB ERROR] Batch update fitnesses failed")
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_update_fitnesses_fixed(cls, fitnesses):
+        session = DatabaseManager().get_session()
+        try:
+            for sharpness in fitnesses:
+                player = session.query(Players).filter(Players.id == sharpness[0]).first()
+                if player:
+                    player.fitness = sharpness[1]
 
             session.commit()
         except Exception as e:
@@ -3553,6 +3588,31 @@ class PlayerBans(Base):
             session.close()
 
     @classmethod
+    def reduce_injuries_for_team(cls, time, stopDate, teamID):
+        session = DatabaseManager().get_session()
+        try:
+            # Use the teamID parameter passed into the method (was using undefined team_id)
+            bans = session.query(PlayerBans).join(Players).filter(
+                PlayerBans.ban_type == "injury",
+                Players.team_id == teamID
+            ).all()
+
+            for ban in bans:
+                if ban.injury <= stopDate:
+                    session.delete(ban)
+                else:
+                    ban.injury -= time
+
+            session.commit()
+
+            return bans
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def remove_ban(cls, ban_id):
         session = DatabaseManager().get_session()
         try:
@@ -3762,7 +3822,7 @@ class CalendarEvents(Base):
     __tablename__ = 'calendar_events'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    event_type = Column(Enum("Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match Review", "Travel"), nullable = False)
+    event_type = Column(Enum("Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match Review", "Travel"))
     team_id = Column(String(128), ForeignKey('teams.id'))
     start_date = Column(DateTime, nullable = False)
     end_date = Column(DateTime, nullable = False)
@@ -3917,6 +3977,29 @@ class CalendarEvents(Base):
         try:
             event = session.query(CalendarEvents).filter(CalendarEvents.id == event_id).first()
             event.finished = True
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_update_events(cls, event_ids):
+        if not event_ids:
+            return
+
+        session = DatabaseManager().get_session()
+        try:
+            events = (
+                session.query(CalendarEvents)
+                .filter(CalendarEvents.id.in_(event_ids))
+                .all()
+            )
+
+            for event in events:
+                event.finished = True
+
             session.commit()
         except Exception as e:
             session.rollback()
@@ -4086,8 +4169,6 @@ class StatsManager:
                 Matches.league_id == league_id
             ).all()
             match_ids = [m.id for m in matches]
-            # Map match_id to home/away
-            match_team_map = {m.id: (m.home_id, m.away_id) for m in matches}
 
             # Get all penalty_goal and penalty_miss events in league
             events = session.query(
@@ -5880,6 +5961,8 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
 
         current_date += timedelta(days=1)
 
+    print(team_id, planned_events)
+
     # === SECOND PASS: fill in gaps and insert ===
     for day, events in planned_events.items():
         days_left = (end_date.date() - day).days
@@ -5893,29 +5976,28 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
                 events.append("Recovery")
                 weekly_usage["Recovery"] += 1
 
-        # Fill remaining slots up to 3
-        while len(events) < 3:
-            possible = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e] and e not in events]
-            if not possible:
-                break
-            choice = random.choice(possible)
-            events.append(choice)
-            weekly_usage[choice] += 1
+        # # Fill remaining slots up to 3
+        # while len(events) < 3:
+        #     possible = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e] and e not in events]
+        #     if not possible:
+        #         break
+        #     choice = random.choice(possible)
+        #     events.append(choice)
+        #     weekly_usage[choice] += 1
 
         # Insert into DB
         eventsToAdd = []
         for i, event in enumerate(events):
+            startHour, endHour = EVENT_TIMES[i]
+            startDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=startHour)
+            endDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=endHour)
 
-            if event:
-                startHour, endHour = EVENT_TIMES[i]
-                startDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=startHour)
-                endDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=endHour)
-                # CalendarEvents.add_event(team_id, event, startDate, endDate)
+            eventsToAdd.append(
+                (team_id, event, startDate, endDate, True if event == "Travel" else False)
+            )
 
-                eventsToAdd.append((team_id, event, startDate, endDate, True if event == "Travel" else False))
-
-        CalendarEvents.batch_add_events(eventsToAdd)
-
+        if len(eventsToAdd) != 0:
+            CalendarEvents.batch_add_events(eventsToAdd)
 
 def teamStrength(playerIDs, role, playerOBJs):
     if not playerIDs:

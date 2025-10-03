@@ -859,3 +859,63 @@ def getStatPlayer(stat, lineup, playerOBJs):
         case "Big chances created" | "Big chances missed":
             rating = random.uniform(BIG_CHANCE_CREATED_RATING[0], BIG_CHANCE_CREATED_RATING[1]) if stat == "Big chances created" else random.uniform(BIG_CHANCE_MISSED_RATING[0], BIG_CHANCE_MISSED_RATING[1])
             return choosePlayerFromDict(lineup, BIG_CHANCES_POSITIONS, playerOBJs), rating
+    
+def apply_attribute_changes(fitness_map, sharpness_map, time_in_between):
+
+    hours = int(time_in_between.total_seconds() // 3600)
+    if hours <= 0:
+        return
+
+    # factors
+    hourly_sharpness_decay = DAILY_SHARPNESS_DECAY / 24.0
+    sharpness_decay_factor = (1 - hourly_sharpness_decay) ** hours
+
+    hourly_fitness_recovery = DAILY_FITNESS_RECOVERY_RATE / 24.0
+    fitness_recovery_factor = (1 - hourly_fitness_recovery) ** hours
+
+    # update sharpness
+    for pid, sharpness in sharpness_map.items():
+        new_sharpness = sharpness * sharpness_decay_factor
+        if new_sharpness < MIN_SHARPNESS:
+            new_sharpness = MIN_SHARPNESS
+        sharpness_map[pid] = int(round(new_sharpness))
+
+    # update fitness
+    for pid, (fitness, injured) in fitness_map.items():
+        if injured:
+            continue  
+
+        new_fitness = 100 - (100 - fitness) * fitness_recovery_factor
+        fitness_map[pid] = [int(math.ceil(min(100, new_fitness))), injured]
+
+def update_dict_values(values_dict, amount, min_value = None, max_value = None):
+
+    for k, v in values_dict.items():
+        new_val = v + amount
+
+        if min_value is not None and new_val < min_value:
+            new_val = min_value
+        if max_value is not None and new_val > max_value:
+            new_val = max_value
+
+        values_dict[k] = int(round(new_val))
+
+    return values_dict
+
+def update_fitness_dict_values(values_dict, amount, min_value = None, max_value = None):
+
+    for k, (v, injured) in values_dict.items():
+
+        if injured:
+            continue
+
+        new_val = v + amount
+
+        if min_value is not None and new_val < min_value:
+            new_val = min_value
+        if max_value is not None and new_val > max_value:
+            new_val = max_value
+
+        values_dict[k] = [int(round(new_val)), injured]
+
+    return values_dict

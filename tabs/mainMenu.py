@@ -1,4 +1,4 @@
-import gc, traceback, logging, time, os, random, io
+import gc, traceback, logging, time, os, random, io, cProfile, pstats
 import customtkinter as ctk
 from settings import *
 from data.database import *
@@ -243,6 +243,9 @@ class MainMenu(ctk.CTkFrame):
 
             return matches
 
+        db = DatabaseManager()
+        db.start_copy()
+
         self.currDate = Game.get_game_date(self.manager_id)
         self._logger.debug("moveDate start - manager_id=%s currDate=%s", self.manager_id, self.currDate)
         teamIDs = Teams.get_all_teams()
@@ -272,9 +275,7 @@ class MainMenu(ctk.CTkFrame):
             if not Settings.get_setting("events_delegated") and self.team.id in team_list:
                 team_list.remove(self.team.id)
 
-            max_workers = min(len(team_list) or 1, (os.cpu_count() or 4))
-            # time the event creation work
-            events_start = time.perf_counter()
+            max_workers = len(team_list)
             with ThreadPoolExecutor(max_workers = max_workers) as ex:
                 self._logger.info("Preparing futures for creating calendar events (count=%d)", len(team_list))
                 futures = [ex.submit(create_events_for_other_teams, team_id, current_day, managing_team = team_id == self.team.id) for team_id in team_list]
@@ -286,9 +287,6 @@ class MainMenu(ctk.CTkFrame):
                         self._logger.info("Finished creating events for a team")
                     except Exception:
                         self._logger.exception("Calendar events worker raised an exception")
-            events_end = time.perf_counter()
-            events_elapsed = events_end - events_start
-            self._logger.info("Calendar events creation completed in %.3f seconds for %d teams", events_elapsed, len(team_list))
 
         self._logger.debug("Created/checked calendar events between %s and %s for %d teams", self.currDate, stopDate, len(teamIDs))
 
@@ -301,23 +299,78 @@ class MainMenu(ctk.CTkFrame):
         # ------------------- Update player attributes and carry out events -------------------
 
         self._logger.info("Starting player attribute updates and event processing across %d intervals", len(intervals))
-        for start, end in intervals:
-            timeInBetween = end - start
 
-            for teamID in teamIDs:
+        # Profile the event processing block and always write profile output to files.
+        profiler = cProfile.Profile()
+        profile_filename = None
+        profile_text_filename = None
+        profiler.enable()
+
+        # Start total timer for the whole event processing block
+        total_block_start = time.perf_counter()
+
+        for teamID in teamIDs:
+            team_start = time.perf_counter()
+            playerFitnesses = {player.id: [player.fitness, True if PlayerBans.get_player_injured(player.id) else False] for player in Players.get_all_players_by_team(teamID, youths = False)}
+            playerSharpnesses = {player.id: player.sharpness for player in Players.get_all_players_by_team(teamID, youths = False)}
+            playerMorales = {player.id: player.morale for player in Players.get_all_players_by_team(teamID, youths = False)}
+
+            for start, end in intervals:
+                timeInBetween = end - start
+
+                eventsToUpdate = []
                 events = CalendarEvents.get_events_dates(teamID, start, end)
 
                 if len(events) == 0:
                     self._logger.debug("No calendar events for team %s in interval %s - %s: updating sharpness/fitness", teamID, start, end)
-                    Players.update_sharpness_and_fitness(timeInBetween, teamID)
+                    apply_attribute_changes(playerFitnesses, playerSharpnesses, timeInBetween)
                     continue
 
                 for event in events:
-                    self._logger.debug("Carrying out event %s for team %s", event.id if hasattr(event, 'id') else event, teamID)
-                    self.carryOutEvent(event)
-                    CalendarEvents.update_event(event.id)
+                    eventsToUpdate.append(event.id)
+                    self._logger.debug("Carrying out event %s for team %s", event.event_type, teamID)
+                    if event.event_type == "Team Building":
+                        update_dict_values(playerMorales, 20, 0, 100)
+                    elif event.event_type in EVENT_CHANGES.keys():
+                        fitness, sharpness = EVENT_CHANGES[event.event_type]
+                        update_fitness_dict_values(playerFitnesses, fitness, 0, 100)
+                        update_dict_values(playerSharpnesses, sharpness, 10, 100)
+        
+            CalendarEvents.batch_update_events(eventsToUpdate)
+            PlayerBans.reduce_injuries_for_team(timeInBetween, stopDate, teamID)
 
-            PlayerBans.reduce_injuries(timeInBetween, stopDate)
+            fitntessToUpdate = [(playerID, v) for playerID, (v, _) in playerFitnesses.items()]
+            sharpnessesToUpdate = [(playerID, v) for playerID, v in playerSharpnesses.items()]
+            moralesToUpdate = [(playerID, v) for playerID, v in playerMorales.items()]
+
+            Players.batch_update_fitnesses_fixed(fitntessToUpdate)
+            Players.batch_update_sharpnesses_fixed(sharpnessesToUpdate)
+            Players.batch_update_morales_fixed(moralesToUpdate)
+
+            team_elapsed = time.perf_counter() - team_start
+            self._logger.info("Finished processing team %s in %.3f seconds", teamID, team_elapsed)
+
+        total_block_elapsed = time.perf_counter() - total_block_start
+        self._logger.info("Player attribute/event processing total time: %.3f seconds for %d teams", total_block_elapsed, len(teamIDs))
+
+        if profiler:
+            try:
+                profiler.disable()
+            except Exception:
+                pass
+            ts = int(time.time())
+            profile_filename = f"data/event_profile_{ts}.prof"
+            profile_text_filename = f"data/event_profile_{ts}.txt"
+            try:
+                profiler.dump_stats(profile_filename)
+                # write a human-readable top 50 by cumulative time
+                with open(profile_text_filename, 'w', encoding='utf-8') as f:
+                    ps = pstats.Stats(profiler, stream=f).strip_dirs().sort_stats('cumulative')
+                    ps.print_stats(50)
+            except Exception:
+                self._logger.exception("Failed to write profile output to %s and %s", profile_filename, profile_text_filename)
+            else:
+                self._logger.info("Wrote event profile data to %s and human report to %s", profile_filename, profile_text_filename)
 
         update_ages(self.currDate, stopDate)
         self._logger.debug("Updated player ages between %s and %s", self.currDate, stopDate)
@@ -400,28 +453,6 @@ class MainMenu(ctk.CTkFrame):
                     break
 
         return sorted(intervals)
-
-    def carryOutEvent(self, event):
-        team = Teams.get_team_by_id(event.team_id)
-        updateStats = True
-        match event.event_type:
-            case "Light Training":
-                Players.update_sharpness_and_fitness_with_values(team.id, -5, 5)
-                updateStats = False
-            case "Medium Training":
-                Players.update_sharpness_and_fitness_with_values(team.id, -12, 10)
-                updateStats = False
-            case "Intense Training":
-                Players.update_sharpness_and_fitness_with_values(team.id, -20, 15)
-                updateStats = False
-            case "Team Building":
-                Players.update_morale_with_values(team.id, random.randint(5, 10))
-            case "Recovery":
-                Players.update_sharpness_and_fitness_with_values(team.id, 20, 0)
-                updateStats = False
-
-        if updateStats:
-            Players.update_sharpness_and_fitness(event.end_date - event.start_date, team.id)
 
     def resetMenu(self):
         

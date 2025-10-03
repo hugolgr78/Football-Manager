@@ -4,3 +4,4 @@ utils/__pycache__/
 tabs/__pycache__/
 logs/
 venv/
+clear_logs.py

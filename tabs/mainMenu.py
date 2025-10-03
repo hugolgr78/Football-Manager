@@ -1,4 +1,4 @@
-import gc, traceback, logging, time, os, random, io, cProfile, pstats
+import gc, traceback, logging, time, os
 import customtkinter as ctk
 from settings import *
 from data.database import *
@@ -300,18 +300,10 @@ class MainMenu(ctk.CTkFrame):
 
         self._logger.info("Starting player attribute updates and event processing across %d intervals", len(intervals))
 
-        # Profile the event processing block and always write profile output to files.
-        profiler = cProfile.Profile()
-        profile_filename = None
-        profile_text_filename = None
-        profiler.enable()
-
-        # Start total timer for the whole event processing block
-        total_block_start = time.perf_counter()
-
         for teamID in teamIDs:
             team_start = time.perf_counter()
-            playerFitnesses = {player.id: [player.fitness, True if PlayerBans.get_player_injured(player.id) else False] for player in Players.get_all_players_by_team(teamID, youths = False)}
+            injuredPlayers = PlayerBans.get_team_injured_player_ids(teamID)
+            playerFitnesses = {player.id: [player.fitness, True if player.id in injuredPlayers else False] for player in Players.get_all_players_by_team(teamID, youths = False)}
             playerSharpnesses = {player.id: player.sharpness for player in Players.get_all_players_by_team(teamID, youths = False)}
             playerMorales = {player.id: player.morale for player in Players.get_all_players_by_team(teamID, youths = False)}
 
@@ -338,39 +330,10 @@ class MainMenu(ctk.CTkFrame):
         
             CalendarEvents.batch_update_events(eventsToUpdate)
             PlayerBans.reduce_injuries_for_team(timeInBetween, stopDate, teamID)
-
-            fitntessToUpdate = [(playerID, v) for playerID, (v, _) in playerFitnesses.items()]
-            sharpnessesToUpdate = [(playerID, v) for playerID, v in playerSharpnesses.items()]
-            moralesToUpdate = [(playerID, v) for playerID, v in playerMorales.items()]
-
-            Players.batch_update_fitnesses_fixed(fitntessToUpdate)
-            Players.batch_update_sharpnesses_fixed(sharpnessesToUpdate)
-            Players.batch_update_morales_fixed(moralesToUpdate)
+            Players.batch_update_player_stats(playerFitnesses, playerSharpnesses, playerMorales)
 
             team_elapsed = time.perf_counter() - team_start
             self._logger.info("Finished processing team %s in %.3f seconds", teamID, team_elapsed)
-
-        total_block_elapsed = time.perf_counter() - total_block_start
-        self._logger.info("Player attribute/event processing total time: %.3f seconds for %d teams", total_block_elapsed, len(teamIDs))
-
-        if profiler:
-            try:
-                profiler.disable()
-            except Exception:
-                pass
-            ts = int(time.time())
-            profile_filename = f"data/event_profile_{ts}.prof"
-            profile_text_filename = f"data/event_profile_{ts}.txt"
-            try:
-                profiler.dump_stats(profile_filename)
-                # write a human-readable top 50 by cumulative time
-                with open(profile_text_filename, 'w', encoding='utf-8') as f:
-                    ps = pstats.Stats(profiler, stream=f).strip_dirs().sort_stats('cumulative')
-                    ps.print_stats(50)
-            except Exception:
-                self._logger.exception("Failed to write profile output to %s and %s", profile_filename, profile_text_filename)
-            else:
-                self._logger.info("Wrote event profile data to %s and human report to %s", profile_filename, profile_text_filename)
 
         update_ages(self.currDate, stopDate)
         self._logger.debug("Updated player ages between %s and %s", self.currDate, stopDate)

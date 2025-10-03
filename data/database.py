@@ -879,21 +879,40 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def batch_update_morales_fixed(cls, morales):
+    def batch_update_player_stats(cls, playerFitnesses, playerSharpnesses, playerMorales):
+        """
+        Bulk update fitness, sharpness, and morale in a single call.
+
+        Parameters:
+        - playerFitnesses: dict {player_id: [fitness, injured_flag]}
+        - playerSharpnesses: dict {player_id: sharpness}
+        - playerMorales: dict {player_id: morale}
+        """
         session = DatabaseManager().get_session()
         try:
-            for morale in morales:
-                player = session.query(Players).filter(Players.id == morale[0]).first()
-                if player:
-                    player.morale = morale[1]
+            # Build a single list of mappings for all players
+            player_ids = set(playerFitnesses) | set(playerSharpnesses) | set(playerMorales)
+            mappings = []
+            for pid in player_ids:
+                mapping = {"id": pid}
+                if pid in playerFitnesses:
+                    mapping["fitness"] = playerFitnesses[pid][0]  # take the fitness value
+                if pid in playerSharpnesses:
+                    mapping["sharpness"] = playerSharpnesses[pid]
+                if pid in playerMorales:
+                    mapping["morale"] = playerMorales[pid]
+                mappings.append(mapping)
 
+            # Single bulk update call
+            session.bulk_update_mappings(Players, mappings)
             session.commit()
         except Exception as e:
             session.rollback()
-            logger.exception("[DB ERROR] Batch update morales failed")
+            logger.exception("[DB ERROR] Bulk update of player stats failed")
             raise e
         finally:
             session.close()
+
 
     @classmethod
     def batch_update_morales(cls, morales):
@@ -922,40 +941,6 @@ class Players(Base):
                 if player:
                     player.sharpness += sharpness[1]
                     player.sharpness = min(100, max(MIN_SHARPNESS, player.sharpness))
-
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            logger.exception("[DB ERROR] Batch update sharpnesses failed")
-            raise e
-        finally:
-            session.close()
-
-    @classmethod
-    def batch_update_sharpnesses_fixed(cls, sharpnesses):
-        session = DatabaseManager().get_session()
-        try:
-            for sharpness in sharpnesses:
-                player = session.query(Players).filter(Players.id == sharpness[0]).first()
-                if player:
-                    player.sharpness = sharpness[1]
-
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            logger.exception("[DB ERROR] Batch update fitnesses failed")
-            raise e
-        finally:
-            session.close()
-
-    @classmethod
-    def batch_update_fitnesses_fixed(cls, fitnesses):
-        session = DatabaseManager().get_session()
-        try:
-            for sharpness in fitnesses:
-                player = session.query(Players).filter(Players.id == sharpness[0]).first()
-                if player:
-                    player.fitness = sharpness[1]
 
             session.commit()
         except Exception as e:
@@ -3668,6 +3653,27 @@ class PlayerBans(Base):
             session.close()
 
     @classmethod
+    def get_team_injured_player_ids(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            # Get all player IDs in the team
+            player_ids = [p.id for p in Players.get_all_players_by_team(team_id, youths=False)]
+
+            # Fetch all injury bans for these players
+            bans = (
+                session.query(PlayerBans.player_id)
+                .filter(PlayerBans.player_id.in_(player_ids))
+                .filter(PlayerBans.ban_type == "injury")
+                .all()
+            )
+
+            # Return as a set of IDs
+            return {ban.player_id for ban in bans}
+        finally:
+            session.close()
+
+
+    @classmethod
     def get_all_non_banned_players_for_comp(cls, team_id, competition_id):
         session = DatabaseManager().get_session()
         try:
@@ -5960,8 +5966,6 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
             planned_events[current_date.date()] = events[:3]
 
         current_date += timedelta(days=1)
-
-    print(team_id, planned_events)
 
     # === SECOND PASS: fill in gaps and insert ===
     for day, events in planned_events.items():

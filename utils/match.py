@@ -310,7 +310,7 @@ class Match():
                     self.appendScore(1, True if side == "home" else False)
                 else:
                     goalType = "penalty_miss"
-            elif event == "own_goal":
+            elif goalType == "own_goal":
                 self.appendScore(1, False if side == "home" else True)
             else:
                 self.appendScore(1, True if side == "home" else False)
@@ -926,15 +926,17 @@ class Match():
     def saveData(self, managing_team = None, auto = True):
 
         logger = logging.getLogger(__name__)
+        # prepare a match id prefix for all logs in this method
+        prefix = f"[{getattr(self.match, 'id', None)}]:"
 
         try:
             currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
-            logger.debug(f"saveData START: match_id={self.match.id} auto={self.auto} managing_team={managing_team}")
+            logger.debug(f"{prefix} saveData START: match_id={self.match.id}, auto={self.auto}, managing_team={managing_team}, score = {self.score}")
 
             self.returnWinner()
-            logger.debug(f"Winner resolved: {self.winner.id if self.winner else None}")
+            logger.debug(f"{prefix} Winner resolved: {self.winner.id if self.winner else None}")
 
-            logger.debug(f"Reducing suspensions for home={self.homeTeam.id} away={self.awayTeam.id} league={self.match.league_id}")
+            logger.debug(f"{prefix} Reducing suspensions for home={self.homeTeam.id} away={self.awayTeam.id} league={self.match.league_id}")
             PlayerBans.reduce_suspensions_for_team(self.homeTeam.id, self.match.league_id)
             PlayerBans.reduce_suspensions_for_team(self.awayTeam.id, self.match.league_id)
 
@@ -942,7 +944,7 @@ class Match():
             awayManager = Managers.get_manager_by_id(self.awayTeam.manager_id)
 
             # debug counts
-            logger.debug(f"Processed events counts: home={len(self.homeProcessedEvents)} away={len(self.awayProcessedEvents)}")
+            logger.debug(f"{prefix} Processed events counts: home={len(self.homeProcessedEvents)} away={len(self.awayProcessedEvents)}")
 
             # If this is an automatic simulation run (worker/process), acquire the write lock
             # and switch the DatabaseManager connection to a shared per-manager copy so all
@@ -973,19 +975,19 @@ class Match():
                         except Exception:
                             pass
                         acquired_lock = True
-                        logger.debug("Acquired DB write lock %s", lockfile)
+                        logger.debug("%s Acquired DB write lock %s", prefix, lockfile)
                         break
                     except FileExistsError:
                         # wait a bit and retry
                         if attempt_lock % 10 == 0:
-                            logger.debug("Waiting for DB write lock %s (attempt %d)", lockfile, attempt_lock)
+                            logger.debug("%s Waiting for DB write lock %s (attempt %d)", prefix, lockfile, attempt_lock)
                         time.sleep(0.05)
                     except Exception as e:
-                        logger.exception("Unexpected error acquiring DB write lock: %s", e)
+                        logger.exception(f"{prefix} Unexpected error acquiring DB write lock: %s", e)
                         time.sleep(0.05)
 
                 if not acquired_lock:
-                    logger.error("Could not acquire DB write lock after %d attempts; aborting saveData for match %s", max_attempts, self.match.id)
+                    logger.error("%s Could not acquire DB write lock after %d attempts; aborting saveData for match %s", prefix, max_attempts, self.match.id)
                     return
 
                 # Perform DB writes while holding the lock. Ensure lock is always released and
@@ -1010,15 +1012,15 @@ class Match():
                     try:
                         dbm._connect(shared_copy_path)
                         dbm.copy_active = True
-                        logger.debug("Switched DB connection to shared copy %s for writing", shared_copy_path)
+                        logger.debug("%s Switched DB connection to shared copy %s for writing", prefix, shared_copy_path)
                     except Exception as e:
-                        logger.exception("Failed to connect to shared copy %s: %s", shared_copy_path, e)
+                        logger.exception(f"{prefix} Failed to connect to shared copy %s: %s", shared_copy_path, e)
 
                     # Submit DB update tasks to ThreadPoolExecutor
                     self.writeToDB(managing_team, homeManager, awayManager, currDate)
                     
                 except Exception as inner_e:
-                    logger.exception("Error while performing DB writes: %s", inner_e)
+                    logger.exception(f"{prefix} Error while performing DB writes: %s", inner_e)
                     raise
                 finally:
                     # Always release the lock and reconnect to the original DB
@@ -1032,9 +1034,9 @@ class Match():
                                 os.remove(lockfile)
                             except Exception:
                                 pass
-                            logger.debug("Released DB write lock %s", lockfile)
+                            logger.debug("%s Released DB write lock %s", prefix, lockfile)
                     except Exception as e:
-                        logger.debug("Failed during lock release: %s", e)
+                        logger.debug("%s Failed during lock release: %s", prefix, e)
 
                     # Reconnect DatabaseManager back to original DB path
                     try:
@@ -1051,25 +1053,27 @@ class Match():
                                 pass
                             dbm._connect(dbm.original_path)
                             dbm.copy_active = False
-                            logger.debug("Reconnected DatabaseManager to original DB %s", dbm.original_path)
+                            logger.debug("%s Reconnected DatabaseManager to original DB %s", prefix, dbm.original_path)
                     except Exception as e:
-                        logger.debug("Failed to reconnect to original DB: %s", e)
+                        logger.debug("%s Failed to reconnect to original DB: %s", prefix, e)
             else:
                 # Manual save: no cross-process locking or connection switching. Write directly
                 try:
                     self.writeToDB(managing_team, homeManager, awayManager, currDate)
                 except Exception as inner_e:
-                    logger.exception("Error while performing DB writes (manual save): %s", inner_e)
+                    logger.exception(f"{prefix} Error while performing DB writes (manual save): %s", inner_e)
                     raise
             
         except Exception as e:
-            logger.error(f"Exception in saveData: {str(e)}", exc_info = True)
+            logger.error(f"{prefix} Exception in saveData: {str(e)}", exc_info = True)
         finally:
             if self.auto:
                 self.timerThread_running = False
 
     def writeToDB(self, managing_team, homeManager, awayManager, currDate):
-        logger.debug("Submitting DB update tasks to ThreadPoolExecutor")
+        # prepare a match id prefix for logs in this method
+        prefix = f"[{getattr(self.match, 'id', None)}]:"
+        logger.debug(f"{prefix} Submitting DB update tasks to ThreadPoolExecutor")
         with concurrent.futures.ThreadPoolExecutor() as executor:
             futures = []
 
@@ -1127,19 +1131,19 @@ class Match():
                 if event["type"] == "goal":
                     events_to_add.append((self.match.id, "goal", minute, player_id))
                     events_to_add.append((self.match.id, "assist", minute, assister_id))
-                    logger.debug(f"Home goal event queued: match={self.match.id} player={player_id} minute={minute}")
+                    logger.debug(f"{prefix} Home goal event queued: match={self.match.id} player={player_id} minute={minute}")
                 elif event["type"] == "penalty_miss":
                     goalkeeper_id = event["keeper"]
                     events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
                     events_to_add.append((self.match.id, "penalty_saved", minute, goalkeeper_id))
-                    logger.debug(f"Home penalty miss queued: match={self.match.id} player={player_id} minute={minute}")
+                    logger.debug(f"{prefix} Home penalty miss queued: match={self.match.id} player={player_id} minute={minute}")
                 elif event["type"] == "substitution":
                     events_to_add.append((self.match.id, "sub_off", minute, player_off_id))
                     events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
                 elif event["type"] in ("injury", "red_card"):
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
                     ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
-                    logger.debug(f"Computed ban length={ban} for player={player_id} type={event['type']}")
+                    logger.debug(f"{prefix} Computed ban length={ban} for player={player_id} type={event['type']}")
                     sendEmail, _ = PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate)
 
                     if sendEmail:
@@ -1148,6 +1152,13 @@ class Match():
                             Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
                         elif managing_team == "home" and event["type"] == "red_card":
                             Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                elif event["type"] == "yellow_card":
+                    events_to_add.append((self.match.id, "yellow_card", minute, player_id))
+                    MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, YELLOW_THRESHOLD, Game.get_game_date(Managers.get_all_user_managers()[0].id))
+                    logger.debug(f"{prefix} Home yellow card queued: match={self.match.id} player={player_id} minute={minute}")
+                else:
+                    events_to_add.append((self.match.id, event["type"], minute, player_id))
+                    logger.debug(f"{prefix} Home event queued: event={event["type"]}, match={self.match.id}, player={player_id}, minute={minute}")
 
             for t, event in self.awayProcessedEvents.items():
                 player_id = event.get("player") or None
@@ -1169,19 +1180,19 @@ class Match():
                 if event["type"] == "goal":
                     events_to_add.append((self.match.id, "goal", minute, player_id))
                     events_to_add.append((self.match.id, "assist", minute, assister_id))
-                    logger.debug(f"Away goal event queued: match={self.match.id} player={player_id} minute={minute}")
+                    logger.debug(f"{prefix} Away goal event queued: match={self.match.id} player={player_id} minute={minute}")
                 elif event["type"] == "penalty_miss":
                     goalkeeper_id = event["keeper"]
                     events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
                     events_to_add.append((self.match.id, "penalty_saved", minute, goalkeeper_id))
-                    logger.debug(f"Away penalty miss queued: match={self.match.id} player={player_id} minute={minute}")
+                    logger.debug(f"{prefix} Away penalty miss queued: match={self.match.id} player={player_id} minute={minute}")
                 elif event["type"] == "substitution":
                     events_to_add.append((self.match.id, "sub_off", minute, player_off_id))
                     events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
                 elif event["type"] in ("injury", "red_card"):
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
                     ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
-                    logger.debug(f"Computed ban length={ban} for player={player_id} type={event['type']}")
+                    logger.debug(f"{prefix} Computed ban length={ban} for player={player_id} type={event['type']}")
                     sendEmail, _ = PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate)
 
                     if sendEmail:
@@ -1190,6 +1201,13 @@ class Match():
                             Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
                         elif managing_team == "away" and event["type"] == "red_card":
                             Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                elif event["type"] == "yellow_card":
+                    events_to_add.append((self.match.id, "yellow_card", minute, player_id))
+                    MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, YELLOW_THRESHOLD, Game.get_game_date(Managers.get_all_user_managers()[0].id))
+                    logger.debug(f"{prefix} Away yellow card queued: match={self.match.id} player={player_id} minute={minute}")
+                else:
+                    events_to_add.append((self.match.id, event["type"], minute, player_id))
+                    logger.debug(f"{prefix} Away event queued: event={event["type"]}, match={self.match.id}, player={player_id}, minute={minute}")
                             
             if self.homeCleanSheet:
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"]))
@@ -1198,23 +1216,23 @@ class Match():
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"]))
 
             if len(events_to_add) > 0:
-                logger.debug(f"Submitting {len(events_to_add)} match events for insertion")
+                logger.debug(f"{prefix} Submitting {len(events_to_add)} match events for insertion")
                 futures.append(executor.submit(MatchEvents.batch_add_events, events_to_add))
 
             # Matches update
-            logger.debug(f"Submitting match score update: {self.score[0]} -> {self.score[1]}")
+            logger.debug(f"{prefix} Submitting match score update: {self.score[0]} : {self.score[1]}")
             futures.append(executor.submit(Matches.update_score, self.match.id, self.score[0], self.score[1]))
 
             # Players updates
             fitness_to_update = []
-            logger.debug("Preparing player fitness updates")
+            logger.debug(f"{prefix} Preparing player fitness updates")
             for playerID, fitness in self.homeFitness.items():
                 fitness_to_update.append((playerID, round(fitness)))
 
             for playerID, fitness in self.awayFitness.items():
                 fitness_to_update.append((playerID, round(fitness)))
 
-            logger.debug(f"Submitting fitness updates for {len(fitness_to_update)} players")
+            logger.debug(f"{prefix} Submitting fitness updates for {len(fitness_to_update)} players")
             futures.append(executor.submit(Players.batch_update_fitness, fitness_to_update))
 
             # Lineups and morales
@@ -1412,12 +1430,12 @@ class Match():
                     )
 
             # submit morales update
-            logger.debug(f"Submitting {len(morales_to_update)} morale updates")
+            logger.debug(f"{prefix} Submitting {len(morales_to_update)} morale updates")
             futures.append(executor.submit(Players.batch_update_morales, morales_to_update))
             futures.append(executor.submit(Players.batch_update_sharpnesses, sharpnesses_to_update))
 
             # extra debug: how many rating entries we will store
-            logger.debug(f"Ratings stored: home={len(self.homeRatings)} away={len(self.awayRatings)}")
+            logger.debug(f"{prefix} Ratings stored: home={len(self.homeRatings)} away={len(self.awayRatings)}")
 
             # Stats
             stats_to_add = []
@@ -1444,17 +1462,17 @@ class Match():
                     stats_to_add.append((self.match.id, stat, data, None, self.awayTeam.id))
 
             if len(stats_to_add) > 0:
-                logger.debug(f"Submitting {len(stats_to_add)} match stats for insertion")
+                logger.debug(f"{prefix} Submitting {len(stats_to_add)} match stats for insertion")
                 futures.append(executor.submit(MatchStats.batch_add_stats, stats_to_add))
 
             # debug total DB tasks
-            logger.debug(f"Total DB tasks submitted: {len(futures)}")
+            logger.debug(f"{prefix} Total DB tasks submitted: {len(futures)}")
 
-            logger.debug(f"Submitting {len(lineups_to_add)} lineups for insertion")
+            logger.debug(f"{prefix} Submitting {len(lineups_to_add)} lineups for insertion")
             futures.append(executor.submit(TeamLineup.batch_add_lineups, lineups_to_add))
 
             concurrent.futures.wait(futures)
-            logger.debug("All DB futures completed")
+            logger.debug(f"{prefix} All DB futures completed")
 
     def getGameTime(self, playerID, events):
         sub_off_time = None
@@ -1547,9 +1565,6 @@ class Match():
         else:
             self.score[1] += value
 
-    def getEvents(self):
-        return self.homeEvents, self.awayEvents
-    
     def setRatingsBoost(self, team):
         self.ratingsBoost = team
     

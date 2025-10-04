@@ -509,22 +509,23 @@ def ownGoalFoulWeight(p):
     base = 0.5 * ability_factor + 0.5 * sharpness_factor
     return max(base, 0.01)  # avoid zero probability
 
-def fitnessWeight(p, fitness):
+def fitnessWeight(fitness):
     # Low fitness → higher chance
     fitness_factor = (100 - fitness) / 100.0
     return max(fitness_factor, 0.01)  # avoid 0 prob
 
 def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
     attackRatio = attackingLevel / max(1, defendingLevel)
-    attackModifier = min(((avgSharpness / 100 + avgMorale / 100)) ** 0.5, 1.2)
 
-    # Dampening factor so even matchups (attackRatio ~= 1) produce lower goal
-    # probabilities. ratio_factor is in (0..1), ~0.5 for attackRatio==1.
+    # Sharpness has less weight now
+    combined_form = (0.25 * (avgSharpness / 100)) + (0.75 * (avgMorale / 100))
+    attackModifier = min(combined_form ** 0.5, 1.05)
+
+    # Dampening factor for even matchups
     ratio_factor = attackRatio / (attackRatio + 1) if attackRatio > 0 else 0.5
 
-    # Make attackRatio more influential than attackModifier. Use a weighted
-    # combination so that attackRatio dominates the effective attacking input.
-    weight_ratio = 0.75
+    # Attack ratio dominates
+    weight_ratio = 0.8
     weight_modifier = 1 - weight_ratio
     effective_attack = attackRatio * weight_ratio + attackModifier * weight_modifier
 
@@ -532,29 +533,28 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
         if oppKeeper.position == "goalkeeper":
             keeperModifier = (oppKeeper.current_ability / 200) * (oppKeeper.sharpness / 100)
 
-            # Reduce keeper impact slightly on shot/on-target but keep it strong
-            shot_base = BASE_SHOT * effective_attack
-            shotProb = shot_base * (1 - keeperModifier * 0.4)
-            shotProb = min(max(shotProb, 0.05), MAX_SHOT_PROB)
+            # Much lower shot base now
+            shot_base = BASE_SHOT * effective_attack * 0.4
+            shotProb = shot_base * (1 - keeperModifier * 0.3)
+            shotProb = min(max(shotProb, 0.01), MAX_SHOT_PROB)  # very low floor
 
-            onTarget_base = BASE_ON_TARGET * effective_attack
-            onTargetProb = onTarget_base * (1 - keeperModifier * 0.4)
-            onTargetProb = min(max(onTargetProb, 0.20), MAX_TARGET_PROB)
+            onTarget_base = BASE_ON_TARGET * effective_attack * 0.7
+            onTargetProb = onTarget_base * (1 - keeperModifier * 0.25)
+            onTargetProb = min(max(onTargetProb, 0.10), MAX_TARGET_PROB)
 
-            # Damp goal probability for even matchups via ratio_factor and scale
             goal_base = BASE_GOAL * effective_attack * ratio_factor
             goalProb = goal_base * (1 - keeperModifier)
             goalProb = min(max(goalProb, 0.01), MAX_GOAL_PROB)
         else:
-            # Outfield player in goal - use effective_attack so ratio remains influential
-            shotProb = min(max(BASE_SHOT * effective_attack * 1.2, 0.15), 0.7)
-            onTargetProb = min(max(BASE_ON_TARGET * effective_attack * 1.2, 0.40), 0.8)
-            goalProb = min(max(BASE_GOAL * effective_attack * 1.5, 0.50), 0.9)
+            # Outfield keeper (more shots, but still tuned down)
+            shotProb = min(max(BASE_SHOT * effective_attack * 0.6, 0.08), 0.55)
+            onTargetProb = min(max(BASE_ON_TARGET * effective_attack * 0.9, 0.25), 0.7)
+            goalProb = min(max(BASE_GOAL * effective_attack * 1.2, 0.35), 0.8)
     else:
-        # No keeper present: use effective_attack to weight ratio higher
-        shotProb = min(max(BASE_SHOT * effective_attack * 1.5, 0.25), 0.75)
-        onTargetProb = min(max(BASE_ON_TARGET * effective_attack * 1.5, 0.60), 0.85)
-        goalProb = min(max(BASE_GOAL * effective_attack * 2.0, 0.80), 0.95)
+        # No keeper
+        shotProb = min(max(BASE_SHOT * effective_attack * 0.7, 0.15), 0.6)
+        onTargetProb = min(max(BASE_ON_TARGET * effective_attack * 1.0, 0.40), 0.75)
+        goalProb = min(max(BASE_GOAL * effective_attack * 1.5, 0.65), 0.9)
 
     # Final distribution
     pNothing   = 1 - shotProb
@@ -565,7 +565,8 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
     events = ["nothing", "Shots", "Shots on target", "goal"]
     probs  = [pNothing, pShotOff, pShotSaved, pGoal]
 
-    return random.choices(events, weights = probs, k = 1)[0]
+    return random.choices(events, weights=probs, k=1)[0]
+
 
 def foulChances(avgSharpnessWthKeeper, severity):
     severity_map = {"low": 0.8, "medium": 1.0, "high": 1.2}

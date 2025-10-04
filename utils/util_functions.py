@@ -567,7 +567,6 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
 
     return random.choices(events, weights=probs, k=1)[0]
 
-
 def foulChances(avgSharpnessWthKeeper, severity):
     severity_map = {"low": 0.8, "medium": 1.0, "high": 1.2}
     severity = severity_map.get(severity, 1.0)
@@ -601,6 +600,9 @@ def foulChances(avgSharpnessWthKeeper, severity):
     return random.choices(events, weights = probs, k = 1)[0]
 
 def injuryChances(avgFitness):
+
+    if avgFitness == 0:
+        return
 
     injuryProb = BASE_INJURY * (100 / avgFitness)
     injuryProb = min(max(injuryProb, 0.0001), MAX_INJURY_PROB)

@@ -255,12 +255,12 @@ class MainMenu(ctk.CTkFrame):
         dates.append(Emails.get_next_email(self.currDate).date)
         stopDate = min(dates)
         overallTimeInBetween = stopDate - self.currDate
-        print(stopDate)
         self._logger.debug("Computed stopDate=%s overallTimeInBetween=%s", stopDate, overallTimeInBetween)
 
         # ------------------- Creating calendar events for other teams -------------------
         self._logger.info("Starting calendar events generation from %s to %s", self.currDate, stopDate)
         
+        # Checking if we are going past a monday at 8.59am
         current_day = self.currDate
         createEvents = False
         while current_day.date() <= stopDate.date():

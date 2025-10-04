@@ -709,7 +709,7 @@ class Match():
 
             elif event["type"] == "injury":
 
-                weights = [fitnessWeight(player, fitness[player.id]) for player in players_dict.values()]
+                weights = [fitnessWeight(fitness[player.id]) for player in players_dict.values()]
 
                 injuredPlayerID = random.choices(list(players_dict.values()), weights = weights, k = 1)[0].id
                 event["player"] = injuredPlayerID

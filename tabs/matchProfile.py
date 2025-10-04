@@ -1034,5 +1034,5 @@ class MatchProfile(ctk.CTkFrame):
 
             text = f"{homeValue} / {awayValue}"
 
-            ctk.CTkLabel(self.statsFrame, text = statName, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = currRow, column = currCol, sticky = "w", padx = 10)
+            ctk.CTkLabel(self.statsFrame, text = statName, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = currRow, column = currCol, sticky = "w", padx = 8)
             ctk.CTkLabel(self.statsFrame, text = text, font = (APP_FONT_BOLD, 14), fg_color = GREY_BACKGROUND).grid(row = currRow, column = currCol + 1, sticky = "nsew", padx = 5)

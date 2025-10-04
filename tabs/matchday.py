@@ -963,13 +963,13 @@ class MatchDay(ctk.CTkFrame):
 
         # ------------------ SUBSTITUTIONS ------------------
         if not teamMatch:
-            subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness, playerOBJs)
+            subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness, playerOBJs, ratings)
             for _ in range(len(subsChosen)):
                 eventsToAdd.append("substitution")
 
         else:
             if (self.home and side == "away") or (not self.home and side == "home"):
-                subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness, playerOBJs)
+                subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness, playerOBJs, ratings)
                 for _ in range(len(subsChosen)):
                     eventsToAdd.append("substitution")
 

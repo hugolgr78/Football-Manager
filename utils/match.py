@@ -343,7 +343,7 @@ class Match():
             eventsToAdd.append(event)
 
         # ------------------ SUBSTITUTIONS ------------------
-        subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, self.minutes, fitness, playerOBJs)
+        subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, self.minutes, fitness, playerOBJs, ratings)
 
         for _ in range(len(subsChosen)):
             eventsToAdd.append("substitution")

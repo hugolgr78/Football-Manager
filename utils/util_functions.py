@@ -613,12 +613,12 @@ def injuryChances(avgFitness):
 
     return random.choices(events, weights = probs, k = 1)[0]
 
-def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness, playerOBJs):
+def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness, playerOBJs, ratings):
     subsAvailable = MAX_SUBS - subsMade
     if subsAvailable <= 0:
         return []
 
-    candidates = get_sub_candidates(lineup, currMinute, events, fitness)
+    candidates = get_sub_candidates(lineup, currMinute, events, fitness, ratings)
 
     if not candidates:
         return []
@@ -636,7 +636,7 @@ def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness, pla
 
     return chosen
 
-def get_sub_candidates(lineup, currMinute, events, fitness):
+def get_sub_candidates(lineup, currMinute, events, fitness, ratings):
     candidates = []
     for pos, playerID in lineup.items():
         played_minutes = currMinute
@@ -647,7 +647,7 @@ def get_sub_candidates(lineup, currMinute, events, fitness):
                 break
 
         if played_minutes >= 30:  # don’t sub too early
-            prob = sub_probability(fitness[playerID])
+            prob = sub_probability(fitness[playerID], ratings[playerID])
             if prob > 0:
                 candidates.append((prob, playerID, pos))
 
@@ -705,24 +705,33 @@ def find_substitute(lineup, candidates, subs, num_to_sub, playerOBJs):
                         break
 
             if replacement_id:
-                # player off id, old position, player on id, new position, reason
                 chosen.append((playerID, pos, replacement_id, replacement_pos, reason))
                 subs.remove(replacement_id)
 
     return chosen
 
-def sub_probability(fitness: float) -> float:
+def sub_probability(fitness: float, rating: float) -> float:
+    # Base probability from fitness
     if fitness > 50:
-        return 0.0
+        base_prob = 0.0
     elif fitness > 20:
         # scales 50 -> 0%, 20 -> 60%
-        return (50 - fitness) / 30 * 0.6
+        base_prob = (50 - fitness) / 30 * 0.6
     elif fitness > 10:
         # scales 20 -> 60%, 10 -> 85%
-        return 0.6 + (20 - fitness) / 10 * 0.25
+        base_prob = 0.6 + (20 - fitness) / 10 * 0.25
     else:
         # below 10 -> 85–100%
-        return 0.85 + (10 - max(fitness, 0)) / 10 * 0.15
+        base_prob = 0.85 + (10 - max(fitness, 0)) / 10 * 0.15
+
+    # Rating adjustment (assume 1–10 scale)
+    # Rating < 5 increases chance, rating > 5 decreases chance
+    # Clamp between -0.2 and +0.2 for balance
+    rating_adjustment = (5 - rating) * 0.04  # 1 rating point ≈ 4% effect
+    prob = base_prob + rating_adjustment
+
+    # Clamp to [0, 1]
+    return max(0.0, min(1.0, prob))
     
 def getPasses(homeOBJs, awayOBJs):
 

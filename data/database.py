@@ -508,6 +508,7 @@ class Teams(Base):
             return team.manager_id
         finally:
             session.close()
+            
 class Players(Base):
     __tablename__ = 'players'
 
@@ -1244,15 +1245,19 @@ class Matches(Base):
 
     @classmethod
     def add_all_matches(cls, leagues):
+        def assign_times_for_day(games, time_slots):
+            for game in games:
+                chosen_time = random.choice(time_slots)
+                yield game, chosen_time  
+
         session = DatabaseManager().get_session()
         try:
             matches_dict = []
 
             for league in leagues:
-                print(f"START -- Creating matches for league {league.name}")
                 schedule = []
                 referees = Referees.get_all_referees_by_league(league.id)
-                team_ids = [t.id for t in LeagueTeams.get_teams_by_league(league.id)]
+                team_ids = [t.team_id for t in LeagueTeams.get_teams_by_league(league.id)]
                 league_id = league.id
 
                 # --- Generate the first round of matches ---
@@ -1351,7 +1356,6 @@ class Matches(Base):
                             "date": kickoff_datetime,
                         })
                 updateProgress(None)
-                print(f"END -- Created matches for league {league.name}, len of matches dict: {len(matches_dict)}")
 
             session.bulk_insert_mappings(Matches, matches_dict)
             session.commit()
@@ -2872,6 +2876,7 @@ class LeagueTeams(Base):
 
             for league in leagues:
                 teams = get_all_league_teams(data, league.name)
+                teams.sort(key = lambda x: x["name"])
 
                 for i, team in enumerate(teams):
                     league_teams_dict.append({

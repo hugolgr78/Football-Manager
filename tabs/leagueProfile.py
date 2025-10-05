@@ -107,7 +107,7 @@ class Profile(ctk.CTkFrame):
         else:
             # Use any manager from the league
             leagueTeam = LeagueTeams.get_teams_by_league(self.league.id)[0]
-            leagueManager = Teams.get_manager_by_team(leagueTeam.id)
+            leagueManager = Teams.get_manager_by_team(leagueTeam.team_id)
             self.tableFrame.defineManager(leagueManager.id)
 
         self.tableFrame.addLeagueTable()

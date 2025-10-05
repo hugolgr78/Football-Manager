@@ -1,5 +1,7 @@
 __pycache__/
 data/__pycache__/
+data/remove_white_border_pixels.py
+data/interstellar_logos.png
 utils/__pycache__/
 tabs/__pycache__/
 logs/

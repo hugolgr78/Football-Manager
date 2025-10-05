@@ -315,7 +315,11 @@ class StartMenu(ctk.CTkFrame):
         self.teamsFrame.grid_propagate(False)
 
         for i, team in enumerate(self.teamsJson):
-            path = os.path.join("Images/Teams", team["name"] + ".png")
+
+            if i > 19:
+                return
+
+            path = team["logo"]
 
             src = Image.open(path)
             max_width, max_height = 75, 75 

@@ -1,0 +1,194 @@
+[
+    {
+        "name": "Cryonese Primera",
+        "logo": "Images/Leagues\\Cryonese_Primera.png",
+        "promotion": 0,
+        "relegation": 3
+    },
+    {
+        "name": "Cryonese Segunda",
+        "logo": "Images/Leagues\\Cryonese_Primera.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Cryonese Tercera",
+        "logo": "Images/Leagues\\Cryonese_Primera.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Cryonese Cuarta",
+        "logo": "Images/Leagues\\Cryonese_Primera.png",
+        "promotion": 3,
+        "relegation": 0
+    },
+    {
+        "name": "Vorlis Liga",
+        "logo": "Images/Leagues\\Vorlis_Liga.png",
+        "promotion": 0,
+        "relegation": 3
+    },
+    {
+        "name": "Vorlis National",
+        "logo": "Images/Leagues\\Vorlis_Liga.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Vorlis Continental",
+        "logo": "Images/Leagues\\Vorlis_Liga.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Vorlis Regional",
+        "logo": "Images/Leagues\\Vorlis_Liga.png",
+        "promotion": 3,
+        "relegation": 0
+    },
+    {
+        "name": "Zephyra Pro",
+        "logo": "Images/Leagues\\Zephyra_Pro.png",
+        "promotion": 0,
+        "relegation": 3
+    },
+    {
+        "name": "Zephyra Challenge",
+        "logo": "Images/Leagues\\Zephyra_Pro.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Zephyra Series",
+        "logo": "Images/Leagues\\Zephyra_Pro.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Zephyra B",
+        "logo": "Images/Leagues\\Zephyra_Pro.png",
+        "promotion": 3,
+        "relegation": 0
+    },
+    {
+        "name": "Tauron Premier",
+        "logo": "Images/Leagues\\Tauron_Premier.png",
+        "promotion": 0,
+        "relegation": 3
+    },
+    {
+        "name": "Tauron Elite",
+        "logo": "Images/Leagues\\Tauron_Premier.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Tauron Division 2",
+        "logo": "Images/Leagues\\Tauron_Premier.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Tauron Division 3",
+        "logo": "Images/Leagues\\Tauron_Premier.png",
+        "promotion": 3,
+        "relegation": 0
+    },
+    {
+        "name": "Nerathoul",
+        "logo": "Images/Leagues\\Nerathoul.png",
+        "promotion": 0,
+        "relegation": 3
+    },
+    {
+        "name": "Nerathoul Prime",
+        "logo": "Images/Leagues\\Nerathoul.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Nerathoul Ascend",
+        "logo": "Images/Leagues\\Nerathoul.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Nerathoul Minor",
+        "logo": "Images/Leagues\\Nerathoul.png",
+        "promotion": 3,
+        "relegation": 0
+    },
+    {
+        "name": "Ecliptus",
+        "logo": "Images/Leagues\\Ecliptus.png",
+        "promotion": 0,
+        "relegation": 3
+    },
+    {
+        "name": "Ecliptus B",
+        "logo": "Images/Leagues\\Ecliptus.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Ecliptus C",
+        "logo": "Images/Leagues\\Ecliptus.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Ecliptus D",
+        "logo": "Images/Leagues\\Ecliptus.png",
+        "promotion": 3,
+        "relegation": 0
+    },
+    {
+        "name": "Lyraxis",
+        "logo": "Images/Leagues\\Lyraxis.png",
+        "promotion": 0,
+        "relegation": 3
+    },
+    {
+        "name": "Lyraxis Nova",
+        "logo": "Images/Leagues\\Lyraxis.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Lyraxis Minor",
+        "logo": "Images/Leagues\\Lyraxis.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Lyraxis Rising",
+        "logo": "Images/Leagues\\Lyraxis.png",
+        "promotion": 3,
+        "relegation": 0
+    },
+    {
+        "name": "Solarion",
+        "logo": "Images/Leagues\\Solarion.png",
+        "promotion": 0,
+        "relegation": 3
+    },
+    {
+        "name": "Solarion 2",
+        "logo": "Images/Leagues\\Solarion.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Solarion 3",
+        "logo": "Images/Leagues\\Solarion.png",
+        "promotion": 3,
+        "relegation": 3
+    },
+    {
+        "name": "Solarion 4",
+        "logo": "Images/Leagues\\Solarion.png",
+        "promotion": 3,
+        "relegation": 0
+    }
+]

@@ -208,7 +208,7 @@ class Managers(Base):
                 updateProgress(2)
                 Referees.add_referees()
                 updateProgress(3)
-                League.add_league(LEAGUE_NAME, FIRST_YEAR, 0, 3)
+                League.add_leagues()
                 Emails.add_emails(managerID)
                 CalendarEvents.add_travel_events(managerID)
                 Settings.add_settings()
@@ -332,7 +332,7 @@ class Teams(Base):
                 stadium = team['stadium']
                 strength = team['strength']
 
-                with open(f"Images/Teams/{name}.png", 'rb') as file:
+                with open(team["logo"], 'rb') as file:
                     logo = file.read()
 
                 if name != chosenTeamName:
@@ -2623,37 +2623,47 @@ class League(Base):
     relegation = Column(Integer, nullable = False)
 
     @classmethod
-    def add_league(cls, name, year, promotion, relegation):
+    def add_leagues(cls):
         session = DatabaseManager().get_session()
         try:
-            with open(f"Images/{name}.png", 'rb') as file:
-                logo = file.read()
+            with open("data/leagues.json", 'r') as file:
+                data = json.load(file)
 
-            new_league = League(
-                id = str(uuid.uuid4()),
-                name = name,
-                year = year,
-                logo = logo,
-                promotion = promotion,
-                relegation = relegation
-            )
+            for league in data:
+                name = league["name"]
+                promotion = league["promotion"]
+                relegation = league["relegation"]
 
-            leagueID = new_league.id
+                with open(league["logo"], 'rb') as file:
+                    logo = file.read()
 
-            session.add(new_league)
-            session.commit()
+                new_league = League(
+                    id = str(uuid.uuid4()),
+                    name = name,
+                    year = 2024,
+                    logo = logo,
+                    promotion = promotion,
+                    relegation = relegation
+                )
 
-            updateProgress(None)
+                leagueID = new_league.id
 
-            teams = Teams.get_all_teams()
+                session.add(new_league)
+                session.commit()
 
-            for i, teamID in enumerate(teams):
-                LeagueTeams.add_team(leagueID, teamID, i + 1)
                 updateProgress(None)
 
-            updateProgress(4)
+                teams = get_all_league_teams(name)
+                teams.sort(key = lambda x: x["name"])
 
-            cls.generate_schedule(teams, leagueID)
+                for i, team in enumerate(teams):
+                    teamID = Teams.get_team_by_name(team["name"]).id
+                    LeagueTeams.add_team(leagueID, teamID, i + 1)
+                    updateProgress(None)
+
+                cls.generate_schedule(teams, leagueID)
+
+            updateProgress(4)
 
             return new_league
         except Exception as e:

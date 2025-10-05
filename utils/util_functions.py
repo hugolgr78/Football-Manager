@@ -1,8 +1,6 @@
-import calendar
+import calendar, math, random, json
 from datetime import timedelta
 from settings import *
-import random
-import math
 
 def get_objective_for_level(teamAverages, teamID):
     sorted_teams = sorted(teamAverages.items(), key = lambda x: x[1]["avg_ca"], reverse = True)
@@ -931,3 +929,15 @@ def update_fitness_dict_values(values_dict, amount, min_value = None, max_value 
         values_dict[k] = [int(round(new_val)), injured]
 
     return values_dict
+
+def get_all_league_teams(jsonData, leagueName):
+    teamOBJs = []
+
+    with open("data/leagues.json", 'r') as file:
+        data = json.load(file)
+
+    for team in data:
+        if team["league"] == leagueName:
+            teamOBJs.append(team)
+
+    return teamOBJs

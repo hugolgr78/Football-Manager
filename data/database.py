@@ -1,4 +1,4 @@
-import re, datetime, os, shutil, time, gc
+import re, datetime, os, shutil, time, gc, logging
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
@@ -12,6 +12,8 @@ from settings import *
 from utils.util_functions import *
 
 Base = declarative_base()
+
+logger = logging.getLogger(__name__)
 
 progressBar = None
 progressLabel = None
@@ -67,6 +69,10 @@ class DatabaseManager:
 
     def start_copy(self):
         """Create working copies of BOTH player DB and games DB, then switch connections to player copy."""
+
+        if self.copy_active:
+            return
+
         shutil.copy(self.original_path, self.copy_path)
         if os.path.exists(self.game_original):
             shutil.copy(self.game_original, self.game_copy)
@@ -123,7 +129,7 @@ class DatabaseManager:
                     try:
                         os.remove(path)
                     except PermissionError as e:
-                        print(f"[DB DEBUG] Could not delete {path}: {e}")
+                        logger.debug("[DB DEBUG] Could not delete %s: %s", path, e)
 
             # Reconnect to the original
             self._connect(self.original_path)
@@ -261,6 +267,9 @@ class Managers(Base):
                 session.commit()
             else:
                 return None
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
             session.close()
 
@@ -874,20 +883,40 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def update_morale_with_values(cls, team_id, morale_value):
+    def batch_update_player_stats(cls, playerFitnesses, playerSharpnesses, playerMorales):
+        """
+        Bulk update fitness, sharpness, and morale in a single call.
+
+        Parameters:
+        - playerFitnesses: dict {player_id: [fitness, injured_flag]}
+        - playerSharpnesses: dict {player_id: sharpness}
+        - playerMorales: dict {player_id: morale}
+        """
         session = DatabaseManager().get_session()
         try:
-            players = session.query(Players).filter(Players.team_id == team_id).all()
-            for player in players:
-                player.morale += morale_value
-                player.morale = min(100, max(0, player.morale))
+            # Build a single list of mappings for all players
+            player_ids = set(playerFitnesses) | set(playerSharpnesses) | set(playerMorales)
+            mappings = []
+            for pid in player_ids:
+                mapping = {"id": pid}
+                if pid in playerFitnesses:
+                    mapping["fitness"] = playerFitnesses[pid][0]  # take the fitness value
+                if pid in playerSharpnesses:
+                    mapping["sharpness"] = playerSharpnesses[pid]
+                if pid in playerMorales:
+                    mapping["morale"] = playerMorales[pid]
+                mappings.append(mapping)
 
+            # Single bulk update call
+            session.bulk_update_mappings(Players, mappings)
             session.commit()
         except Exception as e:
             session.rollback()
+            logger.exception("[DB ERROR] Bulk update of player stats failed")
             raise e
         finally:
             session.close()
+
 
     @classmethod
     def batch_update_morales(cls, morales):
@@ -902,6 +931,7 @@ class Players(Base):
             session.commit()
         except Exception as e:
             session.rollback()
+            logger.exception("[DB ERROR] Batch update morales failed")
             raise e
         finally:
             session.close()
@@ -919,6 +949,7 @@ class Players(Base):
             session.commit()
         except Exception as e:
             session.rollback()
+            logger.exception("[DB ERROR] Batch update sharpnesses failed")
             raise e
         finally:
             session.close()
@@ -1077,6 +1108,7 @@ class Players(Base):
             session.commit()
         except Exception as e:
             session.rollback()
+            logger.exception("[DB ERROR] Batch update fitness failed")
             raise e
         finally:
             session.close()
@@ -1349,6 +1381,10 @@ class Matches(Base):
                 session.commit()
             else:
                 return None
+        except Exception as e:
+            session.rollback()
+            logger.exception("[DB ERROR] Update match score failed")
+            raise e
         finally:
             session.close()
 
@@ -1590,6 +1626,7 @@ class TeamLineup(Base):
             session.commit()
         except Exception as e:
             session.rollback()
+            logger.exception("Error in batch_add_lineups: %s", e)
             raise e
         finally:
             session.close()
@@ -1848,6 +1885,7 @@ class MatchEvents(Base):
             session.commit()
         except Exception as e:
             session.rollback()
+            logger.exception("Error in batch_add_events: %s", e)
             raise e
         finally:
             session.close()
@@ -2355,6 +2393,224 @@ class MatchEvents(Base):
         finally:
             session.close()
 
+class MatchStats(Base):
+    __tablename__ = 'match_stats'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    match_id = Column(String(128), ForeignKey('matches.id'))
+    stat_type = Column(Enum(*SAVED_STATS), nullable = False)
+    value = Column(Integer, nullable = False)
+    player_id = Column(String(128), ForeignKey('players.id'))
+    team_id = Column(String(128), ForeignKey('teams.id'))
+
+    @classmethod
+    def add_stat(cls, match_id, stat_type, value, player_id = None, team_id = None):
+        session = DatabaseManager().get_session()
+        try:
+            new_stat = MatchStats(
+                match_id = match_id,
+                stat_type = stat_type,
+                value = value,
+                player_id = player_id,
+                team_id = team_id
+            )
+            session.add(new_stat)
+            session.commit()
+            return new_stat
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+    
+    @classmethod
+    def batch_add_stats(cls, stats):
+        session = DatabaseManager().get_session()
+        try:
+            # Create a list of dictionaries representing each stat
+            stat_dicts = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "match_id": stat[0],
+                    "stat_type": stat[1],
+                    "value": stat[2],
+                    "player_id": stat[3],
+                    "team_id": stat[4]
+                }
+                for stat in stats
+            ]
+
+            # Use session.execute with an insert statement
+            session.execute(insert(MatchStats), stat_dicts)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.exception("Error in batch_add_stats: %s", e)
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_stat_by_id(cls, id):
+        session = DatabaseManager().get_session()
+        try:
+            stat = session.query(MatchStats).filter(MatchStats.id == id).first()
+            return stat
+        finally:
+            session.close()
+
+    @classmethod
+    def get_stats_by_match(cls, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            stats = session.query(MatchStats).filter(MatchStats.match_id == match_id).all()
+            return stats
+        finally:
+            session.close()
+    
+    @classmethod
+    def get_stats_by_player(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            stats = session.query(MatchStats).filter(MatchStats.player_id == player_id).all()
+            return stats
+        finally:
+            session.close()
+
+    @classmethod
+    def get_stat_by_players(cls, league_id, stat_type):
+        session = DatabaseManager().get_session()
+        try:
+            MatchAlias = aliased(Matches)
+            stats = (
+                session.query(
+                    MatchStats.player_id,
+                    func.sum(MatchStats.value).label('stat_count')
+                )
+                .join(MatchAlias, MatchStats.match_id == MatchAlias.id)
+                .filter(
+                    MatchAlias.league_id == league_id,
+                    MatchStats.stat_type == stat_type
+                )
+                .group_by(MatchStats.player_id)
+                .having(func.sum(MatchStats.value) > 0)
+                .order_by(func.sum(MatchStats.value).desc())
+                .all()
+            )
+            return stats
+        finally:
+            session.close()
+
+    @classmethod
+    def get_team_stats_in_match(cls, match_id, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            # Read team-level stats directly (there should be at most one stored value per stat_type)
+            team_agg = (
+                session.query(
+                    MatchStats.stat_type,
+                    MatchStats.value
+                )
+                .filter(
+                    MatchStats.match_id == match_id,
+                    MatchStats.team_id == team_id,
+                    MatchStats.player_id == None
+                )
+                .all()
+            )
+
+            # Aggregate player-level stats per stat_type for players who belong to this team
+            # and actually participated in the match (i.e., appear in TeamLineup for the match).
+            player_agg = (
+                session.query(
+                    MatchStats.stat_type,
+                    func.coalesce(func.sum(MatchStats.value), 0).label('total')
+                )
+                .join(Players, MatchStats.player_id == Players.id)
+                .join(TeamLineup, TeamLineup.player_id == MatchStats.player_id)
+                .filter(
+                    MatchStats.match_id == match_id,
+                    TeamLineup.match_id == match_id,
+                    Players.team_id == team_id,
+                    MatchStats.player_id != None
+                )
+                .group_by(MatchStats.stat_type)
+                .all()
+            )
+
+            # Combine both aggregations into a dict { stat_type: total }
+            # One stat ("xG") is a float while the rest are integers. Keep types consistent
+            totals = defaultdict(int)
+            for s_type, value in team_agg:
+                if s_type == "xG":
+                    totals[s_type] = round(float(value or 0.0), 2)
+                else:
+                    totals[s_type] = int(value or 0)
+
+            for s_type, total in player_agg:
+                totals[s_type] += int(total or 0)
+
+            # Ensure all known saved stats are present with a zero default for predictable UI ordering
+            for s in SAVED_STATS:
+                if s == "xG":
+                    totals.setdefault(s, 0.0)
+                else:
+                    totals.setdefault(s, 0)
+
+            return dict(totals)
+        finally:
+            session.close()
+
+    @classmethod
+    def get_all_players_for_stat(cls, league_id, stat_type):
+        session = DatabaseManager().get_session()
+        try:
+            PlayerAlias = aliased(Players)
+            MatchAlias = aliased(Matches)
+            # Sum the stored stat values for each player (some stats may be stored per-row)
+            rows = session.query(
+                MatchStats.player_id,
+                PlayerAlias.first_name,
+                PlayerAlias.last_name,
+                func.coalesce(func.sum(MatchStats.value), 0).label('total')
+            ).join(
+                PlayerAlias, MatchStats.player_id == PlayerAlias.id
+            ).join(
+                MatchAlias, MatchStats.match_id == MatchAlias.id
+            ).filter(
+                MatchStats.stat_type == stat_type,
+                MatchAlias.league_id == league_id
+            ).group_by(
+                MatchStats.player_id,
+                PlayerAlias.first_name,
+                PlayerAlias.last_name
+            ).having(
+                func.sum(MatchStats.value) > 0
+            ).order_by(
+                func.sum(MatchStats.value).desc()
+            ).all()
+            return rows
+        finally:
+            session.close()
+
+    @classmethod
+    def get_team_stat_in_match(cls, match_id, team_id, stat_type):
+        session = DatabaseManager().get_session()
+        try:
+            # Sum team-level stats for the specific stat_type (team entries where player_id is NULL)
+            team_total = (
+                session.query(MatchStats)
+                .filter(
+                    MatchStats.match_id == match_id,
+                    MatchStats.team_id == team_id,
+                    MatchStats.player_id == None,
+                    MatchStats.stat_type == stat_type
+                ).first()
+            )
+
+            return team_total
+        finally:
+            session.close()
 class League(Base):
     __tablename__ = 'leagues'
     
@@ -2678,6 +2934,10 @@ class LeagueTeams(Base):
                 session.commit()
             else:
                 return None
+        except Exception as e:
+            session.rollback()
+            logger.exception("Error in update_team: %s", e)
+            raise e
         finally:
             session.close()
 
@@ -3317,6 +3577,31 @@ class PlayerBans(Base):
             session.close()
 
     @classmethod
+    def reduce_injuries_for_team(cls, time, stopDate, teamID):
+        session = DatabaseManager().get_session()
+        try:
+            # Use the teamID parameter passed into the method (was using undefined team_id)
+            bans = session.query(PlayerBans).join(Players).filter(
+                PlayerBans.ban_type == "injury",
+                Players.team_id == teamID
+            ).all()
+
+            for ban in bans:
+                if ban.injury <= stopDate:
+                    session.delete(ban)
+                else:
+                    ban.injury -= time
+
+            session.commit()
+
+            return bans
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def remove_ban(cls, ban_id):
         session = DatabaseManager().get_session()
         try:
@@ -3370,6 +3655,27 @@ class PlayerBans(Base):
             return is_injured
         finally:
             session.close()
+
+    @classmethod
+    def get_team_injured_player_ids(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            # Get all player IDs in the team
+            player_ids = [p.id for p in Players.get_all_players_by_team(team_id, youths=False)]
+
+            # Fetch all injury bans for these players
+            bans = (
+                session.query(PlayerBans.player_id)
+                .filter(PlayerBans.player_id.in_(player_ids))
+                .filter(PlayerBans.ban_type == "injury")
+                .all()
+            )
+
+            # Return as a set of IDs
+            return {ban.player_id for ban in bans}
+        finally:
+            session.close()
+
 
     @classmethod
     def get_all_non_banned_players_for_comp(cls, team_id, competition_id):
@@ -3526,7 +3832,7 @@ class CalendarEvents(Base):
     __tablename__ = 'calendar_events'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    event_type = Column(Enum("Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match Review", "Travel"), nullable = False)
+    event_type = Column(Enum("Light Training", "Medium Training", "Intense Training", "Team Building", "Recovery", "Match Preparation", "Match Review", "Travel"))
     team_id = Column(String(128), ForeignKey('teams.id'))
     start_date = Column(DateTime, nullable = False)
     end_date = Column(DateTime, nullable = False)
@@ -3681,6 +3987,29 @@ class CalendarEvents(Base):
         try:
             event = session.query(CalendarEvents).filter(CalendarEvents.id == event_id).first()
             event.finished = True
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_update_events(cls, event_ids):
+        if not event_ids:
+            return
+
+        session = DatabaseManager().get_session()
+        try:
+            events = (
+                session.query(CalendarEvents)
+                .filter(CalendarEvents.id.in_(event_ids))
+                .all()
+            )
+
+            for event in events:
+                event.finished = True
+
             session.commit()
         except Exception as e:
             session.rollback()
@@ -3850,8 +4179,6 @@ class StatsManager:
                 Matches.league_id == league_id
             ).all()
             match_ids = [m.id for m in matches]
-            # Map match_id to home/away
-            match_team_map = {m.id: (m.home_id, m.away_id) for m in matches}
 
             # Get all penalty_goal and penalty_miss events in league
             events = session.query(
@@ -4783,6 +5110,74 @@ class StatsManager:
         return results
 
     @staticmethod
+    def get_highest_possession(leagueTeams, league_id):
+        results = []
+        for team in leagueTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+            highest_possession = 0
+            for match in matches:
+                possession_stat = (
+                    MatchStats.get_team_stat_in_match(match.id, team.team_id, "Possession")
+                )
+                if possession_stat:
+                    highest_possession = max(highest_possession, possession_stat.value)
+            results.append((team.team_id, highest_possession))
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
+    @staticmethod
+    def get_lowest_possession(leagueTeams, league_id):
+        results = []
+        for team in leagueTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+            lowest_possession = 100
+            for match in matches:
+                possession_stat = (
+                    MatchStats.get_team_stat_in_match(match.id, team.team_id, "Possession")
+                )
+                if possession_stat:
+                    lowest_possession = min(lowest_possession, possession_stat.value)
+            if lowest_possession == 100:
+                lowest_possession = 0
+            results.append((team.team_id, lowest_possession))
+        results.sort(key=lambda x: x[1])
+        return results
+
+    @staticmethod
+    def get_highest_xg(leagueTeams, league_id):
+        results = []
+        for team in leagueTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+            highest_xg = 0
+            for match in matches:
+                xg_stat = (
+                    MatchStats.get_team_stat_in_match(match.id, team.team_id, "xG")
+                )
+                if xg_stat:
+                    highest_xg = max(highest_xg, xg_stat.value)
+            results.append((team.team_id, highest_xg))
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
+    @staticmethod
+    def get_lowest_xg(leagueTeams, league_id):
+        results = []
+        for team in leagueTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+            lowest_xg = float('inf')
+            for match in matches:
+                xg_stat = (
+                    MatchStats.get_team_stat_in_match(match.id, team.team_id, "xG")
+                )
+                if xg_stat:
+                    lowest_xg = min(lowest_xg, xg_stat.value)
+            if lowest_xg == float('inf'):
+                lowest_xg = 0
+            results.append((team.team_id, lowest_xg))
+        results.sort(key=lambda x: x[1])
+        return results
+
+    @staticmethod
     def get_team_stats(teamID, league_id, leagueTeams, functions):
 
         def get_prefix(rank):
@@ -4818,7 +5213,7 @@ class StatsManager:
                     except Exception:
                         stat_results[stat_name] = None
         except Exception as e:
-            print(e)
+            logger.exception("Error running stat threads: %s", e)
 
         # # Run slow stats (each in its own thread, but sequentially after fast stats)
         # for stat_name, stat_func in slow_items:
@@ -5109,15 +5504,14 @@ def searchResults(search, limit = SEARCH_LIMIT):
     finally:
         session.close()
 
-def getDefaultLineup(team, league, opponent_id):
+def getDefaultLineup(players, youths):
     bestLineup = None
     bestScore = 0
 
-    players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
     sortedPlayers = sorted(players, key = lambda p: effective_ability(p), reverse = True)
 
     for _, positions in FORMATIONS_POSITIONS.items():
-        _, _, lineup = score_formation(sortedPlayers, positions, opponent_id, league.league_id)
+        _, _, lineup = score_formation(sortedPlayers, positions, youths)
         formationScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
         if formationScore > bestScore:
             bestScore = formationScore
@@ -5131,8 +5525,11 @@ def getPredictedLineup(opponent_id, currDate):
     league = LeagueTeams.get_league_by_team(team.id)
     matches = Matches.get_team_last_5_matches(team.id, currDate)
 
+    available_players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
+    youths = PlayerBans.get_all_non_banned_youth_players_for_comp(team.id, league.league_id)
+
     if len(matches) == 0:
-        bestLineup = getDefaultLineup(team, league, opponent_id)
+        bestLineup = getDefaultLineup(available_players, youths)
         return bestLineup
 
     # Step 1: Find the most used formation
@@ -5151,11 +5548,8 @@ def getPredictedLineup(opponent_id, currDate):
 
     most_used_formation = max(formation_counts.items(), key = lambda x: x[1])[0] if formation_counts else None
     if not most_used_formation:
-        bestLineup = getDefaultLineup(team, league, opponent_id)
+        bestLineup = getDefaultLineup(available_players, youths)
         return bestLineup
-
-    # Step 2: Get all available players (excluding banned/injured)
-    available_players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
     
     # Step 3: For each position in the formation, find most started player
     predicted_lineup = {}
@@ -5170,7 +5564,7 @@ def getPredictedLineup(opponent_id, currDate):
 
         if not position_players:
             # Get a youth player if no senior players are available
-            youth = getYouthPlayer(team.id, position, league.league_id, predicted_lineup.values())
+            youth = getYouthPlayer(position, predicted_lineup.values(), youths)
             if youth:
                 predicted_lineup[position] = youth
         else:
@@ -5197,7 +5591,13 @@ def getPredictedLineup(opponent_id, currDate):
 
     return predicted_lineup
 
-def getProposedLineup(team_id, opponent_id, comp_id, currDate):
+def getProposedLineup(team_id, opponent_id, comp_id, currDate, players = None, youths = None):
+    if not players:
+        players = PlayerBans.get_all_non_banned_players_for_comp(team_id, comp_id)
+    
+    if not youths:
+        youths = PlayerBans.get_all_non_banned_youth_players_for_comp(team_id, comp_id)
+
     predictedLineup = getPredictedLineup(opponent_id, currDate)
 
     attackingScore = 0
@@ -5210,7 +5610,6 @@ def getProposedLineup(team_id, opponent_id, comp_id, currDate):
         elif position in ATTACKING_POSITIONS:
             attackingScore += effective_ability(player)
 
-    players = PlayerBans.get_all_non_banned_players_for_comp(team_id, comp_id)
     sortedPlayers = sorted(players, key = lambda p: effective_ability(p), reverse = True)
 
     bestLineup = None
@@ -5218,7 +5617,7 @@ def getProposedLineup(team_id, opponent_id, comp_id, currDate):
     lineupPositions = None
 
     for _, positions in FORMATIONS_POSITIONS.items():
-        aScore, dScore, lineup = score_formation(sortedPlayers, positions, team_id, comp_id)
+        aScore, dScore, lineup = score_formation(sortedPlayers, positions, youths)
         if not lineup:
             continue  # skip incomplete formations
 
@@ -5237,7 +5636,7 @@ def getProposedLineup(team_id, opponent_id, comp_id, currDate):
     if not bestLineup:
         bestScore = -1
         for _, positions in FORMATIONS_POSITIONS.items():
-            _, _, lineup = score_formation(sortedPlayers, positions, team_id, comp_id)
+            _, _, lineup = score_formation(sortedPlayers, positions, youths)
             formationScore = sum(effective_ability(p) for p in sortedPlayers if p.id in lineup.values())
             if formationScore > bestScore:
                 bestScore = formationScore
@@ -5257,7 +5656,7 @@ def parse_formation_key(key: str):
 
     return defenders, mids, attackers
 
-def score_formation(sortedPlayers, positions, teamID, compID):
+def score_formation(sortedPlayers, positions, youths):
     lineup = {}
     used = set()
 
@@ -5277,7 +5676,7 @@ def score_formation(sortedPlayers, positions, teamID, compID):
         candidates = [p for p in position_candidates[pos] if p.id not in used]
         
         if not candidates:
-            youthID = getYouthPlayer(teamID, pos, compID, lineup.values())
+            youthID = getYouthPlayer(pos, lineup.values(), youths)
 
             if not youthID:
                 return -1, {}
@@ -5321,8 +5720,7 @@ def score_formation(sortedPlayers, positions, teamID, compID):
 
     return attackingScore, defendingScore, lineup
 
-def getYouthPlayer(teamID, position, compID, players):
-    youthPlayers = PlayerBans.get_all_non_banned_youth_players_for_comp(teamID, compID)
+def getYouthPlayer(position, players, youthPlayers):
     available_youths = []
 
     if youthPlayers:
@@ -5333,14 +5731,13 @@ def getYouthPlayer(teamID, position, compID, players):
     available_youths.sort(key = effective_ability, reverse = True)
     return available_youths[0].id if available_youths else None
 
-def effective_ability(p):
-    # weights: morale 20%, fitness 40%, sharpness 40%
-    weighted = (0.2 * p.morale + 0.4 * p.fitness + 0.4 * p.sharpness) / 100.0
-    multiplier = 0.75 + (weighted * 0.5)
-    return p.current_ability * multiplier
+def getSubstitutes(teamID, lineup, compID, allPlayers, allYouths):
+    if not allPlayers:
+        allPlayers = PlayerBans.get_all_non_banned_players_for_comp(teamID, compID)
 
-def getSubstitutes(teamID, lineup, compID):
-    allPlayers = PlayerBans.get_all_non_banned_players_for_comp(teamID, compID)
+    if not allYouths:
+        allYouths = PlayerBans.get_all_non_banned_youth_players_for_comp(teamID, compID)
+
     usedPlayers = set(lineup.values())
     substitutes = []
 
@@ -5381,7 +5778,7 @@ def getSubstitutes(teamID, lineup, compID):
 
     # --- Pick subs as we go ---
     if pick_sub(goalkeepers, 1, DEFENSIVE_POSITIONS) < 1:
-        youthID = getYouthPlayer(teamID, "Goalkeeper", compID, substitutes)
+        youthID = getYouthPlayer("Goalkeeper", substitutes, allYouths)
         if youthID:
             substitutes.append(youthID)
             covered_positions.add("Goalkeeper")
@@ -5391,7 +5788,7 @@ def getSubstitutes(teamID, lineup, compID):
             uncovered_positions = [p for p in DEFENDER_POSITIONS if p not in covered_positions]
             if uncovered_positions:
                 specific_position = random.choice(uncovered_positions)
-                youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
+                youthID = getYouthPlayer(specific_position, substitutes, allYouths)
                 if youthID:
                     substitutes.append(youthID)
                     covered_positions.add(specific_position)
@@ -5401,7 +5798,7 @@ def getSubstitutes(teamID, lineup, compID):
             uncovered_positions = [p for p in MIDFIELD_POSITIONS if p not in covered_positions]
             if uncovered_positions:
                 specific_position = random.choice(uncovered_positions)
-                youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
+                youthID = getYouthPlayer(specific_position, substitutes, allYouths)
                 if youthID:
                     substitutes.append(youthID)
                     covered_positions.add(specific_position)
@@ -5411,7 +5808,7 @@ def getSubstitutes(teamID, lineup, compID):
             uncovered_positions = [p for p in FORWARD_POSITIONS if p not in covered_positions]
             if uncovered_positions:
                 specific_position = random.choice(uncovered_positions)
-                youthID = getYouthPlayer(teamID, specific_position, compID, substitutes)
+                youthID = getYouthPlayer(specific_position, substitutes, allYouths)
                 if youthID:
                     substitutes.append(youthID)
                     covered_positions.add(specific_position)
@@ -5426,7 +5823,7 @@ def getSubstitutes(teamID, lineup, compID):
     # Final fallback: fill remaining slots with youth players if still not full
     while len(substitutes) < 7:
         pos_choice = random.choice(DEFENSIVE_POSITIONS + MIDFIELD_POSITIONS + FORWARD_POSITIONS)
-        youthID = getYouthPlayer(teamID, pos_choice, compID, substitutes)
+        youthID = getYouthPlayer(pos_choice, substitutes, allYouths)
         if youthID:
             substitutes.append(youthID)
         else:
@@ -5587,29 +5984,36 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
                 events.append("Recovery")
                 weekly_usage["Recovery"] += 1
 
-        # Fill remaining slots up to 3
-        while len(events) < 3:
-            possible = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e] and e not in events]
-            if not possible:
-                break
-            choice = random.choice(possible)
-            events.append(choice)
-            weekly_usage[choice] += 1
+        # # Fill remaining slots up to 3
+        # while len(events) < 3:
+        #     possible = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e] and e not in events]
+        #     if not possible:
+        #         break
+        #     choice = random.choice(possible)
+        #     events.append(choice)
+        #     weekly_usage[choice] += 1
 
         # Insert into DB
+        eventsToAdd = []
         for i, event in enumerate(events):
             startHour, endHour = EVENT_TIMES[i]
             startDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=startHour)
             endDate = datetime.datetime.combine(day, datetime.datetime.min.time()).replace(hour=endHour)
-            CalendarEvents.add_event(team_id, event, startDate, endDate)
 
-def teamStrength(playerIDs, role):
+            eventsToAdd.append(
+                (team_id, event, startDate, endDate, True if event == "Travel" else False)
+            )
+
+        if len(eventsToAdd) != 0:
+            CalendarEvents.batch_add_events(eventsToAdd)
+
+def teamStrength(playerIDs, role, playerOBJs):
     if not playerIDs:
         return 0
     
     weights = []
     for pid in playerIDs:
-        p = Players.get_player_by_id(pid)
+        p = playerOBJs[pid]
         ability = p.current_ability
 
         # attackers scale harder when more of them

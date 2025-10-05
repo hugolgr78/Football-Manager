@@ -2,5 +2,6 @@ __pycache__/
 data/__pycache__/
 utils/__pycache__/
 tabs/__pycache__/
-data/reset database.sqlite3-query
+logs/
 venv/
+clear_logs.py

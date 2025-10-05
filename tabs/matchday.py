@@ -2,10 +2,11 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
-from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame, SubstitutePlayer, FormGraph, InGamePlayerFrame
+from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame, SubstitutePlayer, FormGraph, InGamePlayerFrame, InGameStatFrame
 from utils.shouts import ShoutFrame
 from utils.util_functions import *
 import threading, time
+import logging
 from PIL import Image, ImageTk
 import math
 
@@ -86,6 +87,7 @@ class MatchDay(ctk.CTkFrame):
         self.homePlayersFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 460, fg_color = GREY_BACKGROUND)
         self.homePlayersFrame.pack_propagate(False)
         self.homeStatsFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 460, fg_color = GREY_BACKGROUND)
+        self.homeStatsFrame.pack_propagate(False)
 
         self.awayDropDown = ctk.CTkComboBox(
             self.teamMatchFrame,
@@ -109,6 +111,7 @@ class MatchDay(ctk.CTkFrame):
         self.awayPlayersFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 460, fg_color = GREY_BACKGROUND)
         self.awayPlayersFrame.pack_propagate(False)
         self.awayStatsFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 460, fg_color = GREY_BACKGROUND)
+        self.awayStatsFrame.pack_propagate(False)
 
         self.homeSubstituteFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 180, fg_color = GREY_BACKGROUND)
         self.homeSubstituteFrame.place(relx = 0.02, rely = 0.73, anchor = "nw")
@@ -162,7 +165,10 @@ class MatchDay(ctk.CTkFrame):
             InGamePlayerFrame(frame, playerID, 220, 18, GREY_BACKGROUND)
 
     def createStatsFrame(self, frame):
-        pass
+        stats = self.matchFrame.matchInstance.homeStats if frame == self.homeStatsFrame else self.matchFrame.matchInstance.awayStats
+
+        for stat in stats.keys():
+            InGameStatFrame(frame, stat, 220, 17, GREY_BACKGROUND)
 
     def changeData(self, side, selection):
 
@@ -260,9 +266,11 @@ class MatchDay(ctk.CTkFrame):
         self.oppositionLineup = self.matchFrame.matchInstance.awayCurrentLineup if self.home else self.matchFrame.matchInstance.homeCurrentLineup
         oppositionSubstitutes = self.matchFrame.matchInstance.awayCurrentSubs if self.home else self.matchFrame.matchInstance.homeCurrentSubs
 
+        self.matchFrame.matchInstance.setUpRatings()
+
         for position, playerID, in self.teamLineup.items():
             player = Players.get_player_by_id(playerID)
-            teamPitch.addPlayer(position, player.last_name)
+            teamPitch.addPlayer(position, player.last_name, matchday = True)
 
         for i, playerID in enumerate(self.teamSubstitutes):
             player = Players.get_player_by_id(playerID)
@@ -271,7 +279,7 @@ class MatchDay(ctk.CTkFrame):
 
         for position, playerID in self.oppositionLineup.items():
             player = Players.get_player_by_id(playerID)
-            oppPitch.addPlayer(position, player.last_name)
+            oppPitch.addPlayer(position, player.last_name, matchday = True)
 
         for i, playerID in enumerate(oppositionSubstitutes):
             player = Players.get_player_by_id(playerID)
@@ -324,12 +332,16 @@ class MatchDay(ctk.CTkFrame):
             
             currTime = self.timeLabel.cget("text")
 
-            # After HT, once the player hits Resume
+            """
+            HALF TIME - After Half time, once the player hits the "Resume" button.
+            - Reset the time to 45:00
+            - Reset all the score labels to what they were before HT
+            - Allow shouts and substitutions again
+            """
             if currTime == "HT":
                 minutes = 45
                 seconds = 0
 
-                # reset all the score labels as they were before HT
                 for frame in self.otherMatchesFrame.winfo_children():
                     if frame.matchInstance:
                         frame.HTLabel(place = False)
@@ -345,12 +357,33 @@ class MatchDay(ctk.CTkFrame):
                 minutes = int(currTime[0])
                 seconds = int(currTime[1])
 
+            """
+            TIMER - Update the time every tick based on the speed selected
+            """
             if seconds == 59:
                 minutes += 1
                 seconds = 0
             else:
                 seconds += 1
 
+            """
+            SHOUTS - Reset the shout button to enabled 10 minutes after the last shout
+            """
+            if minutes == self.lastShout + 10 and seconds == 0:
+                self.shoutsButton.configure(state = "normal")
+
+            """
+            SUBSTITUTIONS - Remove substitution button a minute before the end of the match
+            """
+            if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
+                self.substitutionButton.configure(state = "disabled")
+
+            """
+            FITNESS - Every 90 seconds, reduce the fitness of every player on the pitch
+            - Reduce fitness of players who are currently on the pitch for team game as well as other matches
+            - Reduce fitness based on player's fitness attribute and current fitness level (lower fitness = lower drop)
+            - Update the fitness icon and text in the player frames if the players frame is currently being shown
+            """
             total_seconds = minutes * 60 + seconds
             if total_seconds % 90 == 0:
                 for frame in self.otherMatchesFrame.winfo_children():
@@ -405,10 +438,12 @@ class MatchDay(ctk.CTkFrame):
                             fitness = self.matchFrame.matchInstance.awayFitness[playerID]
                             frame.updateFitness(fitness)
 
-            if minutes == self.lastShout + 10 and seconds == 0:
-                self.shoutsButton.configure(state = "normal")
-
-            ## ----------- half time ------------
+            """
+            HALF TIME - First Half time procedure
+            - Calculate extra time for every match based on events that have happened (team match and other matches)
+            - Get the maximum extra time from all matches and set that as the extra time for the first half
+            - Display the extra time label in the time frame
+            """
             if minutes == 45 and seconds == 0:
 
                 ## extra time
@@ -475,14 +510,20 @@ class MatchDay(ctk.CTkFrame):
                 self.matchDataFrame.update_idletasks()
                 self.matchDataFrame._parent_canvas.yview_moveto(1)
 
-            ## Half time for every time now
+            """
+            HALF TIME - Second Half time procedure
+            - Display the extra time label in the time frame
+            - Call the half time talks function to display the half time frame
+            - If the max time is reached, set half time to false and stop the timer
+            - Add HT labels to every match if not already there
+            - Remove the extra time label from the time frame
+            """
             if self.halfTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
                 if minutes == 45 + self.maxExtraTimeHalf and seconds == 0:
                     self.timerThread_running = False
                     self.halfTimeTalks()
 
-                    ## Add HT labels if they are not already there
                     for frame in self.otherMatchesFrame.winfo_children():
                         if not frame.halfTimeLabel.winfo_ismapped() and frame.matchInstance:
                             frame.HTLabel()
@@ -495,7 +536,12 @@ class MatchDay(ctk.CTkFrame):
                     self.halfTime = False
                     self.halfTimeEnded = True
 
-            ## ----------- full time ------------
+            """
+            FULL TIME - First Full time procedure
+            - Calculate extra time for every match based on events that have happened (team match and other matches)
+            - Get the maximum extra time from all matches and set that as the extra time for the full time
+            - Display the extra time label in the time frame
+            """
             if minutes == 90 and seconds == 0:
                
                 self.fullTime = True
@@ -562,6 +608,14 @@ class MatchDay(ctk.CTkFrame):
                 self.matchDataFrame.update_idletasks()
                 self.matchDataFrame._parent_canvas.yview_moveto(1)
 
+            """
+            FULL TIME - Second Full time procedure
+            - Display the extra time label in the time frame
+            - If the max time is reached, set full time to false and stop the timer
+            - Add FT labels to every match if not already there
+            - Remove the extra time label from the time frame
+            - Ensure the Full Time label is placed at the end of the match data frame
+            """
             if self.fullTime:
                 self.extraTimeLabel.place(relx = 0.76, rely = 0.48, anchor = "center")
                 if minutes == 90 + self.maxExtraTimeFull and seconds == 0:
@@ -588,14 +642,12 @@ class MatchDay(ctk.CTkFrame):
                         self.matchDataFrame.update_idletasks()
                         self.matchDataFrame._parent_canvas.yview_moveto(1)
 
-                    print(self.matchFrame.matchInstance.homeStats)
-                    print(self.matchFrame.matchInstance.awayStats)
-
-            ## ----------- substitution end ------------
-            if minutes == 89 + self.maxExtraTimeFull and seconds == 0:
-                self.substitutionButton.configure(state = "disabled")
-
-            ## ----------- other matches ------------ 
+            """
+            EVENTS - Other matches
+            - Add the HT and FT labels at the correct times
+            - Check every match for events that need to be processed at the current time
+            - If goal, update the score label
+            """
             for frame in self.otherMatchesFrame.winfo_children():
                 
                 if not frame.matchInstance:
@@ -638,6 +690,12 @@ class MatchDay(ctk.CTkFrame):
                                 frame.matchInstance.getEventPlayer(event_details, False, event_time)
                                 frame.matchInstance.awayProcessedEvents[event_time] = event_details
 
+            """
+            HALF TIME - your team match has reached its half time
+            - Disable shouts and substitutions
+            - Add the HT label
+            - Add a half time separator in the match data frame
+            """
             if minutes == 45 + self.matchFrame.matchInstance.extraTimeHalf and self.halfTime and seconds == 0:
                 self.shoutsButton.configure(state = "disabled")
                 self.substitutionButton.configure(state = "disabled")
@@ -650,6 +708,12 @@ class MatchDay(ctk.CTkFrame):
                 self.matchDataFrame.update_idletasks()
                 self.matchDataFrame._parent_canvas.yview_moveto(1)
             
+            """
+            FULL TIME - your team match has reached its full time
+            - Disable shouts and substitutions
+            - Add the FT label
+            - Add a full time separator in the match data frame
+            """
             if minutes == 90 + self.matchFrame.matchInstance.extraTimeFull and self.fullTime and seconds == 0:
                 self.shoutsButton.configure(state = "disabled")
                 self.substitutionButton.configure(state = "disabled")
@@ -662,17 +726,68 @@ class MatchDay(ctk.CTkFrame):
                 self.matchDataFrame.update_idletasks()
                 self.matchDataFrame._parent_canvas.yview_moveto(1)
 
+            """
+            TICK - Every 30 seconds, generate events and statistics for every match
+            - Generate events and stats for both teams in your match
+            - Get the passes and possession stats for your match
+            - Update the stats frames with the new stats
+            - Get the events, stats and passes and possession for other matches
+            """
             if total_seconds % TICK == 0 and self.timeLabel.cget("text") != "HT":
                 self.generateEvents("home", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
                 self.generateEvents("away", matchInstance = self.matchFrame.matchInstance, teamMatch = True)
+                passesAndPossession(matchInstance = self.matchFrame.matchInstance)
+
+                for stat in MATCH_STATS:
+                    homeStats = self.matchFrame.matchInstance.homeStats
+                    awayStats = self.matchFrame.matchInstance.awayStats
+
+                    # Update stats frames
+                    if stat == "Possession":
+                        valueH, valueA = homeStats[stat], awayStats[stat]
+                        textH, textA = f"{valueH}%", f"{valueA}%"
+                    elif stat == "Passes":
+                        valueH, valueA = getStatNum(homeStats[stat]), getStatNum(awayStats[stat])
+                        textH, textA = f"{valueH} ({self.matchFrame.matchInstance.homePassesAttempted})", f"{valueA} ({self.matchFrame.matchInstance.awayPassesAttempted})"
+                    elif stat in PLAYER_STATS:
+                        valueH, valueA = getStatNum(homeStats[stat]), getStatNum(awayStats[stat])
+                        textH, textA = f"{valueH}", f"{valueA}"
+                    else:
+                        valueH, valueA = homeStats[stat], awayStats[stat]
+                        textH, textA = f"{valueH}", f"{valueA}"
+
+                    for frame in self.homeStatsFrame.winfo_children():
+                        if frame.statName == stat:
+                            if stat in NEGATIVE_STATS:
+                                color = False if valueH > valueA else True if valueA > valueH else None
+                            else:
+                                color = True if valueH > valueA else False if valueA > valueH else None
+                            frame.updateValue(textH, color)
+
+                    for frame in self.awayStatsFrame.winfo_children():
+                        if frame.statName == stat:
+                            if stat in NEGATIVE_STATS:
+                                color = False if valueA > valueH else True if valueH > valueA else None
+                            else:
+                                color = True if valueA > valueH else False if valueH > valueA else None
+                            frame.updateValue(textA, color)
 
                 for frame in self.otherMatchesFrame.winfo_children():
                     if frame.matchInstance:
                         self.generateEvents("home", matchInstance = frame.matchInstance)
                         self.generateEvents("away", matchInstance = frame.matchInstance)
 
+                        passesAndPossession(matchInstance = frame.matchInstance)
 
-            ## ----------- managing team match ------------
+            """
+            EVENTS - Home team events
+            - Check for events that need to be processed at the current time
+            - If an event is marked as extra time, only process it if half time or full
+            - If an event is not marked as extra time, only process it if not half time or full
+            - Update the match data frame with the new event
+            - If goal, update the score label
+            - If injury or red card and your team is the home team, make a substitution
+            """
             for event_time, event_details in list(self.matchFrame.matchInstance.homeEvents.items()):
                 if event_time == str(minutes) + ":" + str(seconds) and event_time not in self.matchFrame.matchInstance.homeProcessedEvents:
                     if event_details["extra"]:
@@ -703,6 +818,15 @@ class MatchDay(ctk.CTkFrame):
 
                             self.after(0, self.updateMatchDataFrame, newEvent, event_time, True)
 
+            """
+            EVENTS - Away team events
+            - Check for events that need to be processed at the current time
+            - If an event is marked as extra time, only process it if half time or full
+            - If an event is not marked as extra time, only process it if not half time or full
+            - Update the match data frame with the new event
+            - If goal, update the score label
+            - If injury or red card and your team is the away team, make a substitution
+            """
             for event_time, event_details in list(self.matchFrame.matchInstance.awayEvents.items()):
                 if event_time == str(minutes) + ":" + str(seconds) and event_time not in self.matchFrame.matchInstance.awayProcessedEvents:
                     if event_details["extra"]:
@@ -732,6 +856,12 @@ class MatchDay(ctk.CTkFrame):
 
                             self.after(0, self.updateMatchDataFrame, event_details, event_time, False)
 
+            """
+            TIMER - Configure the time label based on the current time
+            - If half time has just ended, set the label to HT
+            - If full time has just ended, set the label to FT
+            - Otherwise, update the label with the current time
+            """
             if self.halfTimeEnded:
                 self.timeLabel.configure(text = "HT")
                 self.halfTimeEnded = False
@@ -752,29 +882,39 @@ class MatchDay(ctk.CTkFrame):
         fitness = matchInstance.homeFitness if side == "home" else matchInstance.awayFitness
         subsCount = matchInstance.homeSubs if side == "home" else matchInstance.awaySubs
         stats = matchInstance.homeStats if side == "home" else matchInstance.awayStats
+        oppStats = matchInstance.awayStats if side == "home" else matchInstance.homeStats
         subs = matchInstance.homeCurrentSubs if side == "home" else matchInstance.awayCurrentSubs
         events = matchInstance.homeProcessedEvents if side == "home" else matchInstance.awayProcessedEvents
+        ratings = matchInstance.homeRatings if side == "home" else matchInstance.awayRatings
+        oppRatings = matchInstance.awayRatings if side == "home" else matchInstance.homeRatings
 
-        sharpness = [Players.get_player_by_id(playerID).sharpness for playerID in lineup.values()]
+        playerOBJs = matchInstance.homePlayersOBJ if side == "home" else matchInstance.awayPlayersOBJ 
+        oppPlayersOBJ = matchInstance.awayPlayersOBJ if side == "home" else matchInstance.homePlayersOBJ
+
+        if teamMatch:
+            pitch = self.homeLineupPitch if side == "home" else self.awayLineupPitch
+            oppPitch = self.awayLineupPitch if side == "home" else self.homeLineupPitch
+
+        sharpness = [playerOBJs[playerID].sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
 
         if "Goalkeeper" in lineup:
-            avgSharpness = (sum(sharpness) - Players.get_player_by_id(lineup["Goalkeeper"]).sharpness) / (len(sharpness) - 1)
+            avgSharpness = (sum(sharpness) - playerOBJs[lineup["Goalkeeper"]].sharpness) / (len(sharpness) - 1)
         else:
             avgSharpness = avgSharpnessWthKeeper
 
         avgFitness = sum(fitness[playerID] for playerID in lineup.values()) / len(lineup)
-        
-        morale = [Players.get_player_by_id(playerID).morale for pos, playerID in lineup.items() if pos != "Goalkeeper"]
+
+        morale = [playerOBJs[playerID].morale for pos, playerID in lineup.items() if pos != "Goalkeeper"]
         avgMorale = sum(morale) / len(morale)
 
-        oppKeeper = Players.get_player_by_id(oppLineup["Goalkeeper"]) if "Goalkeeper" in oppLineup else None
+        oppKeeper = oppPlayersOBJ[oppLineup["Goalkeeper"]] if "Goalkeeper" in oppLineup else None
 
         attackingPlayers = [playerID for pos, playerID in lineup.items() if pos in ATTACKING_POSITIONS]
         defendingPlayers = [playerID for pos, playerID in oppLineup.items() if pos in DEFENSIVE_POSITIONS]
 
-        attackingLevel = teamStrength(attackingPlayers, role = "attack")
-        defendingLevel = teamStrength(defendingPlayers, role = "defend")
+        attackingLevel = teamStrength(attackingPlayers, "attack", playerOBJs)
+        defendingLevel = teamStrength(defendingPlayers, "defend", oppPlayersOBJ)
 
         # ------------------ GOAL ------------------
         event = goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper)
@@ -786,35 +926,34 @@ class MatchDay(ctk.CTkFrame):
             if goalType == "penalty":
                 if random.random() < PENALTY_SCORE_CHANCE or "Goalkeeper" not in oppLineup:
                     goalType = "penalty_goal"
-                    self.matchFrame.matchInstance.appendScore(1, True if side == "home" else False)
+                    matchInstance.appendScore(1, True if side == "home" else False)
                 else:
                     goalType = "penalty_miss"
-            elif event == "own_goal":
-                self.matchFrame.matchInstance.appendScore(1, False if side == "home" else True)
+            elif goalType == "own_goal":
+                matchInstance.appendScore(1, False if side == "home" else True)
             else:
-                self.matchFrame.matchInstance.appendScore(1, True if side == "home" else False)
-
+                matchInstance.appendScore(1, True if side == "home" else False)
+            
             eventsToAdd.append(goalType)
-            statsToAdd.append("shot")
-            statsToAdd.append("shot on target")
-        elif event == "shot_on_target":
-            statsToAdd.append("shot")
-            statsToAdd.append(event)
-        elif event == "shot":
+
+            if random.random() < GOAL_BIG_CHANCE:
+                statsToAdd.append("Big chances created")
+        elif event != "nothing":
             statsToAdd.append(event)
 
         # ------------------ FOUL ------------------
-        event = foulChances(avgSharpnessWthKeeper, self.matchFrame.matchInstance.referee.severity)
+        event = foulChances(avgSharpnessWthKeeper, matchInstance.referee.severity)
 
         if event in ["yellow_card", "red_card"]:
             eventsToAdd.append(event)
-
-            # 70% chance of foul too
-            if random.random() < 0.7:
-                statsToAdd.append("foul")
-
-        elif event == "foul":
+        elif event == "Fouls":
             statsToAdd.append(event)
+        else:
+            # If nothing, get tackles and interceptions
+            tacklesInterceptions = random.choices(population = list(DEFENSIVE_ACTIONS_CHANCES.keys()), weights = list(DEFENSIVE_ACTIONS_CHANCES.values()), k = 1)[0]
+
+            if tacklesInterceptions != "nothing":
+                statsToAdd.append(tacklesInterceptions)
 
         # ------------------ INJURY ------------------
         event = injuryChances(avgFitness)
@@ -824,13 +963,13 @@ class MatchDay(ctk.CTkFrame):
 
         # ------------------ SUBSTITUTIONS ------------------
         if not teamMatch:
-            subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness)
+            subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness, playerOBJs, ratings)
             for _ in range(len(subsChosen)):
                 eventsToAdd.append("substitution")
 
         else:
             if (self.home and side == "away") or (not self.home and side == "home"):
-                subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness)
+                subsChosen = substitutionChances(lineup, subsCount, subs.copy(), events, int(self.timeLabel.cget("text").split(":")[0]), fitness, playerOBJs, ratings)
                 for _ in range(len(subsChosen)):
                     eventsToAdd.append("substitution")
 
@@ -842,7 +981,7 @@ class MatchDay(ctk.CTkFrame):
         futureTotalSecs = currTotalSecs + 30
 
         if extraTime:
-            maxMinute = self.matchFrame.matchInstance.extraTimeHalf if self.halfTime else self.matchFrame.matchInstance.extraTimeFull
+            maxMinute = matchInstance.extraTimeHalf if self.halfTime else matchInstance.extraTimeFull
             finalMinute = 45 if self.halfTime else 90
             maxTotalSecs = (finalMinute + maxMinute) * 60
         else:
@@ -872,10 +1011,97 @@ class MatchDay(ctk.CTkFrame):
                 matchEvents[eventTime] = {"type": event, "extra": extraTime}
 
         for stat in statsToAdd:
-            if not stat in stats:
-                stats[stat] = 0
 
-            stats[stat] += 1
+            if stat in PLAYER_STATS:
+                playerID, rating = getStatPlayer(stat, lineup, playerOBJs)
+                ratings[playerID] = min(10, max(0, round(ratings.get(playerID, 0) + rating, 2)))
+            
+                if teamMatch:
+                    self.updateRatingOval(pitch, playerID, lineup, ratings)
+
+                if not playerID:
+                    continue
+
+                if not playerID in stats[stat]:
+                    stats[stat][playerID] = 0
+
+                stats[stat][playerID] += 1
+
+                match stat:
+                    case "Shots":
+                        shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
+                        if not playerID in stats[shotDirection]:
+                            stats[shotDirection][playerID] = 0
+
+                        stats[shotDirection][playerID] += 1
+
+                        shotOutcome = random.choices(population = list(SHOT_CHANCES.keys()), weights = list(SHOT_CHANCES.values()), k = 1)[0]
+                        if shotOutcome != "wide":
+                            stats[shotOutcome] += 1
+
+                        if random.random() < SHOT_BIG_CHANCE:
+                            if not playerID in stats["Big chances missed"]:
+                                stats["Big chances missed"][playerID] = 0
+
+                            stats["Big chances missed"][playerID] += 1
+
+                            playerID, rating = getStatPlayer("Big chances created", lineup, playerOBJs)
+                            ratings[playerID] = min(10, max(0, round(ratings.get(playerID, 0) + rating, 2)))
+
+                            if teamMatch:
+                                self.updateRatingOval(pitch, playerID, lineup, ratings)
+                    
+                            if not playerID in stats["Big chances created"]:
+                                stats["Big chances created"][playerID] = 0
+
+                            stats["Big chances created"][playerID] += 1
+
+                        stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
+                        stats["xG"] = round(stats["xG"], 2)
+                    case "Shots on target":
+                        if playerID not in stats["Shots"]:
+                            stats["Shots"][playerID] = 0
+                        
+                        stats["Shots"][playerID] += 1
+
+                        shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
+                        if not playerID in stats[shotDirection]:
+                            stats[shotDirection][playerID] = 0
+                        
+                        stats[shotDirection][playerID] += 1
+
+                        if random.random() < SHOT_BIG_CHANCE:
+                            if not playerID in stats["Big chances missed"]:
+                                stats["Big chances missed"][playerID] = 0
+
+                            stats["Big chances missed"][playerID] += 1
+
+                            playerID, rating = getStatPlayer("Big chances created", lineup, playerOBJs)
+                            ratings[playerID] = min(10, max(0, round(ratings.get(playerID, 0) + rating, 2)))
+
+                            if teamMatch:
+                                self.updateRatingOval(pitch, playerID, lineup, ratings)
+
+                            if not playerID in stats["Big chances created"]:
+                                stats["Big chances created"][playerID] = 0
+
+                            stats["Big chances created"][playerID] += 1
+
+                        playerID, rating = getStatPlayer("Saves", oppLineup, oppPlayersOBJ)
+                        if playerID:
+                            if playerID not in oppStats["Saves"]:
+                                oppStats["Saves"][playerID] = 0
+                            oppStats["Saves"][playerID] += 1
+
+                            oppRatings[playerID] = min(10, max(0, round(oppRatings.get(playerID, 0) + rating, 2)))
+
+                            if teamMatch:
+                                self.updateRatingOval(oppPitch, playerID, oppLineup, oppRatings)
+
+                        stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
+                        stats["xG"] = round(stats["xG"], 2)
+            else:
+                stats[stat] += 1
 
     def shouts(self):
 
@@ -1881,6 +2107,34 @@ class MatchDay(ctk.CTkFrame):
                 num = self.countPlayerEvents(playerID, events, event["type"])
                 pitch.addIcon(EVENTS_TO_ICONS[event["type"]], image, "Goalkeeper", playerData.last_name, num)
 
+        if event["type"] not in ["injury", "substitution", "red_card"]:
+
+            if event["type"] == "own_goal":
+                pitch = self.awayLineupPitch if home else self.homeLineupPitch
+                ratings = self.matchFrame.matchInstance.awayRatings if home else self.matchFrame.matchInstance.homeRatings
+                lineup = self.matchFrame.matchInstance.awayCurrentLineup if home else self.matchFrame.matchInstance.homeCurrentLineup
+            else:
+                pitch = self.homeLineupPitch if home else self.awayLineupPitch
+                ratings = self.matchFrame.matchInstance.homeRatings if home else self.matchFrame.matchInstance.awayRatings
+                lineup = self.matchFrame.matchInstance.homeCurrentLineup if home else self.matchFrame.matchInstance.awayCurrentLineup
+                oppLineup = self.matchFrame.matchInstance.awayCurrentLineup if home else self.matchFrame.matchInstance.homeCurrentLineup
+                oppRatings = self.matchFrame.matchInstance.awayRatings if home else self.matchFrame.matchInstance.homeRatings
+                oppPitch = self.awayLineupPitch if home else self.homeLineupPitch
+
+            self.updateRatingOval(pitch, event["player"], lineup, ratings)
+
+            if event["type"] == "goal":
+                self.updateRatingOval(pitch, event["assister"], lineup, ratings)
+
+                for pos, playerID in oppLineup.items():
+                    if pos in DEFENDER_POSITIONS + ["Goalkeeper"]:
+                        self.updateRatingOval(oppPitch, playerID, oppLineup, oppRatings)
+
+    def updateRatingOval(self, pitch, playerID, lineup, ratings):
+        position = list(lineup.keys())[list(lineup.values()).index(playerID)]
+        playerData = Players.get_player_by_id(playerID)
+        pitch.updateRating(position, playerData.last_name, ratings[playerID])
+
     def countPlayerEvents(self, player_id, events, event_type):
         group = EVENT_GROUPS.get(event_type, [event_type])
 
@@ -1903,9 +2157,9 @@ class MatchDay(ctk.CTkFrame):
 
         for frame in self.otherMatchesFrame.winfo_children():
             if frame.matchInstance:
-                frame.matchInstance.saveData()
+                frame.matchInstance.saveData(auto = False)
 
-        self.matchFrame.matchInstance.saveData("home" if self.home else "away")
+        self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away", auto = False)
 
         LeagueTeams.update_team_positions(self.league.id)
         Game.increment_game_date(Managers.get_all_user_managers()[0].id, timedelta(hours = 2))
@@ -1936,6 +2190,7 @@ class MatchDay(ctk.CTkFrame):
             db = DatabaseManager()
             db.commit_copy()
         except Exception as Ex:
-            print(f"Error occurred while saving game: {Ex}")
+            logger = logging.getLogger(__name__)
+            logger.exception("Error occurred while saving game: %s", Ex)
 
         self.parent.resetMenu()

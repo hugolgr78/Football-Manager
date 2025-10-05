@@ -6,24 +6,47 @@ from data.gamesDatabase import GamesDatabaseManager
 from data.database import DatabaseManager
 import sys, signal, logging, os, glob, shutil
 from CTkMessagebox import CTkMessagebox
+from datetime import datetime
 
 # Enable debug mode if "debug" is passed as a command-line argument
 DEBUG_MODE = len(sys.argv) > 1 and sys.argv[1].lower() == "debug"
 
+# Create a logs directory if it doesn't exist
+LOG_DIR = "logs"
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+# Log file path (rotates per run, timestamped)
+log_filename = os.path.join(LOG_DIR, f"fm_log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
+
+# Configure root logging once at startup
+log_level = logging.DEBUG if DEBUG_MODE else logging.WARNING
+handlers = [logging.StreamHandler(sys.stdout)]
 if DEBUG_MODE:
-    # Create a dedicated handler for the utils.match logger so DEBUG records show
-    match_logger = logging.getLogger("utils.match")
+    # Only write logs to file when debug mode is explicitly enabled
+    handlers.append(logging.FileHandler(log_filename, encoding="utf-8"))
+
+logging.basicConfig(
+    level=log_level,
+    format="%(asctime)s %(name)s %(levelname)s: %(message)s",
+    handlers=handlers
+)
+
+# Keep custom behaviour for the heavy "utils.match" logger
+match_logger = logging.getLogger("utils.match")
+if DEBUG_MODE:
+    # ensure it emits debug records to stdout (file writing is handled by root handlers when DEBUG_MODE)
     if not any(isinstance(h, logging.StreamHandler) for h in match_logger.handlers):
         match_handler = logging.StreamHandler(sys.stdout)
         match_handler.setLevel(logging.DEBUG)
         match_handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(levelname)s: %(message)s"))
         match_logger.addHandler(match_handler)
+
     match_logger.setLevel(logging.DEBUG)
-    # Prevent duplicate propagation to root handlers
-    match_logger.propagate = False
+    match_logger.propagate = True
 else:
-    # Silence the logger if not in debug mode
-    logging.getLogger("utils.match").setLevel(logging.CRITICAL)
+    match_logger.setLevel(logging.CRITICAL)
+    match_logger.propagate = True
 
 def backup_all_databases(data_dir, backup_dir):
     """Backup all .db files in the data directory"""

@@ -509,22 +509,23 @@ def ownGoalFoulWeight(p):
     base = 0.5 * ability_factor + 0.5 * sharpness_factor
     return max(base, 0.01)  # avoid zero probability
 
-def fitnessWeight(p, fitness):
+def fitnessWeight(fitness):
     # Low fitness → higher chance
     fitness_factor = (100 - fitness) / 100.0
     return max(fitness_factor, 0.01)  # avoid 0 prob
 
 def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
     attackRatio = attackingLevel / max(1, defendingLevel)
-    attackModifier = min(((avgSharpness / 100 + avgMorale / 100)) ** 0.5, 1.2)
 
-    # Dampening factor so even matchups (attackRatio ~= 1) produce lower goal
-    # probabilities. ratio_factor is in (0..1), ~0.5 for attackRatio==1.
+    # Sharpness has less weight now
+    combined_form = (0.25 * (avgSharpness / 100)) + (0.75 * (avgMorale / 100))
+    attackModifier = min(combined_form ** 0.5, 1.05)
+
+    # Dampening factor for even matchups
     ratio_factor = attackRatio / (attackRatio + 1) if attackRatio > 0 else 0.5
 
-    # Make attackRatio more influential than attackModifier. Use a weighted
-    # combination so that attackRatio dominates the effective attacking input.
-    weight_ratio = 0.75
+    # Attack ratio dominates
+    weight_ratio = 0.8
     weight_modifier = 1 - weight_ratio
     effective_attack = attackRatio * weight_ratio + attackModifier * weight_modifier
 
@@ -532,29 +533,28 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
         if oppKeeper.position == "goalkeeper":
             keeperModifier = (oppKeeper.current_ability / 200) * (oppKeeper.sharpness / 100)
 
-            # Reduce keeper impact slightly on shot/on-target but keep it strong
-            shot_base = BASE_SHOT * effective_attack
-            shotProb = shot_base * (1 - keeperModifier * 0.4)
-            shotProb = min(max(shotProb, 0.05), MAX_SHOT_PROB)
+            # Much lower shot base now
+            shot_base = BASE_SHOT * effective_attack * 0.4
+            shotProb = shot_base * (1 - keeperModifier * 0.3)
+            shotProb = min(max(shotProb, 0.01), MAX_SHOT_PROB)  # very low floor
 
-            onTarget_base = BASE_ON_TARGET * effective_attack
-            onTargetProb = onTarget_base * (1 - keeperModifier * 0.4)
-            onTargetProb = min(max(onTargetProb, 0.20), MAX_TARGET_PROB)
+            onTarget_base = BASE_ON_TARGET * effective_attack * 0.7
+            onTargetProb = onTarget_base * (1 - keeperModifier * 0.25)
+            onTargetProb = min(max(onTargetProb, 0.10), MAX_TARGET_PROB)
 
-            # Damp goal probability for even matchups via ratio_factor and scale
             goal_base = BASE_GOAL * effective_attack * ratio_factor
             goalProb = goal_base * (1 - keeperModifier)
             goalProb = min(max(goalProb, 0.01), MAX_GOAL_PROB)
         else:
-            # Outfield player in goal - use effective_attack so ratio remains influential
-            shotProb = min(max(BASE_SHOT * effective_attack * 1.2, 0.15), 0.7)
-            onTargetProb = min(max(BASE_ON_TARGET * effective_attack * 1.2, 0.40), 0.8)
-            goalProb = min(max(BASE_GOAL * effective_attack * 1.5, 0.50), 0.9)
+            # Outfield keeper (more shots, but still tuned down)
+            shotProb = min(max(BASE_SHOT * effective_attack * 0.6, 0.08), 0.55)
+            onTargetProb = min(max(BASE_ON_TARGET * effective_attack * 0.9, 0.25), 0.7)
+            goalProb = min(max(BASE_GOAL * effective_attack * 1.2, 0.35), 0.8)
     else:
-        # No keeper present: use effective_attack to weight ratio higher
-        shotProb = min(max(BASE_SHOT * effective_attack * 1.5, 0.25), 0.75)
-        onTargetProb = min(max(BASE_ON_TARGET * effective_attack * 1.5, 0.60), 0.85)
-        goalProb = min(max(BASE_GOAL * effective_attack * 2.0, 0.80), 0.95)
+        # No keeper
+        shotProb = min(max(BASE_SHOT * effective_attack * 0.7, 0.15), 0.6)
+        onTargetProb = min(max(BASE_ON_TARGET * effective_attack * 1.0, 0.40), 0.75)
+        goalProb = min(max(BASE_GOAL * effective_attack * 1.5, 0.65), 0.9)
 
     # Final distribution
     pNothing   = 1 - shotProb
@@ -562,10 +562,10 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
     pShotSaved = shotProb * onTargetProb * (1 - goalProb)
     pGoal      = shotProb * onTargetProb * goalProb
 
-    events = ["nothing", "shot", "shot on target", "goal"]
+    events = ["nothing", "Shots", "Shots on target", "goal"]
     probs  = [pNothing, pShotOff, pShotSaved, pGoal]
 
-    return random.choices(events, weights = probs, k = 1)[0]
+    return random.choices(events, weights=probs, k=1)[0]
 
 def foulChances(avgSharpnessWthKeeper, severity):
     severity_map = {"low": 0.8, "medium": 1.0, "high": 1.2}
@@ -594,12 +594,15 @@ def foulChances(avgSharpnessWthKeeper, severity):
 
     pNothing = 1.0 - (foulProb + yellowProb + redProb)
 
-    events = ["nothing", "foul", "yellow_card", "red_card"]
+    events = ["nothing", "Fouls", "yellow_card", "red_card"]
     probs = [pNothing, foulProb, yellowProb, redProb]
 
     return random.choices(events, weights = probs, k = 1)[0]
 
 def injuryChances(avgFitness):
+
+    if avgFitness == 0:
+        return
 
     injuryProb = BASE_INJURY * (100 / avgFitness)
     injuryProb = min(max(injuryProb, 0.0001), MAX_INJURY_PROB)
@@ -613,12 +616,12 @@ def injuryChances(avgFitness):
 
     return random.choices(events, weights = probs, k = 1)[0]
 
-def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness):
+def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness, playerOBJs, ratings):
     subsAvailable = MAX_SUBS - subsMade
     if subsAvailable <= 0:
         return []
 
-    candidates = get_sub_candidates(lineup, currMinute, events, fitness)
+    candidates = get_sub_candidates(lineup, currMinute, events, fitness, ratings)
 
     if not candidates:
         return []
@@ -632,11 +635,11 @@ def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness):
     num_to_sub = random.choices(outcomes, weights=weights, k=1)[0]
     num_to_sub = min(num_to_sub, subsAvailable, len(candidates))
 
-    chosen = find_substitute(lineup, candidates, subs, num_to_sub)
+    chosen = find_substitute(lineup, candidates, subs, num_to_sub, playerOBJs)
 
     return chosen
 
-def get_sub_candidates(lineup, currMinute, events, fitness):
+def get_sub_candidates(lineup, currMinute, events, fitness, ratings):
     candidates = []
     for pos, playerID in lineup.items():
         played_minutes = currMinute
@@ -647,15 +650,13 @@ def get_sub_candidates(lineup, currMinute, events, fitness):
                 break
 
         if played_minutes >= 30:  # don’t sub too early
-            prob = sub_probability(fitness[playerID])
+            prob = sub_probability(fitness[playerID], ratings[playerID])
             if prob > 0:
                 candidates.append((prob, playerID, pos))
 
     return candidates
 
-def find_substitute(lineup, candidates, subs, num_to_sub):
-    from data.database import Players
-
+def find_substitute(lineup, candidates, subs, num_to_sub, playerOBJs):
     chosen = []
     # make substitutions
     for prob, playerID, pos in candidates:
@@ -670,7 +671,7 @@ def find_substitute(lineup, candidates, subs, num_to_sub):
 
             # --- Exact / compatible replacement ---
             for subID in subs:
-                player = Players.get_player_by_id(subID)
+                player = playerOBJs[subID]
                 subPositions = [s for s in player.specific_positions.split(",")]
 
                 # Direct match: outgoing code is explicitly listed in sub's positions
@@ -692,7 +693,7 @@ def find_substitute(lineup, candidates, subs, num_to_sub):
             # --- Fallback if no compatible found ---
             if not replacement_id and subs:
                 for subID in subs:
-                    sub_player = Players.get_player_by_id(subID)
+                    sub_player = playerOBJs[subID]
                     subPositions = [REVERSE_POSITION_CODES[s][0] for s in sub_player.specific_positions.split(",")]
 
                     # pick the first full position not already in lineup.keys()
@@ -707,21 +708,226 @@ def find_substitute(lineup, candidates, subs, num_to_sub):
                         break
 
             if replacement_id:
-                # player off id, old position, player on id, new position, reason
                 chosen.append((playerID, pos, replacement_id, replacement_pos, reason))
                 subs.remove(replacement_id)
 
     return chosen
 
-def sub_probability(fitness: float) -> float:
+def sub_probability(fitness: float, rating: float) -> float:
+    # Base probability from fitness
     if fitness > 50:
-        return 0.0
+        base_prob = 0.0
     elif fitness > 20:
         # scales 50 -> 0%, 20 -> 60%
-        return (50 - fitness) / 30 * 0.6
+        base_prob = (50 - fitness) / 30 * 0.6
     elif fitness > 10:
         # scales 20 -> 60%, 10 -> 85%
-        return 0.6 + (20 - fitness) / 10 * 0.25
+        base_prob = 0.6 + (20 - fitness) / 10 * 0.25
     else:
         # below 10 -> 85–100%
-        return 0.85 + (10 - max(fitness, 0)) / 10 * 0.15
+        base_prob = 0.85 + (10 - max(fitness, 0)) / 10 * 0.15
+
+    # Rating adjustment (assume 1–10 scale)
+    # Rating < 5 increases chance, rating > 5 decreases chance
+    # Clamp between -0.2 and +0.2 for balance
+    rating_adjustment = (5 - rating) * 0.04  # 1 rating point ≈ 4% effect
+    prob = base_prob + rating_adjustment
+
+    # Clamp to [0, 1]
+    return max(0.0, min(1.0, prob))
+    
+def getPasses(homeOBJs, awayOBJs):
+
+    overallHome = sum(effective_ability(p) for p in homeOBJs.values())
+    overallAway = sum(effective_ability(p) for p in awayOBJs.values())
+
+    total_passes = random.randint(3, 5)
+    # soften big differences (alpha = 0.5)
+    alpha = 0.5
+    home_weight = overallHome ** alpha
+    away_weight = overallAway ** alpha
+    p_home = home_weight / (home_weight + away_weight)
+
+    # allocate passes stochastically
+    home_passes = sum(random.random() < p_home for _ in range(total_passes))
+    away_passes = total_passes - home_passes
+
+    # cap dominance (max 80% of passes)
+    cap = 0.8
+    max_home = int(total_passes * cap)
+    min_home = total_passes - max_home
+    home_passes = max(min(home_passes, max_home), min_home)
+    away_passes = total_passes - home_passes
+
+    return home_passes, away_passes
+
+def effective_ability(p):
+    # weights: morale 20%, fitness 40%, sharpness 40%
+    weighted = (0.2 * p.morale + 0.4 * p.fitness + 0.4 * p.sharpness) / 100.0
+    multiplier = 0.75 + (weighted * 0.5)
+    return p.current_ability * multiplier
+
+def getStatNum(stat):
+    return sum(playerValue for playerValue in stat.values())
+
+def passesAndPossession(matchInstance):
+    homeLineup = matchInstance.homeCurrentLineup
+    awayLineup = matchInstance.awayCurrentLineup
+    homeStats = matchInstance.homeStats
+    awayStats = matchInstance.awayStats
+    homePassesAttempted = matchInstance.homePassesAttempted
+    awayPassesAttempted = matchInstance.awayPassesAttempted
+    homeRatings = matchInstance.homeRatings
+    homePlayersOBJs = matchInstance.homePlayersOBJ
+    awayPlayersOBJs = matchInstance.awayPlayersOBJ
+
+    homeOBJs = {pid: p for pid, p in homePlayersOBJs.items() if pid in homeLineup.values()}
+    awayOBJs = {pid: p for pid, p in awayPlayersOBJs.items() if pid in awayLineup.values()}
+
+    awayRatings = matchInstance.awayRatings
+
+    homePasses, awayPasses = getPasses(homeOBJs, awayOBJs)
+    matchInstance.homePassesAttempted = homePassesAttempted + homePasses
+    matchInstance.awayPassesAttempted = awayPassesAttempted + awayPasses
+
+    # Compute pass completion probability from sharpness with a lower baseline and an upper cap
+    # We scale sharpness into a range [0.60, 0.90] so even low-sharpness players have at least 60%
+    # and very high sharpness caps at ~90%.
+    for _ in range(homePasses):
+        playerID = choosePlayerFromDict(homeLineup, PASSING_POSITIONS, homeOBJs)
+
+        raw = homeOBJs[playerID].sharpness / 100.0
+        passCompleteProb = 0.60 + raw * (0.90 - 0.60)
+
+        if random.random() < passCompleteProb:
+            # ensure the Passes dict exists and the player key is initialized
+            homeStats.setdefault("Passes", {})
+            homeStats["Passes"].setdefault(playerID, 0)
+            homeStats["Passes"][playerID] += 1
+
+            rating = random.uniform(PASS_RATING[0], PASS_RATING[1])
+            homeRatings[playerID] = round(homeRatings.get(playerID, 0) + rating, 2)
+
+    for _ in range(awayPasses):
+        playerID = choosePlayerFromDict(awayLineup, PASSING_POSITIONS, awayOBJs)
+
+        raw = awayOBJs[playerID].sharpness / 100.0
+        passCompleteProb = 0.60 + raw * (0.90 - 0.60)
+
+        if random.random() < passCompleteProb:
+            # ensure the Passes dict exists and the player key is initialized
+            awayStats.setdefault("Passes", {})
+            awayStats["Passes"].setdefault(playerID, 0)
+            awayStats["Passes"][playerID] += 1
+
+            rating = random.uniform(PASS_RATING[0], PASS_RATING[1])
+            awayRatings[playerID] = round(awayRatings.get(playerID, 0) + rating, 2)
+
+    homeCompleted = getStatNum(homeStats["Passes"])
+    awayCompleted = getStatNum(awayStats["Passes"])
+    totalCompleted = homeCompleted + awayCompleted
+
+    if totalCompleted == 0:
+        homeStats["Possession"] = 50
+        awayStats["Possession"] = 50
+    else:
+        homeStats["Possession"] = round((homeCompleted / totalCompleted) * 100)
+        awayStats["Possession"] = 100 - homeStats["Possession"]
+
+def choosePlayerFromDict(lineup, dict_, playerOBJs):
+    playerPosition = random.choices(list(dict_.keys()), weights = list(dict_.values()), k = 1)[0]
+    players = [playerID for playerID in lineup.values() if playerOBJs[playerID].position == playerPosition]
+
+    while len(players) == 0:
+        playerPosition = random.choices(list(dict_.keys()), weights = list(dict_.values()), k = 1)[0]
+        players = [playerID for playerID in lineup.values() if playerOBJs[playerID].position == playerPosition]
+
+    weights = [effective_ability(playerOBJs[playerID]) for playerID in players]
+    if sum(weights) == 0:
+        weights = [1] * len(players)
+
+    return random.choices(players, weights = weights, k = 1)[0]
+
+def getStatPlayer(stat, lineup, playerOBJs):
+    
+    if playerOBJs is None:
+        from data.database import Players
+        playerOBJs = {pid: Players.get_player_by_id(pid) for pid in lineup.values()}
+    
+    match stat:
+        case "Saves":
+            rating = random.uniform(SAVE_RATING[0], SAVE_RATING[1])
+            return lineup["Goalkeeper"] if "Goalkeeper" in lineup else None, rating if "Goalkeeper" in lineup else 0
+        case "Shots" | "Shots on target" | "Shots in the box" | "Shots outside the box":
+            rating = random.uniform(SHOT_RATING[0], SHOT_RATING[1]) if stat != "Shots on target" else random.uniform(SHOT_TARGET_RATING[0], SHOT_TARGET_RATING[1])
+            return choosePlayerFromDict(lineup, SCORER_CHANCES, playerOBJs), rating
+        case "Fouls":
+            weights = [ownGoalFoulWeight(playerOBJs[playerID]) for playerID in lineup.values()]
+            rating = random.uniform(FOUL_RATING[0], FOUL_RATING[1])
+            return random.choices(list(lineup.values()), weights = weights, k = 1)[0], rating
+        case "Tackles" | "Interceptions":
+            rating = random.uniform(DEFENSIVE_ACTION_RATING[0], DEFENSIVE_ACTION_RATING[1])
+            return choosePlayerFromDict(lineup, DEFENSIVE_ACTION_POSITIONS, playerOBJs), rating
+        case "Big chances created" | "Big chances missed":
+            rating = random.uniform(BIG_CHANCE_CREATED_RATING[0], BIG_CHANCE_CREATED_RATING[1]) if stat == "Big chances created" else random.uniform(BIG_CHANCE_MISSED_RATING[0], BIG_CHANCE_MISSED_RATING[1])
+            return choosePlayerFromDict(lineup, BIG_CHANCES_POSITIONS, playerOBJs), rating
+    
+def apply_attribute_changes(fitness_map, sharpness_map, time_in_between):
+
+    hours = int(time_in_between.total_seconds() // 3600)
+    if hours <= 0:
+        return
+
+    # factors
+    hourly_sharpness_decay = DAILY_SHARPNESS_DECAY / 24.0
+    sharpness_decay_factor = (1 - hourly_sharpness_decay) ** hours
+
+    hourly_fitness_recovery = DAILY_FITNESS_RECOVERY_RATE / 24.0
+    fitness_recovery_factor = (1 - hourly_fitness_recovery) ** hours
+
+    # update sharpness
+    for pid, sharpness in sharpness_map.items():
+        new_sharpness = sharpness * sharpness_decay_factor
+        if new_sharpness < MIN_SHARPNESS:
+            new_sharpness = MIN_SHARPNESS
+        sharpness_map[pid] = int(round(new_sharpness))
+
+    # update fitness
+    for pid, (fitness, injured) in fitness_map.items():
+        if injured:
+            continue  
+
+        new_fitness = 100 - (100 - fitness) * fitness_recovery_factor
+        fitness_map[pid] = [int(math.ceil(min(100, new_fitness))), injured]
+
+def update_dict_values(values_dict, amount, min_value = None, max_value = None):
+
+    for k, v in values_dict.items():
+        new_val = v + amount
+
+        if min_value is not None and new_val < min_value:
+            new_val = min_value
+        if max_value is not None and new_val > max_value:
+            new_val = max_value
+
+        values_dict[k] = int(round(new_val))
+
+    return values_dict
+
+def update_fitness_dict_values(values_dict, amount, min_value = None, max_value = None):
+
+    for k, (v, injured) in values_dict.items():
+
+        if injured:
+            continue
+
+        new_val = v + amount
+
+        if min_value is not None and new_val < min_value:
+            new_val = min_value
+        if max_value is not None and new_val > max_value:
+            new_val = max_value
+
+        values_dict[k] = [int(round(new_val)), injured]
+
+    return values_dict

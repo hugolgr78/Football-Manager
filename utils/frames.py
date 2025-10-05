@@ -1770,6 +1770,7 @@ class FootballPitchMatchDay(FootballPitchVertical):
 
     def addRating(self, position, playerName, text, potm):
         # Use positions from self.positions dictionary (these are relative coordinates)
+
         player_relx, player_rely = self.positions[position]
         
         # Calculate the center position of the oval
@@ -1795,6 +1796,8 @@ class FootballPitchMatchDay(FootballPitchVertical):
         formatted_text = text
         if "." not in str(text):
             formatted_text = f"{text}.0"
+        elif len(str(text).split(".")[1]) == 1:
+            formatted_text = f"{text}0"
 
         position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
 
@@ -1838,7 +1841,14 @@ class FootballPitchMatchDay(FootballPitchVertical):
             tags = (position_tag, "rating_text")
         )
 
+    def updateRating(self, position, playerName, newRating):
+        position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
+        self.canvas.delete(f"{position_tag}_rating_oval")
+        self.canvas.delete(f"{position_tag}_rating_text")
+        self.addRating(position, playerName, newRating, False)
+
     def addInjuryIcon(self, position, playerName, image):
+
         # Store the image to prevent garbage collection
         key = f"injury_{position}"
         self.icon_images[key] = image
@@ -1864,7 +1874,8 @@ class FootballPitchMatchDay(FootballPitchVertical):
 
         self.canvas.create_image(text_x - 30, text_y, image = image, tags = (position_tag, "injury_icon"))
 
-    def addPlayer(self, position, playerName):
+    def addPlayer(self, position, playerName, matchday = False):
+
         relx, rely = self.positions[position]
         position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
 
@@ -1889,6 +1900,9 @@ class FootballPitchMatchDay(FootballPitchVertical):
             font = (APP_FONT, 10),
             tags = text_tag
         )
+
+        if matchday:
+            self.addRating(position, playerName, 6.0, False)
 
     def removePlayer(self, position, playerName):
         position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
@@ -2847,3 +2861,36 @@ class InGamePlayerFrame(ctk.CTkFrame):
         self.fitnessLabel.destroy()
 
         self.nameLabel.configure(text_color = GREY)
+
+class InGameStatFrame(ctk.CTkFrame):
+    def __init__(self, parent, statName, width, height, fgColor):
+        super().__init__(parent, fg_color = fgColor, width = width, height = height)
+        self.pack(pady = 5, padx = 2)
+
+        self.statName = statName
+        self.statValue = 0
+        self.fgColor = fgColor
+
+        ctk.CTkLabel(self, text = self.statName, font = (APP_FONT, 12), fg_color = fgColor, height = height, text_color = "white", width = 0).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+        pill_height = 24
+        self.valueLabel = ctk.CTkLabel(
+            self,
+            text = f"{self.statValue}",
+            font = (APP_FONT, 12),
+            fg_color = self.fgColor,
+            text_color = "white",
+            height = pill_height,
+            corner_radius = pill_height // 2,
+            padx = 8
+        )
+        self.valueLabel.place(relx = 0.8, rely = 0.5, anchor = "center")
+
+    def updateValue(self, value, color):
+        self.statValue = value
+        self.valueLabel.configure(text = f"{self.statValue}")
+
+        if color:
+            self.valueLabel.configure(fg_color = "white", text_color = "black")
+        else:
+            self.valueLabel.configure(fg_color = self.fgColor, text_color = "white")

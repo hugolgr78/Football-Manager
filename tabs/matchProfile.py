@@ -29,6 +29,16 @@ class MatchProfile(ctk.CTkFrame):
         self.matchAddiInfoFrame.place(relx = 0.995, rely = 0.99, anchor = "se")
         self.matchAddiInfoFrame.pack_propagate(False)
 
+        self.infoFrame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 580, height = 150, corner_radius = 10)
+        self.infoFrame.place(relx = 0, rely = 0, anchor = "nw")
+        self.infoFrame.pack_propagate(False)
+
+        self.statsFrame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 580, height = 150, corner_radius = 10)
+        self.statsAdded = False
+
+        self.swapDataButton = ctk.CTkButton(self.matchAddiInfoFrame, text = "Stats", font = (APP_FONT, 15), fg_color = DARK_GREY, command = self.swapData, width = 40, height = 10)
+        self.swapDataButton.place(relx = 0.99, rely = 0.05, anchor = "ne")
+
         self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 150, corner_radius = 0, background_corner_colors = [TKINTER_BACKGROUND, TKINTER_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND])
 
         src = Image.open("Images/information.png")
@@ -771,7 +781,7 @@ class MatchProfile(ctk.CTkFrame):
                 self.awayStartLineupPitch.addPlayer(player.start_position, playerData.last_name)
 
                 # Also show in end lineup if they finished the match (not subbed off and not red carded)
-                if not subbed_off and not red_carded:
+                if not subbed_off and not red_carded and not injured:
                     self.awayEndLineupPitch.addPlayer(player.end_position, playerData.last_name)
                     pitch = "Both"
             else:
@@ -938,8 +948,22 @@ class MatchProfile(ctk.CTkFrame):
             ctk.CTkLabel(self.legendFrame, text = "", image = icon, fg_color = GREY_BACKGROUND).grid(row = i // 2 + 1, column = i % 2 * 2, sticky = "w", padx = (8, 0), pady = (0, 2))
             ctk.CTkLabel(self.legendFrame, text = iconName, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = i // 2 + 1, column = i % 2 * 2 + 1, sticky = "w", padx = (8, 0), pady = (0, 2))
 
+    def swapData(self):
+        if self.swapDataButton.cget("text") == "Stats":
+            self.swapDataButton.configure(text = "Info")
+            self.infoFrame.place_forget()
+            self.statsFrame.place(relx = 0, rely = 0, anchor = "nw")
+
+            if not self.statsAdded:
+                self.statsAdded = True
+                self.stats()
+        else:
+            self.swapDataButton.configure(text = "Stats")
+            self.statsFrame.place_forget()
+            self.infoFrame.place(relx = 0, rely = 0, anchor = "nw")
+
     def additionalInfo(self):
-        frame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
+        frame = ctk.CTkFrame(self.infoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
         frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))
 
         src = Image.open("Images/calendar.png")
@@ -950,7 +974,7 @@ class MatchProfile(ctk.CTkFrame):
         day, dateText, time = format_datetime_split(self.match.date)
         ctk.CTkLabel(frame, text = f"{day} {dateText}, {time}", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
 
-        frame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
+        frame = ctk.CTkFrame(self.infoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
         frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))
 
         src = Image.open("Images/Eclipse League.png")
@@ -959,7 +983,7 @@ class MatchProfile(ctk.CTkFrame):
         ctk.CTkLabel(frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
         ctk.CTkLabel(frame, text = f"Eclipse League Matchday {self.match.matchday}", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
 
-        frame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
+        frame = ctk.CTkFrame(self.infoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
         frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))
 
         src = Image.open("Images/stadium.png")
@@ -968,7 +992,7 @@ class MatchProfile(ctk.CTkFrame):
         ctk.CTkLabel(frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
         ctk.CTkLabel(frame, text = f"{self.homeTeam.stadium}", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
 
-        frame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
+        frame = ctk.CTkFrame(self.infoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
         frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))
 
         src = Image.open("Images/user.png")
@@ -977,7 +1001,7 @@ class MatchProfile(ctk.CTkFrame):
         ctk.CTkLabel(frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
         ctk.CTkLabel(frame, text = f"Attendance", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
 
-        frame = ctk.CTkFrame(self.matchAddiInfoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
+        frame = ctk.CTkFrame(self.infoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
         frame.pack(fill = "x", expand = True, padx = (5, 0), pady = 5)
 
         referee = Referees.get_referee_by_id(self.match.referee_id)
@@ -987,3 +1011,28 @@ class MatchProfile(ctk.CTkFrame):
         img = ctk.CTkImage(src, None, (src.width, src.height))
         ctk.CTkLabel(frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
         RefereeProfileLink(frame, referee, f"{referee.first_name} {referee.last_name}", "white", 0.08, 0.5, "w", GREY_BACKGROUND, self.parentTab, 12)
+
+    def stats(self):
+        self.statsFrame.grid_columnconfigure((0, 2, 4), weight = 2)
+        self.statsFrame.grid_columnconfigure((1, 3, 5), weight = 1)
+        self.statsFrame.grid_rowconfigure((0, 1, 2, 3, 4), weight = 1)
+
+        homeStats = MatchStats.get_team_stats_in_match(self.match.id, self.homeTeam.id)
+        awayStats = MatchStats.get_team_stats_in_match(self.match.id, self.awayTeam.id)
+
+        currCol = 0
+        # Use canonical SAVED_STATS ordering to ensure home/away stats align reliably
+        stat_names = list(SAVED_STATS)
+        for i, statName in enumerate(stat_names):
+            currRow = i % 5
+
+            if i % 5 == 0 and i != 0:
+                currCol += 2
+
+            homeValue = homeStats.get(statName, 0)
+            awayValue = awayStats.get(statName, 0)
+
+            text = f"{homeValue} / {awayValue}"
+
+            ctk.CTkLabel(self.statsFrame, text = statName, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = currRow, column = currCol, sticky = "w", padx = 8)
+            ctk.CTkLabel(self.statsFrame, text = text, font = (APP_FONT_BOLD, 14), fg_color = GREY_BACKGROUND).grid(row = currRow, column = currCol + 1, sticky = "nsew", padx = 5)

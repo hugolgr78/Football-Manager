@@ -1,11 +1,11 @@
+import gc, traceback, logging, time, os
 import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
 from PIL import Image
 from utils.util_functions import *
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import traceback
+from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExecutor
 
 from tabs.hub import Hub
 from tabs.inbox import Inbox
@@ -19,6 +19,47 @@ from tabs.search import Search
 from tabs.settingsTab import SettingsTab
 from utils.match import Match
 
+def _simulate_match(game, manager_base_name):
+
+    base_name = manager_base_name
+    dbm = DatabaseManager()
+    dbm.set_database(base_name)
+    try:
+        per_process_copy = f"data/{base_name}_copy_{os.getpid()}.db"
+        dbm.copy_path = per_process_copy
+        dbm.start_copy()
+    except Exception:
+        logging.getLogger(__name__).exception("Failed to start DB copy for manager %s", base_name)
+
+    match = Match(game, auto=True)
+    match.startGame()
+    match.join()
+
+    try:
+        if dbm.scoped_session:
+            dbm.scoped_session.remove()
+    except Exception:
+        pass
+    try:
+        if dbm.engine:
+            dbm.engine.dispose()
+    except Exception:
+        pass
+    gc.collect()
+
+    if 'per_process_copy' in locals() and per_process_copy and os.path.exists(per_process_copy):
+        try:
+            os.remove(per_process_copy)
+            logging.getLogger(__name__).debug("Removed per-process DB copy %s", per_process_copy)
+        except Exception:
+            logging.getLogger(__name__).exception("Failed to remove per-process DB copy %s", per_process_copy)
+
+    result = {
+        "id": getattr(game, "id", None),
+        "score": match.score,
+    }
+
+    return result
 class MainMenu(ctk.CTkFrame):
     def __init__(self, parent, manager_id, created):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND)
@@ -71,6 +112,9 @@ class MainMenu(ctk.CTkFrame):
 
         self.createTabs()
         self.addDate()
+
+        # instance logger
+        self._logger = logging.getLogger(__name__)
 
     def createTabs(self):
 
@@ -163,7 +207,47 @@ class MainMenu(ctk.CTkFrame):
                 self.tabs[4].turnSubsOn()
 
     def moveDate(self):
+    
+        def run_match_simulation(self, stopDate):
+            matches = []
+            matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
+            if matchesToSim:
+                self._logger.info("Preparing to simulate %d matches", len(matchesToSim))
+                self._logger.info("Starting match initialization")
+
+                self._logger.info("Starting parallel match simulation with %d workers", max(1, len(matchesToSim)))
+
+                sim_start = time.perf_counter()
+
+                # Run in ProcessPoolExecutor
+                matches = []
+                with ProcessPoolExecutor(max_workers=len(matchesToSim)) as ex:
+                    # compute base name once (we're on the main process and DB is already set)
+                    mgr = Managers.get_manager_by_id(self.manager_id)
+                    base_name = f"{mgr.first_name}{mgr.last_name}"
+                    futures = [ex.submit(_simulate_match, g, base_name) for g in matchesToSim]
+
+                    for fut in as_completed(futures):
+                        try:
+                            result = fut.result()
+                            matches.append(Matches.get_match_by_id(result["id"]))
+                            self._logger.info("Finished match %s with score %s", result["id"], result["score"])
+                        except Exception:
+                            self._logger.exception("Match worker raised an exception")
+                            traceback.print_exc()
+
+                sim_end = time.perf_counter()
+
+                elapsed = sim_end - sim_start
+                self._logger.info("Match smulation completed in %.3f seconds for %d matches", elapsed, len(matchesToSim))
+
+            return matches
+
+        db = DatabaseManager()
+        db.start_copy()
+
         self.currDate = Game.get_game_date(self.manager_id)
+        self._logger.debug("moveDate start - manager_id=%s currDate=%s", self.manager_id, self.currDate)
         teamIDs = Teams.get_all_teams()
 
         dates = []
@@ -171,83 +255,106 @@ class MainMenu(ctk.CTkFrame):
         dates.append(Emails.get_next_email(self.currDate).date)
         stopDate = min(dates)
         overallTimeInBetween = stopDate - self.currDate
+        self._logger.debug("Computed stopDate=%s overallTimeInBetween=%s", stopDate, overallTimeInBetween)
 
         # ------------------- Creating calendar events for other teams -------------------
-        current_day = self.currDate # + timedelta(days = 1)
+        self._logger.info("Starting calendar events generation from %s to %s", self.currDate, stopDate)
+        
+        # Checking if we are going past a monday at 8.59am
+        current_day = self.currDate
+        createEvents = False
         while current_day.date() <= stopDate.date():
             if current_day.weekday() == 0:
                 monday_moment = datetime.datetime(current_day.year, current_day.month, current_day.day, 8, 59)
-                if monday_moment > self.currDate and monday_moment <= stopDate:
-                    for team_id in teamIDs:
-                        if team_id != self.team.id or Settings.get_setting("events_delegated"):
-                            create_events_for_other_teams(team_id, current_day, managing_team = team_id == self.team.id)
+                if monday_moment > current_day and monday_moment <= stopDate:
+                    createEvents = True
+                    break
             current_day += timedelta(days = 1)
+
+        if createEvents:
+            team_list = list(teamIDs)
+            if not Settings.get_setting("events_delegated") and self.team.id in team_list:
+                team_list.remove(self.team.id)
+
+            max_workers = len(team_list)
+            with ThreadPoolExecutor(max_workers = max_workers) as ex:
+                self._logger.info("Preparing futures for creating calendar events (count=%d)", len(team_list))
+                futures = [ex.submit(create_events_for_other_teams, team_id, current_day, managing_team = team_id == self.team.id) for team_id in team_list]
+                self._logger.info("Prepared futures for creating calendar events")
+
+                for fut in as_completed(futures):
+                    try:
+                        fut.result()
+                        self._logger.info("Finished creating events for a team")
+                    except Exception:
+                        self._logger.exception("Calendar events worker raised an exception")
+
+        self._logger.debug("Created/checked calendar events between %s and %s for %d teams", self.currDate, stopDate, len(teamIDs))
 
         # -------------------Figuring out intervals -------------------
 
+        self._logger.debug("Computing intervals between %s and %s for %d teams", self.currDate, stopDate, len(teamIDs))
         intervals = self.getIntervals(self.currDate, stopDate, teamIDs)
+        self._logger.debug("Computed intervals count=%d", len(intervals))
 
         # ------------------- Update player attributes and carry out events -------------------
 
-        for start, end in intervals:
-            timeInBetween = end - start
+        self._logger.info("Starting player attribute updates and event processing across %d intervals", len(intervals))
 
-            for teamID in teamIDs:
+        for teamID in teamIDs:
+            team_start = time.perf_counter()
+            injuredPlayers = PlayerBans.get_team_injured_player_ids(teamID)
+            playerFitnesses = {player.id: [player.fitness, True if player.id in injuredPlayers else False] for player in Players.get_all_players_by_team(teamID, youths = False)}
+            playerSharpnesses = {player.id: player.sharpness for player in Players.get_all_players_by_team(teamID, youths = False)}
+            playerMorales = {player.id: player.morale for player in Players.get_all_players_by_team(teamID, youths = False)}
+
+            for start, end in intervals:
+                timeInBetween = end - start
+
+                eventsToUpdate = []
                 events = CalendarEvents.get_events_dates(teamID, start, end)
 
                 if len(events) == 0:
-                    Players.update_sharpness_and_fitness(timeInBetween, teamID)
+                    self._logger.debug("No calendar events for team %s in interval %s - %s: updating sharpness/fitness", teamID, start, end)
+                    apply_attribute_changes(playerFitnesses, playerSharpnesses, timeInBetween)
                     continue
 
                 for event in events:
-                    self.carryOutEvent(event)
-                    CalendarEvents.update_event(event.id)
+                    eventsToUpdate.append(event.id)
+                    self._logger.debug("Carrying out event %s for team %s", event.event_type, teamID)
+                    if event.event_type == "Team Building":
+                        update_dict_values(playerMorales, 20, 0, 100)
+                    elif event.event_type in EVENT_CHANGES.keys():
+                        fitness, sharpness = EVENT_CHANGES[event.event_type]
+                        update_fitness_dict_values(playerFitnesses, fitness, 0, 100)
+                        update_dict_values(playerSharpnesses, sharpness, 10, 100)
+                
+                PlayerBans.reduce_injuries_for_team(timeInBetween, stopDate, teamID)
+        
+            CalendarEvents.batch_update_events(eventsToUpdate)
+            Players.batch_update_player_stats(playerFitnesses, playerSharpnesses, playerMorales)
 
-            PlayerBans.reduce_injuries(timeInBetween, stopDate)
+            team_elapsed = time.perf_counter() - team_start
+            self._logger.info("Finished processing team %s in %.3f seconds", teamID, team_elapsed)
 
         update_ages(self.currDate, stopDate)
+        self._logger.debug("Updated player ages between %s and %s", self.currDate, stopDate)
 
         # ------------------- Matches simulation -------------------
 
         if self.tabs[4]:
             SavedLineups.delete_current_lineup()
             self.tabs[4].saveLineup()
-
-        matches = []
-        matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
-        if matchesToSim:
-            # Phase 1: create all Match objects
-            for game in matchesToSim:
-                try:
-                    match = Match(game, auto = True)  # init only
-                    matches.append(match)
-                except Exception as e:
-                    traceback.print_exc()
-                    print(e)
-
-            # Phase 2: run startGame in parallel with ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers = len(matches)) as ex:
-                # submit a wrapper that starts the match thread and then joins it
-                def _run_and_join(m):
-                    m.startGame()
-                    m.join()
-                
-                futures = [ex.submit(_run_and_join, match) for match in matches]
-
-                # Phase 3: wait for all to finish
-                for fut in as_completed(futures):
-                    try:
-                        fut.result()
-                    except Exception as e:
-                        traceback.print_exc()
-                        print(e)
+    
+        matches = run_match_simulation(self, stopDate)
 
         self.currDate += overallTimeInBetween
         Game.increment_game_date(self.manager_id, overallTimeInBetween)
+        self._logger.debug("Updated game date to %s with %s difference", self.currDate, overallTimeInBetween)
 
         # ------------------- Post-match updates -------------------
 
-        leagueIDs = list({match.league.league_id for match in matches})
+        leagueIDs = list({match.league_id for match in matches})
         for id_ in leagueIDs:
             LeagueTeams.update_team_positions(id_)
             if League.check_all_matches_complete(id_, self.currDate):
@@ -259,8 +366,8 @@ class MainMenu(ctk.CTkFrame):
 
         teams = []
         for match in matches:
-            teams.append(match.homeTeam)
-            teams.append(match.awayTeam)
+            teams.append(Teams.get_team_by_id(match.home_id))
+            teams.append(Teams.get_team_by_id(match.away_id))
 
         check_player_games_happy(teams, self.currDate)
 
@@ -268,7 +375,7 @@ class MainMenu(ctk.CTkFrame):
 
         self.resetTabs(0, 1, 2, 3, 4, 5, 6)
         self.addDate()
-
+        
     def getIntervals(self, start_date, end_date, teamIDs):
         intervals = set()
 
@@ -311,28 +418,6 @@ class MainMenu(ctk.CTkFrame):
                     break
 
         return sorted(intervals)
-
-    def carryOutEvent(self, event):
-        team = Teams.get_team_by_id(event.team_id)
-        updateStats = True
-        match event.event_type:
-            case "Light Training":
-                Players.update_sharpness_and_fitness_with_values(team.id, -5, 5)
-                updateStats = False
-            case "Medium Training":
-                Players.update_sharpness_and_fitness_with_values(team.id, -12, 10)
-                updateStats = False
-            case "Intense Training":
-                Players.update_sharpness_and_fitness_with_values(team.id, -20, 15)
-                updateStats = False
-            case "Team Building":
-                Players.update_morale_with_values(team.id, random.randint(5, 10))
-            case "Recovery":
-                Players.update_sharpness_and_fitness_with_values(team.id, 20, 0)
-                updateStats = False
-
-        if updateStats:
-            Players.update_sharpness_and_fitness(event.end_date - event.start_date, team.id)
 
     def resetMenu(self):
         

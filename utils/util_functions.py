@@ -941,3 +941,8 @@ def get_all_league_teams(jsonData, leagueName):
             teamOBJs.append(team)
 
     return teamOBJs
+
+def assign_times_for_day(games, time_slots):
+    for game in games:
+        chosen_time = random.choice(time_slots)
+        yield game, chosen_time  

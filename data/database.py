@@ -167,54 +167,63 @@ class Managers(Base):
     age = Column(Integer, nullable = False)
 
     @classmethod
-    def add_manager(cls, first_name = None, last_name = None, nationality = None, date_of_birth = None, user = False, chosenTeam = None):
+    def add_manager(cls, first_name = None, last_name = None, nationality = None, date_of_birth = None, chosenTeam = None):
         session = DatabaseManager().get_session()
         try:
-            if user:
-                new_manager  =  Managers(
-                    id = str(uuid.uuid4()),
-                    first_name = first_name,
-                    last_name = last_name,
-                    nationality = nationality,
-                    user = user,
-                    date_of_birth = date_of_birth,
-                    age = 2024 - date_of_birth.year
-                )
-            else:
+            flags = {}
+            for continent in COUNTRIES:
+                for country in COUNTRIES[continent][1].keys():
+                    with open(f"Images/Countries/{country.lower()}.png", "rb") as file:
+                        flags[country] = file.read()
+
+            userManagerID = str(uuid.uuid4())
+            managers_dicts = [
+                {
+                    "id": userManagerID,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "nationality": nationality,
+                    "flag": flags[nationality],
+                    "user": True,
+                    "date_of_birth": date_of_birth,
+                    "age": 2024 - date_of_birth.year
+                }
+            ]
+            for _ in range(699):
                 selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
                 country = random.choices(list(COUNTRIES[selectedContinent][1].keys()), weights = list(COUNTRIES[selectedContinent][1].values()), k = 1)[0]
                 date_of_birth = Faker().date_of_birth(minimum_age = 32, maximum_age = 65)
-                new_manager = Managers(
-                    id = str(uuid.uuid4()),
-                    first_name = Faker().first_name_male(),
-                    last_name = Faker().first_name(),
-                    nationality = country,
-                    date_of_birth = date_of_birth,
-                    age = 2024 - date_of_birth.year,
-                    user = user
+
+                managers_dicts.append(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "first_name": Faker().first_name_male(),
+                        "last_name": Faker().first_name(),
+                        "nationality": country,
+                        "flag": flags[country],
+                        "date_of_birth": date_of_birth,
+                        "user": False,
+                        "age": 2024 - date_of_birth.year,
+                    }
                 )
 
-            with open(f"Images/Countries/{new_manager.nationality.lower()}.png", 'rb') as file:
-                new_manager.flag  =  file.read()
-
-            managerID = new_manager.id
-
-            session.add(new_manager)
+            session.bulk_insert_mappings(Managers, managers_dicts)
             session.commit()
-            updateProgress(1)
 
-            if user:
-                Teams.add_teams(chosenTeam, managerID)
-                updateProgress(2)
-                Referees.add_referees()
-                updateProgress(3)
-                League.add_leagues()
-                Emails.add_emails(managerID)
-                CalendarEvents.add_travel_events(managerID)
-                Settings.add_settings()
-                updateProgress(None)
+            nameas_id_mapping = Teams.add_teams(chosenTeam, userManagerID)
+            Players.add_players(flags)
+            League.add_leagues()
 
-            return managerID
+            leagues = League.get_all_leagues()
+            LeagueTeams.add_league_teams(nameas_id_mapping, leagues)
+            Matches.add_all_matches(leagues)
+            Referees.add_referees(leagues, flags)
+
+            Emails.add_emails(userManagerID)
+            CalendarEvents.add_travel_events(userManagerID)
+            Settings.add_settings()
+
+            return userManagerID
         except Exception as e:
             session.rollback()
             raise e
@@ -226,6 +235,15 @@ class Managers(Base):
         session = DatabaseManager().get_session()
         try:
             return session.query(Managers).filter(Managers.id == id).first()
+        finally:
+            session.close()
+
+    @classmethod
+    def get_all_non_user_managers(cls):
+        session = DatabaseManager().get_session()
+        try:
+            managers = session.query(Managers).filter(Managers.user == False).all()
+            return managers
         finally:
             session.close()
 
@@ -326,37 +344,39 @@ class Teams(Base):
             with open("data/teams.json", 'r') as file:
                 data = json.load(file)
 
+            teams_dict = []
+            names_ids_mapping = {}
+            non_user_managers = Managers.get_all_non_user_managers()
+
             for team in data:
-                name = team['name']
-                year_created = team['year_created']
-                stadium = team['stadium']
-                strength = team['strength']
 
                 with open(team["logo"], 'rb') as file:
                     logo = file.read()
 
-                if name != chosenTeamName:
-                    managerID = Managers.add_manager()
+                if team["name"] == chosenTeamName:
+                    managerID = manager_id
                 else:
-                    managerID = manager_id 
+                    manager = random.choice(non_user_managers)
+                    managerID = manager.id
+                    non_user_managers.remove(manager)
 
-                new_team = Teams(
-                    id = str(uuid.uuid4()),
-                    manager_id = managerID,
-                    name = name,
-                    year_created = year_created,
-                    stadium = stadium,
-                    logo = logo,
-                    strength = strength
-                )
+                teamID = str(uuid.uuid4())
+                teams_dict.append({
+                    "id": teamID,
+                    "manager_id": managerID,
+                    "name": team["name"],
+                    "logo": logo,
+                    "year_created": team["year_created"],
+                    "stadium": team["stadium"],
+                    "strength": team["strength"]
+                })
 
-                updateProgress(None)
-                session.add(new_team)
-                session.commit()
+                names_ids_mapping[team["name"]] = teamID
 
-                Players.add_players(new_team.id)
-
+            session.bulk_insert_mappings(Teams, teams_dict)
             session.commit()
+
+            return names_ids_mapping
         except Exception as e:
             session.rollback()
             raise e
@@ -491,51 +511,35 @@ class Players(Base):
     talked_to = Column(Boolean, default = False)
 
     @classmethod
-    def add_player_entry(cls, data):
-        session = DatabaseManager().get_session()
-        try:
-            session.add(data)
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            raise e
-        finally:
-            session.close()
-
-    @classmethod
-    def add_youth_player(cls, team_id, position, required_code):
-        role = "Youth Team"
+    def create_youth_player(cls, team_id, position, required_code, flags, numbers):
         selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
         _, countryWeights = COUNTRIES[selectedContinent]
         country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
-
-        with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
-            flag = file.read()
 
         faker = Faker()
         date_of_birth = faker.date_of_birth(minimum_age = 15, maximum_age = 17)
         playerCA = generate_youth_player_level()
         playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
 
-        new_player = Players(
-            id = str(uuid.uuid4()),
-            team_id = team_id,
-            first_name = faker.first_name_male(),
-            last_name = faker.last_name(),
-            current_ability = playerCA,
-            potential_ability = playerPA,
-            number = random.randint(1, 99),
-            position = position,
-            date_of_birth = date_of_birth,
-            age = SEASON_START_DATE.year - date_of_birth.year,
-            nationality = country,
-            flag = flag,
-            player_role = role,
-        )
+        dict_ = {
+            "id": str(uuid.uuid4()),
+            "team_id": team_id,
+            "first_name": faker.first_name_male(),
+            "last_name": faker.last_name(),
+            "number": random.randint(1, 99),
+            "position": position,
+            "date_of_birth": date_of_birth,
+            "age": SEASON_START_DATE.year - date_of_birth.year,
+            "nationality": country,
+            "flag": flags[country],
+            "current_ability": playerCA,
+            "potential_ability": playerPA,
+            "player_role": "Youth Team"
+        }
 
-        existing_numbers = {player.number for player in Players.get_all_players_by_team(team_id)}
-        while new_player.number in existing_numbers:
-            new_player.number = random.randint(1, 99)
+        while dict_["number"] in numbers:
+            dict_["number"] = random.randint(1, 99)
+        numbers.append(dict_["number"])
 
         specific_positions = {
             "goalkeeper": ["GK"],
@@ -547,204 +551,200 @@ class Players(Base):
         player_positions = [required_code]
 
         if position in specific_positions:
-            other_positions = specific_positions[position]
-            other_positions.remove(required_code)
+            other_positions = specific_positions[position][:]
+            if required_code in other_positions:
+                other_positions.remove(required_code)
+
             if len(other_positions) > 0:
-                num_other_positions = random.randint(0, 1)
+                num_other_positions = random.choices([0, 1, 2], weights = [0.7, 0.25, 0.05])[0]
                 player_positions.extend(random.sample(other_positions, num_other_positions))
 
-        new_player.specific_positions = ','.join(player_positions)
+        dict_["specific_positions"] = ','.join(player_positions or [required_code])
 
-        return new_player
+        return dict_
 
     @classmethod
-    def add_players(cls, team_id):
+    def add_players(cls, flags):
         session = DatabaseManager().get_session()
-        team = session.query(Teams).filter(Teams.id == team_id).first()
+        teams = Teams.get_all_teams()
+
+        players_dict = []
         try:
-            base_positions = {
-                "goalkeeper": 3,
-                "defender": 8,
-                "midfielder": 8,
-                "forward": 6
-            }
+            for team in teams:
+                team_players = []
+                team_id = team.id
 
-            positions = {
-                pos: random.randint(val, val + (1 if pos == "goalkeeper" else 2))
-                for pos, val in base_positions.items()
-            }
+                base_positions = {
+                    "goalkeeper": 3,
+                    "defender": 8,
+                    "midfielder": 8,
+                    "forward": 6
+                }
 
-            specific_positions = {
-                "goalkeeper": ["GK"],
-                "defender": ["RB", "CB", "LB"],
-                "midfielder": ["DM", "CM", "RM", "LM", "AM"],
-                "forward": ["LW", "CF", "RW"]
-            }
+                positions = {
+                    pos: random.randint(val, val + (1 if pos == "goalkeeper" else 2))
+                    for pos, val in base_positions.items()
+                }
 
-            numbers = []
-            faker = Faker()
-            position_weights = [0.4, 0.3, 0.2, 0.1]
+                specific_positions = {
+                    "goalkeeper": ["GK"],
+                    "defender": ["RB", "CB", "LB"],
+                    "midfielder": ["DM", "CM", "RM", "LM", "AM"],
+                    "forward": ["LW", "CF", "RW"]
+                }
 
-            all_players = []
+                numbers = []
+                faker = Faker()
+                position_weights = [0.4, 0.3, 0.2, 0.1]
 
-            # --- Generate all players without assigning roles ---
-            for overall_position, specific_pos_list in specific_positions.items():
-                # Minimum players for each specific position
-                for specific_pos in specific_pos_list:
-                    selectedContinent = random.choices(list(continentWeights.keys()), weights=list(continentWeights.values()), k=1)[0]
-                    _, countryWeights = COUNTRIES[selectedContinent]
-                    country = random.choices(list(countryWeights.keys()), weights=list(countryWeights.values()), k=1)[0]
+                # --- Generate all players without assigning roles ---
+                for overall_position, specific_pos_list in specific_positions.items():
+                    # Minimum players for each specific position
+                    for specific_pos in specific_pos_list:
+                        selectedContinent = random.choices(list(continentWeights.keys()), weights=list(continentWeights.values()), k=1)[0]
+                        _, countryWeights = COUNTRIES[selectedContinent]
+                        country = random.choices(list(countryWeights.keys()), weights=list(countryWeights.values()), k=1)[0]
 
-                    with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
-                        flag = file.read()
-
-                    date_of_birth = faker.date_of_birth(minimum_age = 18, maximum_age = 35)
-                    player_number = random.randint(1, 99)
-                    while player_number in numbers:
+                        date_of_birth = faker.date_of_birth(minimum_age = 18, maximum_age = 35)
                         player_number = random.randint(1, 99)
-                    numbers.append(player_number)
+                        while player_number in numbers:
+                            player_number = random.randint(1, 99)
+                        numbers.append(player_number)
 
-                    num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1),
-                                                weights=position_weights[:min(len(specific_pos_list), 4)])[0]
-                    new_player_positions = random.sample(specific_pos_list, k=num_positions)
-                    if specific_pos not in new_player_positions:
-                        new_player_positions[0] = specific_pos
+                        num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1),
+                                                    weights=position_weights[:min(len(specific_pos_list), 4)])[0]
+                        new_player_positions = random.sample(specific_pos_list, k=num_positions)
+                        if specific_pos not in new_player_positions:
+                            new_player_positions[0] = specific_pos
 
-                    playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength)
-                    playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
+                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength)
+                        playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
 
-                    new_player = Players(
-                        team_id = team_id,
-                        first_name = faker.first_name_male(),
-                        last_name = faker.last_name(),
-                        number = player_number,
-                        position = overall_position,
-                        date_of_birth = date_of_birth,
-                        age = SEASON_START_DATE.year - date_of_birth.year,
-                        nationality = country,
-                        flag = flag,
-                        specific_positions = ','.join(new_player_positions),
-                        current_ability = playerCA,
-                        potential_ability = playerPA
-                    )
-                    all_players.append(new_player)
+                        team_players.append({
+                            "id": str(uuid.uuid4()),
+                            "team_id": team_id,
+                            "first_name": faker.first_name_male(),
+                            "last_name": faker.last_name(),
+                            "number": player_number,
+                            "position": overall_position,
+                            "date_of_birth": date_of_birth,
+                            "age": SEASON_START_DATE.year - date_of_birth.year,
+                            "nationality": country,
+                            "flag": flags[country],
+                            "specific_positions": ','.join(new_player_positions),
+                            "current_ability": playerCA,
+                            "potential_ability": playerPA
+                        })
 
-                # Add extra players to reach desired count
-                for _ in range(positions[overall_position] - len(specific_pos_list)):
-                    selectedContinent = random.choices(list(continentWeights.keys()), weights=list(continentWeights.values()), k=1)[0]
-                    _, countryWeights = COUNTRIES[selectedContinent]
-                    country = random.choices(list(countryWeights.keys()), weights=list(countryWeights.values()), k=1)[0]
+                    # Add extra players to reach desired count
+                    for _ in range(positions[overall_position] - len(specific_pos_list)):
+                        selectedContinent = random.choices(list(continentWeights.keys()), weights=list(continentWeights.values()), k=1)[0]
+                        _, countryWeights = COUNTRIES[selectedContinent]
+                        country = random.choices(list(countryWeights.keys()), weights=list(countryWeights.values()), k=1)[0]
 
-                    with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
-                        flag = file.read()
-
-                    date_of_birth = faker.date_of_birth(minimum_age=18, maximum_age=35)
-                    player_number = random.randint(1, 99)
-                    while player_number in numbers:
+                        date_of_birth = faker.date_of_birth(minimum_age=18, maximum_age=35)
                         player_number = random.randint(1, 99)
-                    numbers.append(player_number)
+                        while player_number in numbers:
+                            player_number = random.randint(1, 99)
+                        numbers.append(player_number)
 
-                    num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1),
-                                                weights=position_weights[:min(len(specific_pos_list), 4)])[0]
-                    new_player_positions = random.sample(specific_pos_list, k=num_positions)
+                        num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1),
+                                                    weights=position_weights[:min(len(specific_pos_list), 4)])[0]
+                        new_player_positions = random.sample(specific_pos_list, k=num_positions)
 
-                    playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength)
-                    playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
+                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength)
+                        playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
 
-                    new_player = Players(
-                        team_id = team_id,
-                        first_name = faker.first_name_male(),
-                        last_name = faker.last_name(),
-                        number = player_number,
-                        position = overall_position,
-                        date_of_birth = date_of_birth,
-                        age = SEASON_START_DATE.year - date_of_birth.year,
-                        nationality = country,
-                        flag = flag,
-                        specific_positions = ','.join(new_player_positions),
-                        current_ability = playerCA,
-                        potential_ability = playerPA
-                    )
-                    all_players.append(new_player)
+                        team_players.append({
+                            "id": str(uuid.uuid4()),
+                            "team_id": team_id,
+                            "first_name": faker.first_name_male(),
+                            "last_name": faker.last_name(),
+                            "number": player_number,
+                            "position": overall_position,
+                            "date_of_birth": date_of_birth,
+                            "age": SEASON_START_DATE.year - date_of_birth.year,
+                            "nationality": country,
+                            "flag": flags[country],
+                            "specific_positions": ','.join(new_player_positions),
+                            "current_ability": playerCA,
+                            "potential_ability": playerPA
+                        })
 
-            # 1. Star Players: top 4 in the team
-            all_players.sort(key = lambda p: p.current_ability, reverse = True)
+                # 1. Star Players: top 4 in the team
+                team_players.sort(key = lambda p: p["current_ability"], reverse = True)
 
-            starKeeperPicked = False
-            count = 0
+                starKeeperPicked = False
+                count = 0
 
-            for player in all_players:
-                if count < 4:
-                    if player.position == "GK":
-                        if not starKeeperPicked:
-                            player.player_role = "Star Player"
-                            starKeeperPicked = True
-                            count += 1
+                for player in team_players:
+                    if count < 4:
+                        if player["position"] == "GK":
+                            if not starKeeperPicked:
+                                player["player_role"] = "Star Player"
+                                starKeeperPicked = True
+                                count += 1
+                            else:
+                                player["player_role"] = None
                         else:
-                            player.player_role = None
+                            player["player_role"] = "Star Player"
+                            count += 1
                     else:
-                        player.player_role = "Star Player"
-                        count += 1
-                else:
-                    player.player_role = None
+                        player["player_role"] = None
 
-            # Tie-break for Star Player limit
-            for i in range(4, len(all_players)):
-                if all_players[i].current_ability == all_players[3].current_ability:
-                    all_players[i].current_ability -= 5
+                # Tie-break for Star Player limit
+                for i in range(4, len(team_players)):
+                    if team_players[i]["current_ability"] == team_players[3]["current_ability"]:
+                        team_players[i]["current_ability"] -= 5
 
-            # 2. First team and Rotation per position (Backup only for goalkeepers)
-            positions = ["goalkeeper", "defender", "midfielder", "forward"]
-            max_top_per_position = {"goalkeeper": 1, "defender": 4, "midfielder": 4, "forward": 4}
+                # 2. First team and Rotation per position (Backup only for goalkeepers)
+                positions = ["goalkeeper", "defender", "midfielder", "forward"]
+                max_top_per_position = {"goalkeeper": 1, "defender": 4, "midfielder": 4, "forward": 4}
 
-            for pos in positions:
-                pos_players = [p for p in all_players if p.position == pos and p.player_role is None]
-                pos_players.sort(key=lambda p: p.current_ability, reverse=True)
+                for pos in positions:
+                    pos_players = [p for p in team_players if p["position"] == pos and p["player_role"] is None]
+                    pos_players.sort(key=lambda p: p["current_ability"], reverse=True)
 
-                # Count existing Star Players in this position
-                sp_count = sum(1 for p in all_players if p.position == pos and p.player_role == "Star Player")
-                remaining_top_slots = max(0, max_top_per_position[pos] - sp_count)
+                    # Count existing Star Players in this position
+                    sp_count = sum(1 for p in team_players if p["position"] == pos and p["player_role"] == "Star Player")
+                    remaining_top_slots = max(0, max_top_per_position[pos] - sp_count)
 
-                # Assign First Team up to remaining slots
-                for i in range(min(remaining_top_slots, len(pos_players))):
-                    pos_players[i].player_role = "First Team"
+                    # Assign First Team up to remaining slots
+                    for i in range(min(remaining_top_slots, len(pos_players))):
+                        pos_players[i]["player_role"] = "First Team"
 
-                # Tie-break for First Team limit
-                if len(pos_players) > remaining_top_slots:
-                    if remaining_top_slots > 0:
-                        limit_CA = pos_players[remaining_top_slots - 1].current_ability
-                        for player in pos_players[remaining_top_slots:]:
-                            if player.current_ability == limit_CA:
-                                player.current_ability -= 5
+                    # Tie-break for First Team limit
+                    if len(pos_players) > remaining_top_slots:
+                        if remaining_top_slots > 0:
+                            limit_CA = pos_players[remaining_top_slots - 1]["current_ability"]
+                            for player in pos_players[remaining_top_slots:]:
+                                if player["current_ability"] == limit_CA:
+                                    player["current_ability"] -= 5
 
-                # Assign Rotation or Backup
-                for player in pos_players[remaining_top_slots:]:
-                    if pos == "goalkeeper":
-                        player.player_role = "Backup"
-                    else:
-                        player.player_role = "Rotation"
+                    # Assign Rotation or Backup
+                    for player in pos_players[remaining_top_slots:]:
+                        if pos == "goalkeeper":
+                            player["player_role"] = "Backup"
+                        else:
+                            player["player_role"] = "Rotation"
 
-            # 1) Ensure at least one youth for each specific position
-            for overall_position, specific_pos_list in specific_positions.items():
-                for specific_pos in specific_pos_list:
-                    all_players.append(Players.add_youth_player(team_id, overall_position, specific_pos))
+                # 1) Ensure at least one youth for each specific position
+                for overall_position, specific_pos_list in specific_positions.items():
+                    for specific_pos in specific_pos_list:
+                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers))
 
-            # 2) Ensure at least base_positions youths for each overall position
-            for overall_position, minimum in base_positions.items():
-                curr_count = session.query(Players).filter(
-                    Players.team_id == team_id,
-                    Players.position == overall_position,
-                    Players.player_role == 'Youth Team'
-                ).count()
+                # 2) Ensure at least base_positions youths for each overall position
+                for overall_position, minimum in base_positions.items():
+                    curr_count = sum(1 for p in team_players if p["position"] == overall_position and p["player_role"] == "Youth Team")
 
-                while curr_count < minimum:
-                    specific_pos = random.choice(specific_positions[overall_position])
-                    all_players.append(Players.add_youth_player(team_id, overall_position, specific_pos))
-                    curr_count += 1
+                    while curr_count < minimum:
+                        specific_pos = random.choice(specific_positions[overall_position])
+                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers))
+                        curr_count += 1
 
-            for player in all_players:
-                session.add(player)
+                players_dict.extend(team_players)
 
+            session.bulk_insert_mappings(Players, players_dict)
             session.commit()
         except Exception as e:
             session.rollback()
@@ -1222,24 +1222,116 @@ class Matches(Base):
     date = Column(DateTime, nullable = False)
 
     @classmethod
-    def add_match(cls, league_id, home_id, away_id, referee_id, matchday, date):
+    def add_all_matches(cls, leagues):
         session = DatabaseManager().get_session()
         try:
+            matches_dict = []
 
-            new_match = Matches(
-                league_id = league_id,
-                home_id = home_id,
-                away_id = away_id,
-                referee_id = referee_id,
-                matchday = matchday,
-                date = date,
-            )
+            for league in leagues:
+                schedule = []
+                referees = Referees.get_all_referees_by_league(league.id)
+                team_ids = [t.id for t in LeagueTeams.get_teams_by_league(league.id)]
+                league_id = league.id
 
-            session.add(new_match)
+                # --- Generate the first round of matches ---
+                num_teams = len(team_ids)
+                for round_ in range(num_teams - 1):
+                    round_matches = []
+                    for i in range(num_teams // 2):
+                        home = team_ids[i]
+                        away = team_ids[num_teams - 1 - i]
+                        if round_ % 2 == 0:
+                            round_matches.append((home, away))
+                        else:
+                            round_matches.append((away, home))
+                    schedule.append(round_matches)
+                    team_ids.insert(1, team_ids.pop())  # Rotate the list
+
+                random.shuffle(schedule)
+
+                # --- Second round (reverse fixtures) ---
+                second_round = [[(away, home) for home, away in round] for round in schedule]
+                random.shuffle(second_round)
+                schedule.extend(second_round)
+
+                # --- Generate weekend dates for 38 matchdays ---
+                start_date = SEASON_START_DATE
+                matchdays_dates = []
+                current = start_date
+
+                while len(matchdays_dates) < 38:
+                    saturday = current + datetime.timedelta(days = (5 - current.weekday()) % 7)
+                    sunday = saturday + datetime.timedelta(days = 1)
+
+                    sat_date = saturday.date()
+                    sun_date = sunday.date()
+
+                    # Skip Christmas week (Dec 24 - Jan 1)
+                    if not (datetime.date(sat_date.year, 12, 24) <= sat_date <= datetime.date(sat_date.year, 12, 31) or
+                            sun_date == datetime.date(sun_date.year, 1, 1)):
+                        matchdays_dates.append((saturday, sunday))
+
+                    current = saturday + datetime.timedelta(days = 7)
+
+                # --- Allowed kickoff times (strings) ---
+                time_slots = ["12:00", "15:00", "18:00", "21:00"]
+
+                # --- Add matches to the database ---
+                for i, (matchday, (saturday, sunday)) in enumerate(zip(schedule, matchdays_dates)):
+                    assigned_referees = set()
+                    random.shuffle(matchday)  # Shuffle order so Sat/Sun split is fair
+                    half = len(matchday) // 2
+                    sat_games = matchday[:half]
+                    sun_games = matchday[half:]
+
+                    # --- Assign Saturday games ---
+                    for (home_id, away_id), kickoff_time in assign_times_for_day(sat_games, time_slots):
+                        available_referees = [r for r in referees if r not in assigned_referees]
+
+                        if not available_referees:
+                            raise ValueError("Not enough referees to cover all matches for this matchday.")
+
+                        referee_id = random.choice(available_referees)
+                        assigned_referees.add(referee_id)
+
+                        # Combine date and time into a datetime object
+                        kickoff_datetime = datetime.datetime.combine(saturday, datetime.datetime.strptime(kickoff_time, "%H:%M").time())
+
+                        matches_dict.append({
+                            "id": str(uuid.uuid4()),
+                            "league_id": league_id,
+                            "home_id": home_id,
+                            "away_id": away_id,
+                            "referee_id": referee_id,
+                            "matchday": i + 1,
+                            "date": kickoff_datetime,
+                        })
+
+                    # --- Assign Sunday games ---
+                    for (home_id, away_id), kickoff_time in assign_times_for_day(sun_games, time_slots):
+                        available_referees = [r for r in referees if r not in assigned_referees]
+
+                        if not available_referees:
+                            raise ValueError("Not enough referees to cover all matches for this matchday.")
+
+                        referee_id = random.choice(available_referees)
+                        assigned_referees.add(referee_id)
+
+                        kickoff_datetime = datetime.datetime.combine(sunday, datetime.datetime.strptime(kickoff_time, "%H:%M").time())
+
+                        matches_dict.append({
+                            "id": str(uuid.uuid4()),
+                            "league_id": league_id,
+                            "home_id": home_id,
+                            "away_id": away_id,
+                            "referee_id": referee_id,
+                            "matchday": i + 1,
+                            "date": kickoff_datetime,
+                        })
+
+            session.bulk_insert_mappings(Matches, matches_dict)
             session.commit()
-            updateProgress(None)
 
-            return new_match
         except Exception as e:
             session.rollback()
             raise e
@@ -2629,144 +2721,24 @@ class League(Base):
             with open("data/leagues.json", 'r') as file:
                 data = json.load(file)
 
+            leagues_dict = []
+
             for league in data:
-                name = league["name"]
-                promotion = league["promotion"]
-                relegation = league["relegation"]
 
                 with open(league["logo"], 'rb') as file:
                     logo = file.read()
 
-                new_league = League(
-                    id = str(uuid.uuid4()),
-                    name = name,
-                    year = 2024,
-                    logo = logo,
-                    promotion = promotion,
-                    relegation = relegation
-                )
+                leagues_dict.append({
+                    "id": str(uuid.uuid4()),
+                    "name": league["name"],
+                    "year": 2024,
+                    "logo": logo,
+                    "promotion": league["promotion"],
+                    "relegation": league["relegation"],
+                })
 
-                leagueID = new_league.id
-
-                session.add(new_league)
-                session.commit()
-
-                updateProgress(None)
-
-                teams = get_all_league_teams(name)
-                teams.sort(key = lambda x: x["name"])
-
-                for i, team in enumerate(teams):
-                    teamID = Teams.get_team_by_name(team["name"]).id
-                    LeagueTeams.add_team(leagueID, teamID, i + 1)
-                    updateProgress(None)
-
-                cls.generate_schedule(teams, leagueID)
-
-            updateProgress(4)
-
-            return new_league
-        except Exception as e:
-            session.rollback()
-            raise e
-        finally:
-            session.close()
-
-    @classmethod
-    def generate_schedule(cls, team_ids, league_id):
-        session = DatabaseManager().get_session()
-        try:
-            schedule = []
-
-            # --- Generate the first round of matches ---
-            num_teams = len(team_ids)
-            for round in range(num_teams - 1):
-                round_matches = []
-                for i in range(num_teams // 2):
-                    home = team_ids[i]
-                    away = team_ids[num_teams - 1 - i]
-                    if round % 2 == 0:
-                        round_matches.append((home, away))
-                    else:
-                        round_matches.append((away, home))
-                schedule.append(round_matches)
-                team_ids.insert(1, team_ids.pop())  # Rotate the list
-
-            random.shuffle(schedule)
-
-            # --- Second round (reverse fixtures) ---
-            second_round = [[(away, home) for home, away in round] for round in schedule]
-            random.shuffle(second_round)
-            schedule.extend(second_round)
-
-            # --- Generate weekend dates for 38 matchdays ---
-            start_date = SEASON_START_DATE
-            matchdays_dates = []
-            current = start_date
-
-            while len(matchdays_dates) < 38:
-                saturday = current + datetime.timedelta(days = (5 - current.weekday()) % 7)
-                sunday = saturday + datetime.timedelta(days = 1)
-
-                sat_date = saturday.date()
-                sun_date = sunday.date()
-
-                # Skip Christmas week (Dec 24 - Jan 1)
-                if not (datetime.date(sat_date.year, 12, 24) <= sat_date <= datetime.date(sat_date.year, 12, 31) or
-                        sun_date == datetime.date(sun_date.year, 1, 1)):
-                    matchdays_dates.append((saturday, sunday))
-
-                current = saturday + datetime.timedelta(days = 7)
-
-            # --- Allowed kickoff times (strings) ---
-            time_slots = ["12:00", "15:00", "18:00", "21:00"]
-
-            def assign_times_for_day(games):
-                for game in games:
-                    chosen_time = random.choice(time_slots)
-                    yield game, chosen_time  # game is tuple (home_id, away_id), time is string
-
-            # --- Add matches to the database ---
-            for i, (matchday, (saturday, sunday)) in enumerate(zip(schedule, matchdays_dates)):
-                assigned_referees = set()
-                random.shuffle(matchday)  # Shuffle order so Sat/Sun split is fair
-                half = len(matchday) // 2
-                sat_games = matchday[:half]
-                sun_games = matchday[half:]
-
-                # --- Assign Saturday games ---
-                for (home_id, away_id), kickoff_time in assign_times_for_day(sat_games):
-                    available_referees = [
-                        referee.id for referee in session.query(Referees).all()
-                        if referee.id not in assigned_referees
-                    ]
-                    if not available_referees:
-                        raise ValueError("Not enough referees to cover all matches for this matchday.")
-
-                    referee_id = random.choice(available_referees)
-                    assigned_referees.add(referee_id)
-
-                    # Combine date and time into a datetime object
-                    kickoff_datetime = datetime.datetime.combine(saturday, datetime.datetime.strptime(kickoff_time, "%H:%M").time())
-                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1, kickoff_datetime)
-
-                # --- Assign Sunday games ---
-                for (home_id, away_id), kickoff_time in assign_times_for_day(sun_games):
-                    available_referees = [
-                        referee.id for referee in session.query(Referees).all()
-                        if referee.id not in assigned_referees
-                    ]
-                    if not available_referees:
-                        raise ValueError("Not enough referees to cover all matches for this matchday.")
-
-                    referee_id = random.choice(available_referees)
-                    assigned_referees.add(referee_id)
-
-                    kickoff_datetime = datetime.datetime.combine(sunday, datetime.datetime.strptime(kickoff_time, "%H:%M").time())
-                    Matches.add_match(league_id, home_id, away_id, referee_id, i + 1, kickoff_datetime)
-
-                updateProgress(None)
-
+            session.bulk_insert_mappings(League, leagues_dict)
+            session.commit()
         except Exception as e:
             session.rollback()
             raise e
@@ -2856,7 +2828,7 @@ class LeagueTeams(Base):
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     league_id = Column(String(128), ForeignKey('leagues.id'))
     team_id = Column(String(128), ForeignKey('teams.id'))
-    position = Column(Integer, nullable = False, default = 0)
+    position = Column(Integer, nullable = False)
     points = Column(Integer, nullable = False, default = 0)
     games_won = Column(Integer, nullable = False, default = 0)
     games_drawn = Column(Integer, nullable = False, default = 0)
@@ -2864,6 +2836,33 @@ class LeagueTeams(Base):
     goals_scored = Column(Integer, nullable = False, default = 0)
     goals_conceded = Column(Integer, nullable = False, default = 0)
 
+    @classmethod
+    def add_league_teams(cls, names_ids_mapping, leagues):
+        session = DatabaseManager().get_session()
+        try:
+            league_teams_dict = []
+
+            with open("data/teams.json", 'r') as file:
+                data = json.load(file)
+
+            for league in leagues:
+                teams = get_all_league_teams(data, league.name)
+
+                for i, team in enumerate(teams):
+                    league_teams_dict.append({
+                        "id": str(uuid.uuid4()),
+                        "league_id": league.id,
+                        "team_id": names_ids_mapping[team["name"]],
+                        "position": i + 1
+                    })
+
+            session.bulk_insert_mappings(LeagueTeams, league_teams_dict)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
     @classmethod
     def add_team(cls, league_id, team_id, position):
         session = DatabaseManager().get_session()
@@ -3065,77 +3064,54 @@ class Referees(Base):
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     first_name = Column(String(128), nullable = False)
     last_name = Column(String(128), nullable = False)
+    league_id = Column(String(256), ForeignKey('leagues.id'))
     severity = Column(Enum("low", "medium", "high"), nullable = False)
     flag = Column(BLOB)
     nationality = Column(String(128), nullable = False)
     age = Column(Integer, nullable = False)
     date_of_birth = Column(Date, nullable = False)
-
+    
     @classmethod
-    def add_referee(cls):
+    def add_referees(cls, leagues, flags):
         session = DatabaseManager().get_session()
         try:
-            selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
-            _, countryWeights = COUNTRIES[selectedContinent]
-            country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
-
-            with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
-                flag = file.read()
+            referees_dict = []
 
             faker = Faker()
-            date_of_birth = faker.date_of_birth(minimum_age = 15, maximum_age = 17)
-            new_referee = Referees(
-                first_name = faker.first_name_male(),
-                last_name = faker.last_name(),
-                severity = random.choices(["low", "medium", "high"], k = 1)[0],
-                flag = flag,
-                nationality = country,
-                age = 2024 - date_of_birth.year,
-                date_of_birth = date_of_birth
-            )
+            for league in leagues:
+                for _ in range(random.randint(35, 45)):
+                    selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
+                    _, countryWeights = COUNTRIES[selectedContinent]
+                    country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
 
-            session.add(new_referee)
+                    date_of_birth = faker.date_of_birth(minimum_age = 30, maximum_age = 65)
+
+                    referees_dict.append({
+                        "id": str(uuid.uuid4()),
+                        "first_name": faker.first_name_male(),
+                        "last_name": faker.last_name_male(),
+                        "league_id": league.id,
+                        "severity": random.choices(["low", "medium", "high"], k = 1)[0],
+                        "flag": flags[country],
+                        "nationality": country,
+                        "age": 2024 - date_of_birth.year,
+                        "date_of_birth": date_of_birth
+                    })
+
+            session.bulk_insert_mappings(Referees, referees_dict)
             session.commit()
-
-            return new_referee
         except Exception as e:
             session.rollback()
             raise e
         finally:
             session.close()
-    
+
     @classmethod
-    def add_referees(cls):
+    def get_all_referees_by_league(cls, league_id):
         session = DatabaseManager().get_session()
         try:
-            for _ in range(NUM_TEAMS * 2):
-                selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
-                _, countryWeights = COUNTRIES[selectedContinent]
-                country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
-
-                with open(f"Images/Countries/{country.lower()}.png", 'rb') as file:
-                    flag = file.read()
-
-                faker = Faker()
-                date_of_birth = faker.date_of_birth(minimum_age = 30, maximum_age = 65)
-                new_referee = Referees(
-                    first_name = faker.first_name_male(),
-                    last_name = faker.last_name_male(),
-                    severity = random.choices(["low", "medium", "high"], k = 1)[0],
-                    flag = flag,
-                    nationality = country,
-                    age = 2024 - date_of_birth.year,
-                    date_of_birth = date_of_birth
-                )
-
-                session.add(new_referee)
-
-                updateProgress(None)
-
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            raise e
+            referee = session.query(Referees).filter(Referees.league_id == league_id).all()
+            return referee
         finally:
             session.close()
 
@@ -5328,11 +5304,12 @@ def updateProgress(textIndex):
     PROGRESS += 1
 
     textLabels = [
-        "Creating manager...",
-        "Adding Teams and Players...",
-        "Adding the Refeeres",
-        "Creating the League...",
-        "Creating the Matches...",
+        "Creating managers...",
+        "Creating Teams...",
+        "Creating Players...",
+        "Creating Leagues...",
+        "Creating Matches...",
+        "Finishing up...",
     ]
 
     percentage = PROGRESS / TOTAL_STEPS * 100

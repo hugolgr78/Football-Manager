@@ -248,7 +248,7 @@ class MainMenu(ctk.CTkFrame):
 
         self.currDate = Game.get_game_date(self.manager_id)
         self._logger.debug("moveDate start - manager_id=%s currDate=%s", self.manager_id, self.currDate)
-        teamIDs = Teams.get_all_teams()
+        teamIDs = [t.id for t in Teams.get_all_teams()]
 
         dates = []
         dates.append(Matches.get_team_next_match(self.team.id, self.currDate).date)

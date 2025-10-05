@@ -167,9 +167,10 @@ class Managers(Base):
     age = Column(Integer, nullable = False)
 
     @classmethod
-    def add_manager(cls, first_name = None, last_name = None, nationality = None, date_of_birth = None, chosenTeam = None):
+    def add_managers(cls, first_name = None, last_name = None, nationality = None, date_of_birth = None, chosenTeam = None):
         session = DatabaseManager().get_session()
         try:
+            faker = Faker()
             flags = {}
             for continent in COUNTRIES:
                 for country in COUNTRIES[continent][1].keys():
@@ -183,7 +184,7 @@ class Managers(Base):
                     "first_name": first_name,
                     "last_name": last_name,
                     "nationality": nationality,
-                    "flag": flags[nationality],
+                    "flag": flags[nationality.capitalize()],
                     "user": True,
                     "date_of_birth": date_of_birth,
                     "age": 2024 - date_of_birth.year
@@ -193,7 +194,7 @@ class Managers(Base):
             for _ in range(699):
                 selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
                 country = random.choices(list(COUNTRIES[selectedContinent][1].keys()), weights = list(COUNTRIES[selectedContinent][1].values()), k = 1)[0]
-                date_of_birth = Faker().date_of_birth(minimum_age = 32, maximum_age = 65)
+                date_of_birth = faker.date_of_birth(minimum_age = 32, maximum_age = 65)
 
                 managers_dicts.append(
                     {
@@ -222,8 +223,8 @@ class Managers(Base):
             leagues = League.get_all_leagues()
             LeagueTeams.add_league_teams(nameas_id_mapping, leagues)
             updateProgress(4)
-            Matches.add_all_matches(leagues)
             Referees.add_referees(leagues, flags)
+            Matches.add_all_matches(leagues)
 
             updateProgress(5)
             Emails.add_emails(userManagerID)
@@ -426,7 +427,7 @@ class Teams(Base):
         session = DatabaseManager().get_session()
         try:
             teams = session.query(Teams).all()
-            return [team.id for team in teams]
+            return teams
         finally:
             session.close()
 
@@ -499,6 +500,14 @@ class Teams(Base):
         finally:
             session.close()
 
+    @classmethod
+    def get_manager_by_team(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            team = session.query(Teams).filter(Teams.id == team_id).first()
+            return team.manager_id
+        finally:
+            session.close()
 class Players(Base):
     __tablename__ = 'players'
 
@@ -1240,6 +1249,7 @@ class Matches(Base):
             matches_dict = []
 
             for league in leagues:
+                print(f"START -- Creating matches for league {league.name}")
                 schedule = []
                 referees = Referees.get_all_referees_by_league(league.id)
                 team_ids = [t.id for t in LeagueTeams.get_teams_by_league(league.id)]
@@ -1303,7 +1313,7 @@ class Matches(Base):
                         if not available_referees:
                             raise ValueError("Not enough referees to cover all matches for this matchday.")
 
-                        referee_id = random.choice(available_referees)
+                        referee_id = random.choice(available_referees).id
                         assigned_referees.add(referee_id)
 
                         # Combine date and time into a datetime object
@@ -1326,7 +1336,7 @@ class Matches(Base):
                         if not available_referees:
                             raise ValueError("Not enough referees to cover all matches for this matchday.")
 
-                        referee_id = random.choice(available_referees)
+                        referee_id = random.choice(available_referees).id
                         assigned_referees.add(referee_id)
 
                         kickoff_datetime = datetime.datetime.combine(sunday, datetime.datetime.strptime(kickoff_time, "%H:%M").time())
@@ -1341,6 +1351,7 @@ class Matches(Base):
                             "date": kickoff_datetime,
                         })
                 updateProgress(None)
+                print(f"END -- Created matches for league {league.name}, len of matches dict: {len(matches_dict)}")
 
             session.bulk_insert_mappings(Matches, matches_dict)
             session.commit()
@@ -5320,7 +5331,7 @@ def updateProgress(textIndex):
     PROGRESS += 1
 
     textLabels = [
-        "Creating managers...",
+        "Creating Managers...",
         "Creating Teams...",
         "Creating Players...",
         "Creating Leagues...",

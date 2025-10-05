@@ -22,7 +22,9 @@ class LeagueProfile(ctk.CTkFrame):
             self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
             self.league = League.get_league_by_id(self.leagueTeams.league_id)
         else:
-            self.league_id = League.get_league_by_id(self.league_id)
+            self.manager_id = None
+            self.league_id = league_id
+            self.league = League.get_league_by_id(self.league_id)
 
         self.profile = Profile(self, self.league)
         self.matchdays = None
@@ -105,7 +107,7 @@ class Profile(ctk.CTkFrame):
         else:
             # Use any manager from the league
             leagueTeam = LeagueTeams.get_teams_by_league(self.league.id)[0]
-            leagueManager = Managers.get_manager_by_team(leagueTeam.id)
+            leagueManager = Teams.get_manager_by_team(leagueTeam.id)
             self.tableFrame.defineManager(leagueManager.id)
 
         self.tableFrame.addLeagueTable()

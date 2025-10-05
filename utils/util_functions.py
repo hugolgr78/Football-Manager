@@ -933,10 +933,7 @@ def update_fitness_dict_values(values_dict, amount, min_value = None, max_value 
 def get_all_league_teams(jsonData, leagueName):
     teamOBJs = []
 
-    with open("data/leagues.json", 'r') as file:
-        data = json.load(file)
-
-    for team in data:
+    for team in jsonData:
         if team["league"] == leagueName:
             teamOBJs.append(team)
 

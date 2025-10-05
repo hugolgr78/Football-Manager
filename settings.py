@@ -37,7 +37,7 @@ FIRST_YEAR = 2024
 NUM_TEAMS = 20
 SEASON_START_DATE = datetime.datetime(2025, 8, 10, 7, 0, 0, 0)
 
-TOTAL_STEPS = 400
+TOTAL_STEPS = 2111
 PROGRESS = 0
 
 STATES = ["preview", "matchday", "review"]

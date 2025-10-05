@@ -189,6 +189,7 @@ class Managers(Base):
                     "age": 2024 - date_of_birth.year
                 }
             ]
+            updateProgress(None)
             for _ in range(699):
                 selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
                 country = random.choices(list(COUNTRIES[selectedContinent][1].keys()), weights = list(COUNTRIES[selectedContinent][1].values()), k = 1)[0]
@@ -206,22 +207,31 @@ class Managers(Base):
                         "age": 2024 - date_of_birth.year,
                     }
                 )
+                updateProgress(None)
 
             session.bulk_insert_mappings(Managers, managers_dicts)
             session.commit()
 
+            updateProgress(1)
             nameas_id_mapping = Teams.add_teams(chosenTeam, userManagerID)
+            updateProgress(2)
             Players.add_players(flags)
+            updateProgress(3)
             League.add_leagues()
 
             leagues = League.get_all_leagues()
             LeagueTeams.add_league_teams(nameas_id_mapping, leagues)
+            updateProgress(4)
             Matches.add_all_matches(leagues)
             Referees.add_referees(leagues, flags)
 
+            updateProgress(5)
             Emails.add_emails(userManagerID)
+            updateProgress(None)
             CalendarEvents.add_travel_events(userManagerID)
+            updateProgress(None)
             Settings.add_settings()
+            updateProgress(None)
 
             return userManagerID
         except Exception as e:
@@ -372,6 +382,7 @@ class Teams(Base):
                 })
 
                 names_ids_mapping[team["name"]] = teamID
+                updateProgress(None)
 
             session.bulk_insert_mappings(Teams, teams_dict)
             session.commit()
@@ -743,6 +754,7 @@ class Players(Base):
                         curr_count += 1
 
                 players_dict.extend(team_players)
+                updateProgress(None)
 
             session.bulk_insert_mappings(Players, players_dict)
             session.commit()
@@ -1328,6 +1340,7 @@ class Matches(Base):
                             "matchday": i + 1,
                             "date": kickoff_datetime,
                         })
+                updateProgress(None)
 
             session.bulk_insert_mappings(Matches, matches_dict)
             session.commit()
@@ -2736,6 +2749,7 @@ class League(Base):
                     "promotion": league["promotion"],
                     "relegation": league["relegation"],
                 })
+                updateProgress(None)
 
             session.bulk_insert_mappings(League, leagues_dict)
             session.commit()
@@ -2855,6 +2869,7 @@ class LeagueTeams(Base):
                         "team_id": names_ids_mapping[team["name"]],
                         "position": i + 1
                     })
+                updateProgress(None)
 
             session.bulk_insert_mappings(LeagueTeams, league_teams_dict)
             session.commit()
@@ -3097,6 +3112,7 @@ class Referees(Base):
                         "age": 2024 - date_of_birth.year,
                         "date_of_birth": date_of_birth
                     })
+                updateProgress(None)
 
             session.bulk_insert_mappings(Referees, referees_dict)
             session.commit()
@@ -5312,15 +5328,16 @@ def updateProgress(textIndex):
         "Finishing up...",
     ]
 
-    percentage = PROGRESS / TOTAL_STEPS * 100
-    progressBar.set(percentage)
-
-    percentageLabel.configure(text = f"{round(percentage)}%")
-
     if textIndex:
         progressLabel.configure(text = textLabels[textIndex])
-    
-    progressFrame.update_idletasks()
+    else:
+        percentage = PROGRESS / TOTAL_STEPS * 100
+        progressBar.set(percentage)
+
+        percentageLabel.configure(text = f"{round(percentage)}%")
+
+        
+        progressFrame.update_idletasks()
 
 def setUpProgressBar(progressB, progressL, progressF, percentageL):
     global progressBar, progressLabel, progressFrame, percentageLabel

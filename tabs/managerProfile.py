@@ -87,6 +87,12 @@ class Profile(ctk.CTkFrame):
         self.parent = parent
         self.manager_id = manager_id
 
+        user = Managers.get_all_user_managers()[0]
+        if user.id == self.manager_id:
+            self.parentTab = self.parent
+        else:
+            self.parentTab = self.parent.parent
+
         src = Image.open("Images/default_user.png")
         src.thumbnail((200, 200))
         self.photo = ctk.CTkImage(src, None, (src.width, src.height))
@@ -104,7 +110,7 @@ class Profile(ctk.CTkFrame):
 
         teamLogo = Image.open(io.BytesIO(self.parent.team.logo))
         teamLogo.thumbnail((200, 200))
-        self.teamLogo = TeamLogo(self, teamLogo, self.parent.team, TKINTER_BACKGROUND, 0.83, 0.22, "center", self.parent)
+        self.teamLogo = TeamLogo(self, teamLogo, self.parent.team, TKINTER_BACKGROUND, 0.83, 0.22, "center", self.parentTab)
 
         canvas = ctk.CTkCanvas(self, width = 1000, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = 0.5, rely = 0.4, anchor = "center")

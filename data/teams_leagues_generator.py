@@ -728,7 +728,7 @@ vibrant_colors = [
     (255, 87, 34),    # Deep Orange
     (63, 81, 181),    # Indigo Blue
     (3, 169, 244),    # Sky Blue
-    (102, 187, 106),  # Light Green
+    (98, 104, 189),   # Light Purple
     (255, 111, 0),    # Orange Accent
     (171, 71, 188),   # Bright Violet
     (205, 220, 57),   # Lime Yellow

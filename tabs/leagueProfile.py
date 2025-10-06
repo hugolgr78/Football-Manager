@@ -25,6 +25,7 @@ class LeagueProfile(ctk.CTkFrame):
             self.manager_id = None
             self.league_id = league_id
             self.league = League.get_league_by_id(self.league_id)
+            self.leagueTeams = LeagueTeams.get_teams_by_league(self.league_id)
 
         self.profile = Profile(self, self.league)
         self.matchdays = None
@@ -229,11 +230,17 @@ class Matchdays(ctk.CTkFrame):
         self.league = league
         self.currentMatchday = self.league.current_matchday
 
+        userTeam = Teams.get_teams_by_manager(Managers.get_all_user_managers()[0].id)[0]
+        userLeague = LeagueTeams.get_league_by_team(userTeam.id)
+
+        if userLeague.league_id == self.league.id:
+            self.parentTab = self.parent
+        else:
+            self.parentTab = self.parent.parent
+
         self.frames = []
         self.activeFrame = self.currentMatchday - 1
-
-        self.numTeams = self.parent.leagueTeams.get_teams_by_league(self.league.id)
-        self.numMacthdays = len(self.numTeams) * 2 - 2
+        self.numMacthdays = 38
 
         self.buttonsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 980, height = 60, corner_radius = 15)
         self.buttonsFrame.place(relx = 0, rely = 0.98, anchor = "sw")
@@ -245,7 +252,7 @@ class Matchdays(ctk.CTkFrame):
         for i in range(self.numMacthdays):
             if i == self.currentMatchday - 1:
                 matchday = Matches.get_matchday_for_league(self.league.id, self.currentMatchday)
-                frame = MatchdayFrame(self, matchday, self.currentMatchday, self.currentMatchday, self, self.parent, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
+                frame = MatchdayFrame(self, matchday, self.currentMatchday, self.currentMatchday, self, self.parentTab, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
             else:
                 frame = None
             

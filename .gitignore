@@ -5,4 +5,5 @@ utils/__pycache__/
 tabs/__pycache__/
 logs/
 venv/
+Images/Teams/
 clear_logs.py

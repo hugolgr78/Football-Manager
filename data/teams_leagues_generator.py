@@ -33,7 +33,7 @@ league_names = {
 league_strengths = [1.28, 0.82, 1.22, 1.33, 1.18, 1.25, 1.15, 0.88, 0.79, 1.00, 
                     1.30, 1.32, 1.27, 1.21, 0.96, 1.31, 1.12, 1.35, 1.26, 0.91] 
 
-logo_templates_path = "Images/Logo Templates"
+logo_templates_path = "data/Logo Templates"
 team_logos_path = "Images/Teams"
 league_logos_path = "Images/Leagues"
 
@@ -712,20 +712,58 @@ for league, divisions in league_names.items():
     for div in divisions:
         league_strength_dict[div] = league_strengths.copy()
 
-# Create a pool of 64 colors for each template
+all_divisions_ordered = list(league_strength_dict.keys())
+
+# --- CREATE A POOL OF 16 COLORS FOR EACH TEMPLATE (fixed & faster) ---
 template_colors = {}
+vibrant_colors = [
+    (220, 38, 38),    # Strong Red
+    (0, 123, 255),    # Bright Blue
+    (0, 184, 148),    # Teal Green
+    (255, 159, 28),   # Warm Orange
+    (255, 193, 7),    # Golden Yellow
+    (156, 39, 176),   # Vivid Purple
+    (0, 200, 83),     # Emerald Green
+    (233, 30, 99),    # Pinkish Red
+    (255, 87, 34),    # Deep Orange
+    (63, 81, 181),    # Indigo Blue
+    (3, 169, 244),    # Sky Blue
+    (102, 187, 106),  # Light Green
+    (255, 111, 0),    # Orange Accent
+    (171, 71, 188),   # Bright Violet
+    (205, 220, 57),   # Lime Yellow
+    (255, 64, 129),   # Vibrant Pink
+]
+
 for template_file in os.listdir(logo_templates_path):
     if template_file.lower().endswith((".png", ".jpg", ".jpeg")):
-        template_colors[template_file] = [tuple(random.randint(0, 255) for _ in range(3)) for _ in range(64)]
+        # Make a copy of the palette for each template so they don't share the same list
+        template_colors[template_file] = vibrant_colors.copy()  # [CHANGED]
 
-# --- ASSIGN TEAMS ---
-all_divisions_ordered = []
-for league, divisions in league_names.items():
-    all_divisions_ordered.extend(divisions)
+# Build a list of (template_file, color) pairs (exactly one pair per logo you want)
+assignment_pairs = []
+for tfile, colors in template_colors.items():
+    for color in colors:
+        assignment_pairs.append((tfile, color))
 
+# If there are more teams than pairs, repeat the pairs (shouldn't be needed if 40*16 == 640)
+num_teams = len(teams)
+if len(assignment_pairs) < num_teams:
+    import math
+    reps = math.ceil(num_teams / len(assignment_pairs))
+    assignment_pairs = (assignment_pairs * reps)[:num_teams]  # [CHANGED]
+
+random.shuffle(assignment_pairs)  # shuffle assignments so templates/colors are distributed  # [CHANGED]
+
+# Preload each template image to avoid opening it repeatedly
+template_images = {}
+for tfile in template_colors.keys():
+    path = os.path.join(logo_templates_path, tfile)
+    template_images[tfile] = Image.open(path).convert("RGBA")  # [CHANGED]
+
+# --- ASSIGN TEAMS (replace the previous while-loop approach) ---
 teams_json = []
 division_index = 0
-template_files = list(template_colors.keys())
 
 for team_name, stadium in teams.items():
     # League assignment in order
@@ -737,16 +775,22 @@ for team_name, stadium in teams.items():
     strength = random.choice(strength_list)
     strength_list.remove(strength)
     
-    # Logo assignment using Solution 2
-    while True:
-        template_file = random.choice(template_files)
-        color_list = template_colors[template_file]
-        if color_list:
-            color = random.choice(color_list)
-            color_list.remove(color)
-            break
+    # Take the next (template, color) pair (no searching/removals)
+    template_file, color = assignment_pairs.pop()  # [CHANGED]
+    
+    # Work on an in-memory copy of the preloaded template (avoid reopening file)
+    img = template_images[template_file].copy()  # [CHANGED]
+    datas = img.getdata()
+    new_data = []
+    for item in datas:
+        if item[:3] == PLACEHOLDER_COLOR:
+            new_data.append(color + (item[3],))
+        else:
+            new_data.append(item)
+    img.putdata(new_data)
+    
     logo_save_path = os.path.join(team_logos_path, f"{team_name.replace(' ', '_')}.png")
-    replace_color(os.path.join(logo_templates_path, template_file), color, logo_save_path)
+    img.save(logo_save_path)
     
     # Year created
     year_created = random.randint(1950, 2010)
@@ -761,6 +805,13 @@ for team_name, stadium in teams.items():
     }
     
     teams_json.append(team_entry)
+
+# Close preloaded images
+for im in template_images.values():
+    try:
+        im.close()
+    except Exception:
+        pass
 
 # --- CREATE LEAGUES JSON ---
 leagues_json = []

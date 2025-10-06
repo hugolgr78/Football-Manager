@@ -1,303 +1,303 @@
 [
     {
         "name": "Emberfall Vipers",
-        "strength": 1.27,
+        "strength": 1.0,
         "logo": "Images/Teams\\Emberfall_Vipers.png",
-        "year_created": 1992,
+        "year_created": 1965,
         "stadium": "Gate Cradle Realm",
         "league": "Cryonese Primera"
     },
     {
         "name": "Crimson Scorpions",
-        "strength": 0.82,
+        "strength": 1.15,
         "logo": "Images/Teams\\Crimson_Scorpions.png",
-        "year_created": 2009,
+        "year_created": 1964,
         "stadium": "The Astral Core",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Ethereal Tigers",
-        "strength": 0.82,
+        "strength": 1.25,
         "logo": "Images/Teams\\Ethereal_Tigers.png",
-        "year_created": 2010,
+        "year_created": 1958,
         "stadium": "The Run Bastion",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Runic Griffins",
-        "strength": 1.15,
+        "strength": 0.91,
         "logo": "Images/Teams\\Runic_Griffins.png",
-        "year_created": 1993,
+        "year_created": 1961,
         "stadium": "The Stellar",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Celestial Guardians",
-        "strength": 1.26,
+        "strength": 1.12,
         "logo": "Images/Teams\\Celestial_Guardians.png",
-        "year_created": 1965,
+        "year_created": 1952,
         "stadium": "Cradle Sanctum",
         "league": "Vorlis Liga"
     },
     {
         "name": "Shadowborn Pioneers",
-        "strength": 1.31,
+        "strength": 1.25,
         "logo": "Images/Teams\\Shadowborn_Pioneers.png",
-        "year_created": 2000,
+        "year_created": 1968,
         "stadium": "The Emerald Forge",
         "league": "Vorlis National"
     },
     {
         "name": "Shadow Phoenixes",
-        "strength": 1.0,
+        "strength": 1.32,
         "logo": "Images/Teams\\Shadow_Phoenixes.png",
-        "year_created": 1995,
+        "year_created": 1993,
         "stadium": "Nightflame Stadium",
         "league": "Vorlis Continental"
     },
     {
         "name": "Luminous Chargers",
-        "strength": 1.27,
+        "strength": 0.79,
         "logo": "Images/Teams\\Luminous_Chargers.png",
-        "year_created": 1998,
+        "year_created": 1966,
         "stadium": "The Arcane Halo",
         "league": "Vorlis Regional"
     },
     {
         "name": "Titanic Stingers",
-        "strength": 1.27,
+        "strength": 1.28,
         "logo": "Images/Teams\\Titanic_Stingers.png",
-        "year_created": 1965,
+        "year_created": 2008,
         "stadium": "Citadel Continuum",
         "league": "Zephyra Pro"
     },
     {
         "name": "Abyssal Centaurs",
-        "strength": 0.88,
+        "strength": 0.79,
         "logo": "Images/Teams\\Abyssal_Centaurs.png",
-        "year_created": 1972,
+        "year_created": 1950,
         "stadium": "The Lair Zenith",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Stormborn Eagles",
-        "strength": 0.82,
+        "strength": 1.32,
         "logo": "Images/Teams\\Stormborn_Eagles.png",
-        "year_created": 1959,
+        "year_created": 1988,
         "stadium": "The Blazing Vault",
         "league": "Zephyra Series"
     },
     {
         "name": "Golden Stallions",
-        "strength": 1.12,
+        "strength": 1.3,
         "logo": "Images/Teams\\Golden_Stallions.png",
-        "year_created": 1998,
+        "year_created": 1971,
         "stadium": "The Aegis Drift Sanctum",
         "league": "Zephyra B"
     },
     {
         "name": "Nebular Sabers",
-        "strength": 0.91,
+        "strength": 1.3,
         "logo": "Images/Teams\\Nebular_Sabers.png",
-        "year_created": 1965,
+        "year_created": 1967,
         "stadium": "The Zephyr Sanctum",
         "league": "Tauron Premier"
     },
     {
         "name": "Cobalt Stingers",
-        "strength": 1.3,
+        "strength": 1.0,
         "logo": "Images/Teams\\Cobalt_Stingers.png",
-        "year_created": 1956,
+        "year_created": 1978,
         "stadium": "The Oblivion Eyrie",
         "league": "Tauron Elite"
     },
     {
         "name": "Rune Blades",
-        "strength": 1.0,
+        "strength": 0.88,
         "logo": "Images/Teams\\Rune_Blades.png",
-        "year_created": 1967,
+        "year_created": 2000,
         "stadium": "The Obsidian Vortex",
         "league": "Tauron Division 2"
     },
     {
         "name": "Frostborn Falcons",
-        "strength": 1.3,
+        "strength": 1.26,
         "logo": "Images/Teams\\Frostborn_Falcons.png",
-        "year_created": 1963,
+        "year_created": 1956,
         "stadium": "Astral Arena",
         "league": "Tauron Division 3"
     },
     {
         "name": "Radiant Vipers",
-        "strength": 1.35,
+        "strength": 1.21,
         "logo": "Images/Teams\\Radiant_Vipers.png",
-        "year_created": 1986,
+        "year_created": 1955,
         "stadium": "The Ember Continuum",
         "league": "Nerathoul"
     },
     {
         "name": "Phantom Blades",
-        "strength": 0.91,
+        "strength": 0.79,
         "logo": "Images/Teams\\Phantom_Blades.png",
-        "year_created": 1989,
+        "year_created": 1976,
         "stadium": "The Pyre Spire",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Marble Bears",
-        "strength": 0.79,
+        "strength": 1.28,
         "logo": "Images/Teams\\Marble_Bears.png",
-        "year_created": 1959,
+        "year_created": 1999,
         "stadium": "The Eternal Sanctum",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Auric Djinn",
-        "strength": 1.21,
+        "strength": 0.96,
         "logo": "Images/Teams\\Auric_Djinn.png",
-        "year_created": 1960,
+        "year_created": 2000,
         "stadium": "Goldveil Stadium",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Thorn Bears",
-        "strength": 1.33,
+        "strength": 1.27,
         "logo": "Images/Teams\\Thorn_Bears.png",
-        "year_created": 2010,
+        "year_created": 2005,
         "stadium": "The Emerald Core",
         "league": "Ecliptus"
     },
     {
         "name": "Stormborn Titans",
-        "strength": 1.12,
+        "strength": 1.27,
         "logo": "Images/Teams\\Stormborn_Titans.png",
-        "year_created": 2006,
+        "year_created": 1983,
         "stadium": "Stellar Drift",
         "league": "Ecliptus B"
     },
     {
         "name": "Oceanic Falcons",
-        "strength": 1.3,
+        "strength": 0.82,
         "logo": "Images/Teams\\Oceanic_Falcons.png",
-        "year_created": 1995,
+        "year_created": 1978,
         "stadium": "Nova Eyrie",
         "league": "Ecliptus C"
     },
     {
         "name": "Echo Tigers",
-        "strength": 0.91,
+        "strength": 1.12,
         "logo": "Images/Teams\\Echo_Tigers.png",
-        "year_created": 2007,
+        "year_created": 1976,
         "stadium": "Cradle",
         "league": "Ecliptus D"
     },
     {
         "name": "Glacial Dragons",
-        "strength": 1.21,
+        "strength": 1.32,
         "logo": "Images/Teams\\Glacial_Dragons.png",
-        "year_created": 1976,
+        "year_created": 1967,
         "stadium": "The Astral Continuum",
         "league": "Lyraxis"
     },
     {
         "name": "Inferno Wolves",
-        "strength": 1.12,
+        "strength": 0.82,
         "logo": "Images/Teams\\Inferno_Wolves.png",
-        "year_created": 1963,
+        "year_created": 1983,
         "stadium": "Stellar Forge",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Ecliptic Centaurs",
-        "strength": 1.12,
+        "strength": 1.26,
         "logo": "Images/Teams\\Ecliptic_Centaurs.png",
-        "year_created": 1951,
+        "year_created": 1991,
         "stadium": "Lunar Celestial",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Nocturne Tigers",
-        "strength": 1.12,
+        "strength": 1.26,
         "logo": "Images/Teams\\Nocturne_Tigers.png",
-        "year_created": 2009,
+        "year_created": 2001,
         "stadium": "Velvet Conflux",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Cobalt Dragons",
-        "strength": 1.35,
+        "strength": 1.27,
         "logo": "Images/Teams\\Cobalt_Dragons.png",
-        "year_created": 1952,
+        "year_created": 1950,
         "stadium": "The Thunder Aether",
         "league": "Solarion"
     },
     {
         "name": "Eternal Hurricanes",
-        "strength": 1.25,
+        "strength": 1.31,
         "logo": "Images/Teams\\Eternal_Hurricanes.png",
-        "year_created": 1992,
+        "year_created": 1975,
         "stadium": "Nova Empyrean",
         "league": "Solarion 2"
     },
     {
         "name": "Velvet Raiders",
-        "strength": 0.91,
+        "strength": 1.31,
         "logo": "Images/Teams\\Velvet_Raiders.png",
-        "year_created": 1960,
+        "year_created": 1964,
         "stadium": "Oblivion Nexus",
         "league": "Solarion 3"
     },
     {
         "name": "Savage Leopards",
-        "strength": 0.79,
+        "strength": 1.21,
         "logo": "Images/Teams\\Savage_Leopards.png",
-        "year_created": 1958,
+        "year_created": 1969,
         "stadium": "Halo",
         "league": "Solarion 4"
     },
     {
         "name": "Solar Chargers",
-        "strength": 0.82,
+        "strength": 1.18,
         "logo": "Images/Teams\\Solar_Chargers.png",
-        "year_created": 1955,
+        "year_created": 1965,
         "stadium": "Stormborn Nucleus",
         "league": "Cryonese Primera"
     },
     {
         "name": "Zephyr Bulls",
-        "strength": 1.0,
+        "strength": 1.18,
         "logo": "Images/Teams\\Zephyr_Bulls.png",
-        "year_created": 2003,
+        "year_created": 1977,
         "stadium": "Umbral Vault",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Runic Tigers",
-        "strength": 1.3,
+        "strength": 1.32,
         "logo": "Images/Teams\\Runic_Tigers.png",
-        "year_created": 1997,
+        "year_created": 2007,
         "stadium": "The Solaris Gate",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Emerald Falcons",
-        "strength": 1.22,
+        "strength": 1.28,
         "logo": "Images/Teams\\Emerald_Falcons.png",
-        "year_created": 2007,
+        "year_created": 1959,
         "stadium": "Velvet Zenith",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Violet Vortex",
-        "strength": 1.0,
+        "strength": 1.28,
         "logo": "Images/Teams\\Violet_Vortex.png",
-        "year_created": 1984,
+        "year_created": 1974,
         "stadium": "The Gate Arcane Zephyr",
         "league": "Vorlis Liga"
     },
     {
         "name": "Celestial Leviathans",
-        "strength": 1.12,
+        "strength": 0.96,
         "logo": "Images/Teams\\Celestial_Leviathans.png",
         "year_created": 1972,
         "stadium": "Starfall Colosseum",
@@ -305,153 +305,153 @@
     },
     {
         "name": "Obsidian Chimera",
-        "strength": 1.3,
+        "strength": 1.31,
         "logo": "Images/Teams\\Obsidian_Chimera.png",
-        "year_created": 2009,
+        "year_created": 1967,
         "stadium": "Blackfire Grounds",
         "league": "Vorlis Continental"
     },
     {
         "name": "Iron Lynx",
-        "strength": 0.79,
+        "strength": 0.91,
         "logo": "Images/Teams\\Iron_Lynx.png",
-        "year_created": 2002,
+        "year_created": 1950,
         "stadium": "Titan Gate",
         "league": "Vorlis Regional"
     },
     {
         "name": "Steel Pioneers",
-        "strength": 1.35,
+        "strength": 1.21,
         "logo": "Images/Teams\\Steel_Pioneers.png",
-        "year_created": 1971,
+        "year_created": 1970,
         "stadium": "The Tempest Gate",
         "league": "Zephyra Pro"
     },
     {
         "name": "Hollow Titans",
-        "strength": 1.0,
+        "strength": 0.91,
         "logo": "Images/Teams\\Hollow_Titans.png",
-        "year_created": 1994,
+        "year_created": 1951,
         "stadium": "The Sanctum Halo Sanctuary",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Golden Mavericks",
-        "strength": 1.31,
+        "strength": 1.26,
         "logo": "Images/Teams\\Golden_Mavericks.png",
-        "year_created": 1959,
+        "year_created": 1974,
         "stadium": "Eternal Forge",
         "league": "Zephyra Series"
     },
     {
         "name": "Nocturne Dragons",
-        "strength": 1.26,
+        "strength": 0.96,
         "logo": "Images/Teams\\Nocturne_Dragons.png",
-        "year_created": 1960,
+        "year_created": 1971,
         "stadium": "The Oblivion Gate",
         "league": "Zephyra B"
     },
     {
         "name": "Granite Dragons",
-        "strength": 1.35,
+        "strength": 1.15,
         "logo": "Images/Teams\\Granite_Dragons.png",
-        "year_created": 1967,
+        "year_created": 1988,
         "stadium": "The Arcane Bastion",
         "league": "Tauron Premier"
     },
     {
         "name": "Thunder Eagles",
-        "strength": 0.79,
+        "strength": 0.88,
         "logo": "Images/Teams\\Thunder_Eagles.png",
-        "year_created": 1988,
+        "year_created": 1958,
         "stadium": "The Stellar Obelisk",
         "league": "Tauron Elite"
     },
     {
         "name": "Nebular Scorpions",
-        "strength": 1.12,
+        "strength": 1.35,
         "logo": "Images/Teams\\Nebular_Scorpions.png",
-        "year_created": 1967,
+        "year_created": 1993,
         "stadium": "The Celestial Pinnacle",
         "league": "Tauron Division 2"
     },
     {
         "name": "Runic Bulls",
-        "strength": 0.82,
+        "strength": 0.88,
         "logo": "Images/Teams\\Runic_Bulls.png",
-        "year_created": 1953,
+        "year_created": 1995,
         "stadium": "Emerald Forge",
         "league": "Tauron Division 3"
     },
     {
         "name": "Frost Mavericks",
-        "strength": 1.15,
+        "strength": 1.28,
         "logo": "Images/Teams\\Frost_Mavericks.png",
-        "year_created": 1996,
+        "year_created": 1988,
         "stadium": "The Nocturne Vault",
         "league": "Nerathoul"
     },
     {
         "name": "Violet Raiders",
-        "strength": 0.96,
+        "strength": 1.21,
         "logo": "Images/Teams\\Violet_Raiders.png",
-        "year_created": 1960,
+        "year_created": 1969,
         "stadium": "The Tempest Aether",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Solaris Knights",
-        "strength": 1.3,
+        "strength": 1.32,
         "logo": "Images/Teams\\Solaris_Knights.png",
-        "year_created": 2003,
+        "year_created": 1968,
         "stadium": "Stellar Forge",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Verdant Phoenixes",
-        "strength": 1.26,
+        "strength": 1.15,
         "logo": "Images/Teams\\Verdant_Phoenixes.png",
-        "year_created": 1967,
+        "year_created": 2006,
         "stadium": "Emerald Flame Stadium",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Auric Falcons",
-        "strength": 1.31,
+        "strength": 1.26,
         "logo": "Images/Teams\\Auric_Falcons.png",
-        "year_created": 1984,
+        "year_created": 1969,
         "stadium": "Infernal Spire",
         "league": "Ecliptus"
     },
     {
         "name": "Stormborn Rhinos",
-        "strength": 1.27,
+        "strength": 1.18,
         "logo": "Images/Teams\\Stormborn_Rhinos.png",
-        "year_created": 1986,
+        "year_created": 2000,
         "stadium": "The Stone Forge",
         "league": "Ecliptus B"
     },
     {
         "name": "Feral Raiders",
-        "strength": 1.26,
+        "strength": 0.91,
         "logo": "Images/Teams\\Feral_Raiders.png",
-        "year_created": 1977,
+        "year_created": 1964,
         "stadium": "Titan Citadel Crystal",
         "league": "Ecliptus C"
     },
     {
         "name": "Solaris Wolves",
-        "strength": 1.25,
+        "strength": 1.32,
         "logo": "Images/Teams\\Solaris_Wolves.png",
-        "year_created": 1986,
+        "year_created": 1961,
         "stadium": "The Frosted Spire",
         "league": "Ecliptus D"
     },
     {
         "name": "Titanic Raptors",
-        "strength": 0.91,
+        "strength": 1.22,
         "logo": "Images/Teams\\Titanic_Raptors.png",
-        "year_created": 1972,
+        "year_created": 1975,
         "stadium": "Mystic Titan Arcane",
         "league": "Lyraxis"
     },
@@ -459,39 +459,39 @@
         "name": "Emberfall Leopards",
         "strength": 0.96,
         "logo": "Images/Teams\\Emberfall_Leopards.png",
-        "year_created": 1996,
+        "year_created": 1995,
         "stadium": "Velvet Mystic",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Celestial Stingers",
-        "strength": 0.79,
+        "strength": 0.96,
         "logo": "Images/Teams\\Celestial_Stingers.png",
-        "year_created": 1985,
+        "year_created": 1955,
         "stadium": "Thunder Spire",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Rune Vortex",
-        "strength": 1.0,
+        "strength": 1.3,
         "logo": "Images/Teams\\Rune_Vortex.png",
-        "year_created": 1982,
+        "year_created": 1961,
         "stadium": "The Ember Sanctum",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Radiant Lynx",
-        "strength": 1.0,
+        "strength": 1.25,
         "logo": "Images/Teams\\Radiant_Lynx.png",
-        "year_created": 1972,
+        "year_created": 1963,
         "stadium": "Celestial Eclipse",
         "league": "Solarion"
     },
     {
         "name": "Grove Knights",
-        "strength": 1.22,
+        "strength": 1.26,
         "logo": "Images/Teams\\Grove_Knights.png",
-        "year_created": 2003,
+        "year_created": 1986,
         "stadium": "The Stormborn Citadel",
         "league": "Solarion 2"
     },
@@ -499,207 +499,207 @@
         "name": "Iron Chargers",
         "strength": 1.21,
         "logo": "Images/Teams\\Iron_Chargers.png",
-        "year_created": 1976,
+        "year_created": 1973,
         "stadium": "The Nova Continuum",
         "league": "Solarion 3"
     },
     {
         "name": "Iron Cobras",
-        "strength": 0.82,
+        "strength": 1.28,
         "logo": "Images/Teams\\Iron_Cobras.png",
-        "year_created": 1959,
+        "year_created": 2003,
         "stadium": "The Arcane Drift",
         "league": "Solarion 4"
     },
     {
         "name": "Eternal Strikers",
-        "strength": 1.0,
+        "strength": 0.96,
         "logo": "Images/Teams\\Eternal_Strikers.png",
-        "year_created": 1961,
+        "year_created": 1966,
         "stadium": "Eternal Spire",
         "league": "Cryonese Primera"
     },
     {
         "name": "Obsidian Phoenixes",
-        "strength": 1.3,
+        "strength": 1.35,
         "logo": "Images/Teams\\Obsidian_Phoenixes.png",
-        "year_created": 1989,
+        "year_created": 1993,
         "stadium": "Sanctuary Nova",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Inferno Cobras",
-        "strength": 1.32,
+        "strength": 1.15,
         "logo": "Images/Teams\\Inferno_Cobras.png",
-        "year_created": 1971,
+        "year_created": 1995,
         "stadium": "The Infernal Nucleus",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Ethereal Griffins",
-        "strength": 1.28,
+        "strength": 0.79,
         "logo": "Images/Teams\\Ethereal_Griffins.png",
-        "year_created": 1964,
+        "year_created": 1952,
         "stadium": "Void Spire",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Twilight Djinn",
-        "strength": 0.96,
+        "strength": 1.21,
         "logo": "Images/Teams\\Twilight_Djinn.png",
-        "year_created": 2004,
+        "year_created": 1959,
         "stadium": "Gloamspire Coliseum",
         "league": "Vorlis Liga"
     },
     {
         "name": "Tempest Gargoyles",
-        "strength": 1.18,
+        "strength": 1.35,
         "logo": "Images/Teams\\Tempest_Gargoyles.png",
-        "year_created": 1999,
+        "year_created": 1955,
         "stadium": "Stormspire Arena",
         "league": "Vorlis National"
     },
     {
         "name": "Crimson Leopards",
-        "strength": 0.91,
+        "strength": 1.12,
         "logo": "Images/Teams\\Crimson_Leopards.png",
-        "year_created": 2001,
+        "year_created": 1954,
         "stadium": "Astral Temple",
         "league": "Vorlis Continental"
     },
     {
         "name": "Hollow Stingers",
-        "strength": 0.96,
+        "strength": 1.33,
         "logo": "Images/Teams\\Hollow_Stingers.png",
-        "year_created": 1996,
+        "year_created": 1951,
         "stadium": "The Sky Aegis",
         "league": "Vorlis Regional"
     },
     {
         "name": "Auric Stallions",
-        "strength": 1.21,
+        "strength": 0.79,
         "logo": "Images/Teams\\Auric_Stallions.png",
-        "year_created": 1986,
+        "year_created": 1995,
         "stadium": "Nova Obelisk",
         "league": "Zephyra Pro"
     },
     {
         "name": "Oblivion Ravens",
-        "strength": 1.3,
+        "strength": 0.82,
         "logo": "Images/Teams\\Oblivion_Ravens.png",
-        "year_created": 1993,
+        "year_created": 1985,
         "stadium": "Shadowspire Arena",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Silver Pioneers",
-        "strength": 1.26,
+        "strength": 1.35,
         "logo": "Images/Teams\\Silver_Pioneers.png",
-        "year_created": 1988,
+        "year_created": 1979,
         "stadium": "The Blazing Haven",
         "league": "Zephyra Series"
     },
     {
         "name": "Zephyr Dragons",
-        "strength": 1.35,
+        "strength": 1.31,
         "logo": "Images/Teams\\Zephyr_Dragons.png",
-        "year_created": 1955,
+        "year_created": 1999,
         "stadium": "Astral Vault",
         "league": "Zephyra B"
     },
     {
         "name": "Silver Dragons",
-        "strength": 0.96,
+        "strength": 1.21,
         "logo": "Images/Teams\\Silver_Dragons.png",
-        "year_created": 2008,
+        "year_created": 1994,
         "stadium": "The Celestial Nucleus",
         "league": "Tauron Premier"
     },
     {
         "name": "Crimson Krakens",
-        "strength": 1.33,
+        "strength": 1.32,
         "logo": "Images/Teams\\Crimson_Krakens.png",
-        "year_created": 1959,
+        "year_created": 1998,
         "stadium": "Red Tide Coliseum",
         "league": "Tauron Elite"
     },
     {
         "name": "Frostborn Scorpions",
-        "strength": 1.22,
+        "strength": 1.32,
         "logo": "Images/Teams\\Frostborn_Scorpions.png",
-        "year_created": 1972,
+        "year_created": 2006,
         "stadium": "The Titan Gate",
         "league": "Tauron Division 2"
     },
     {
         "name": "Aether Rhinos",
-        "strength": 1.27,
+        "strength": 1.0,
         "logo": "Images/Teams\\Aether_Rhinos.png",
-        "year_created": 2009,
+        "year_created": 1962,
         "stadium": "The Continuum Oblivion",
         "league": "Tauron Division 3"
     },
     {
         "name": "Arcane Guardians",
-        "strength": 1.31,
+        "strength": 1.35,
         "logo": "Images/Teams\\Arcane_Guardians.png",
-        "year_created": 1950,
+        "year_created": 2000,
         "stadium": "The Nova Sphere",
         "league": "Nerathoul"
     },
     {
         "name": "Prismatic Vipers",
-        "strength": 1.27,
+        "strength": 0.91,
         "logo": "Images/Teams\\Prismatic_Vipers.png",
-        "year_created": 1995,
+        "year_created": 1952,
         "stadium": "Umbral Gate",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Blazing Wolves",
-        "strength": 1.28,
+        "strength": 1.12,
         "logo": "Images/Teams\\Blazing_Wolves.png",
-        "year_created": 1989,
+        "year_created": 1993,
         "stadium": "Citadel Eclipse",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Marble Centaurs",
-        "strength": 1.15,
+        "strength": 1.18,
         "logo": "Images/Teams\\Marble_Centaurs.png",
-        "year_created": 1965,
+        "year_created": 1972,
         "stadium": "Umbral Granite",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Titanic Oozes",
-        "strength": 1.35,
+        "strength": 0.96,
         "logo": "Images/Teams\\Titanic_Oozes.png",
-        "year_created": 2007,
+        "year_created": 1971,
         "stadium": "Colossus Slime Grounds",
         "league": "Ecliptus"
     },
     {
         "name": "Nocturne Mavericks",
-        "strength": 1.21,
+        "strength": 1.35,
         "logo": "Images/Teams\\Nocturne_Mavericks.png",
-        "year_created": 1961,
+        "year_created": 1998,
         "stadium": "Bastion Sanctuary",
         "league": "Ecliptus B"
     },
     {
         "name": "Ethereal Leopards",
-        "strength": 1.15,
+        "strength": 1.35,
         "logo": "Images/Teams\\Ethereal_Leopards.png",
-        "year_created": 2000,
+        "year_created": 1994,
         "stadium": "Halo Runic",
         "league": "Ecliptus C"
     },
     {
         "name": "Shadowborn Wolves",
-        "strength": 1.18,
+        "strength": 1.25,
         "logo": "Images/Teams\\Shadowborn_Wolves.png",
-        "year_created": 1970,
+        "year_created": 1982,
         "stadium": "Stone Spire",
         "league": "Ecliptus D"
     },
@@ -707,143 +707,143 @@
         "name": "Mystic Knights",
         "strength": 0.96,
         "logo": "Images/Teams\\Mystic_Knights.png",
-        "year_created": 1982,
+        "year_created": 1996,
         "stadium": "Zephyr Vault",
         "league": "Lyraxis"
     },
     {
         "name": "Solar Gorgons",
-        "strength": 1.26,
+        "strength": 1.21,
         "logo": "Images/Teams\\Solar_Gorgons.png",
-        "year_created": 1977,
+        "year_created": 1970,
         "stadium": "Sunfang Stadium",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Oceanic Pioneers",
-        "strength": 1.25,
+        "strength": 0.88,
         "logo": "Images/Teams\\Oceanic_Pioneers.png",
-        "year_created": 1965,
+        "year_created": 1950,
         "stadium": "Continuum Aegis",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Radiant Hawks",
-        "strength": 0.91,
+        "strength": 1.0,
         "logo": "Images/Teams\\Radiant_Hawks.png",
-        "year_created": 1981,
+        "year_created": 2006,
         "stadium": "Halo Spire",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Oceanic Hawks",
-        "strength": 1.25,
+        "strength": 1.15,
         "logo": "Images/Teams\\Oceanic_Hawks.png",
-        "year_created": 1974,
+        "year_created": 1960,
         "stadium": "Core",
         "league": "Solarion"
     },
     {
         "name": "Crimson Mavericks",
-        "strength": 0.79,
+        "strength": 0.91,
         "logo": "Images/Teams\\Crimson_Mavericks.png",
-        "year_created": 1990,
+        "year_created": 1999,
         "stadium": "Nova Obelisk",
         "league": "Solarion 2"
     },
     {
         "name": "Glacial Blades",
-        "strength": 1.28,
+        "strength": 1.12,
         "logo": "Images/Teams\\Glacial_Blades.png",
-        "year_created": 1992,
+        "year_created": 1984,
         "stadium": "Arcane Stellar",
         "league": "Solarion 3"
     },
     {
         "name": "Stormborn Vipers",
-        "strength": 1.25,
+        "strength": 1.26,
         "logo": "Images/Teams\\Stormborn_Vipers.png",
-        "year_created": 1973,
+        "year_created": 1997,
         "stadium": "Spire Eternal",
         "league": "Solarion 4"
     },
     {
         "name": "Mystic Blades",
-        "strength": 1.12,
+        "strength": 1.15,
         "logo": "Images/Teams\\Mystic_Blades.png",
-        "year_created": 1981,
+        "year_created": 2006,
         "stadium": "The Stellar Sanctum",
         "league": "Cryonese Primera"
     },
     {
         "name": "Glacial Eagles",
-        "strength": 0.79,
+        "strength": 0.96,
         "logo": "Images/Teams\\Glacial_Eagles.png",
-        "year_created": 1967,
+        "year_created": 1959,
         "stadium": "Nova Gate",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Solaris Stallions",
-        "strength": 1.12,
+        "strength": 1.27,
         "logo": "Images/Teams\\Solaris_Stallions.png",
-        "year_created": 1990,
+        "year_created": 1972,
         "stadium": "The Zephyr Starforge",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Solaris Griffins",
-        "strength": 1.32,
+        "strength": 1.15,
         "logo": "Images/Teams\\Solaris_Griffins.png",
-        "year_created": 2001,
+        "year_created": 1990,
         "stadium": "Hollow Aether Tempest",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Aether Eagles",
-        "strength": 1.28,
+        "strength": 1.18,
         "logo": "Images/Teams\\Aether_Eagles.png",
-        "year_created": 1985,
+        "year_created": 1966,
         "stadium": "Arcane Eyrie",
         "league": "Vorlis Liga"
     },
     {
         "name": "Glacial Banshees",
-        "strength": 1.22,
+        "strength": 0.91,
         "logo": "Images/Teams\\Glacial_Banshees.png",
-        "year_created": 2001,
+        "year_created": 1966,
         "stadium": "Frostwail Stadium",
         "league": "Vorlis National"
     },
     {
         "name": "Crimson Eagles",
-        "strength": 1.21,
+        "strength": 1.33,
         "logo": "Images/Teams\\Crimson_Eagles.png",
-        "year_created": 1984,
+        "year_created": 1980,
         "stadium": "Blazing Crucible",
         "league": "Vorlis Continental"
     },
     {
         "name": "Golden Dragons",
-        "strength": 1.25,
+        "strength": 0.88,
         "logo": "Images/Teams\\Golden_Dragons.png",
-        "year_created": 2004,
+        "year_created": 1960,
         "stadium": "The Eyrie Core",
         "league": "Vorlis Regional"
     },
     {
         "name": "Draconic Wolves",
-        "strength": 1.31,
+        "strength": 1.12,
         "logo": "Images/Teams\\Draconic_Wolves.png",
-        "year_created": 1989,
+        "year_created": 1999,
         "stadium": "The Nova Spire",
         "league": "Zephyra Pro"
     },
     {
         "name": "Stone Cougars",
-        "strength": 1.26,
+        "strength": 1.35,
         "logo": "Images/Teams\\Stone_Cougars.png",
-        "year_created": 2004,
+        "year_created": 1963,
         "stadium": "Nocturne Sanctum",
         "league": "Zephyra Challenge"
     },
@@ -851,325 +851,325 @@
         "name": "Crimson Warthogs",
         "strength": 1.15,
         "logo": "Images/Teams\\Crimson_Warthogs.png",
-        "year_created": 1984,
+        "year_created": 2001,
         "stadium": "The Zephyr Citadel",
         "league": "Zephyra Series"
     },
     {
         "name": "Auric Guardians",
-        "strength": 1.25,
+        "strength": 1.12,
         "logo": "Images/Teams\\Auric_Guardians.png",
-        "year_created": 1957,
+        "year_created": 1993,
         "stadium": "The Ashen Vault",
         "league": "Zephyra B"
     },
     {
         "name": "Zephyr Lynx",
-        "strength": 1.27,
+        "strength": 0.82,
         "logo": "Images/Teams\\Zephyr_Lynx.png",
-        "year_created": 1989,
+        "year_created": 1984,
         "stadium": "Dominion Continuum",
         "league": "Tauron Premier"
     },
     {
         "name": "Luminous Spectres",
-        "strength": 1.26,
+        "strength": 1.33,
         "logo": "Images/Teams\\Luminous_Spectres.png",
-        "year_created": 1976,
+        "year_created": 1996,
         "stadium": "Glowveil Stadium",
         "league": "Tauron Elite"
     },
     {
         "name": "Frostborn Dragons",
-        "strength": 1.35,
+        "strength": 1.28,
         "logo": "Images/Teams\\Frostborn_Dragons.png",
-        "year_created": 1998,
+        "year_created": 1953,
         "stadium": "Velvet",
         "league": "Tauron Division 2"
     },
     {
         "name": "Voltaic Strikers",
-        "strength": 1.21,
+        "strength": 1.33,
         "logo": "Images/Teams\\Voltaic_Strikers.png",
-        "year_created": 1980,
+        "year_created": 1954,
         "stadium": "The Oblivion Mystic",
         "league": "Tauron Division 3"
     },
     {
         "name": "Emberfall Phoenixes",
-        "strength": 1.28,
+        "strength": 1.0,
         "logo": "Images/Teams\\Emberfall_Phoenixes.png",
-        "year_created": 1996,
+        "year_created": 2002,
         "stadium": "Empyrean Ember",
         "league": "Nerathoul"
     },
     {
         "name": "Voltaic Bears",
-        "strength": 1.18,
+        "strength": 1.25,
         "logo": "Images/Teams\\Voltaic_Bears.png",
-        "year_created": 1989,
+        "year_created": 1964,
         "stadium": "The Monolith Realm Prism",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Nocturne Pioneers",
-        "strength": 1.26,
+        "strength": 0.79,
         "logo": "Images/Teams\\Nocturne_Pioneers.png",
-        "year_created": 1972,
+        "year_created": 1995,
         "stadium": "The Astral Monolith",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Nocturne Bulls",
-        "strength": 1.33,
+        "strength": 1.28,
         "logo": "Images/Teams\\Nocturne_Bulls.png",
-        "year_created": 1984,
+        "year_created": 1989,
         "stadium": "The Stellar Cathedral",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Prismatic Sharks",
-        "strength": 1.27,
+        "strength": 0.79,
         "logo": "Images/Teams\\Prismatic_Sharks.png",
-        "year_created": 1972,
+        "year_created": 1966,
         "stadium": "Beacon Realm",
         "league": "Ecliptus"
     },
     {
         "name": "Scarlet Phoenixes",
-        "strength": 1.25,
+        "strength": 1.12,
         "logo": "Images/Teams\\Scarlet_Phoenixes.png",
-        "year_created": 1974,
+        "year_created": 1975,
         "stadium": "Vault Bastion",
         "league": "Ecliptus B"
     },
     {
         "name": "Velvet Rhinos",
-        "strength": 1.27,
+        "strength": 0.88,
         "logo": "Images/Teams\\Velvet_Rhinos.png",
-        "year_created": 1961,
+        "year_created": 2004,
         "stadium": "The Empyrean Nova",
         "league": "Ecliptus C"
     },
     {
         "name": "Blazing Dragons",
-        "strength": 1.3,
+        "strength": 1.31,
         "logo": "Images/Teams\\Blazing_Dragons.png",
-        "year_created": 1968,
+        "year_created": 1990,
         "stadium": "The Den Spire",
         "league": "Ecliptus D"
     },
     {
         "name": "Celestial Rhinos",
-        "strength": 0.88,
+        "strength": 1.21,
         "logo": "Images/Teams\\Celestial_Rhinos.png",
-        "year_created": 2009,
+        "year_created": 2004,
         "stadium": "The Runic Runic",
         "league": "Lyraxis"
     },
     {
         "name": "Onyx Blades",
-        "strength": 1.3,
+        "strength": 1.15,
         "logo": "Images/Teams\\Onyx_Blades.png",
-        "year_created": 1960,
+        "year_created": 1969,
         "stadium": "Prism Granite Oblivion",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Runestone Lynx",
-        "strength": 1.21,
+        "strength": 1.12,
         "logo": "Images/Teams\\Runestone_Lynx.png",
-        "year_created": 1953,
+        "year_created": 1994,
         "stadium": "Cradle Vault",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Marble Wolves",
-        "strength": 0.88,
+        "strength": 0.79,
         "logo": "Images/Teams\\Marble_Wolves.png",
-        "year_created": 1959,
+        "year_created": 1960,
         "stadium": "Citadel Arena",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Hollow Wolves",
-        "strength": 1.12,
+        "strength": 1.22,
         "logo": "Images/Teams\\Hollow_Wolves.png",
-        "year_created": 1997,
+        "year_created": 1986,
         "stadium": "Infernal Citadel",
         "league": "Solarion"
     },
     {
         "name": "Ethereal Stingers",
-        "strength": 1.21,
+        "strength": 1.27,
         "logo": "Images/Teams\\Ethereal_Stingers.png",
-        "year_created": 2010,
+        "year_created": 1974,
         "stadium": "The Oblivion Crucible",
         "league": "Solarion 2"
     },
     {
         "name": "Storm Sabers",
-        "strength": 0.96,
+        "strength": 1.3,
         "logo": "Images/Teams\\Storm_Sabers.png",
-        "year_created": 1965,
+        "year_created": 1997,
         "stadium": "The Arcane Dome",
         "league": "Solarion 3"
     },
     {
         "name": "Inferno Lynx",
-        "strength": 1.12,
+        "strength": 0.91,
         "logo": "Images/Teams\\Inferno_Lynx.png",
-        "year_created": 1955,
+        "year_created": 1982,
         "stadium": "The Runic Citadel",
         "league": "Solarion 4"
     },
     {
         "name": "Lunar Dragons",
-        "strength": 0.91,
+        "strength": 1.26,
         "logo": "Images/Teams\\Lunar_Dragons.png",
-        "year_created": 1984,
+        "year_created": 1972,
         "stadium": "The Astral Ascendant",
         "league": "Cryonese Primera"
     },
     {
         "name": "Gilded Griffons",
-        "strength": 1.31,
+        "strength": 0.79,
         "logo": "Images/Teams\\Gilded_Griffons.png",
-        "year_created": 1965,
+        "year_created": 1983,
         "stadium": "Golden Wing Arena",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Aurora Stallions",
-        "strength": 1.31,
+        "strength": 1.33,
         "logo": "Images/Teams\\Aurora_Stallions.png",
-        "year_created": 1987,
+        "year_created": 1976,
         "stadium": "Stellar Lunar",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Emerald Eagles",
-        "strength": 1.18,
+        "strength": 1.3,
         "logo": "Images/Teams\\Emerald_Eagles.png",
-        "year_created": 1960,
+        "year_created": 1968,
         "stadium": "Infernal Dominion",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Zephyr Vortex",
-        "strength": 1.35,
+        "strength": 1.31,
         "logo": "Images/Teams\\Zephyr_Vortex.png",
-        "year_created": 2001,
+        "year_created": 1972,
         "stadium": "Oblivion Realm",
         "league": "Vorlis Liga"
     },
     {
         "name": "Solar Raptors",
-        "strength": 1.25,
+        "strength": 0.79,
         "logo": "Images/Teams\\Solar_Raptors.png",
-        "year_created": 1957,
+        "year_created": 1984,
         "stadium": "The Crystal Tempest",
         "league": "Vorlis National"
     },
     {
         "name": "Frostborn Hurricanes",
-        "strength": 1.25,
+        "strength": 1.28,
         "logo": "Images/Teams\\Frostborn_Hurricanes.png",
-        "year_created": 1993,
+        "year_created": 1956,
         "stadium": "The Mystic Monolith",
         "league": "Vorlis Continental"
     },
     {
         "name": "Radiant Sylphs",
-        "strength": 1.31,
+        "strength": 1.12,
         "logo": "Images/Teams\\Radiant_Sylphs.png",
-        "year_created": 1972,
+        "year_created": 1991,
         "stadium": "Skygleam Field",
         "league": "Vorlis Regional"
     },
     {
         "name": "Emerald Chargers",
-        "strength": 1.0,
+        "strength": 0.96,
         "logo": "Images/Teams\\Emerald_Chargers.png",
-        "year_created": 1989,
+        "year_created": 1985,
         "stadium": "Granite Core",
         "league": "Zephyra Pro"
     },
     {
         "name": "Mythic Falcons",
-        "strength": 1.32,
+        "strength": 1.3,
         "logo": "Images/Teams\\Mythic_Falcons.png",
-        "year_created": 1983,
+        "year_created": 1966,
         "stadium": "Radiant",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Onyx Lynx",
-        "strength": 1.3,
+        "strength": 0.96,
         "logo": "Images/Teams\\Onyx_Lynx.png",
-        "year_created": 1985,
+        "year_created": 2006,
         "stadium": "Run Bastion",
         "league": "Zephyra Series"
     },
     {
         "name": "Ecliptic Raptors",
-        "strength": 1.32,
+        "strength": 1.33,
         "logo": "Images/Teams\\Ecliptic_Raptors.png",
-        "year_created": 1978,
+        "year_created": 2006,
         "stadium": "The Den Gate",
         "league": "Zephyra B"
     },
     {
         "name": "Stormborn Tigers",
-        "strength": 1.21,
+        "strength": 1.33,
         "logo": "Images/Teams\\Stormborn_Tigers.png",
-        "year_created": 1981,
+        "year_created": 1966,
         "stadium": "Spire Gate",
         "league": "Tauron Premier"
     },
     {
         "name": "Eternal Bulls",
-        "strength": 1.28,
+        "strength": 1.31,
         "logo": "Images/Teams\\Eternal_Bulls.png",
-        "year_created": 1954,
+        "year_created": 2001,
         "stadium": "Oblivion Temple",
         "league": "Tauron Elite"
     },
     {
         "name": "Auric Panthers",
-        "strength": 1.15,
+        "strength": 1.3,
         "logo": "Images/Teams\\Auric_Panthers.png",
-        "year_created": 1995,
+        "year_created": 1965,
         "stadium": "The Celestial Cathedral",
         "league": "Tauron Division 2"
     },
     {
         "name": "Scarlet Blades",
-        "strength": 1.22,
+        "strength": 1.25,
         "logo": "Images/Teams\\Scarlet_Blades.png",
-        "year_created": 1950,
+        "year_created": 1954,
         "stadium": "Titan Sanctum",
         "league": "Tauron Division 3"
     },
     {
         "name": "Obsidian Stingers",
-        "strength": 0.82,
+        "strength": 1.25,
         "logo": "Images/Teams\\Obsidian_Stingers.png",
-        "year_created": 1967,
+        "year_created": 2004,
         "stadium": "River Halo",
         "league": "Nerathoul"
     },
     {
         "name": "Abyssal Titans",
-        "strength": 1.22,
+        "strength": 0.88,
         "logo": "Images/Teams\\Abyssal_Titans.png",
-        "year_created": 2004,
+        "year_created": 1953,
         "stadium": "Tempest Core",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Stellar Cougars",
-        "strength": 1.35,
+        "strength": 1.21,
         "logo": "Images/Teams\\Stellar_Cougars.png",
         "year_created": 1962,
         "stadium": "The Velvet Forge",
@@ -1177,81 +1177,81 @@
     },
     {
         "name": "Blazing Leopards",
-        "strength": 1.31,
+        "strength": 0.82,
         "logo": "Images/Teams\\Blazing_Leopards.png",
-        "year_created": 1975,
+        "year_created": 1984,
         "stadium": "Cyclone Spire",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Silver Blades",
-        "strength": 1.28,
+        "strength": 1.33,
         "logo": "Images/Teams\\Silver_Blades.png",
-        "year_created": 1980,
+        "year_created": 1986,
         "stadium": "The Stellar Paradox",
         "league": "Ecliptus"
     },
     {
         "name": "Lunar Serpents",
-        "strength": 0.82,
+        "strength": 1.3,
         "logo": "Images/Teams\\Lunar_Serpents.png",
-        "year_created": 1985,
+        "year_created": 1996,
         "stadium": "Moonfang Field",
         "league": "Ecliptus B"
     },
     {
         "name": "Solaris Raiders",
-        "strength": 1.28,
+        "strength": 1.33,
         "logo": "Images/Teams\\Solaris_Raiders.png",
-        "year_created": 1983,
+        "year_created": 1951,
         "stadium": "Infernal",
         "league": "Ecliptus C"
     },
     {
         "name": "Feral Chargers",
-        "strength": 0.82,
+        "strength": 1.21,
         "logo": "Images/Teams\\Feral_Chargers.png",
-        "year_created": 1999,
+        "year_created": 1990,
         "stadium": "Beacon Citadel",
         "league": "Ecliptus D"
     },
     {
         "name": "Grove Bulls",
-        "strength": 1.32,
+        "strength": 1.33,
         "logo": "Images/Teams\\Grove_Bulls.png",
-        "year_created": 1960,
+        "year_created": 1982,
         "stadium": "Citadel Vault",
         "league": "Lyraxis"
     },
     {
         "name": "Spectral Dragons",
-        "strength": 1.31,
+        "strength": 1.18,
         "logo": "Images/Teams\\Spectral_Dragons.png",
-        "year_created": 2004,
+        "year_created": 1968,
         "stadium": "Astral Conflux",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Rune Tigers",
-        "strength": 1.35,
+        "strength": 1.3,
         "logo": "Images/Teams\\Rune_Tigers.png",
-        "year_created": 1969,
+        "year_created": 2008,
         "stadium": "The Oblivion Prism",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Ashen Wolves",
-        "strength": 0.82,
+        "strength": 0.91,
         "logo": "Images/Teams\\Ashen_Wolves.png",
-        "year_created": 1950,
+        "year_created": 1983,
         "stadium": "Radiant Halo Celestial",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Radiant Hurricanes",
-        "strength": 1.27,
+        "strength": 0.96,
         "logo": "Images/Teams\\Radiant_Hurricanes.png",
-        "year_created": 1967,
+        "year_created": 1996,
         "stadium": "Oblivion Citadel Cradle",
         "league": "Solarion"
     },
@@ -1259,197 +1259,197 @@
         "name": "Runic Guardians",
         "strength": 1.33,
         "logo": "Images/Teams\\Runic_Guardians.png",
-        "year_created": 1997,
+        "year_created": 1960,
         "stadium": "Titan Monolith",
         "league": "Solarion 2"
     },
     {
         "name": "Auric Sabers",
-        "strength": 1.27,
+        "strength": 0.88,
         "logo": "Images/Teams\\Auric_Sabers.png",
-        "year_created": 1974,
+        "year_created": 1960,
         "stadium": "Astral Halo",
         "league": "Solarion 3"
     },
     {
         "name": "Cosmic Stallions",
-        "strength": 0.88,
+        "strength": 1.33,
         "logo": "Images/Teams\\Cosmic_Stallions.png",
-        "year_created": 1982,
+        "year_created": 1998,
         "stadium": "The Umbral Vortex",
         "league": "Solarion 4"
     },
     {
         "name": "Tempest Panthers",
-        "strength": 0.88,
+        "strength": 1.33,
         "logo": "Images/Teams\\Tempest_Panthers.png",
-        "year_created": 2001,
+        "year_created": 1975,
         "stadium": "Frosted Nexus",
         "league": "Cryonese Primera"
     },
     {
         "name": "Empyreal Tigers",
-        "strength": 1.32,
+        "strength": 1.25,
         "logo": "Images/Teams\\Empyreal_Tigers.png",
-        "year_created": 2000,
+        "year_created": 2005,
         "stadium": "Oblivion Empyrean",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Mystic Phoenixes",
-        "strength": 0.88,
+        "strength": 0.79,
         "logo": "Images/Teams\\Mystic_Phoenixes.png",
-        "year_created": 2004,
+        "year_created": 1953,
         "stadium": "Celestial Ascension",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Celestial Raiders",
-        "strength": 1.26,
+        "strength": 1.25,
         "logo": "Images/Teams\\Celestial_Raiders.png",
-        "year_created": 1977,
+        "year_created": 1966,
         "stadium": "Infernal Forge",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Sable Leopards",
-        "strength": 0.88,
+        "strength": 0.82,
         "logo": "Images/Teams\\Sable_Leopards.png",
-        "year_created": 2002,
+        "year_created": 1982,
         "stadium": "Oblivion Nucleus",
         "league": "Vorlis Liga"
     },
     {
         "name": "Mythic Scorpions",
-        "strength": 1.26,
+        "strength": 1.28,
         "logo": "Images/Teams\\Mythic_Scorpions.png",
-        "year_created": 1967,
+        "year_created": 2001,
         "stadium": "Lair Spire",
         "league": "Vorlis National"
     },
     {
         "name": "Lunar Stingers",
-        "strength": 1.33,
+        "strength": 1.18,
         "logo": "Images/Teams\\Lunar_Stingers.png",
-        "year_created": 1974,
+        "year_created": 1994,
         "stadium": "The Stormborn Chasm",
         "league": "Vorlis Continental"
     },
     {
         "name": "Oceanic Leopards",
-        "strength": 1.32,
+        "strength": 0.96,
         "logo": "Images/Teams\\Oceanic_Leopards.png",
-        "year_created": 1998,
+        "year_created": 1983,
         "stadium": "Hollow Forge",
         "league": "Vorlis Regional"
     },
     {
         "name": "Hollow Mavericks",
-        "strength": 0.79,
+        "strength": 1.3,
         "logo": "Images/Teams\\Hollow_Mavericks.png",
-        "year_created": 1982,
+        "year_created": 1968,
         "stadium": "Zephyr Core",
         "league": "Zephyra Pro"
     },
     {
         "name": "Shadow Centaurs",
-        "strength": 0.79,
+        "strength": 1.27,
         "logo": "Images/Teams\\Shadow_Centaurs.png",
-        "year_created": 1960,
+        "year_created": 2000,
         "stadium": "The Oblivion Core",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Storm Eagles",
-        "strength": 0.96,
+        "strength": 1.33,
         "logo": "Images/Teams\\Storm_Eagles.png",
-        "year_created": 2007,
+        "year_created": 2010,
         "stadium": "Tempest Core",
         "league": "Zephyra Series"
     },
     {
         "name": "Voltaic Cougars",
-        "strength": 1.21,
+        "strength": 0.79,
         "logo": "Images/Teams\\Voltaic_Cougars.png",
-        "year_created": 1978,
+        "year_created": 1963,
         "stadium": "Ember Prism",
         "league": "Zephyra B"
     },
     {
         "name": "Hollow Leopards",
-        "strength": 0.82,
+        "strength": 0.96,
         "logo": "Images/Teams\\Hollow_Leopards.png",
-        "year_created": 1982,
+        "year_created": 1963,
         "stadium": "The Stellar Horizon",
         "league": "Tauron Premier"
     },
     {
         "name": "Oblivion Wolves",
-        "strength": 1.32,
+        "strength": 1.15,
         "logo": "Images/Teams\\Oblivion_Wolves.png",
-        "year_created": 1992,
+        "year_created": 1961,
         "stadium": "Shadowclaw Stadium",
         "league": "Tauron Elite"
     },
     {
         "name": "Sable Phoenixes",
-        "strength": 1.27,
+        "strength": 0.82,
         "logo": "Images/Teams\\Sable_Phoenixes.png",
-        "year_created": 1995,
+        "year_created": 1950,
         "stadium": "Celestial Paradox",
         "league": "Tauron Division 2"
     },
     {
         "name": "Runic Strikers",
-        "strength": 1.31,
+        "strength": 0.96,
         "logo": "Images/Teams\\Runic_Strikers.png",
-        "year_created": 1990,
+        "year_created": 2001,
         "stadium": "Iron Ember",
         "league": "Tauron Division 3"
     },
     {
         "name": "Spectral Cobras",
-        "strength": 1.32,
+        "strength": 1.26,
         "logo": "Images/Teams\\Spectral_Cobras.png",
-        "year_created": 2006,
+        "year_created": 1968,
         "stadium": "The Cyclone Forge",
         "league": "Nerathoul"
     },
     {
         "name": "Phantom Basilisks",
-        "strength": 1.15,
+        "strength": 1.32,
         "logo": "Images/Teams\\Phantom_Basilisks.png",
-        "year_created": 2009,
+        "year_created": 1964,
         "stadium": "Ghostfang Arena",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Thunder Strikers",
-        "strength": 1.21,
+        "strength": 0.82,
         "logo": "Images/Teams\\Thunder_Strikers.png",
-        "year_created": 1995,
+        "year_created": 1998,
         "stadium": "The Umbral Halo",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Scarlet Dragons",
-        "strength": 0.82,
+        "strength": 1.35,
         "logo": "Images/Teams\\Scarlet_Dragons.png",
-        "year_created": 2006,
+        "year_created": 1959,
         "stadium": "The Nest Forge",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Zephyr Rhinos",
-        "strength": 0.79,
+        "strength": 1.18,
         "logo": "Images/Teams\\Zephyr_Rhinos.png",
-        "year_created": 1978,
+        "year_created": 2009,
         "stadium": "The Run Forge",
         "league": "Ecliptus"
     },
     {
         "name": "Radiant Leopards",
-        "strength": 0.79,
+        "strength": 1.33,
         "logo": "Images/Teams\\Radiant_Leopards.png",
         "year_created": 2002,
         "stadium": "The Celestial Crucible",
@@ -1457,25 +1457,25 @@
     },
     {
         "name": "Aether Titans",
-        "strength": 0.79,
+        "strength": 1.15,
         "logo": "Images/Teams\\Aether_Titans.png",
-        "year_created": 1965,
+        "year_created": 1966,
         "stadium": "Emerald Sanctum",
         "league": "Ecliptus C"
     },
     {
         "name": "Steel Titans",
-        "strength": 1.33,
+        "strength": 1.15,
         "logo": "Images/Teams\\Steel_Titans.png",
-        "year_created": 1953,
+        "year_created": 1955,
         "stadium": "Iron Realm",
         "league": "Ecliptus D"
     },
     {
         "name": "Prismatic Hawks",
-        "strength": 1.35,
+        "strength": 1.26,
         "logo": "Images/Teams\\Prismatic_Hawks.png",
-        "year_created": 1961,
+        "year_created": 2010,
         "stadium": "Arcane Pinnacle",
         "league": "Lyraxis"
     },
@@ -1483,165 +1483,165 @@
         "name": "Oblivion Vortex",
         "strength": 1.0,
         "logo": "Images/Teams\\Oblivion_Vortex.png",
-        "year_created": 1986,
+        "year_created": 2002,
         "stadium": "Aether Drift",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Prismatic Falcons",
-        "strength": 1.32,
+        "strength": 0.79,
         "logo": "Images/Teams\\Prismatic_Falcons.png",
-        "year_created": 2004,
+        "year_created": 2002,
         "stadium": "Arcane Cradle",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Aurora Rhinos",
-        "strength": 1.35,
+        "strength": 1.25,
         "logo": "Images/Teams\\Aurora_Rhinos.png",
-        "year_created": 1990,
+        "year_created": 1991,
         "stadium": "Lunar Realm",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Phantom Bulls",
-        "strength": 0.96,
+        "strength": 1.31,
         "logo": "Images/Teams\\Phantom_Bulls.png",
-        "year_created": 1975,
+        "year_created": 1968,
         "stadium": "The Realm Zephyr",
         "league": "Solarion"
     },
     {
         "name": "Empyreal Knights",
-        "strength": 0.96,
+        "strength": 1.25,
         "logo": "Images/Teams\\Empyreal_Knights.png",
-        "year_created": 1955,
+        "year_created": 1992,
         "stadium": "The Runic",
         "league": "Solarion 2"
     },
     {
         "name": "Oceanic Scorpions",
-        "strength": 0.79,
+        "strength": 1.22,
         "logo": "Images/Teams\\Oceanic_Scorpions.png",
-        "year_created": 1954,
+        "year_created": 1990,
         "stadium": "Den Eclipse",
         "league": "Solarion 3"
     },
     {
         "name": "Emberfall Centaurs",
-        "strength": 1.18,
+        "strength": 1.15,
         "logo": "Images/Teams\\Emberfall_Centaurs.png",
-        "year_created": 1986,
+        "year_created": 1993,
         "stadium": "The Run Spire",
         "league": "Solarion 4"
     },
     {
         "name": "Mythic Vipers",
-        "strength": 1.32,
+        "strength": 1.25,
         "logo": "Images/Teams\\Mythic_Vipers.png",
-        "year_created": 2009,
+        "year_created": 1967,
         "stadium": "The Oblivion Arcane",
         "league": "Cryonese Primera"
     },
     {
         "name": "Tempest Vipers",
-        "strength": 1.15,
+        "strength": 1.22,
         "logo": "Images/Teams\\Tempest_Vipers.png",
-        "year_created": 1989,
+        "year_created": 2008,
         "stadium": "Frozen Aegis",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Aether Dragons",
-        "strength": 0.96,
+        "strength": 1.21,
         "logo": "Images/Teams\\Aether_Dragons.png",
-        "year_created": 2008,
+        "year_created": 2002,
         "stadium": "Frozen Spire",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Storm Falcons",
-        "strength": 0.91,
+        "strength": 1.35,
         "logo": "Images/Teams\\Storm_Falcons.png",
-        "year_created": 2002,
+        "year_created": 1967,
         "stadium": "The Crystal Forge",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Aurora Falcons",
-        "strength": 1.3,
+        "strength": 1.26,
         "logo": "Images/Teams\\Aurora_Falcons.png",
-        "year_created": 1967,
+        "year_created": 1989,
         "stadium": "The Arcane Drift",
         "league": "Vorlis Liga"
     },
     {
         "name": "Verdant Wolves",
-        "strength": 1.35,
+        "strength": 1.0,
         "logo": "Images/Teams\\Verdant_Wolves.png",
-        "year_created": 1961,
+        "year_created": 1993,
         "stadium": "Nova Core",
         "league": "Vorlis National"
     },
     {
         "name": "Astral Raptors",
-        "strength": 0.79,
+        "strength": 0.82,
         "logo": "Images/Teams\\Astral_Raptors.png",
-        "year_created": 1962,
+        "year_created": 1951,
         "stadium": "Starclaw Colosseum",
         "league": "Vorlis Continental"
     },
     {
         "name": "Grove Blades",
-        "strength": 0.82,
+        "strength": 1.26,
         "logo": "Images/Teams\\Grove_Blades.png",
-        "year_created": 1981,
+        "year_created": 1987,
         "stadium": "The Nova Haven",
         "league": "Vorlis Regional"
     },
     {
         "name": "Obsidian Krakens",
-        "strength": 0.88,
+        "strength": 1.18,
         "logo": "Images/Teams\\Obsidian_Krakens.png",
-        "year_created": 1979,
+        "year_created": 1960,
         "stadium": "The Blacktide",
         "league": "Zephyra Pro"
     },
     {
         "name": "Empyreal Vortex",
-        "strength": 1.21,
+        "strength": 1.0,
         "logo": "Images/Teams\\Empyreal_Vortex.png",
-        "year_created": 1950,
+        "year_created": 1989,
         "stadium": "Umbral Monolith",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Spectral Lynx",
-        "strength": 1.27,
+        "strength": 0.79,
         "logo": "Images/Teams\\Spectral_Lynx.png",
-        "year_created": 1995,
+        "year_created": 1956,
         "stadium": "Astral Temple",
         "league": "Zephyra Series"
     },
     {
         "name": "Ember Cobras",
-        "strength": 0.79,
+        "strength": 1.32,
         "logo": "Images/Teams\\Ember_Cobras.png",
-        "year_created": 1952,
+        "year_created": 2005,
         "stadium": "The Prism Arcane",
         "league": "Zephyra B"
     },
     {
         "name": "Cosmic Tigers",
-        "strength": 1.28,
+        "strength": 1.31,
         "logo": "Images/Teams\\Cosmic_Tigers.png",
-        "year_created": 2008,
+        "year_created": 1982,
         "stadium": "Aether Cradle",
         "league": "Tauron Premier"
     },
     {
         "name": "Abyssal Stallions",
-        "strength": 1.31,
+        "strength": 1.25,
         "logo": "Images/Teams\\Abyssal_Stallions.png",
         "year_created": 1980,
         "stadium": "The Obsidian Vault",
@@ -1649,401 +1649,401 @@
     },
     {
         "name": "Titanic Scorpions",
-        "strength": 0.88,
+        "strength": 0.79,
         "logo": "Images/Teams\\Titanic_Scorpions.png",
-        "year_created": 2008,
+        "year_created": 1973,
         "stadium": "Nova Sphere",
         "league": "Tauron Division 2"
     },
     {
         "name": "Thunder Raiders",
-        "strength": 1.0,
+        "strength": 1.21,
         "logo": "Images/Teams\\Thunder_Raiders.png",
-        "year_created": 1997,
+        "year_created": 1982,
         "stadium": "Eclipse Dominion",
         "league": "Tauron Division 3"
     },
     {
         "name": "Rune Hurricanes",
-        "strength": 0.79,
+        "strength": 1.12,
         "logo": "Images/Teams\\Rune_Hurricanes.png",
-        "year_created": 1999,
+        "year_created": 1979,
         "stadium": "Crystal Gate",
         "league": "Nerathoul"
     },
     {
         "name": "Ember Hawks",
-        "strength": 1.33,
+        "strength": 1.18,
         "logo": "Images/Teams\\Ember_Hawks.png",
-        "year_created": 1972,
+        "year_created": 1971,
         "stadium": "The Void Haven",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Arcane Tigers",
-        "strength": 1.18,
+        "strength": 1.26,
         "logo": "Images/Teams\\Arcane_Tigers.png",
-        "year_created": 1988,
+        "year_created": 1973,
         "stadium": "The Dominion Haven",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Ecliptic Sharks",
-        "strength": 1.28,
+        "strength": 1.0,
         "logo": "Images/Teams\\Ecliptic_Sharks.png",
-        "year_created": 1979,
+        "year_created": 1992,
         "stadium": "The Stellar Zenith",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Solar Phoenixes",
-        "strength": 1.25,
+        "strength": 1.35,
         "logo": "Images/Teams\\Solar_Phoenixes.png",
-        "year_created": 1957,
+        "year_created": 1999,
         "stadium": "Iron Drift",
         "league": "Ecliptus"
     },
     {
         "name": "Tempest Cougars",
-        "strength": 1.0,
+        "strength": 0.88,
         "logo": "Images/Teams\\Tempest_Cougars.png",
-        "year_created": 1954,
+        "year_created": 2000,
         "stadium": "Titan Vault",
         "league": "Ecliptus B"
     },
     {
         "name": "Cosmic Raptors",
-        "strength": 1.22,
+        "strength": 1.28,
         "logo": "Images/Teams\\Cosmic_Raptors.png",
-        "year_created": 1991,
+        "year_created": 1997,
         "stadium": "Eternal Infernal",
         "league": "Ecliptus C"
     },
     {
         "name": "Storm Griffins",
-        "strength": 1.32,
+        "strength": 1.27,
         "logo": "Images/Teams\\Storm_Griffins.png",
-        "year_created": 1984,
+        "year_created": 1961,
         "stadium": "Thunder Vault",
         "league": "Ecliptus D"
     },
     {
         "name": "Steel Dragons",
-        "strength": 1.25,
+        "strength": 0.82,
         "logo": "Images/Teams\\Steel_Dragons.png",
-        "year_created": 1970,
+        "year_created": 1964,
         "stadium": "Aegis Spire",
         "league": "Lyraxis"
     },
     {
         "name": "Grove Stingers",
-        "strength": 1.21,
+        "strength": 1.35,
         "logo": "Images/Teams\\Grove_Stingers.png",
-        "year_created": 1961,
+        "year_created": 1959,
         "stadium": "Celestial Dome",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Lunar Wolves",
-        "strength": 0.82,
+        "strength": 1.35,
         "logo": "Images/Teams\\Lunar_Wolves.png",
-        "year_created": 1974,
+        "year_created": 1997,
         "stadium": "Stellar Obelisk",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Luminous Blades",
-        "strength": 1.15,
+        "strength": 0.96,
         "logo": "Images/Teams\\Luminous_Blades.png",
-        "year_created": 1973,
+        "year_created": 2005,
         "stadium": "The Solaris Pinnacle",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Stone Pioneers",
-        "strength": 1.26,
+        "strength": 1.33,
         "logo": "Images/Teams\\Stone_Pioneers.png",
-        "year_created": 1988,
+        "year_created": 2009,
         "stadium": "The Stormborn Sanctum",
         "league": "Solarion"
     },
     {
         "name": "Velvet Phoenixes",
-        "strength": 1.12,
+        "strength": 1.3,
         "logo": "Images/Teams\\Velvet_Phoenixes.png",
-        "year_created": 2001,
+        "year_created": 1978,
         "stadium": "The Gate Gate Granite",
         "league": "Solarion 2"
     },
     {
         "name": "Mythic Strikers",
-        "strength": 1.3,
+        "strength": 1.0,
         "logo": "Images/Teams\\Mythic_Strikers.png",
-        "year_created": 1955,
+        "year_created": 2005,
         "stadium": "Dominion Velvet Haven",
         "league": "Solarion 3"
     },
     {
         "name": "Feral Bulls",
-        "strength": 1.21,
+        "strength": 1.35,
         "logo": "Images/Teams\\Feral_Bulls.png",
-        "year_created": 2004,
+        "year_created": 1973,
         "stadium": "Celestial Starforge",
         "league": "Solarion 4"
     },
     {
         "name": "Ecliptic Mavericks",
-        "strength": 0.96,
+        "strength": 1.22,
         "logo": "Images/Teams\\Ecliptic_Mavericks.png",
-        "year_created": 1957,
+        "year_created": 1986,
         "stadium": "The Nova Chasm",
         "league": "Cryonese Primera"
     },
     {
         "name": "Blazing Hawks",
-        "strength": 0.96,
+        "strength": 1.0,
         "logo": "Images/Teams\\Blazing_Hawks.png",
-        "year_created": 1983,
+        "year_created": 1970,
         "stadium": "The Velvet Continuum",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Draconic Lynx",
-        "strength": 1.25,
+        "strength": 1.28,
         "logo": "Images/Teams\\Draconic_Lynx.png",
-        "year_created": 2004,
+        "year_created": 2001,
         "stadium": "Aegis Drift",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Abyssal Rhinos",
-        "strength": 1.12,
+        "strength": 1.27,
         "logo": "Images/Teams\\Abyssal_Rhinos.png",
-        "year_created": 1969,
+        "year_created": 1951,
         "stadium": "The Celestial Nexus",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Arcane Stallions",
-        "strength": 1.12,
+        "strength": 0.88,
         "logo": "Images/Teams\\Arcane_Stallions.png",
-        "year_created": 2008,
+        "year_created": 1958,
         "stadium": "The Velvet Forge",
         "league": "Vorlis Liga"
     },
     {
         "name": "Sable Gargoyles",
-        "strength": 0.82,
+        "strength": 1.32,
         "logo": "Images/Teams\\Sable_Gargoyles.png",
-        "year_created": 1999,
+        "year_created": 2004,
         "stadium": "Stonewing Arena",
         "league": "Vorlis National"
     },
     {
         "name": "Mythic Bears",
-        "strength": 1.32,
+        "strength": 0.88,
         "logo": "Images/Teams\\Mythic_Bears.png",
-        "year_created": 1955,
+        "year_created": 2008,
         "stadium": "The Iron Aether Solaris",
         "league": "Vorlis Continental"
     },
     {
         "name": "Luminous Bulls",
-        "strength": 0.91,
+        "strength": 0.82,
         "logo": "Images/Teams\\Luminous_Bulls.png",
-        "year_created": 1966,
+        "year_created": 1954,
         "stadium": "The Ember Core",
         "league": "Vorlis Regional"
     },
     {
         "name": "Velvet Griffins",
-        "strength": 1.3,
+        "strength": 0.88,
         "logo": "Images/Teams\\Velvet_Griffins.png",
-        "year_created": 1989,
+        "year_created": 1950,
         "stadium": "Oblivion Realm",
         "league": "Zephyra Pro"
     },
     {
         "name": "Abyssal Sabers",
-        "strength": 1.12,
+        "strength": 1.15,
         "logo": "Images/Teams\\Abyssal_Sabers.png",
-        "year_created": 1976,
+        "year_created": 1966,
         "stadium": "Arcane Ascension",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Lunar Cobras",
-        "strength": 0.88,
+        "strength": 1.27,
         "logo": "Images/Teams\\Lunar_Cobras.png",
-        "year_created": 2003,
+        "year_created": 1992,
         "stadium": "The Gate Stellar",
         "league": "Zephyra Series"
     },
     {
         "name": "Blazing Falcons",
-        "strength": 0.82,
+        "strength": 1.21,
         "logo": "Images/Teams\\Blazing_Falcons.png",
-        "year_created": 2003,
+        "year_created": 1950,
         "stadium": "Oblivion Gate",
         "league": "Zephyra B"
     },
     {
         "name": "Savage Rhinos",
-        "strength": 1.33,
+        "strength": 1.27,
         "logo": "Images/Teams\\Savage_Rhinos.png",
-        "year_created": 1985,
+        "year_created": 1979,
         "stadium": "Zephyr Vault",
         "league": "Tauron Premier"
     },
     {
         "name": "Sable Bulls",
-        "strength": 0.88,
+        "strength": 1.27,
         "logo": "Images/Teams\\Sable_Bulls.png",
-        "year_created": 2000,
+        "year_created": 1981,
         "stadium": "Celestial Gate",
         "league": "Tauron Elite"
     },
     {
         "name": "Nebula Warhounds",
-        "strength": 1.21,
+        "strength": 0.96,
         "logo": "Images/Teams\\Nebula_Warhounds.png",
-        "year_created": 2003,
+        "year_created": 1975,
         "stadium": "Cosmic Kennel",
         "league": "Tauron Division 2"
     },
     {
         "name": "Verdant Stingers",
-        "strength": 1.32,
+        "strength": 1.27,
         "logo": "Images/Teams\\Verdant_Stingers.png",
-        "year_created": 1973,
+        "year_created": 1979,
         "stadium": "The Celestial Eclipse",
         "league": "Tauron Division 3"
     },
     {
         "name": "Verdant Rhinos",
-        "strength": 1.22,
+        "strength": 1.27,
         "logo": "Images/Teams\\Verdant_Rhinos.png",
-        "year_created": 1979,
+        "year_created": 1984,
         "stadium": "The Oblivion Gate",
         "league": "Nerathoul"
     },
     {
         "name": "Stellar Bears",
-        "strength": 1.25,
+        "strength": 1.3,
         "logo": "Images/Teams\\Stellar_Bears.png",
-        "year_created": 2009,
+        "year_created": 1957,
         "stadium": "The Stellar Pinnacle",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Oblivion Pioneers",
-        "strength": 0.88,
+        "strength": 1.25,
         "logo": "Images/Teams\\Oblivion_Pioneers.png",
-        "year_created": 1971,
+        "year_created": 1984,
         "stadium": "Granite Halo",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Violet Wolves",
-        "strength": 1.18,
+        "strength": 1.32,
         "logo": "Images/Teams\\Violet_Wolves.png",
-        "year_created": 1993,
+        "year_created": 1969,
         "stadium": "The Stellar Vault",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Eternal Panthers",
-        "strength": 1.0,
+        "strength": 1.25,
         "logo": "Images/Teams\\Eternal_Panthers.png",
-        "year_created": 2007,
+        "year_created": 1972,
         "stadium": "Celestial Vortex",
         "league": "Ecliptus"
     },
     {
         "name": "Thorn Pioneers",
-        "strength": 1.18,
+        "strength": 1.26,
         "logo": "Images/Teams\\Thorn_Pioneers.png",
-        "year_created": 1996,
+        "year_created": 1979,
         "stadium": "The Cyclone Monolith",
         "league": "Ecliptus B"
     },
     {
         "name": "Phantom Ogres",
-        "strength": 1.21,
+        "strength": 1.32,
         "logo": "Images/Teams\\Phantom_Ogres.png",
-        "year_created": 1973,
+        "year_created": 1989,
         "stadium": "Ghoststone Field",
         "league": "Ecliptus C"
     },
     {
         "name": "Inferno Mavericks",
-        "strength": 1.35,
+        "strength": 1.22,
         "logo": "Images/Teams\\Inferno_Mavericks.png",
-        "year_created": 1979,
+        "year_created": 1991,
         "stadium": "The Stellar Forge",
         "league": "Ecliptus D"
     },
     {
         "name": "Cobalt Manticores",
-        "strength": 1.22,
+        "strength": 1.12,
         "logo": "Images/Teams\\Cobalt_Manticores.png",
-        "year_created": 1978,
+        "year_created": 2005,
         "stadium": "Azure Fang Stadium",
         "league": "Lyraxis"
     },
     {
         "name": "Ember Scorpions",
-        "strength": 0.82,
+        "strength": 1.31,
         "logo": "Images/Teams\\Ember_Scorpions.png",
-        "year_created": 1996,
+        "year_created": 1985,
         "stadium": "The Arcane Prism",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Granite Blades",
-        "strength": 0.91,
+        "strength": 1.21,
         "logo": "Images/Teams\\Granite_Blades.png",
-        "year_created": 1962,
+        "year_created": 2010,
         "stadium": "Radiant Spire",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Draconic Chargers",
-        "strength": 1.32,
+        "strength": 1.28,
         "logo": "Images/Teams\\Draconic_Chargers.png",
-        "year_created": 1982,
+        "year_created": 1960,
         "stadium": "The Celestial Realm",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Empyreal Raptors",
-        "strength": 1.18,
+        "strength": 0.91,
         "logo": "Images/Teams\\Empyreal_Raptors.png",
-        "year_created": 1992,
+        "year_created": 1980,
         "stadium": "The Halo Iron",
         "league": "Solarion"
     },
     {
         "name": "Verdant Hydras",
-        "strength": 1.0,
+        "strength": 0.96,
         "logo": "Images/Teams\\Verdant_Hydras.png",
-        "year_created": 1978,
+        "year_created": 1951,
         "stadium": "Emerald Coil Stadium",
         "league": "Solarion 2"
     },
     {
         "name": "Nebular Hawks",
-        "strength": 1.22,
+        "strength": 1.28,
         "logo": "Images/Teams\\Nebular_Hawks.png",
-        "year_created": 2007,
+        "year_created": 1996,
         "stadium": "Empyrean Core",
         "league": "Solarion 3"
     },
     {
         "name": "Aether Warthogs",
-        "strength": 1.3,
+        "strength": 1.0,
         "logo": "Images/Teams\\Aether_Warthogs.png",
-        "year_created": 2008,
+        "year_created": 1992,
         "stadium": "The Oblivion Granite",
         "league": "Solarion 4"
     },
@@ -2051,7 +2051,7 @@
         "name": "Silver Wolves",
         "strength": 1.28,
         "logo": "Images/Teams\\Silver_Wolves.png",
-        "year_created": 1995,
+        "year_created": 2000,
         "stadium": "Eternal Chasm",
         "league": "Cryonese Primera"
     },
@@ -2059,79 +2059,79 @@
         "name": "Obsidian Leopards",
         "strength": 0.88,
         "logo": "Images/Teams\\Obsidian_Leopards.png",
-        "year_created": 1999,
+        "year_created": 1995,
         "stadium": "The Stellar Forge",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Stellar Titans",
-        "strength": 1.0,
+        "strength": 1.3,
         "logo": "Images/Teams\\Stellar_Titans.png",
-        "year_created": 1952,
+        "year_created": 1992,
         "stadium": "The Tempest Temple",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Frost Revenants",
-        "strength": 1.0,
+        "strength": 1.21,
         "logo": "Images/Teams\\Frost_Revenants.png",
-        "year_created": 1958,
+        "year_created": 1955,
         "stadium": "Iceshard Stadium",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Marble Guardians",
-        "strength": 1.25,
+        "strength": 1.0,
         "logo": "Images/Teams\\Marble_Guardians.png",
-        "year_created": 1980,
+        "year_created": 2006,
         "stadium": "The Oblivion Aegis",
         "league": "Vorlis Liga"
     },
     {
         "name": "Thorn Dragons",
-        "strength": 1.21,
+        "strength": 1.12,
         "logo": "Images/Teams\\Thorn_Dragons.png",
-        "year_created": 1961,
+        "year_created": 1994,
         "stadium": "Arcane Nexus",
         "league": "Vorlis National"
     },
     {
         "name": "Savage Bulls",
-        "strength": 1.35,
+        "strength": 1.22,
         "logo": "Images/Teams\\Savage_Bulls.png",
-        "year_created": 1964,
+        "year_created": 1958,
         "stadium": "Mystic Radiant",
         "league": "Vorlis Continental"
     },
     {
         "name": "Titanic Centaurs",
-        "strength": 1.15,
+        "strength": 1.18,
         "logo": "Images/Teams\\Titanic_Centaurs.png",
-        "year_created": 1969,
+        "year_created": 1952,
         "stadium": "Monolith Iron",
         "league": "Vorlis Regional"
     },
     {
         "name": "Thorn Knights",
-        "strength": 1.32,
+        "strength": 1.25,
         "logo": "Images/Teams\\Thorn_Knights.png",
-        "year_created": 1983,
+        "year_created": 2007,
         "stadium": "The Zephyr Void",
         "league": "Zephyra Pro"
     },
     {
         "name": "Phantom Falcons",
-        "strength": 0.91,
+        "strength": 1.18,
         "logo": "Images/Teams\\Phantom_Falcons.png",
-        "year_created": 1971,
+        "year_created": 2002,
         "stadium": "The Eclipse Vault",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Sable Cougars",
-        "strength": 0.91,
+        "strength": 1.25,
         "logo": "Images/Teams\\Sable_Cougars.png",
-        "year_created": 1991,
+        "year_created": 2003,
         "stadium": "The Arcane Gate",
         "league": "Zephyra Series"
     },
@@ -2139,53 +2139,53 @@
         "name": "Stone Wolves",
         "strength": 1.27,
         "logo": "Images/Teams\\Stone_Wolves.png",
-        "year_created": 1972,
+        "year_created": 1976,
         "stadium": "Ashen Gate",
         "league": "Zephyra B"
     },
     {
         "name": "Empyreal Sabers",
-        "strength": 1.0,
+        "strength": 0.88,
         "logo": "Images/Teams\\Empyreal_Sabers.png",
-        "year_created": 1986,
+        "year_created": 1954,
         "stadium": "Nova Ember Zephyr",
         "league": "Tauron Premier"
     },
     {
         "name": "Thorn Chargers",
-        "strength": 1.21,
+        "strength": 1.3,
         "logo": "Images/Teams\\Thorn_Chargers.png",
-        "year_created": 1987,
+        "year_created": 1995,
         "stadium": "The Stellar Bastion",
         "league": "Tauron Elite"
     },
     {
         "name": "Golden Sharks",
-        "strength": 1.26,
+        "strength": 1.12,
         "logo": "Images/Teams\\Golden_Sharks.png",
-        "year_created": 1980,
+        "year_created": 1962,
         "stadium": "Arcane Forge",
         "league": "Tauron Division 2"
     },
     {
         "name": "Granite Knights",
-        "strength": 0.96,
+        "strength": 0.79,
         "logo": "Images/Teams\\Granite_Knights.png",
-        "year_created": 2010,
+        "year_created": 1960,
         "stadium": "Astral Forge",
         "league": "Tauron Division 3"
     },
     {
         "name": "Obsidian Panthers",
-        "strength": 1.3,
+        "strength": 0.91,
         "logo": "Images/Teams\\Obsidian_Panthers.png",
-        "year_created": 1997,
+        "year_created": 1996,
         "stadium": "The Arcane Gate",
         "league": "Nerathoul"
     },
     {
         "name": "Oblivion Mavericks",
-        "strength": 1.21,
+        "strength": 1.28,
         "logo": "Images/Teams\\Oblivion_Mavericks.png",
         "year_created": 1979,
         "stadium": "Granite",
@@ -2193,121 +2193,121 @@
     },
     {
         "name": "Shadowborn Falcons",
-        "strength": 0.91,
+        "strength": 1.31,
         "logo": "Images/Teams\\Shadowborn_Falcons.png",
-        "year_created": 1993,
+        "year_created": 1995,
         "stadium": "Astral Empyrean",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Verdant Raiders",
-        "strength": 0.79,
+        "strength": 1.21,
         "logo": "Images/Teams\\Verdant_Raiders.png",
-        "year_created": 1950,
+        "year_created": 2007,
         "stadium": "The Infernal Vault",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Verdant Eagles",
-        "strength": 1.26,
+        "strength": 1.15,
         "logo": "Images/Teams\\Verdant_Eagles.png",
-        "year_created": 1968,
+        "year_created": 2001,
         "stadium": "The Glacial Sanctum",
         "league": "Ecliptus"
     },
     {
         "name": "Tempest Raiders",
-        "strength": 0.88,
+        "strength": 0.79,
         "logo": "Images/Teams\\Tempest_Raiders.png",
-        "year_created": 2008,
+        "year_created": 1967,
         "stadium": "The Crystal Beacon",
         "league": "Ecliptus B"
     },
     {
         "name": "Shadowborn Cougars",
-        "strength": 1.33,
+        "strength": 1.22,
         "logo": "Images/Teams\\Shadowborn_Cougars.png",
-        "year_created": 2005,
+        "year_created": 2004,
         "stadium": "The Solaris Forge",
         "league": "Ecliptus C"
     },
     {
         "name": "Phantom Sharks",
-        "strength": 1.12,
+        "strength": 1.26,
         "logo": "Images/Teams\\Phantom_Sharks.png",
-        "year_created": 1982,
+        "year_created": 2004,
         "stadium": "The Crystal Core",
         "league": "Ecliptus D"
     },
     {
         "name": "Frostborn Pioneers",
-        "strength": 1.28,
+        "strength": 1.15,
         "logo": "Images/Teams\\Frostborn_Pioneers.png",
-        "year_created": 1973,
+        "year_created": 2009,
         "stadium": "Ember Cradle",
         "league": "Lyraxis"
     },
     {
         "name": "Grove Falcons",
-        "strength": 1.15,
+        "strength": 1.33,
         "logo": "Images/Teams\\Grove_Falcons.png",
-        "year_created": 1955,
+        "year_created": 1952,
         "stadium": "The Bastion Bastion",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Marble Rhinos",
-        "strength": 0.96,
+        "strength": 1.18,
         "logo": "Images/Teams\\Marble_Rhinos.png",
-        "year_created": 1977,
+        "year_created": 1953,
         "stadium": "The Obsidian Drift",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Frostfang Wolves",
-        "strength": 1.22,
+        "strength": 1.12,
         "logo": "Images/Teams\\Frostfang_Wolves.png",
-        "year_created": 1995,
+        "year_created": 1981,
         "stadium": "Icepaw Grounds",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Emberfall Rhinos",
-        "strength": 0.79,
+        "strength": 1.18,
         "logo": "Images/Teams\\Emberfall_Rhinos.png",
-        "year_created": 2009,
+        "year_created": 1988,
         "stadium": "Crystal Prism",
         "league": "Solarion"
     },
     {
         "name": "Draconic Dragons",
-        "strength": 1.28,
+        "strength": 0.82,
         "logo": "Images/Teams\\Draconic_Dragons.png",
-        "year_created": 1996,
+        "year_created": 1960,
         "stadium": "The Arcane Vault",
         "league": "Solarion 2"
     },
     {
         "name": "Cosmic Eagles",
-        "strength": 1.12,
+        "strength": 0.96,
         "logo": "Images/Teams\\Cosmic_Eagles.png",
-        "year_created": 1997,
+        "year_created": 2003,
         "stadium": "Umbral Sanctum",
         "league": "Solarion 3"
     },
     {
         "name": "Voltaic Raiders",
-        "strength": 1.31,
+        "strength": 0.96,
         "logo": "Images/Teams\\Voltaic_Raiders.png",
-        "year_created": 1992,
+        "year_created": 1983,
         "stadium": "Arcane Prism",
         "league": "Solarion 4"
     },
     {
         "name": "Phantom Pioneers",
-        "strength": 1.21,
+        "strength": 1.32,
         "logo": "Images/Teams\\Phantom_Pioneers.png",
-        "year_created": 2001,
+        "year_created": 1967,
         "stadium": "Forge",
         "league": "Cryonese Primera"
     },
@@ -2315,127 +2315,127 @@
         "name": "Echo Cobras",
         "strength": 1.26,
         "logo": "Images/Teams\\Echo_Cobras.png",
-        "year_created": 1971,
+        "year_created": 1969,
         "stadium": "The Nest Gate",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Solar Drakes",
-        "strength": 1.18,
+        "strength": 0.82,
         "logo": "Images/Teams\\Solar_Drakes.png",
-        "year_created": 1968,
+        "year_created": 1963,
         "stadium": "Sunfire Grounds",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Spectral Mavericks",
-        "strength": 0.88,
+        "strength": 1.22,
         "logo": "Images/Teams\\Spectral_Mavericks.png",
-        "year_created": 1968,
+        "year_created": 1969,
         "stadium": "The Ember Gate",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Emerald Titans",
-        "strength": 1.18,
+        "strength": 0.79,
         "logo": "Images/Teams\\Emerald_Titans.png",
-        "year_created": 2001,
+        "year_created": 1952,
         "stadium": "Spire Sanctum",
         "league": "Vorlis Liga"
     },
     {
         "name": "Violet Gargoyles",
-        "strength": 1.0,
+        "strength": 1.33,
         "logo": "Images/Teams\\Violet_Gargoyles.png",
-        "year_created": 1970,
+        "year_created": 1999,
         "stadium": "Amethyst Wing Stadium",
         "league": "Vorlis National"
     },
     {
         "name": "Luminous Wolves",
-        "strength": 1.22,
+        "strength": 1.0,
         "logo": "Images/Teams\\Luminous_Wolves.png",
-        "year_created": 1992,
+        "year_created": 2006,
         "stadium": "The Hollow Gate",
         "league": "Vorlis Continental"
     },
     {
         "name": "Stone Dragons",
-        "strength": 1.21,
+        "strength": 1.22,
         "logo": "Images/Teams\\Stone_Dragons.png",
-        "year_created": 1989,
+        "year_created": 1976,
         "stadium": "River Forge",
         "league": "Vorlis Regional"
     },
     {
         "name": "Arcane Warthogs",
-        "strength": 1.22,
+        "strength": 1.15,
         "logo": "Images/Teams\\Arcane_Warthogs.png",
-        "year_created": 2003,
+        "year_created": 1971,
         "stadium": "The Celestial Conflux",
         "league": "Zephyra Pro"
     },
     {
         "name": "Ember Mavericks",
-        "strength": 1.28,
+        "strength": 1.12,
         "logo": "Images/Teams\\Ember_Mavericks.png",
-        "year_created": 1978,
+        "year_created": 1987,
         "stadium": "The Oblivion Haven Celestial",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Arcane Rhinos",
-        "strength": 0.79,
+        "strength": 0.91,
         "logo": "Images/Teams\\Arcane_Rhinos.png",
-        "year_created": 1966,
+        "year_created": 1959,
         "stadium": "Stellar Prism",
         "league": "Zephyra Series"
     },
     {
         "name": "Cobalt Bears",
-        "strength": 1.33,
+        "strength": 1.18,
         "logo": "Images/Teams\\Cobalt_Bears.png",
-        "year_created": 1974,
+        "year_created": 1958,
         "stadium": "The Stellar Monolith",
         "league": "Zephyra B"
     },
     {
         "name": "Mystic Sharks",
-        "strength": 1.18,
+        "strength": 1.22,
         "logo": "Images/Teams\\Mystic_Sharks.png",
-        "year_created": 1986,
+        "year_created": 1952,
         "stadium": "The Nocturne Vault",
         "league": "Tauron Premier"
     },
     {
         "name": "Shadowborn Scorpions",
-        "strength": 0.91,
+        "strength": 1.18,
         "logo": "Images/Teams\\Shadowborn_Scorpions.png",
-        "year_created": 1968,
+        "year_created": 1973,
         "stadium": "Stellar Cathedral",
         "league": "Tauron Elite"
     },
     {
         "name": "Oblivion Cougars",
-        "strength": 1.31,
+        "strength": 1.27,
         "logo": "Images/Teams\\Oblivion_Cougars.png",
-        "year_created": 2008,
+        "year_created": 1999,
         "stadium": "The Nocturne Forge",
         "league": "Tauron Division 2"
     },
     {
         "name": "Spectral Hurricanes",
-        "strength": 1.33,
+        "strength": 1.3,
         "logo": "Images/Teams\\Spectral_Hurricanes.png",
-        "year_created": 1990,
+        "year_created": 2007,
         "stadium": "The Eclipse Haven",
         "league": "Tauron Division 3"
     },
     {
         "name": "Steel Sharks",
-        "strength": 0.96,
+        "strength": 0.88,
         "logo": "Images/Teams\\Steel_Sharks.png",
-        "year_created": 1979,
+        "year_created": 1963,
         "stadium": "The Oblivion Vault",
         "league": "Nerathoul"
     },
@@ -2443,23 +2443,23 @@
         "name": "Ashen Leopards",
         "strength": 1.31,
         "logo": "Images/Teams\\Ashen_Leopards.png",
-        "year_created": 1970,
+        "year_created": 1965,
         "stadium": "Lair Sanctum",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Nebular Chargers",
-        "strength": 1.15,
+        "strength": 0.91,
         "logo": "Images/Teams\\Nebular_Chargers.png",
-        "year_created": 1971,
+        "year_created": 1966,
         "stadium": "Zephyr Citadel",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Draconic Centaurs",
-        "strength": 1.27,
+        "strength": 1.26,
         "logo": "Images/Teams\\Draconic_Centaurs.png",
-        "year_created": 1980,
+        "year_created": 2010,
         "stadium": "The Tempest Nexus",
         "league": "Nerathoul Minor"
     },
@@ -2467,127 +2467,127 @@
         "name": "Nebular Eagles",
         "strength": 0.88,
         "logo": "Images/Teams\\Nebular_Eagles.png",
-        "year_created": 1975,
+        "year_created": 1998,
         "stadium": "Radiant",
         "league": "Ecliptus"
     },
     {
         "name": "Runestone Bulls",
-        "strength": 1.35,
+        "strength": 0.96,
         "logo": "Images/Teams\\Runestone_Bulls.png",
-        "year_created": 2004,
+        "year_created": 1990,
         "stadium": "Void Halo Infernal",
         "league": "Ecliptus B"
     },
     {
         "name": "Titanic Vipers",
-        "strength": 1.25,
+        "strength": 1.12,
         "logo": "Images/Teams\\Titanic_Vipers.png",
-        "year_created": 1953,
+        "year_created": 2003,
         "stadium": "Runic Prism",
         "league": "Ecliptus C"
     },
     {
         "name": "Golden Warthogs",
-        "strength": 0.96,
+        "strength": 0.79,
         "logo": "Images/Teams\\Golden_Warthogs.png",
-        "year_created": 1992,
+        "year_created": 1989,
         "stadium": "The Celestial Forge",
         "league": "Ecliptus D"
     },
     {
         "name": "Thunder Manticores",
-        "strength": 1.12,
+        "strength": 1.3,
         "logo": "Images/Teams\\Thunder_Manticores.png",
-        "year_created": 1999,
+        "year_created": 1967,
         "stadium": "Stormclaw Grounds",
         "league": "Lyraxis"
     },
     {
         "name": "Feral Tigers",
-        "strength": 1.25,
+        "strength": 0.88,
         "logo": "Images/Teams\\Feral_Tigers.png",
-        "year_created": 1974,
+        "year_created": 1970,
         "stadium": "Arcane Eyrie",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Dread Harpies",
-        "strength": 1.28,
+        "strength": 1.0,
         "logo": "Images/Teams\\Dread_Harpies.png",
-        "year_created": 2003,
+        "year_created": 1984,
         "stadium": "Nightwind Field",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Stone Hawks",
-        "strength": 1.18,
+        "strength": 1.31,
         "logo": "Images/Teams\\Stone_Hawks.png",
-        "year_created": 1996,
+        "year_created": 1966,
         "stadium": "Arcane",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Aurora Warthogs",
-        "strength": 1.21,
+        "strength": 1.0,
         "logo": "Images/Teams\\Aurora_Warthogs.png",
-        "year_created": 1983,
+        "year_created": 1962,
         "stadium": "The Arcane Crown",
         "league": "Solarion"
     },
     {
         "name": "Voltaic Falcons",
-        "strength": 1.27,
+        "strength": 0.79,
         "logo": "Images/Teams\\Voltaic_Falcons.png",
-        "year_created": 2003,
+        "year_created": 1992,
         "stadium": "Stellar Ascendant",
         "league": "Solarion 2"
     },
     {
         "name": "Ember Warthogs",
-        "strength": 0.88,
+        "strength": 1.26,
         "logo": "Images/Teams\\Ember_Warthogs.png",
-        "year_created": 1956,
+        "year_created": 1951,
         "stadium": "The Astral Continuum",
         "league": "Solarion 3"
     },
     {
         "name": "Infernal Wyrms",
-        "strength": 0.96,
+        "strength": 1.27,
         "logo": "Images/Teams\\Infernal_Wyrms.png",
-        "year_created": 1980,
+        "year_created": 2010,
         "stadium": "Blazespire Grounds",
         "league": "Solarion 4"
     },
     {
         "name": "Feral Vortex",
-        "strength": 0.79,
+        "strength": 0.82,
         "logo": "Images/Teams\\Feral_Vortex.png",
-        "year_created": 1956,
+        "year_created": 1963,
         "stadium": "Hollow",
         "league": "Cryonese Primera"
     },
     {
         "name": "Cobalt Cougars",
-        "strength": 1.35,
+        "strength": 1.28,
         "logo": "Images/Teams\\Cobalt_Cougars.png",
-        "year_created": 1989,
+        "year_created": 2004,
         "stadium": "The Obsidian Spire",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Mystic Eagles",
-        "strength": 1.28,
+        "strength": 1.35,
         "logo": "Images/Teams\\Mystic_Eagles.png",
-        "year_created": 1958,
+        "year_created": 2004,
         "stadium": "The Halo Forge",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Shadow Dragons",
-        "strength": 0.79,
+        "strength": 1.0,
         "logo": "Images/Teams\\Shadow_Dragons.png",
-        "year_created": 1979,
+        "year_created": 1994,
         "stadium": "Spire Void",
         "league": "Cryonese Cuarta"
     },
@@ -2595,39 +2595,39 @@
         "name": "Glacial Raptors",
         "strength": 0.91,
         "logo": "Images/Teams\\Glacial_Raptors.png",
-        "year_created": 1994,
+        "year_created": 1968,
         "stadium": "Continuum Hollow",
         "league": "Vorlis Liga"
     },
     {
         "name": "Steel Cobras",
-        "strength": 0.79,
+        "strength": 0.82,
         "logo": "Images/Teams\\Steel_Cobras.png",
-        "year_created": 1979,
+        "year_created": 1994,
         "stadium": "Bastion Granite",
         "league": "Vorlis National"
     },
     {
         "name": "Violet Hawks",
-        "strength": 1.31,
+        "strength": 1.21,
         "logo": "Images/Teams\\Violet_Hawks.png",
-        "year_created": 1958,
+        "year_created": 1986,
         "stadium": "The Stellar Realm",
         "league": "Vorlis Continental"
     },
     {
         "name": "Iron Drakes",
-        "strength": 1.0,
+        "strength": 1.21,
         "logo": "Images/Teams\\Iron_Drakes.png",
-        "year_created": 1987,
+        "year_created": 1988,
         "stadium": "Steelspire Arena",
         "league": "Vorlis Regional"
     },
     {
         "name": "Savage Cougars",
-        "strength": 0.96,
+        "strength": 1.31,
         "logo": "Images/Teams\\Savage_Cougars.png",
-        "year_created": 1950,
+        "year_created": 2001,
         "stadium": "Sky Vault",
         "league": "Zephyra Pro"
     },
@@ -2635,13 +2635,13 @@
         "name": "Echo Strikers",
         "strength": 0.96,
         "logo": "Images/Teams\\Echo_Strikers.png",
-        "year_created": 1988,
+        "year_created": 1956,
         "stadium": "The Nova Halo",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Onyx Rhinos",
-        "strength": 1.22,
+        "strength": 1.31,
         "logo": "Images/Teams\\Onyx_Rhinos.png",
         "year_created": 1972,
         "stadium": "Arcane Monolith",
@@ -2649,47 +2649,47 @@
     },
     {
         "name": "Shadow Knights",
-        "strength": 1.0,
+        "strength": 0.88,
         "logo": "Images/Teams\\Shadow_Knights.png",
-        "year_created": 1985,
+        "year_created": 1975,
         "stadium": "The Mystic Runic",
         "league": "Zephyra B"
     },
     {
         "name": "Granite Hurricanes",
-        "strength": 1.22,
+        "strength": 1.35,
         "logo": "Images/Teams\\Granite_Hurricanes.png",
-        "year_created": 2008,
+        "year_created": 1951,
         "stadium": "Celestial Sphere",
         "league": "Tauron Premier"
     },
     {
         "name": "Echo Vortex",
-        "strength": 1.22,
+        "strength": 0.79,
         "logo": "Images/Teams\\Echo_Vortex.png",
-        "year_created": 2002,
+        "year_created": 1987,
         "stadium": "Zephyr",
         "league": "Tauron Elite"
     },
     {
         "name": "Runestone Leopards",
-        "strength": 1.33,
+        "strength": 1.22,
         "logo": "Images/Teams\\Runestone_Leopards.png",
-        "year_created": 1979,
+        "year_created": 1982,
         "stadium": "The Granite Vault",
         "league": "Tauron Division 2"
     },
     {
         "name": "Cobalt Strikers",
-        "strength": 1.25,
+        "strength": 0.82,
         "logo": "Images/Teams\\Cobalt_Strikers.png",
-        "year_created": 1975,
+        "year_created": 2010,
         "stadium": "Citadel Mystic",
         "league": "Tauron Division 3"
     },
     {
         "name": "Frost Stallions",
-        "strength": 1.0,
+        "strength": 1.22,
         "logo": "Images/Teams\\Frost_Stallions.png",
         "year_created": 2000,
         "stadium": "Arena Infernal",
@@ -2697,143 +2697,143 @@
     },
     {
         "name": "Onyx Sabers",
-        "strength": 0.88,
+        "strength": 1.33,
         "logo": "Images/Teams\\Onyx_Sabers.png",
-        "year_created": 1983,
+        "year_created": 1971,
         "stadium": "Oblivion Sanctuary",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Onyx Scorpions",
-        "strength": 1.27,
+        "strength": 1.15,
         "logo": "Images/Teams\\Onyx_Scorpions.png",
-        "year_created": 1986,
+        "year_created": 2010,
         "stadium": "Spire",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Echo Falcons",
-        "strength": 1.35,
+        "strength": 1.3,
         "logo": "Images/Teams\\Echo_Falcons.png",
-        "year_created": 1954,
+        "year_created": 1980,
         "stadium": "Run Gate",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Glacial Sabers",
-        "strength": 1.22,
+        "strength": 1.32,
         "logo": "Images/Teams\\Glacial_Sabers.png",
-        "year_created": 1953,
+        "year_created": 1966,
         "stadium": "The Eclipse Chasm",
         "league": "Ecliptus"
     },
     {
         "name": "Aurora Strikers",
-        "strength": 0.96,
+        "strength": 1.31,
         "logo": "Images/Teams\\Aurora_Strikers.png",
-        "year_created": 1988,
+        "year_created": 1982,
         "stadium": "Blazing Paradox",
         "league": "Ecliptus B"
     },
     {
         "name": "Stellar Guardians",
-        "strength": 0.88,
+        "strength": 1.27,
         "logo": "Images/Teams\\Stellar_Guardians.png",
-        "year_created": 2004,
+        "year_created": 1958,
         "stadium": "Celestial Halo Granite",
         "league": "Ecliptus C"
     },
     {
         "name": "Ashen Hurricanes",
-        "strength": 1.22,
+        "strength": 0.82,
         "logo": "Images/Teams\\Ashen_Hurricanes.png",
-        "year_created": 1995,
+        "year_created": 1982,
         "stadium": "The Astral Sanctum",
         "league": "Ecliptus D"
     },
     {
         "name": "Runestone Cougars",
-        "strength": 1.3,
+        "strength": 1.18,
         "logo": "Images/Teams\\Runestone_Cougars.png",
-        "year_created": 1972,
+        "year_created": 1981,
         "stadium": "Haven Dominion",
         "league": "Lyraxis"
     },
     {
         "name": "Stellar Rhinos",
-        "strength": 0.88,
+        "strength": 1.26,
         "logo": "Images/Teams\\Stellar_Rhinos.png",
-        "year_created": 1978,
+        "year_created": 1997,
         "stadium": "Eclipse",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Ashen Lynx",
-        "strength": 1.0,
+        "strength": 1.25,
         "logo": "Images/Teams\\Ashen_Lynx.png",
-        "year_created": 1963,
+        "year_created": 1980,
         "stadium": "Arcane Radiant",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Frost Sabers",
-        "strength": 0.79,
+        "strength": 1.32,
         "logo": "Images/Teams\\Frost_Sabers.png",
-        "year_created": 1951,
+        "year_created": 2007,
         "stadium": "Frosted Forge",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Ashen Blades",
-        "strength": 1.3,
+        "strength": 1.12,
         "logo": "Images/Teams\\Ashen_Blades.png",
-        "year_created": 1972,
+        "year_created": 1966,
         "stadium": "The Arcane Gate",
         "league": "Solarion"
     },
     {
         "name": "Frost Raiders",
-        "strength": 1.26,
+        "strength": 1.18,
         "logo": "Images/Teams\\Frost_Raiders.png",
-        "year_created": 1974,
+        "year_created": 1987,
         "stadium": "The Obelisk Hollow",
         "league": "Solarion 2"
     },
     {
         "name": "Phoenix Vortex",
-        "strength": 1.33,
+        "strength": 0.82,
         "logo": "Images/Teams\\Phoenix_Vortex.png",
-        "year_created": 1958,
+        "year_created": 1996,
         "stadium": "Celestial Ascension",
         "league": "Solarion 3"
     },
     {
         "name": "Emerald Panthers",
-        "strength": 1.27,
+        "strength": 1.18,
         "logo": "Images/Teams\\Emerald_Panthers.png",
-        "year_created": 1961,
+        "year_created": 1958,
         "stadium": "Nova Zenith",
         "league": "Solarion 4"
     },
     {
         "name": "Eternal Stingers",
-        "strength": 1.25,
+        "strength": 1.35,
         "logo": "Images/Teams\\Eternal_Stingers.png",
-        "year_created": 1993,
+        "year_created": 1996,
         "stadium": "The Astral Vortex",
         "league": "Cryonese Primera"
     },
     {
         "name": "Aurora Cobras",
-        "strength": 0.91,
+        "strength": 1.31,
         "logo": "Images/Teams\\Aurora_Cobras.png",
-        "year_created": 1999,
+        "year_created": 1970,
         "stadium": "Ember Crystal",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Shadow Wolves",
-        "strength": 1.21,
+        "strength": 1.31,
         "logo": "Images/Teams\\Shadow_Wolves.png",
         "year_created": 2008,
         "stadium": "The Aegis Astral",
@@ -2841,7 +2841,7 @@
     },
     {
         "name": "Golden Vipers",
-        "strength": 1.35,
+        "strength": 0.88,
         "logo": "Images/Teams\\Golden_Vipers.png",
         "year_created": 1958,
         "stadium": "Den Realm",
@@ -2849,113 +2849,113 @@
     },
     {
         "name": "Solar Eagles",
-        "strength": 1.32,
+        "strength": 1.25,
         "logo": "Images/Teams\\Solar_Eagles.png",
-        "year_created": 1976,
+        "year_created": 1963,
         "stadium": "Blazing Nucleus",
         "league": "Vorlis Liga"
     },
     {
         "name": "Emerald Scorpions",
-        "strength": 1.33,
+        "strength": 1.18,
         "logo": "Images/Teams\\Emerald_Scorpions.png",
-        "year_created": 2002,
+        "year_created": 1956,
         "stadium": "The Emerald Eyrie",
         "league": "Vorlis National"
     },
     {
         "name": "Emerald Wolves",
-        "strength": 1.26,
+        "strength": 0.79,
         "logo": "Images/Teams\\Emerald_Wolves.png",
-        "year_created": 1964,
+        "year_created": 1984,
         "stadium": "Nova Continuum",
         "league": "Vorlis Continental"
     },
     {
         "name": "Eternal Wolves",
-        "strength": 0.88,
+        "strength": 1.0,
         "logo": "Images/Teams\\Eternal_Wolves.png",
-        "year_created": 1998,
+        "year_created": 1995,
         "stadium": "Sanctum Velvet Zephyr",
         "league": "Vorlis Regional"
     },
     {
         "name": "Stormy Dragons",
-        "strength": 1.28,
+        "strength": 1.0,
         "logo": "Images/Teams\\Stormy_Dragons.png",
-        "year_created": 1983,
+        "year_created": 2006,
         "stadium": "Dominion Gate Radiant",
         "league": "Zephyra Pro"
     },
     {
         "name": "Dusk Bulls",
-        "strength": 1.33,
+        "strength": 0.88,
         "logo": "Images/Teams\\Dusk_Bulls.png",
-        "year_created": 1987,
+        "year_created": 2004,
         "stadium": "Astral Haven",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Arcane Leopards",
-        "strength": 1.0,
+        "strength": 1.21,
         "logo": "Images/Teams\\Arcane_Leopards.png",
-        "year_created": 1991,
+        "year_created": 1994,
         "stadium": "The Oblivion Temple",
         "league": "Zephyra Series"
     },
     {
         "name": "Stormy Raiders",
-        "strength": 0.96,
+        "strength": 1.25,
         "logo": "Images/Teams\\Stormy_Raiders.png",
-        "year_created": 1982,
+        "year_created": 2009,
         "stadium": "The Thunder Vault",
         "league": "Zephyra B"
     },
     {
         "name": "Emerald Cougars",
-        "strength": 1.3,
+        "strength": 0.79,
         "logo": "Images/Teams\\Emerald_Cougars.png",
-        "year_created": 1979,
+        "year_created": 1955,
         "stadium": "The River Citadel",
         "league": "Tauron Premier"
     },
     {
         "name": "Stormbreak Falcons",
-        "strength": 1.18,
+        "strength": 1.22,
         "logo": "Images/Teams\\Stormbreak_Falcons.png",
-        "year_created": 2007,
+        "year_created": 1954,
         "stadium": "Zephyr Core",
         "league": "Tauron Elite"
     },
     {
         "name": "Oceanic Titans",
-        "strength": 0.79,
+        "strength": 1.18,
         "logo": "Images/Teams\\Oceanic_Titans.png",
-        "year_created": 1976,
+        "year_created": 2007,
         "stadium": "The Ember Hollow",
         "league": "Tauron Division 2"
     },
     {
         "name": "Thunder Bears",
-        "strength": 0.79,
+        "strength": 1.28,
         "logo": "Images/Teams\\Thunder_Bears.png",
-        "year_created": 1956,
+        "year_created": 1952,
         "stadium": "Nova Citadel",
         "league": "Tauron Division 3"
     },
     {
         "name": "Riverstone Stingers",
-        "strength": 1.33,
+        "strength": 0.96,
         "logo": "Images/Teams\\Riverstone_Stingers.png",
-        "year_created": 1987,
+        "year_created": 1972,
         "stadium": "Realm",
         "league": "Nerathoul"
     },
     {
         "name": "Glacial Lynx",
-        "strength": 1.0,
+        "strength": 1.35,
         "logo": "Images/Teams\\Glacial_Lynx.png",
-        "year_created": 1996,
+        "year_created": 1956,
         "stadium": "Frosted Forge",
         "league": "Nerathoul Prime"
     },
@@ -2963,285 +2963,285 @@
         "name": "Iron Bulls",
         "strength": 0.96,
         "logo": "Images/Teams\\Iron_Bulls.png",
-        "year_created": 1978,
+        "year_created": 1977,
         "stadium": "The Emerald Sanctum",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Violet Panthers",
-        "strength": 1.12,
+        "strength": 1.25,
         "logo": "Images/Teams\\Violet_Panthers.png",
-        "year_created": 1972,
+        "year_created": 1996,
         "stadium": "The Sanctum",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Frost Bears",
-        "strength": 0.82,
+        "strength": 1.22,
         "logo": "Images/Teams\\Frost_Bears.png",
-        "year_created": 2010,
+        "year_created": 1956,
         "stadium": "Crystal Sanctuary",
         "league": "Ecliptus"
     },
     {
         "name": "Celestial Panthers",
-        "strength": 1.33,
+        "strength": 1.0,
         "logo": "Images/Teams\\Celestial_Panthers.png",
-        "year_created": 1957,
+        "year_created": 1959,
         "stadium": "Beacon Aether",
         "league": "Ecliptus B"
     },
     {
         "name": "Shadow Scorpions",
-        "strength": 1.35,
+        "strength": 1.26,
         "logo": "Images/Teams\\Shadow_Scorpions.png",
-        "year_created": 1983,
+        "year_created": 1994,
         "stadium": "The Void Spire",
         "league": "Ecliptus C"
     },
     {
         "name": "Blazing Strikers",
-        "strength": 0.79,
+        "strength": 0.88,
         "logo": "Images/Teams\\Blazing_Strikers.png",
-        "year_created": 2001,
+        "year_created": 1983,
         "stadium": "The Nova Monolith",
         "league": "Ecliptus D"
     },
     {
         "name": "Titanic Mavericks",
-        "strength": 1.31,
+        "strength": 0.88,
         "logo": "Images/Teams\\Titanic_Mavericks.png",
-        "year_created": 2004,
+        "year_created": 2000,
         "stadium": "Radiant Stormborn",
         "league": "Lyraxis"
     },
     {
         "name": "Tempest Strikers",
-        "strength": 1.22,
+        "strength": 0.79,
         "logo": "Images/Teams\\Tempest_Strikers.png",
-        "year_created": 1996,
+        "year_created": 2008,
         "stadium": "Sky Vault",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Storm Reavers",
-        "strength": 1.26,
+        "strength": 1.15,
         "logo": "Images/Teams\\Storm_Reavers.png",
-        "year_created": 1994,
+        "year_created": 1958,
         "stadium": "Tempest Hold",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Violet Hurricanes",
-        "strength": 1.3,
+        "strength": 1.35,
         "logo": "Images/Teams\\Violet_Hurricanes.png",
-        "year_created": 1964,
+        "year_created": 1962,
         "stadium": "Titan",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Blazing Hurricanes",
-        "strength": 1.22,
+        "strength": 1.26,
         "logo": "Images/Teams\\Blazing_Hurricanes.png",
-        "year_created": 1956,
+        "year_created": 1968,
         "stadium": "Astral Sanctum",
         "league": "Solarion"
     },
     {
         "name": "Celestial Vipers",
-        "strength": 0.91,
+        "strength": 1.35,
         "logo": "Images/Teams\\Celestial_Vipers.png",
-        "year_created": 1986,
+        "year_created": 1968,
         "stadium": "Celestial Vault",
         "league": "Solarion 2"
     },
     {
         "name": "Dusk Pioneers",
-        "strength": 1.25,
+        "strength": 1.32,
         "logo": "Images/Teams\\Dusk_Pioneers.png",
-        "year_created": 1990,
+        "year_created": 2002,
         "stadium": "The Solar Gate",
         "league": "Solarion 3"
     },
     {
         "name": "Silver Falcons",
-        "strength": 1.0,
+        "strength": 0.79,
         "logo": "Images/Teams\\Silver_Falcons.png",
-        "year_created": 1983,
+        "year_created": 1951,
         "stadium": "Arcane Halo",
         "league": "Solarion 4"
     },
     {
         "name": "Radiant Bears",
-        "strength": 1.18,
+        "strength": 0.88,
         "logo": "Images/Teams\\Radiant_Bears.png",
-        "year_created": 1997,
+        "year_created": 1967,
         "stadium": "Citadel Sanctum",
         "league": "Cryonese Primera"
     },
     {
         "name": "Inferno Blades",
-        "strength": 1.22,
+        "strength": 1.32,
         "logo": "Images/Teams\\Inferno_Blades.png",
-        "year_created": 1969,
+        "year_created": 1993,
         "stadium": "The Halo Sanctuary",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Iron Tigers",
-        "strength": 1.22,
+        "strength": 1.12,
         "logo": "Images/Teams\\Iron_Tigers.png",
-        "year_created": 1961,
+        "year_created": 2005,
         "stadium": "Arcane Starforge",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Violet Pioneers",
-        "strength": 1.33,
+        "strength": 0.82,
         "logo": "Images/Teams\\Violet_Pioneers.png",
-        "year_created": 1960,
+        "year_created": 1951,
         "stadium": "The Nova Citadel",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Aurora Stingers",
-        "strength": 0.82,
+        "strength": 0.96,
         "logo": "Images/Teams\\Aurora_Stingers.png",
-        "year_created": 1978,
+        "year_created": 1975,
         "stadium": "Zephyr Monolith",
         "league": "Vorlis Liga"
     },
     {
         "name": "Scarlet Bulls",
-        "strength": 0.96,
+        "strength": 1.27,
         "logo": "Images/Teams\\Scarlet_Bulls.png",
-        "year_created": 1990,
+        "year_created": 1969,
         "stadium": "The Celestial Citadel",
         "league": "Vorlis National"
     },
     {
         "name": "Shadow Vortex",
-        "strength": 0.88,
+        "strength": 1.27,
         "logo": "Images/Teams\\Shadow_Vortex.png",
-        "year_created": 1965,
+        "year_created": 1957,
         "stadium": "Runic Spire",
         "league": "Vorlis Continental"
     },
     {
         "name": "Obsidian Lynx",
-        "strength": 1.33,
+        "strength": 1.27,
         "logo": "Images/Teams\\Obsidian_Lynx.png",
-        "year_created": 1962,
+        "year_created": 1996,
         "stadium": "The Beacon Void",
         "league": "Vorlis Regional"
     },
     {
         "name": "Golden Knights",
-        "strength": 0.91,
+        "strength": 1.26,
         "logo": "Images/Teams\\Golden_Knights.png",
-        "year_created": 1956,
+        "year_created": 1955,
         "stadium": "Stellar Gate",
         "league": "Zephyra Pro"
     },
     {
         "name": "Scarlet Scorpions",
-        "strength": 0.82,
+        "strength": 1.22,
         "logo": "Images/Teams\\Scarlet_Scorpions.png",
-        "year_created": 1957,
+        "year_created": 1956,
         "stadium": "Gate Sanctum",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Solar Bulls",
-        "strength": 1.25,
+        "strength": 0.82,
         "logo": "Images/Teams\\Solar_Bulls.png",
-        "year_created": 1992,
+        "year_created": 1962,
         "stadium": "Aether Citadel",
         "league": "Zephyra Series"
     },
     {
         "name": "Cobalt Wolves",
-        "strength": 0.88,
+        "strength": 1.15,
         "logo": "Images/Teams\\Cobalt_Wolves.png",
-        "year_created": 1960,
+        "year_created": 1968,
         "stadium": "Stellar Aether",
         "league": "Zephyra B"
     },
     {
         "name": "Ebon Phantoms",
-        "strength": 0.88,
+        "strength": 1.12,
         "logo": "Images/Teams\\Ebon_Phantoms.png",
-        "year_created": 1973,
+        "year_created": 1957,
         "stadium": "Darkveil Grounds",
         "league": "Tauron Premier"
     },
     {
         "name": "Steel Sabers",
-        "strength": 0.82,
+        "strength": 1.26,
         "logo": "Images/Teams\\Steel_Sabers.png",
-        "year_created": 1972,
+        "year_created": 1997,
         "stadium": "Emerald Sanctum",
         "league": "Tauron Elite"
     },
     {
         "name": "Solar Centaurs",
-        "strength": 1.18,
+        "strength": 1.26,
         "logo": "Images/Teams\\Solar_Centaurs.png",
-        "year_created": 1979,
+        "year_created": 1958,
         "stadium": "Sanctuary Infernal Granite",
         "league": "Tauron Division 2"
     },
     {
         "name": "Phoenix Raiders",
-        "strength": 1.28,
+        "strength": 1.15,
         "logo": "Images/Teams\\Phoenix_Raiders.png",
-        "year_created": 1997,
+        "year_created": 2007,
         "stadium": "Velvet Astral Spire",
         "league": "Tauron Division 3"
     },
     {
         "name": "Violet Blades",
-        "strength": 0.91,
+        "strength": 1.3,
         "logo": "Images/Teams\\Violet_Blades.png",
-        "year_created": 1968,
+        "year_created": 1976,
         "stadium": "Void Realm",
         "league": "Nerathoul"
     },
     {
         "name": "Golden Bears",
-        "strength": 1.28,
+        "strength": 1.22,
         "logo": "Images/Teams\\Golden_Bears.png",
-        "year_created": 1987,
+        "year_created": 1965,
         "stadium": "Nest Spire",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Arcane Knights",
-        "strength": 1.0,
+        "strength": 0.88,
         "logo": "Images/Teams\\Arcane_Knights.png",
-        "year_created": 1996,
+        "year_created": 1999,
         "stadium": "Arcane Haven Radiant",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Eternal Guardians",
-        "strength": 1.3,
+        "strength": 1.27,
         "logo": "Images/Teams\\Eternal_Guardians.png",
-        "year_created": 1979,
+        "year_created": 2008,
         "stadium": "The Oblivion Vortex",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Luminous Vipers",
-        "strength": 1.21,
+        "strength": 1.0,
         "logo": "Images/Teams\\Luminous_Vipers.png",
-        "year_created": 1950,
+        "year_created": 2008,
         "stadium": "The Empyrean Gate",
         "league": "Ecliptus"
     },
     {
         "name": "Iron Stallions",
-        "strength": 1.3,
+        "strength": 1.28,
         "logo": "Images/Teams\\Iron_Stallions.png",
         "year_created": 1968,
         "stadium": "The Stellar Starforge",
@@ -3249,297 +3249,297 @@
     },
     {
         "name": "Riverstone Lynx",
-        "strength": 1.18,
+        "strength": 1.0,
         "logo": "Images/Teams\\Riverstone_Lynx.png",
-        "year_created": 1999,
+        "year_created": 1972,
         "stadium": "The Arcane Obelisk",
         "league": "Ecliptus C"
     },
     {
         "name": "Mystic Vortex",
-        "strength": 1.21,
+        "strength": 1.35,
         "logo": "Images/Teams\\Mystic_Vortex.png",
-        "year_created": 1975,
+        "year_created": 1984,
         "stadium": "Oblivion Core",
         "league": "Ecliptus D"
     },
     {
         "name": "Glacial Tigers",
-        "strength": 1.18,
+        "strength": 1.25,
         "logo": "Images/Teams\\Glacial_Tigers.png",
-        "year_created": 1953,
+        "year_created": 1961,
         "stadium": "The Frosted Horizon",
         "league": "Lyraxis"
     },
     {
         "name": "Tempest Stingers",
-        "strength": 1.35,
+        "strength": 0.91,
         "logo": "Images/Teams\\Tempest_Stingers.png",
-        "year_created": 1951,
+        "year_created": 1967,
         "stadium": "Core Eternal",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Eternal Vortex",
-        "strength": 1.22,
+        "strength": 1.33,
         "logo": "Images/Teams\\Eternal_Vortex.png",
-        "year_created": 1979,
+        "year_created": 1954,
         "stadium": "Monolith Temple",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Dusk Cougars",
-        "strength": 1.27,
+        "strength": 1.18,
         "logo": "Images/Teams\\Dusk_Cougars.png",
-        "year_created": 1968,
+        "year_created": 1993,
         "stadium": "Temple Arena",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Savage Sabers",
-        "strength": 1.28,
+        "strength": 1.3,
         "logo": "Images/Teams\\Savage_Sabers.png",
-        "year_created": 1956,
+        "year_created": 1967,
         "stadium": "Oblivion Realm",
         "league": "Solarion"
     },
     {
         "name": "Phoenix Warthogs",
-        "strength": 1.15,
+        "strength": 1.0,
         "logo": "Images/Teams\\Phoenix_Warthogs.png",
-        "year_created": 1969,
+        "year_created": 2009,
         "stadium": "The Eternal Gate",
         "league": "Solarion 2"
     },
     {
         "name": "Solar Panthers",
-        "strength": 1.0,
+        "strength": 1.35,
         "logo": "Images/Teams\\Solar_Panthers.png",
-        "year_created": 1980,
+        "year_created": 2008,
         "stadium": "Astral Vault",
         "league": "Solarion 3"
     },
     {
         "name": "Celestial Wolves",
-        "strength": 1.26,
+        "strength": 0.88,
         "logo": "Images/Teams\\Celestial_Wolves.png",
-        "year_created": 2009,
+        "year_created": 1952,
         "stadium": "Arena Runic",
         "league": "Solarion 4"
     },
     {
         "name": "Thunder Leopards",
-        "strength": 1.15,
+        "strength": 1.3,
         "logo": "Images/Teams\\Thunder_Leopards.png",
-        "year_created": 1965,
+        "year_created": 1992,
         "stadium": "The Temple Umbral",
         "league": "Cryonese Primera"
     },
     {
         "name": "Celestial Cobras",
-        "strength": 1.25,
+        "strength": 0.82,
         "logo": "Images/Teams\\Celestial_Cobras.png",
-        "year_created": 1971,
+        "year_created": 1974,
         "stadium": "Solaris Core",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Sable Rhinos",
-        "strength": 1.33,
+        "strength": 1.26,
         "logo": "Images/Teams\\Sable_Rhinos.png",
-        "year_created": 2007,
+        "year_created": 1997,
         "stadium": "The Hollow Arena",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Crystal Drakes",
-        "strength": 0.96,
+        "strength": 1.18,
         "logo": "Images/Teams\\Crystal_Drakes.png",
-        "year_created": 1954,
+        "year_created": 1950,
         "stadium": "Shardspire Arena",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Stormy Scorpions",
-        "strength": 1.21,
+        "strength": 1.33,
         "logo": "Images/Teams\\Stormy_Scorpions.png",
-        "year_created": 1997,
+        "year_created": 1970,
         "stadium": "Zephyr Ascension",
         "league": "Vorlis Liga"
     },
     {
         "name": "Twilight Ogres",
-        "strength": 1.15,
+        "strength": 1.3,
         "logo": "Images/Teams\\Twilight_Ogres.png",
-        "year_created": 1958,
+        "year_created": 1982,
         "stadium": "Gloamstone Coliseum",
         "league": "Vorlis National"
     },
     {
         "name": "Emerald Stallions",
-        "strength": 1.12,
+        "strength": 0.91,
         "logo": "Images/Teams\\Emerald_Stallions.png",
-        "year_created": 1973,
+        "year_created": 1983,
         "stadium": "Cradle Drift",
         "league": "Vorlis Continental"
     },
     {
         "name": "Glacial Cobras",
-        "strength": 1.18,
+        "strength": 1.25,
         "logo": "Images/Teams\\Glacial_Cobras.png",
-        "year_created": 1968,
+        "year_created": 1955,
         "stadium": "Crystal Spire",
         "league": "Vorlis Regional"
     },
     {
         "name": "Aurora Bears",
-        "strength": 0.82,
+        "strength": 1.27,
         "logo": "Images/Teams\\Aurora_Bears.png",
-        "year_created": 2006,
+        "year_created": 2009,
         "stadium": "Arcane Horizon",
         "league": "Zephyra Pro"
     },
     {
         "name": "Aurora Vipers",
-        "strength": 1.15,
+        "strength": 1.21,
         "logo": "Images/Teams\\Aurora_Vipers.png",
-        "year_created": 2004,
+        "year_created": 1950,
         "stadium": "The Eternal Forge",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Riverstone Blades",
-        "strength": 1.12,
+        "strength": 1.18,
         "logo": "Images/Teams\\Riverstone_Blades.png",
-        "year_created": 2005,
+        "year_created": 1956,
         "stadium": "Iron Dome",
         "league": "Zephyra Series"
     },
     {
         "name": "Sable Vortex",
-        "strength": 1.18,
+        "strength": 0.91,
         "logo": "Images/Teams\\Sable_Vortex.png",
-        "year_created": 1975,
+        "year_created": 2009,
         "stadium": "The Solaris",
         "league": "Zephyra B"
     },
     {
         "name": "Crimson Hurricanes",
-        "strength": 1.15,
+        "strength": 1.32,
         "logo": "Images/Teams\\Crimson_Hurricanes.png",
-        "year_created": 1969,
+        "year_created": 1982,
         "stadium": "Astral Vault",
         "league": "Tauron Premier"
     },
     {
         "name": "Silver Rhinos",
-        "strength": 1.35,
+        "strength": 1.12,
         "logo": "Images/Teams\\Silver_Rhinos.png",
-        "year_created": 1970,
+        "year_created": 2006,
         "stadium": "Halo Arcane",
         "league": "Tauron Elite"
     },
     {
         "name": "Cobalt Sharks",
-        "strength": 0.82,
+        "strength": 1.0,
         "logo": "Images/Teams\\Cobalt_Sharks.png",
-        "year_created": 1964,
+        "year_created": 1995,
         "stadium": "Nest Cradle",
         "league": "Tauron Division 2"
     },
     {
         "name": "Titanic Vortex",
-        "strength": 1.12,
+        "strength": 1.22,
         "logo": "Images/Teams\\Titanic_Vortex.png",
-        "year_created": 1996,
+        "year_created": 1986,
         "stadium": "Sanctuary Runic",
         "league": "Tauron Division 3"
     },
     {
         "name": "Inferno Rhinos",
-        "strength": 1.25,
+        "strength": 1.32,
         "logo": "Images/Teams\\Inferno_Rhinos.png",
-        "year_created": 1997,
+        "year_created": 1964,
         "stadium": "The Astral Bastion",
         "league": "Nerathoul"
     },
     {
         "name": "Stormbreak Lynx",
-        "strength": 0.82,
+        "strength": 1.0,
         "logo": "Images/Teams\\Stormbreak_Lynx.png",
-        "year_created": 1980,
+        "year_created": 2007,
         "stadium": "The Celestial Halo",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Savage Phoenixes",
-        "strength": 1.33,
+        "strength": 1.22,
         "logo": "Images/Teams\\Savage_Phoenixes.png",
-        "year_created": 2007,
+        "year_created": 1967,
         "stadium": "Haven Runic",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Titanic Lynx",
-        "strength": 1.25,
+        "strength": 0.91,
         "logo": "Images/Teams\\Titanic_Lynx.png",
-        "year_created": 1958,
+        "year_created": 1966,
         "stadium": "Titan Forge",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Oceanic Stallions",
-        "strength": 1.15,
+        "strength": 1.12,
         "logo": "Images/Teams\\Oceanic_Stallions.png",
-        "year_created": 1962,
+        "year_created": 1992,
         "stadium": "Temple Cradle",
         "league": "Ecliptus"
     },
     {
         "name": "Stormbreak Blades",
-        "strength": 1.26,
+        "strength": 0.82,
         "logo": "Images/Teams\\Stormbreak_Blades.png",
-        "year_created": 1985,
+        "year_created": 1980,
         "stadium": "Tempest Obelisk",
         "league": "Ecliptus B"
     },
     {
         "name": "Radiant Sharks",
-        "strength": 1.32,
+        "strength": 1.25,
         "logo": "Images/Teams\\Radiant_Sharks.png",
-        "year_created": 2001,
+        "year_created": 1954,
         "stadium": "Stellar Prism",
         "league": "Ecliptus C"
     },
     {
         "name": "Arcane Vipers",
-        "strength": 1.31,
+        "strength": 1.3,
         "logo": "Images/Teams\\Arcane_Vipers.png",
-        "year_created": 2003,
+        "year_created": 1991,
         "stadium": "The Velvet Sanctum",
         "league": "Ecliptus D"
     },
     {
         "name": "Eternal Lynx",
-        "strength": 1.0,
+        "strength": 0.79,
         "logo": "Images/Teams\\Eternal_Lynx.png",
-        "year_created": 2010,
+        "year_created": 2005,
         "stadium": "Eyrie Runic Hollow",
         "league": "Lyraxis"
     },
     {
         "name": "Inferno Bulls",
-        "strength": 1.27,
+        "strength": 1.25,
         "logo": "Images/Teams\\Inferno_Bulls.png",
-        "year_created": 1982,
+        "year_created": 1965,
         "stadium": "Ember Bastion",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Mystic Scorpions",
-        "strength": 1.33,
+        "strength": 1.28,
         "logo": "Images/Teams\\Mystic_Scorpions.png",
-        "year_created": 2002,
+        "year_created": 1972,
         "stadium": "Drift Dominion",
         "league": "Lyraxis Minor"
     },
@@ -3547,103 +3547,103 @@
         "name": "Titanic Bulls",
         "strength": 1.21,
         "logo": "Images/Teams\\Titanic_Bulls.png",
-        "year_created": 1958,
+        "year_created": 1970,
         "stadium": "Granite Forge",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Stormbreak Mavericks",
-        "strength": 1.33,
+        "strength": 1.32,
         "logo": "Images/Teams\\Stormbreak_Mavericks.png",
-        "year_created": 1979,
+        "year_created": 1964,
         "stadium": "Sky Gate",
         "league": "Solarion"
     },
     {
         "name": "Mystic Raptors",
-        "strength": 1.18,
+        "strength": 1.32,
         "logo": "Images/Teams\\Mystic_Raptors.png",
-        "year_created": 1994,
+        "year_created": 1960,
         "stadium": "Velvet Gate",
         "league": "Solarion 2"
     },
     {
         "name": "Scarlet Sharks",
-        "strength": 1.26,
+        "strength": 1.25,
         "logo": "Images/Teams\\Scarlet_Sharks.png",
-        "year_created": 1966,
+        "year_created": 2000,
         "stadium": "Zephyr",
         "league": "Solarion 3"
     },
     {
         "name": "Mystic Tigers",
-        "strength": 1.28,
+        "strength": 1.3,
         "logo": "Images/Teams\\Mystic_Tigers.png",
-        "year_created": 2001,
+        "year_created": 1989,
         "stadium": "The Eternal Dome",
         "league": "Solarion 4"
     },
     {
         "name": "Silver Scorpions",
-        "strength": 1.33,
+        "strength": 0.79,
         "logo": "Images/Teams\\Silver_Scorpions.png",
-        "year_created": 2006,
+        "year_created": 1977,
         "stadium": "The Nova Aether",
         "league": "Cryonese Primera"
     },
     {
         "name": "Luminous Griffins",
-        "strength": 1.18,
+        "strength": 1.27,
         "logo": "Images/Teams\\Luminous_Griffins.png",
-        "year_created": 1956,
+        "year_created": 1969,
         "stadium": "The Arcane Vortex",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Emerald Blades",
-        "strength": 1.35,
+        "strength": 1.18,
         "logo": "Images/Teams\\Emerald_Blades.png",
-        "year_created": 1968,
+        "year_created": 1978,
         "stadium": "Nova Nexus",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Iron Mavericks",
-        "strength": 1.21,
+        "strength": 0.96,
         "logo": "Images/Teams\\Iron_Mavericks.png",
-        "year_created": 1997,
+        "year_created": 1992,
         "stadium": "Crystal Realm",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Crimson Panthers",
-        "strength": 1.33,
+        "strength": 1.15,
         "logo": "Images/Teams\\Crimson_Panthers.png",
-        "year_created": 1952,
+        "year_created": 2006,
         "stadium": "The Mystic",
         "league": "Vorlis Liga"
     },
     {
         "name": "Stormbreak Titans",
-        "strength": 1.27,
+        "strength": 1.31,
         "logo": "Images/Teams\\Stormbreak_Titans.png",
-        "year_created": 1971,
+        "year_created": 1992,
         "stadium": "Halo Spire Realm",
         "league": "Vorlis National"
     },
     {
         "name": "Obsidian Tigers",
-        "strength": 0.82,
+        "strength": 1.26,
         "logo": "Images/Teams\\Obsidian_Tigers.png",
-        "year_created": 1997,
+        "year_created": 1978,
         "stadium": "The Astral Drift",
         "league": "Vorlis Continental"
     },
     {
         "name": "Savage Vortex",
-        "strength": 1.35,
+        "strength": 1.31,
         "logo": "Images/Teams\\Savage_Vortex.png",
-        "year_created": 1950,
+        "year_created": 1999,
         "stadium": "Eclipse Eyrie",
         "league": "Vorlis Regional"
     },
@@ -3651,13 +3651,13 @@
         "name": "Obsidian Centaurs",
         "strength": 1.33,
         "logo": "Images/Teams\\Obsidian_Centaurs.png",
-        "year_created": 1987,
+        "year_created": 2008,
         "stadium": "The Obsidian Core",
         "league": "Zephyra Pro"
     },
     {
         "name": "Skyline Phoenixes",
-        "strength": 1.31,
+        "strength": 1.26,
         "logo": "Images/Teams\\Skyline_Phoenixes.png",
         "year_created": 1970,
         "stadium": "Celestial Chasm",
@@ -3665,25 +3665,25 @@
     },
     {
         "name": "Vortex Minotaurs",
-        "strength": 1.35,
+        "strength": 1.3,
         "logo": "Images/Teams\\Vortex_Minotaurs.png",
-        "year_created": 2002,
+        "year_created": 1979,
         "stadium": "Whirlspire Field",
         "league": "Zephyra Series"
     },
     {
         "name": "Savage Falcons",
-        "strength": 1.22,
+        "strength": 0.82,
         "logo": "Images/Teams\\Savage_Falcons.png",
-        "year_created": 1995,
+        "year_created": 1978,
         "stadium": "The Nova Starforge",
         "league": "Zephyra B"
     },
     {
         "name": "Radiant Tigers",
-        "strength": 0.79,
+        "strength": 0.91,
         "logo": "Images/Teams\\Radiant_Tigers.png",
-        "year_created": 2002,
+        "year_created": 2008,
         "stadium": "The Beacon Citadel",
         "league": "Tauron Premier"
     },
@@ -3691,47 +3691,47 @@
         "name": "Riverstone Bulls",
         "strength": 0.96,
         "logo": "Images/Teams\\Riverstone_Bulls.png",
-        "year_created": 2006,
+        "year_created": 1994,
         "stadium": "Stone Gate",
         "league": "Tauron Elite"
     },
     {
         "name": "Shadow Panthers",
-        "strength": 0.96,
+        "strength": 1.25,
         "logo": "Images/Teams\\Shadow_Panthers.png",
-        "year_created": 1967,
+        "year_created": 1968,
         "stadium": "Nocturne Spire",
         "league": "Tauron Division 2"
     },
     {
         "name": "Mystic Centaurs",
-        "strength": 0.88,
+        "strength": 1.12,
         "logo": "Images/Teams\\Mystic_Centaurs.png",
-        "year_created": 1958,
+        "year_created": 1969,
         "stadium": "Arcane Spire",
         "league": "Tauron Division 3"
     },
     {
         "name": "Golden Cobras",
-        "strength": 1.18,
+        "strength": 1.15,
         "logo": "Images/Teams\\Golden_Cobras.png",
-        "year_created": 2008,
+        "year_created": 1985,
         "stadium": "Continuum Aether",
         "league": "Nerathoul"
     },
     {
         "name": "Eternal Stallions",
-        "strength": 1.35,
+        "strength": 0.96,
         "logo": "Images/Teams\\Eternal_Stallions.png",
-        "year_created": 1951,
+        "year_created": 1983,
         "stadium": "Oblivion Obelisk",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Arcane Wraiths",
-        "strength": 1.12,
+        "strength": 1.18,
         "logo": "Images/Teams\\Arcane_Wraiths.png",
-        "year_created": 1995,
+        "year_created": 1989,
         "stadium": "Mystic Hollow",
         "league": "Nerathoul Ascend"
     },
@@ -3739,15 +3739,15 @@
         "name": "Tempest Scorpions",
         "strength": 0.88,
         "logo": "Images/Teams\\Tempest_Scorpions.png",
-        "year_created": 1969,
+        "year_created": 1962,
         "stadium": "Velvet Spire Halo",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Riverstone Cougars",
-        "strength": 1.12,
+        "strength": 0.82,
         "logo": "Images/Teams\\Riverstone_Cougars.png",
-        "year_created": 1984,
+        "year_created": 1978,
         "stadium": "The Emerald Forge",
         "league": "Ecliptus"
     },
@@ -3755,13 +3755,13 @@
         "name": "Golden Hawks",
         "strength": 0.91,
         "logo": "Images/Teams\\Golden_Hawks.png",
-        "year_created": 2003,
+        "year_created": 1958,
         "stadium": "The Thunder Cradle",
         "league": "Ecliptus B"
     },
     {
         "name": "Silver Raptors",
-        "strength": 0.91,
+        "strength": 1.18,
         "logo": "Images/Teams\\Silver_Raptors.png",
         "year_created": 1976,
         "stadium": "Den Arena",
@@ -3769,81 +3769,81 @@
     },
     {
         "name": "Aurora Pioneers",
-        "strength": 1.28,
+        "strength": 1.33,
         "logo": "Images/Teams\\Aurora_Pioneers.png",
-        "year_created": 1985,
+        "year_created": 1984,
         "stadium": "Astral Crucible",
         "league": "Ecliptus D"
     },
     {
         "name": "Scarlet Centaurs",
-        "strength": 1.33,
+        "strength": 1.31,
         "logo": "Images/Teams\\Scarlet_Centaurs.png",
-        "year_created": 1959,
+        "year_created": 1978,
         "stadium": "Celestial Halo",
         "league": "Lyraxis"
     },
     {
         "name": "Obsidian Guardians",
-        "strength": 0.91,
+        "strength": 1.28,
         "logo": "Images/Teams\\Obsidian_Guardians.png",
-        "year_created": 2008,
+        "year_created": 1982,
         "stadium": "The Celestial Citadel",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Stormfang Lions",
-        "strength": 1.27,
+        "strength": 0.91,
         "logo": "Images/Teams\\Stormfang_Lions.png",
-        "year_created": 1996,
+        "year_created": 2008,
         "stadium": "Thunderpaw Arena",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Radiant Guardians",
-        "strength": 0.96,
+        "strength": 1.33,
         "logo": "Images/Teams\\Radiant_Guardians.png",
-        "year_created": 1986,
+        "year_created": 1998,
         "stadium": "Celestial Temple",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Scarlet Stallions",
-        "strength": 0.82,
+        "strength": 0.88,
         "logo": "Images/Teams\\Scarlet_Stallions.png",
-        "year_created": 1975,
+        "year_created": 1955,
         "stadium": "The Velvet Bastion",
         "league": "Solarion"
     },
     {
         "name": "Dusk Centaurs",
-        "strength": 0.82,
+        "strength": 1.22,
         "logo": "Images/Teams\\Dusk_Centaurs.png",
-        "year_created": 1984,
+        "year_created": 1952,
         "stadium": "Nova Eclipse",
         "league": "Solarion 2"
     },
     {
         "name": "Celestial Strikers",
-        "strength": 0.82,
+        "strength": 0.79,
         "logo": "Images/Teams\\Celestial_Strikers.png",
-        "year_created": 1991,
+        "year_created": 1955,
         "stadium": "Celestial Eyrie",
         "league": "Solarion 3"
     },
     {
         "name": "Celestial Hurricanes",
-        "strength": 1.22,
+        "strength": 1.31,
         "logo": "Images/Teams\\Celestial_Hurricanes.png",
-        "year_created": 1985,
+        "year_created": 2002,
         "stadium": "The Stellar Crucible",
         "league": "Solarion 4"
     },
     {
         "name": "Dusk Scorpions",
-        "strength": 1.26,
+        "strength": 0.91,
         "logo": "Images/Teams\\Dusk_Scorpions.png",
-        "year_created": 1960,
+        "year_created": 2010,
         "stadium": "The Empyrean Gate",
         "league": "Cryonese Primera"
     },
@@ -3851,111 +3851,111 @@
         "name": "Golden Bulls",
         "strength": 1.12,
         "logo": "Images/Teams\\Golden_Bulls.png",
-        "year_created": 1959,
+        "year_created": 2009,
         "stadium": "The Nova Empyrean",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Crimson Hawks",
-        "strength": 1.27,
+        "strength": 1.22,
         "logo": "Images/Teams\\Crimson_Hawks.png",
-        "year_created": 1967,
+        "year_created": 1972,
         "stadium": "The Pyre Sphere",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Skyline Knights",
-        "strength": 1.27,
+        "strength": 1.12,
         "logo": "Images/Teams\\Skyline_Knights.png",
-        "year_created": 1991,
+        "year_created": 2008,
         "stadium": "The Celestial Conflux",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Celestial Lynx",
-        "strength": 1.27,
+        "strength": 1.3,
         "logo": "Images/Teams\\Celestial_Lynx.png",
-        "year_created": 2006,
+        "year_created": 1953,
         "stadium": "Starclaw Arena",
         "league": "Vorlis Liga"
     },
     {
         "name": "Glacial Griffins",
-        "strength": 0.88,
+        "strength": 1.26,
         "logo": "Images/Teams\\Glacial_Griffins.png",
-        "year_created": 2003,
+        "year_created": 1991,
         "stadium": "Crystal Aether",
         "league": "Vorlis National"
     },
     {
         "name": "Radiant Rhinos",
-        "strength": 1.28,
+        "strength": 0.96,
         "logo": "Images/Teams\\Radiant_Rhinos.png",
-        "year_created": 1970,
+        "year_created": 2006,
         "stadium": "Celestial Crown",
         "league": "Vorlis Continental"
     },
     {
         "name": "Cobalt Leopards",
-        "strength": 1.26,
+        "strength": 1.32,
         "logo": "Images/Teams\\Cobalt_Leopards.png",
-        "year_created": 2002,
+        "year_created": 1973,
         "stadium": "The Nest Sphere",
         "league": "Vorlis Regional"
     },
     {
         "name": "Riverstone Stallions",
-        "strength": 1.12,
+        "strength": 1.35,
         "logo": "Images/Teams\\Riverstone_Stallions.png",
-        "year_created": 1967,
+        "year_created": 1976,
         "stadium": "The Granite Citadel",
         "league": "Zephyra Pro"
     },
     {
         "name": "Luminous Titans",
-        "strength": 1.22,
+        "strength": 1.25,
         "logo": "Images/Teams\\Luminous_Titans.png",
-        "year_created": 1952,
+        "year_created": 1950,
         "stadium": "The Halo Eclipse",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Phoenix Dragons",
-        "strength": 1.32,
+        "strength": 1.12,
         "logo": "Images/Teams\\Phoenix_Dragons.png",
-        "year_created": 1965,
+        "year_created": 2007,
         "stadium": "The Umbral",
         "league": "Zephyra Series"
     },
     {
         "name": "Silver Stallions",
-        "strength": 1.28,
+        "strength": 1.26,
         "logo": "Images/Teams\\Silver_Stallions.png",
-        "year_created": 2008,
+        "year_created": 1975,
         "stadium": "Arcane Zenith",
         "league": "Zephyra B"
     },
     {
         "name": "Golden Vortex",
-        "strength": 1.31,
+        "strength": 1.26,
         "logo": "Images/Teams\\Golden_Vortex.png",
-        "year_created": 1956,
+        "year_created": 1975,
         "stadium": "The Arcane",
         "league": "Tauron Premier"
     },
     {
         "name": "Inferno Phoenixes",
-        "strength": 1.12,
+        "strength": 1.21,
         "logo": "Images/Teams\\Inferno_Phoenixes.png",
-        "year_created": 2008,
+        "year_created": 1992,
         "stadium": "The Celestial Citadel",
         "league": "Tauron Elite"
     },
     {
         "name": "Tempest Raptors",
-        "strength": 1.3,
+        "strength": 1.15,
         "logo": "Images/Teams\\Tempest_Raptors.png",
-        "year_created": 1984,
+        "year_created": 1979,
         "stadium": "Stormborn Vault",
         "league": "Tauron Division 2"
     },
@@ -3963,13 +3963,13 @@
         "name": "Shadow Cobras",
         "strength": 1.18,
         "logo": "Images/Teams\\Shadow_Cobras.png",
-        "year_created": 1992,
+        "year_created": 1999,
         "stadium": "The Nova Nucleus",
         "league": "Tauron Division 3"
     },
     {
         "name": "Radiant Strikers",
-        "strength": 1.21,
+        "strength": 1.18,
         "logo": "Images/Teams\\Radiant_Strikers.png",
         "year_created": 1998,
         "stadium": "The Astral Halo",
@@ -3977,41 +3977,41 @@
     },
     {
         "name": "Glacial Wolves",
-        "strength": 1.32,
+        "strength": 1.27,
         "logo": "Images/Teams\\Glacial_Wolves.png",
-        "year_created": 1998,
+        "year_created": 2006,
         "stadium": "The Hollow Spire",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Crimson Strikers",
-        "strength": 1.25,
+        "strength": 1.35,
         "logo": "Images/Teams\\Crimson_Strikers.png",
-        "year_created": 1994,
+        "year_created": 1983,
         "stadium": "The Stellar Arena",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Stormy Falcons",
-        "strength": 0.91,
+        "strength": 1.22,
         "logo": "Images/Teams\\Stormy_Falcons.png",
-        "year_created": 1972,
+        "year_created": 2001,
         "stadium": "Arena Sanctuary",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Celestial Bears",
-        "strength": 1.3,
+        "strength": 1.31,
         "logo": "Images/Teams\\Celestial_Bears.png",
-        "year_created": 2000,
+        "year_created": 1963,
         "stadium": "The Halo Eyrie",
         "league": "Ecliptus"
     },
     {
         "name": "Blazing Titans",
-        "strength": 1.31,
+        "strength": 1.15,
         "logo": "Images/Teams\\Blazing_Titans.png",
-        "year_created": 1965,
+        "year_created": 1953,
         "stadium": "Iron Gate",
         "league": "Ecliptus B"
     },
@@ -4019,13 +4019,13 @@
         "name": "Velvet Sharks",
         "strength": 0.96,
         "logo": "Images/Teams\\Velvet_Sharks.png",
-        "year_created": 1973,
+        "year_created": 1965,
         "stadium": "Eternal Core",
         "league": "Ecliptus C"
     },
     {
         "name": "Golden Falcons",
-        "strength": 1.26,
+        "strength": 1.28,
         "logo": "Images/Teams\\Golden_Falcons.png",
         "year_created": 1971,
         "stadium": "Eyrie Continuum",
@@ -4033,41 +4033,41 @@
     },
     {
         "name": "Savage Cobras",
-        "strength": 1.27,
+        "strength": 1.0,
         "logo": "Images/Teams\\Savage_Cobras.png",
-        "year_created": 1984,
+        "year_created": 1950,
         "stadium": "Cradle Bastion",
         "league": "Lyraxis"
     },
     {
         "name": "Golden Phoenixes",
-        "strength": 1.33,
+        "strength": 1.3,
         "logo": "Images/Teams\\Golden_Phoenixes.png",
-        "year_created": 1996,
+        "year_created": 1969,
         "stadium": "The Celestial Citadel",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Stormbreak Cobras",
-        "strength": 0.88,
+        "strength": 1.27,
         "logo": "Images/Teams\\Stormbreak_Cobras.png",
-        "year_created": 1988,
+        "year_created": 1982,
         "stadium": "Beacon Empyrean",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Eternal Raptors",
-        "strength": 1.25,
+        "strength": 0.88,
         "logo": "Images/Teams\\Eternal_Raptors.png",
-        "year_created": 1952,
+        "year_created": 1986,
         "stadium": "Dominion Hollow",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Frost Tigers",
-        "strength": 0.88,
+        "strength": 1.21,
         "logo": "Images/Teams\\Frost_Tigers.png",
-        "year_created": 1979,
+        "year_created": 1970,
         "stadium": "The Frozen Sanctum",
         "league": "Solarion"
     },
@@ -4075,143 +4075,143 @@
         "name": "Luminous Warthogs",
         "strength": 0.88,
         "logo": "Images/Teams\\Luminous_Warthogs.png",
-        "year_created": 1987,
+        "year_created": 1977,
         "stadium": "The Eternal Titan",
         "league": "Solarion 2"
     },
     {
         "name": "Tempest Falcons",
-        "strength": 1.18,
+        "strength": 1.15,
         "logo": "Images/Teams\\Tempest_Falcons.png",
-        "year_created": 1984,
+        "year_created": 1969,
         "stadium": "The Tempest Vortex",
         "league": "Solarion 3"
     },
     {
         "name": "Violet Titans",
-        "strength": 1.33,
+        "strength": 1.22,
         "logo": "Images/Teams\\Violet_Titans.png",
-        "year_created": 1964,
+        "year_created": 1981,
         "stadium": "The Stone Forge",
         "league": "Solarion 4"
     },
     {
         "name": "Ethereal Wyrms",
-        "strength": 1.3,
+        "strength": 1.21,
         "logo": "Images/Teams\\Ethereal_Wyrms.png",
-        "year_created": 1978,
+        "year_created": 1973,
         "stadium": "Cloudspire Arena",
         "league": "Cryonese Primera"
     },
     {
         "name": "Ebon Drakes",
-        "strength": 1.28,
+        "strength": 1.33,
         "logo": "Images/Teams\\Ebon_Drakes.png",
-        "year_created": 1960,
+        "year_created": 2006,
         "stadium": "Nightfire Colosseum",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Solar Lynx",
-        "strength": 1.15,
+        "strength": 1.0,
         "logo": "Images/Teams\\Solar_Lynx.png",
-        "year_created": 1975,
+        "year_created": 1999,
         "stadium": "Sanctum Hollow",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Eclipse Seraphs",
-        "strength": 0.82,
+        "strength": 1.33,
         "logo": "Images/Teams\\Eclipse_Seraphs.png",
-        "year_created": 1996,
+        "year_created": 1980,
         "stadium": "Duskwing Field",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Sable Titans",
-        "strength": 1.31,
+        "strength": 1.22,
         "logo": "Images/Teams\\Sable_Titans.png",
-        "year_created": 1953,
+        "year_created": 2005,
         "stadium": "The Nova Cradle",
         "league": "Vorlis Liga"
     },
     {
         "name": "Tempest Centaurs",
-        "strength": 1.32,
+        "strength": 1.15,
         "logo": "Images/Teams\\Tempest_Centaurs.png",
-        "year_created": 1980,
+        "year_created": 1988,
         "stadium": "Tempest Granite",
         "league": "Vorlis National"
     },
     {
         "name": "Frost Panthers",
-        "strength": 0.96,
+        "strength": 1.25,
         "logo": "Images/Teams\\Frost_Panthers.png",
-        "year_created": 1974,
+        "year_created": 1958,
         "stadium": "Aegis Halo",
         "league": "Vorlis Continental"
     },
     {
         "name": "Skyline Mavericks",
-        "strength": 1.12,
+        "strength": 1.28,
         "logo": "Images/Teams\\Skyline_Mavericks.png",
-        "year_created": 1950,
+        "year_created": 1969,
         "stadium": "The Astral Crown",
         "league": "Vorlis Regional"
     },
     {
         "name": "Aurora Blades",
-        "strength": 1.25,
+        "strength": 0.91,
         "logo": "Images/Teams\\Aurora_Blades.png",
-        "year_created": 2007,
+        "year_created": 1979,
         "stadium": "Velvet Nexus",
         "league": "Zephyra Pro"
     },
     {
         "name": "Steel Warthogs",
-        "strength": 1.35,
+        "strength": 1.32,
         "logo": "Images/Teams\\Steel_Warthogs.png",
-        "year_created": 1982,
+        "year_created": 1960,
         "stadium": "Titan Forge",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Savage Vipers",
-        "strength": 1.33,
+        "strength": 1.28,
         "logo": "Images/Teams\\Savage_Vipers.png",
-        "year_created": 2004,
+        "year_created": 1969,
         "stadium": "The Hollow Spire",
         "league": "Zephyra Series"
     },
     {
         "name": "Tempest Chargers",
-        "strength": 0.91,
+        "strength": 1.28,
         "logo": "Images/Teams\\Tempest_Chargers.png",
-        "year_created": 1999,
+        "year_created": 1969,
         "stadium": "The Mystic Stormborn",
         "league": "Zephyra B"
     },
     {
         "name": "Stormbreak Stallions",
-        "strength": 1.32,
+        "strength": 1.0,
         "logo": "Images/Teams\\Stormbreak_Stallions.png",
-        "year_created": 2010,
+        "year_created": 1998,
         "stadium": "The Cyclone Spire",
         "league": "Tauron Premier"
     },
     {
         "name": "Blazing Centaurs",
-        "strength": 1.27,
+        "strength": 0.82,
         "logo": "Images/Teams\\Blazing_Centaurs.png",
-        "year_created": 1971,
+        "year_created": 1991,
         "stadium": "The Celestial Arena",
         "league": "Tauron Elite"
     },
     {
         "name": "Emerald Bulls",
-        "strength": 1.32,
+        "strength": 1.33,
         "logo": "Images/Teams\\Emerald_Bulls.png",
-        "year_created": 1958,
+        "year_created": 1975,
         "stadium": "The Arcane Core",
         "league": "Tauron Division 2"
     },
@@ -4219,135 +4219,135 @@
         "name": "Solar Pioneers",
         "strength": 1.35,
         "logo": "Images/Teams\\Solar_Pioneers.png",
-        "year_created": 1995,
+        "year_created": 1951,
         "stadium": "The Ashen Drift",
         "league": "Tauron Division 3"
     },
     {
         "name": "Dusk Panthers",
-        "strength": 1.26,
+        "strength": 0.79,
         "logo": "Images/Teams\\Dusk_Panthers.png",
-        "year_created": 1963,
+        "year_created": 1997,
         "stadium": "Cradle Cradle",
         "league": "Nerathoul"
     },
     {
         "name": "Steel Stallions",
-        "strength": 1.3,
+        "strength": 1.15,
         "logo": "Images/Teams\\Steel_Stallions.png",
-        "year_created": 1975,
+        "year_created": 1959,
         "stadium": "Aegis Prism",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Oceanic Centaurs",
-        "strength": 1.22,
+        "strength": 1.3,
         "logo": "Images/Teams\\Oceanic_Centaurs.png",
-        "year_created": 1987,
+        "year_created": 1956,
         "stadium": "The Umbral Nova",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Mystic Hawks",
-        "strength": 0.96,
+        "strength": 1.33,
         "logo": "Images/Teams\\Mystic_Hawks.png",
-        "year_created": 2000,
+        "year_created": 1991,
         "stadium": "Stellar Forge",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Radiant Stingers",
-        "strength": 1.18,
+        "strength": 1.3,
         "logo": "Images/Teams\\Radiant_Stingers.png",
-        "year_created": 2009,
+        "year_created": 2000,
         "stadium": "The Haven",
         "league": "Ecliptus"
     },
     {
         "name": "Onyx Guardians",
-        "strength": 1.32,
+        "strength": 1.22,
         "logo": "Images/Teams\\Onyx_Guardians.png",
-        "year_created": 1977,
+        "year_created": 1999,
         "stadium": "Oblivion Crown",
         "league": "Ecliptus B"
     },
     {
         "name": "Obsidian Dragons",
-        "strength": 0.82,
+        "strength": 1.3,
         "logo": "Images/Teams\\Obsidian_Dragons.png",
-        "year_created": 1996,
+        "year_created": 1954,
         "stadium": "The Nocturne Sanctum",
         "league": "Ecliptus C"
     },
     {
         "name": "Radiant Warthogs",
-        "strength": 0.88,
+        "strength": 1.0,
         "logo": "Images/Teams\\Radiant_Warthogs.png",
-        "year_created": 1959,
+        "year_created": 1971,
         "stadium": "Aurora Gate",
         "league": "Ecliptus D"
     },
     {
         "name": "Titanic Titans",
-        "strength": 0.79,
+        "strength": 1.27,
         "logo": "Images/Teams\\Titanic_Titans.png",
-        "year_created": 1989,
+        "year_created": 1979,
         "stadium": "Nova Spire",
         "league": "Lyraxis"
     },
     {
         "name": "Celestial Scorpions",
-        "strength": 1.28,
+        "strength": 1.32,
         "logo": "Images/Teams\\Celestial_Scorpions.png",
-        "year_created": 1951,
+        "year_created": 1986,
         "stadium": "The Stormborn Temple",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Frost Cobras",
-        "strength": 1.15,
+        "strength": 1.32,
         "logo": "Images/Teams\\Frost_Cobras.png",
-        "year_created": 1997,
+        "year_created": 1951,
         "stadium": "Core Vault",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Arcane Raptors",
-        "strength": 1.33,
+        "strength": 0.82,
         "logo": "Images/Teams\\Arcane_Raptors.png",
-        "year_created": 1995,
+        "year_created": 2006,
         "stadium": "The Nova Spire",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Oceanic Warthogs",
-        "strength": 1.15,
+        "strength": 0.82,
         "logo": "Images/Teams\\Oceanic_Warthogs.png",
-        "year_created": 1955,
+        "year_created": 1984,
         "stadium": "Hollow Eternal",
         "league": "Solarion"
     },
     {
         "name": "Glacial Centaurs",
-        "strength": 1.32,
+        "strength": 1.21,
         "logo": "Images/Teams\\Glacial_Centaurs.png",
-        "year_created": 1983,
+        "year_created": 1950,
         "stadium": "Astral Eyrie",
         "league": "Solarion 2"
     },
     {
         "name": "Onyx Sphinxes",
-        "strength": 1.32,
+        "strength": 0.91,
         "logo": "Images/Teams\\Onyx_Sphinxes.png",
-        "year_created": 1989,
+        "year_created": 1981,
         "stadium": "Shadowpaw Grounds",
         "league": "Solarion 3"
     },
     {
         "name": "Silver Strikers",
-        "strength": 0.91,
+        "strength": 1.12,
         "logo": "Images/Teams\\Silver_Strikers.png",
-        "year_created": 1993,
+        "year_created": 1996,
         "stadium": "The Hollow Ascendant",
         "league": "Solarion 4"
     },
@@ -4355,23 +4355,23 @@
         "name": "Riverstone Panthers",
         "strength": 1.31,
         "logo": "Images/Teams\\Riverstone_Panthers.png",
-        "year_created": 1954,
+        "year_created": 1967,
         "stadium": "Nova Empyrean",
         "league": "Cryonese Primera"
     },
     {
         "name": "Crimson Falcons",
-        "strength": 1.33,
+        "strength": 0.91,
         "logo": "Images/Teams\\Crimson_Falcons.png",
-        "year_created": 1964,
+        "year_created": 1968,
         "stadium": "The Blazing Core",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Iron Eagles",
-        "strength": 0.79,
+        "strength": 0.91,
         "logo": "Images/Teams\\Iron_Eagles.png",
-        "year_created": 1993,
+        "year_created": 1980,
         "stadium": "The Iron Gate",
         "league": "Cryonese Tercera"
     },
@@ -4379,93 +4379,93 @@
         "name": "Blazing Knights",
         "strength": 1.31,
         "logo": "Images/Teams\\Blazing_Knights.png",
-        "year_created": 1995,
+        "year_created": 1950,
         "stadium": "The Arcane Vault",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Stormbreak Strikers",
-        "strength": 1.22,
+        "strength": 1.35,
         "logo": "Images/Teams\\Stormbreak_Strikers.png",
-        "year_created": 2003,
+        "year_created": 2004,
         "stadium": "Arcane Core",
         "league": "Vorlis Liga"
     },
     {
         "name": "Radiant Mavericks",
-        "strength": 1.28,
+        "strength": 1.22,
         "logo": "Images/Teams\\Radiant_Mavericks.png",
-        "year_created": 1978,
+        "year_created": 1950,
         "stadium": "Celestial Dominion Stellar",
         "league": "Vorlis National"
     },
     {
         "name": "Luminous Eagles",
-        "strength": 1.27,
+        "strength": 1.15,
         "logo": "Images/Teams\\Luminous_Eagles.png",
-        "year_created": 1984,
+        "year_created": 1969,
         "stadium": "The Halo Gate",
         "league": "Vorlis Continental"
     },
     {
         "name": "Frost Strikers",
-        "strength": 1.22,
+        "strength": 1.35,
         "logo": "Images/Teams\\Frost_Strikers.png",
-        "year_created": 1954,
+        "year_created": 1953,
         "stadium": "Umbral Arena",
         "league": "Vorlis Regional"
     },
     {
         "name": "Riverstone Dragons",
-        "strength": 1.15,
+        "strength": 1.32,
         "logo": "Images/Teams\\Riverstone_Dragons.png",
-        "year_created": 1971,
+        "year_created": 1973,
         "stadium": "Nova Zenith",
         "league": "Zephyra Pro"
     },
     {
         "name": "Frost Cougars",
-        "strength": 1.27,
+        "strength": 1.28,
         "logo": "Images/Teams\\Frost_Cougars.png",
-        "year_created": 1951,
+        "year_created": 2010,
         "stadium": "Glacial Ascendant",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Obsidian Cobras",
-        "strength": 1.18,
+        "strength": 1.0,
         "logo": "Images/Teams\\Obsidian_Cobras.png",
-        "year_created": 1998,
+        "year_created": 1961,
         "stadium": "Runic Stellar",
         "league": "Zephyra Series"
     },
     {
         "name": "Arcane Hawks",
-        "strength": 1.31,
+        "strength": 1.35,
         "logo": "Images/Teams\\Arcane_Hawks.png",
-        "year_created": 1967,
+        "year_created": 1977,
         "stadium": "Celestial Realm",
         "league": "Zephyra B"
     },
     {
         "name": "Onyx Falcons",
-        "strength": 1.25,
+        "strength": 1.28,
         "logo": "Images/Teams\\Onyx_Falcons.png",
-        "year_created": 1981,
+        "year_created": 1989,
         "stadium": "The Nest Spire",
         "league": "Tauron Premier"
     },
     {
         "name": "Phoenix Wolves",
-        "strength": 1.0,
+        "strength": 1.35,
         "logo": "Images/Teams\\Phoenix_Wolves.png",
-        "year_created": 2005,
+        "year_created": 1993,
         "stadium": "Celestial Spire",
         "league": "Tauron Elite"
     },
     {
         "name": "Thunder Blades",
-        "strength": 1.28,
+        "strength": 0.91,
         "logo": "Images/Teams\\Thunder_Blades.png",
         "year_created": 1983,
         "stadium": "Stormborn Horizon",
@@ -4473,207 +4473,207 @@
     },
     {
         "name": "Velvet Panthers",
-        "strength": 0.91,
+        "strength": 1.32,
         "logo": "Images/Teams\\Velvet_Panthers.png",
-        "year_created": 1974,
+        "year_created": 2006,
         "stadium": "Mystic Vault",
         "league": "Tauron Division 3"
     },
     {
         "name": "Stormy Phoenixes",
-        "strength": 0.88,
+        "strength": 1.31,
         "logo": "Images/Teams\\Stormy_Phoenixes.png",
-        "year_created": 1971,
+        "year_created": 1995,
         "stadium": "Cyclone Core",
         "league": "Nerathoul"
     },
     {
         "name": "Nether Behemoths",
-        "strength": 1.26,
+        "strength": 1.12,
         "logo": "Images/Teams\\Nether_Behemoths.png",
-        "year_created": 2008,
+        "year_created": 1985,
         "stadium": "The Shadow",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Savage Stingers",
-        "strength": 0.82,
+        "strength": 1.27,
         "logo": "Images/Teams\\Savage_Stingers.png",
-        "year_created": 1999,
+        "year_created": 1959,
         "stadium": "Astral Zephyr",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Sable Lynx",
-        "strength": 1.0,
+        "strength": 1.31,
         "logo": "Images/Teams\\Sable_Lynx.png",
-        "year_created": 2009,
+        "year_created": 1973,
         "stadium": "The Den Arena",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Frost Phoenixes",
-        "strength": 0.91,
+        "strength": 1.28,
         "logo": "Images/Teams\\Frost_Phoenixes.png",
-        "year_created": 1993,
+        "year_created": 1965,
         "stadium": "The Tempest Velvet Haven",
         "league": "Ecliptus"
     },
     {
         "name": "Mystic Mavericks",
-        "strength": 1.28,
+        "strength": 1.25,
         "logo": "Images/Teams\\Mystic_Mavericks.png",
-        "year_created": 1988,
+        "year_created": 1999,
         "stadium": "The Nova Temple",
         "league": "Ecliptus B"
     },
     {
         "name": "Steel Knights",
-        "strength": 1.0,
+        "strength": 1.31,
         "logo": "Images/Teams\\Steel_Knights.png",
-        "year_created": 1996,
+        "year_created": 1965,
         "stadium": "The Astral Obelisk",
         "league": "Ecliptus C"
     },
     {
         "name": "Obsidian Scorpions",
-        "strength": 1.0,
+        "strength": 1.18,
         "logo": "Images/Teams\\Obsidian_Scorpions.png",
-        "year_created": 1987,
+        "year_created": 1969,
         "stadium": "The Celestial Core",
         "league": "Ecliptus D"
     },
     {
         "name": "Dusk Knights",
-        "strength": 0.82,
+        "strength": 1.28,
         "logo": "Images/Teams\\Dusk_Knights.png",
-        "year_created": 1962,
+        "year_created": 1973,
         "stadium": "Empyrean Void",
         "league": "Lyraxis"
     },
     {
         "name": "Aurora Sirens",
-        "strength": 1.18,
+        "strength": 1.27,
         "logo": "Images/Teams\\Aurora_Sirens.png",
-        "year_created": 1978,
+        "year_created": 1981,
         "stadium": "Skywave Arena",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Dusk Wolves",
-        "strength": 1.3,
+        "strength": 1.22,
         "logo": "Images/Teams\\Dusk_Wolves.png",
-        "year_created": 1972,
+        "year_created": 1979,
         "stadium": "Nova Forge",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Titanic Bears",
-        "strength": 1.26,
+        "strength": 1.27,
         "logo": "Images/Teams\\Titanic_Bears.png",
-        "year_created": 1957,
+        "year_created": 1963,
         "stadium": "The Stormborn Runic",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Steel Leopards",
-        "strength": 1.32,
+        "strength": 0.79,
         "logo": "Images/Teams\\Steel_Leopards.png",
-        "year_created": 1991,
+        "year_created": 1975,
         "stadium": "The Bastion Realm",
         "league": "Solarion"
     },
     {
         "name": "Emerald Cobras",
-        "strength": 1.35,
+        "strength": 1.12,
         "logo": "Images/Teams\\Emerald_Cobras.png",
-        "year_created": 1978,
+        "year_created": 1962,
         "stadium": "Nova Gate",
         "league": "Solarion 2"
     },
     {
         "name": "Scarlet Falcons",
-        "strength": 1.35,
+        "strength": 1.27,
         "logo": "Images/Teams\\Scarlet_Falcons.png",
-        "year_created": 1998,
+        "year_created": 1981,
         "stadium": "Run Core",
         "league": "Solarion 3"
     },
     {
         "name": "Radiant Falcons",
-        "strength": 1.32,
+        "strength": 1.25,
         "logo": "Images/Teams\\Radiant_Falcons.png",
-        "year_created": 1957,
+        "year_created": 1990,
         "stadium": "The Bastion Umbral",
         "league": "Solarion 4"
     },
     {
         "name": "Sable Wolves",
-        "strength": 1.22,
+        "strength": 1.27,
         "logo": "Images/Teams\\Sable_Wolves.png",
-        "year_created": 1962,
+        "year_created": 1998,
         "stadium": "Ember Aegis Ember",
         "league": "Cryonese Primera"
     },
     {
         "name": "Golden Titans",
-        "strength": 1.21,
+        "strength": 1.3,
         "logo": "Images/Teams\\Golden_Titans.png",
-        "year_created": 2006,
+        "year_created": 1991,
         "stadium": "Stellar Crucible",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Emerald Raptors",
-        "strength": 0.91,
+        "strength": 0.88,
         "logo": "Images/Teams\\Emerald_Raptors.png",
-        "year_created": 1977,
+        "year_created": 1965,
         "stadium": "The Oblivion Vault",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Shadow Raiders",
-        "strength": 1.25,
+        "strength": 1.26,
         "logo": "Images/Teams\\Shadow_Raiders.png",
-        "year_created": 2010,
+        "year_created": 1992,
         "stadium": "The Dusk Haven",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Titanic Pioneers",
-        "strength": 0.79,
+        "strength": 1.27,
         "logo": "Images/Teams\\Titanic_Pioneers.png",
-        "year_created": 1960,
+        "year_created": 1978,
         "stadium": "Iron Spire",
         "league": "Vorlis Liga"
     },
     {
         "name": "Velvet Raptors",
-        "strength": 1.3,
+        "strength": 1.21,
         "logo": "Images/Teams\\Velvet_Raptors.png",
-        "year_created": 1971,
+        "year_created": 2003,
         "stadium": "Astral Crucible",
         "league": "Vorlis National"
     },
     {
         "name": "Glacial Cougars",
-        "strength": 1.15,
+        "strength": 1.35,
         "logo": "Images/Teams\\Glacial_Cougars.png",
-        "year_created": 1966,
+        "year_created": 1998,
         "stadium": "Crystal Cathedral",
         "league": "Vorlis Continental"
     },
     {
         "name": "Titanic Tigers",
-        "strength": 1.28,
+        "strength": 1.15,
         "logo": "Images/Teams\\Titanic_Tigers.png",
-        "year_created": 1952,
+        "year_created": 1972,
         "stadium": "Obelisk Eyrie Titan",
         "league": "Vorlis Regional"
     },
     {
         "name": "Emerald Sabers",
-        "strength": 1.18,
+        "strength": 0.82,
         "logo": "Images/Teams\\Emerald_Sabers.png",
         "year_created": 1984,
         "stadium": "The Emerald Vault",
@@ -4681,241 +4681,241 @@
     },
     {
         "name": "Thunder Pioneers",
-        "strength": 1.18,
+        "strength": 1.33,
         "logo": "Images/Teams\\Thunder_Pioneers.png",
-        "year_created": 1973,
+        "year_created": 1993,
         "stadium": "The Obelisk Ember",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Silver Vortex",
-        "strength": 1.28,
+        "strength": 0.88,
         "logo": "Images/Teams\\Silver_Vortex.png",
-        "year_created": 1990,
+        "year_created": 1994,
         "stadium": "The Astral Crucible",
         "league": "Zephyra Series"
     },
     {
         "name": "Aurora Basilisks",
-        "strength": 1.15,
+        "strength": 1.0,
         "logo": "Images/Teams\\Aurora_Basilisks.png",
-        "year_created": 1970,
+        "year_created": 2008,
         "stadium": "Radiant Fang Stadium",
         "league": "Zephyra B"
     },
     {
         "name": "Crimson Cobras",
-        "strength": 1.12,
+        "strength": 1.25,
         "logo": "Images/Teams\\Crimson_Cobras.png",
-        "year_created": 1961,
+        "year_created": 1995,
         "stadium": "Ember Spire",
         "league": "Tauron Premier"
     },
     {
         "name": "Skyline Warthogs",
-        "strength": 1.25,
+        "strength": 1.28,
         "logo": "Images/Teams\\Skyline_Warthogs.png",
-        "year_created": 1995,
+        "year_created": 1958,
         "stadium": "Oblivion Drift",
         "league": "Tauron Elite"
     },
     {
         "name": "Riverstone Phoenixes",
-        "strength": 0.91,
+        "strength": 1.31,
         "logo": "Images/Teams\\Riverstone_Phoenixes.png",
-        "year_created": 1954,
+        "year_created": 1971,
         "stadium": "Gate Radiant",
         "league": "Tauron Division 2"
     },
     {
         "name": "Obsidian Chargers",
-        "strength": 1.15,
+        "strength": 0.91,
         "logo": "Images/Teams\\Obsidian_Chargers.png",
-        "year_created": 1990,
+        "year_created": 1963,
         "stadium": "Aether Radiant Iron",
         "league": "Tauron Division 3"
     },
     {
         "name": "Savage Lynx",
-        "strength": 1.27,
+        "strength": 1.33,
         "logo": "Images/Teams\\Savage_Lynx.png",
-        "year_created": 1980,
+        "year_created": 2008,
         "stadium": "Stellar Citadel",
         "league": "Nerathoul"
     },
     {
         "name": "Arcane Strikers",
-        "strength": 1.12,
+        "strength": 1.26,
         "logo": "Images/Teams\\Arcane_Strikers.png",
-        "year_created": 2003,
+        "year_created": 1993,
         "stadium": "The Nova Pinnacle",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Aurora Griffins",
-        "strength": 1.32,
+        "strength": 1.0,
         "logo": "Images/Teams\\Aurora_Griffins.png",
-        "year_created": 1986,
+        "year_created": 1990,
         "stadium": "The Eternal Forge",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Celestial Phoenixes",
-        "strength": 1.32,
+        "strength": 1.12,
         "logo": "Images/Teams\\Celestial_Phoenixes.png",
-        "year_created": 1961,
+        "year_created": 1989,
         "stadium": "The Continuum Solaris",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Titanic Sharks",
-        "strength": 1.32,
+        "strength": 0.91,
         "logo": "Images/Teams\\Titanic_Sharks.png",
-        "year_created": 1973,
+        "year_created": 1981,
         "stadium": "The Realm Crystal",
         "league": "Ecliptus"
     },
     {
         "name": "Velvet Cobras",
-        "strength": 1.22,
+        "strength": 1.32,
         "logo": "Images/Teams\\Velvet_Cobras.png",
-        "year_created": 2006,
+        "year_created": 1953,
         "stadium": "The Velvet Gate",
         "league": "Ecliptus B"
     },
     {
         "name": "Violet Sabers",
-        "strength": 1.12,
+        "strength": 1.21,
         "logo": "Images/Teams\\Violet_Sabers.png",
-        "year_created": 1993,
+        "year_created": 1984,
         "stadium": "The Celestial Zenith",
         "league": "Ecliptus C"
     },
     {
         "name": "Velvet Bears",
-        "strength": 1.15,
+        "strength": 0.96,
         "logo": "Images/Teams\\Velvet_Bears.png",
-        "year_created": 1959,
+        "year_created": 2006,
         "stadium": "The Mystic Core",
         "league": "Ecliptus D"
     },
     {
         "name": "Arcane Leviathans",
-        "strength": 1.26,
+        "strength": 1.35,
         "logo": "Images/Teams\\Arcane_Leviathans.png",
-        "year_created": 1972,
+        "year_created": 1974,
         "stadium": "Mystic Wave Coliseum",
         "league": "Lyraxis"
     },
     {
         "name": "Iron Phoenixes",
-        "strength": 1.32,
+        "strength": 1.22,
         "logo": "Images/Teams\\Iron_Phoenixes.png",
-        "year_created": 2005,
+        "year_created": 1992,
         "stadium": "Iron Gate",
         "league": "Lyraxis Nova"
     },
     {
         "name": "Stormy Titans",
-        "strength": 1.18,
+        "strength": 0.82,
         "logo": "Images/Teams\\Stormy_Titans.png",
-        "year_created": 1992,
+        "year_created": 1986,
         "stadium": "Continuum Sanctuary Umbral",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Emerald Hawks",
-        "strength": 1.31,
+        "strength": 1.22,
         "logo": "Images/Teams\\Emerald_Hawks.png",
-        "year_created": 1952,
+        "year_created": 1956,
         "stadium": "Stone Vault",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Stormbreak Stingers",
-        "strength": 0.91,
+        "strength": 1.28,
         "logo": "Images/Teams\\Stormbreak_Stingers.png",
-        "year_created": 2009,
+        "year_created": 1962,
         "stadium": "The Nova Sphere",
         "league": "Solarion"
     },
     {
         "name": "Savage Titans",
-        "strength": 1.31,
+        "strength": 1.28,
         "logo": "Images/Teams\\Savage_Titans.png",
-        "year_created": 1994,
+        "year_created": 1993,
         "stadium": "The Stellar Ascendant",
         "league": "Solarion 2"
     },
     {
         "name": "Shadow Rhinos",
-        "strength": 1.31,
+        "strength": 1.18,
         "logo": "Images/Teams\\Shadow_Rhinos.png",
-        "year_created": 2009,
+        "year_created": 1999,
         "stadium": "Dusk Monolith",
         "league": "Solarion 3"
     },
     {
         "name": "Radiant Pioneers",
-        "strength": 1.15,
+        "strength": 0.82,
         "logo": "Images/Teams\\Radiant_Pioneers.png",
-        "year_created": 1997,
+        "year_created": 1982,
         "stadium": "The Radiant Horizon",
         "league": "Solarion 4"
     },
     {
         "name": "Scarlet Knights",
-        "strength": 1.35,
+        "strength": 1.12,
         "logo": "Images/Teams\\Scarlet_Knights.png",
-        "year_created": 1981,
+        "year_created": 1967,
         "stadium": "Stormborn Arena",
         "league": "Cryonese Primera"
     },
     {
         "name": "Stormbreak Scorpions",
-        "strength": 1.27,
+        "strength": 1.21,
         "logo": "Images/Teams\\Stormbreak_Scorpions.png",
-        "year_created": 1956,
+        "year_created": 1961,
         "stadium": "The Empyrean Nova Tempest",
         "league": "Cryonese Segunda"
     },
     {
         "name": "Phoenix Cougars",
-        "strength": 1.26,
+        "strength": 0.96,
         "logo": "Images/Teams\\Phoenix_Cougars.png",
-        "year_created": 1963,
+        "year_created": 1961,
         "stadium": "Nova Bastion",
         "league": "Cryonese Tercera"
     },
     {
         "name": "Velvet Hawks",
-        "strength": 1.3,
+        "strength": 1.32,
         "logo": "Images/Teams\\Velvet_Hawks.png",
-        "year_created": 1971,
+        "year_created": 1995,
         "stadium": "The Velvet Ascendant",
         "league": "Cryonese Cuarta"
     },
     {
         "name": "Savage Griffins",
-        "strength": 1.15,
+        "strength": 1.32,
         "logo": "Images/Teams\\Savage_Griffins.png",
-        "year_created": 1962,
+        "year_created": 1978,
         "stadium": "Eyrie Eyrie",
         "league": "Vorlis Liga"
     },
     {
         "name": "Emerald Knights",
-        "strength": 0.91,
+        "strength": 0.88,
         "logo": "Images/Teams\\Emerald_Knights.png",
-        "year_created": 1993,
+        "year_created": 1987,
         "stadium": "The River Nexus",
         "league": "Vorlis National"
     },
     {
         "name": "Violet Stingers",
-        "strength": 1.18,
+        "strength": 1.3,
         "logo": "Images/Teams\\Violet_Stingers.png",
-        "year_created": 1956,
+        "year_created": 2009,
         "stadium": "The Frigid Spire",
         "league": "Vorlis Continental"
     },
@@ -4923,151 +4923,151 @@
         "name": "Scarlet Vortex",
         "strength": 1.3,
         "logo": "Images/Teams\\Scarlet_Vortex.png",
-        "year_created": 1976,
+        "year_created": 1954,
         "stadium": "Arcane Eyrie",
         "league": "Vorlis Regional"
     },
     {
         "name": "Emerald Dragons",
-        "strength": 1.26,
+        "strength": 1.22,
         "logo": "Images/Teams\\Emerald_Dragons.png",
-        "year_created": 1990,
+        "year_created": 1988,
         "stadium": "Granite Sanctum",
         "league": "Zephyra Pro"
     },
     {
         "name": "Shadow Chargers",
-        "strength": 1.25,
+        "strength": 1.31,
         "logo": "Images/Teams\\Shadow_Chargers.png",
-        "year_created": 1993,
+        "year_created": 2001,
         "stadium": "Oblivion Halo",
         "league": "Zephyra Challenge"
     },
     {
         "name": "Aurora Phoenixes",
-        "strength": 1.21,
+        "strength": 1.22,
         "logo": "Images/Teams\\Aurora_Phoenixes.png",
-        "year_created": 1965,
+        "year_created": 1989,
         "stadium": "Arena Monolith",
         "league": "Zephyra Series"
     },
     {
         "name": "Thunder Hurricanes",
-        "strength": 1.3,
+        "strength": 1.22,
         "logo": "Images/Teams\\Thunder_Hurricanes.png",
-        "year_created": 1980,
+        "year_created": 1958,
         "stadium": "Stormborn Core",
         "league": "Zephyra B"
     },
     {
         "name": "Cobalt Griffins",
-        "strength": 1.26,
+        "strength": 1.18,
         "logo": "Images/Teams\\Cobalt_Griffins.png",
-        "year_created": 1960,
+        "year_created": 1957,
         "stadium": "Eyrie Dome",
         "league": "Tauron Premier"
     },
     {
         "name": "Skyline Eagles",
-        "strength": 1.15,
+        "strength": 0.91,
         "logo": "Images/Teams\\Skyline_Eagles.png",
-        "year_created": 1996,
+        "year_created": 1971,
         "stadium": "Lunar Mystic",
         "league": "Tauron Elite"
     },
     {
         "name": "Titanic Leopards",
-        "strength": 1.25,
+        "strength": 1.21,
         "logo": "Images/Teams\\Titanic_Leopards.png",
-        "year_created": 1989,
+        "year_created": 1968,
         "stadium": "River Crown",
         "league": "Tauron Division 2"
     },
     {
         "name": "Skyline Bulls",
-        "strength": 1.26,
+        "strength": 1.31,
         "logo": "Images/Teams\\Skyline_Bulls.png",
-        "year_created": 1951,
+        "year_created": 1969,
         "stadium": "Eyrie Runic",
         "league": "Tauron Division 3"
     },
     {
         "name": "Steel Panthers",
-        "strength": 1.12,
+        "strength": 0.82,
         "logo": "Images/Teams\\Steel_Panthers.png",
-        "year_created": 1962,
+        "year_created": 1989,
         "stadium": "Stellar Paradox",
         "league": "Nerathoul"
     },
     {
         "name": "Velvet Wolves",
-        "strength": 0.79,
+        "strength": 0.82,
         "logo": "Images/Teams\\Velvet_Wolves.png",
-        "year_created": 2009,
+        "year_created": 1966,
         "stadium": "Velvet Vault",
         "league": "Nerathoul Prime"
     },
     {
         "name": "Phoenix Vipers",
-        "strength": 1.31,
+        "strength": 1.33,
         "logo": "Images/Teams\\Phoenix_Vipers.png",
-        "year_created": 1952,
+        "year_created": 1966,
         "stadium": "Arcane Ascendant",
         "league": "Nerathoul Ascend"
     },
     {
         "name": "Stormy Vortex",
-        "strength": 1.22,
+        "strength": 0.79,
         "logo": "Images/Teams\\Stormy_Vortex.png",
-        "year_created": 2006,
+        "year_created": 1979,
         "stadium": "Stormborn Arena",
         "league": "Nerathoul Minor"
     },
     {
         "name": "Feral Krakens",
-        "strength": 0.96,
+        "strength": 1.21,
         "logo": "Images/Teams\\Feral_Krakens.png",
-        "year_created": 1972,
+        "year_created": 2003,
         "stadium": "Tidebreaker Arena",
         "league": "Ecliptus"
     },
     {
         "name": "Solar Titans",
-        "strength": 1.15,
+        "strength": 1.21,
         "logo": "Images/Teams\\Solar_Titans.png",
-        "year_created": 1991,
+        "year_created": 1986,
         "stadium": "The Runic Sanctum",
         "league": "Ecliptus B"
     },
     {
         "name": "Onyx Eagles",
-        "strength": 1.31,
+        "strength": 0.79,
         "logo": "Images/Teams\\Onyx_Eagles.png",
-        "year_created": 1996,
+        "year_created": 2000,
         "stadium": "The Iron Sanctum",
         "league": "Ecliptus C"
     },
     {
         "name": "Luminous Guardians",
-        "strength": 1.27,
+        "strength": 0.91,
         "logo": "Images/Teams\\Luminous_Guardians.png",
-        "year_created": 1989,
+        "year_created": 1964,
         "stadium": "Radiant Eclipse",
         "league": "Ecliptus D"
     },
     {
         "name": "Blazing Bulls",
-        "strength": 1.15,
+        "strength": 0.91,
         "logo": "Images/Teams\\Blazing_Bulls.png",
-        "year_created": 1993,
+        "year_created": 2004,
         "stadium": "Lair Vault",
         "league": "Lyraxis"
     },
     {
         "name": "Infernal Jackals",
-        "strength": 0.79,
+        "strength": 1.12,
         "logo": "Images/Teams\\Infernal_Jackals.png",
-        "year_created": 1959,
+        "year_created": 2000,
         "stadium": "Blazeward Arena",
         "league": "Lyraxis Nova"
     },
@@ -5075,47 +5075,47 @@
         "name": "Skyline Hawks",
         "strength": 1.31,
         "logo": "Images/Teams\\Skyline_Hawks.png",
-        "year_created": 2004,
+        "year_created": 1996,
         "stadium": "Prism Tempest",
         "league": "Lyraxis Minor"
     },
     {
         "name": "Scarlet Rhinos",
-        "strength": 1.28,
+        "strength": 1.15,
         "logo": "Images/Teams\\Scarlet_Rhinos.png",
-        "year_created": 1987,
+        "year_created": 1991,
         "stadium": "Celestial Continuum",
         "league": "Lyraxis Rising"
     },
     {
         "name": "Stormy Bears",
-        "strength": 1.31,
+        "strength": 1.35,
         "logo": "Images/Teams\\Stormy_Bears.png",
-        "year_created": 2008,
+        "year_created": 1974,
         "stadium": "Sanctum Continuum",
         "league": "Solarion"
     },
     {
         "name": "Steel Phoenixes",
-        "strength": 1.3,
+        "strength": 1.15,
         "logo": "Images/Teams\\Steel_Phoenixes.png",
-        "year_created": 1960,
+        "year_created": 2002,
         "stadium": "Celestial Temple",
         "league": "Solarion 2"
     },
     {
         "name": "Thunder Vipers",
-        "strength": 1.15,
+        "strength": 1.33,
         "logo": "Images/Teams\\Thunder_Vipers.png",
-        "year_created": 1960,
+        "year_created": 1999,
         "stadium": "The Sky Pinnacle",
         "league": "Solarion 3"
     },
     {
         "name": "Tempest Tigers",
-        "strength": 1.35,
+        "strength": 1.32,
         "logo": "Images/Teams\\Tempest_Tigers.png",
-        "year_created": 2006,
+        "year_created": 1976,
         "stadium": "Mystic Void",
         "league": "Solarion 4"
     }

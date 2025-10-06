@@ -19,6 +19,7 @@ class MatchProfile(ctk.CTkFrame):
 
         self.homeTeam = Teams.get_team_by_id(match.home_id)
         self.awayTeam = Teams.get_team_by_id(match.away_id)
+        self.league = League.get_league_by_id(self.match.league_id)
 
         ctk.CTkLabel(self, text = f"{self.homeTeam.name} vs {self.awayTeam.name}", font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.01, rely = 0.05, anchor = "w")
 
@@ -977,11 +978,11 @@ class MatchProfile(ctk.CTkFrame):
         frame = ctk.CTkFrame(self.infoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
         frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))
 
-        src = Image.open("Images/Eclipse League.png")
+        src = Image.open(io.BytesIO(self.league.logo))
         src.thumbnail((20, 20))
         img = ctk.CTkImage(src, None, (src.width, src.height))
         ctk.CTkLabel(frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.5, anchor = "w")
-        ctk.CTkLabel(frame, text = f"Eclipse League Matchday {self.match.matchday}", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(frame, text = f"{self.league.name} Matchday {self.match.matchday}", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.08, rely = 0.5, anchor = "w")
 
         frame = ctk.CTkFrame(self.infoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
         frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))

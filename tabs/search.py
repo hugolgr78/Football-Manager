@@ -96,13 +96,15 @@ class Search(ctk.CTkFrame):
                     ctk.CTkLabel(resultFrame, text = f"{resultData.first_name} {resultData.last_name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = firstDataX, rely = 0.5, anchor = "w")
                     ctk.CTkLabel(resultFrame, text = "Manager", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
 
-                    team = Teams.get_teams_by_manager(resultData.id)[0]
-                    ctk.CTkLabel(resultFrame, text = f"{team.name}", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = thirdDataX, rely = 0.5, anchor = "w")
+                    team = Teams.get_teams_by_manager(resultData.id)
+
+                    if team:
+                        ctk.CTkLabel(resultFrame, text = f"{team[0].name}", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = thirdDataX, rely = 0.5, anchor = "w")
 
                     onClickCommand = self.openManagerProfile
                 case "league":
                     ctk.CTkLabel(resultFrame, text = f"{resultData.name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = firstDataX, rely = 0.5, anchor = "w")
-                    ctk.CTkLabel(resultFrame, text = "Country", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
+                    ctk.CTkLabel(resultFrame, text = "League", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
 
                     onClickCommand = self.openLeagueProfile
                 case "referee":
@@ -111,9 +113,10 @@ class Search(ctk.CTkFrame):
 
                     onClickCommand = self.openRefereeProfile
                 case "match":
+                    league = League.get_league_by_id(resultData.league_id)
                     ctk.CTkLabel(resultFrame, text = f"{Teams.get_team_by_id(resultData.home_id).name} vs {Teams.get_team_by_id(resultData.away_id).name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = firstDataX, rely = 0.5, anchor = "w")
                     ctk.CTkLabel(resultFrame, text = f"{resultData.score_home} - {resultData.score_away}", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
-                    ctk.CTkLabel(resultFrame, text = f"Eclipse League Matchday {resultData.matchday}", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = thirdDataX - 0.1, rely = 0.5, anchor = "w")
+                    ctk.CTkLabel(resultFrame, text = f"{league.name} Matchday {resultData.matchday}", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = thirdDataX - 0.1, rely = 0.5, anchor = "w")
 
                     onClickCommand = self.openMatchProfile
 

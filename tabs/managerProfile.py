@@ -7,6 +7,7 @@ import io
 from utils.teamLogo import TeamLogo
 from utils.frames import WinRatePieChart, TrophiesFrame
 from utils.util_functions import *
+from tabs.search import Search
 
 class ManagerProfile(ctk.CTkFrame):
     def __init__(self, parent, manager_id = None, changeBackFunction = None):
@@ -90,8 +91,10 @@ class Profile(ctk.CTkFrame):
         user = Managers.get_all_user_managers()[0]
         if user.id == self.manager_id:
             self.parentTab = self.parent
-        else:
+        elif isinstance(self.parent.parent, Search):
             self.parentTab = self.parent.parent
+        else:
+            self.parentTab = self.parent.parent.parent
 
         src = Image.open("Images/default_user.png")
         src.thumbnail((200, 200))

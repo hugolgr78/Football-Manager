@@ -441,7 +441,8 @@ class CalendarMatchFrame(ctk.CTkFrame):
         src.thumbnail((15, 15))
         ctk.CTkLabel(self, image = ctk.CTkImage(src, None, (src.width, src.height)), text = "", fg_color = TKINTER_BACKGROUND, height = 0).place(relx = 0.95, rely = 0.02, anchor = "ne")
 
-        src = Image.open("Images/Eclipse League.png")
+        league = League.get_league_by_id(self.match.league_id)
+        src = Image.open(io.BytesIO(league.logo))
         src.thumbnail((15, 15))
         ctk.CTkLabel(self, image = ctk.CTkImage(src, None, (src.width, src.height)), text = "", fg_color = TKINTER_BACKGROUND, height = 0).place(relx = 0.95, rely = 0.2 if oppNameY == 0.5 else 0.25, anchor = "ne")
 
@@ -2700,7 +2701,8 @@ class PlayerMatchFrame(ctk.CTkFrame):
         self.oppName = ctk.CTkLabel(self, text = f"{opposition.name} {home}", font = (APP_FONT_BOLD, 18), fg_color = self.fgColor).place(relx = 0.1, rely = 0.35, anchor = "w")
         self.score = ctk.CTkLabel(self, text = f"{self.game.score_home} - {self.game.score_away}", font = (APP_FONT, 15), fg_color = self.fgColor, height = 10).place(relx = 0.1, rely = 0.65, anchor = "w")
 
-        self.compName = ctk.CTkLabel(self, text = f"Eclipse League - Matchday {self.game.matchday}", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10).place(relx = 0.97, rely = 0.25, anchor = "e")
+        self.league = League.get_league_by_id(self.game.league_id)
+        self.compName = ctk.CTkLabel(self, text = f"{self.league.name} - Matchday {self.game.matchday}", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10).place(relx = 0.97, rely = 0.25, anchor = "e")
 
         ratingBG = PIE_RED
         if self.rating >= 7:
@@ -2793,14 +2795,14 @@ class PlayerMatchFrame(ctk.CTkFrame):
         self.configure(fg_color = GREY_BACKGROUND)
 
         for widget in self.winfo_children():
-            if isinstance(widget, ctk.CTkLabel) and widget.cget("text") != self.rating and widget.cget("text") != f"{self.gameTime}'" and widget.cget("text") != f"Eclipse League - Matchday {self.game.matchday}":
+            if isinstance(widget, ctk.CTkLabel) and widget.cget("text") != self.rating and widget.cget("text") != f"{self.gameTime}'" and widget.cget("text") != f"{self.league.name} - Matchday {self.game.matchday}":
                 widget.configure(fg_color = GREY_BACKGROUND)
 
     def onLeave(self):
         self.configure(fg_color = self.fgColor)
 
         for widget in self.winfo_children():
-            if isinstance(widget, ctk.CTkLabel) and widget.cget("text") != self.rating and widget.cget("text") != f"{self.gameTime}'" and widget.cget("text") != f"Eclipse League - Matchday {self.game.matchday}":
+            if isinstance(widget, ctk.CTkLabel) and widget.cget("text") != self.rating and widget.cget("text") != f"{self.gameTime}'" and widget.cget("text") != f"{self.league.name} - Matchday {self.game.matchday}":
                 widget.configure(fg_color = self.fgColor)
 
     def onClick(self):

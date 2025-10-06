@@ -63,7 +63,7 @@ class LeagueProfileLink(ctk.CTkLabel):
     def openLeagueProfile(self, event):
         from tabs.leagueProfile import LeagueProfile
         
-        managerTeam = Teams.get_teams_by_manager(self.manager_id)[0]
+        managerTeam = Teams.get_teams_by_manager(Managers.get_all_user_managers()[0].id)[0]
         leagueTeams = LeagueTeams.get_league_by_team(managerTeam.id)
         managerLeagueID = League.get_league_by_id(leagueTeams.league_id).id
 

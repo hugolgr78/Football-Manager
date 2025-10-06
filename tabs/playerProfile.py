@@ -1,7 +1,7 @@
 import customtkinter as ctk
 import tkinter.font as tkFont
 from settings import *
-from data.database import Matches, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players, Managers
+from data.database import Matches, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players, Managers, League
 from data.gamesDatabase import *
 from PIL import Image
 import io
@@ -19,7 +19,8 @@ class PlayerProfile(ctk.CTkFrame):
         self.caStars = caStars
 
         self.team = Teams.get_team_by_id(self.player.team_id)
-        self.league = LeagueTeams.get_league_by_team(self.team.id)
+        self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
+        self.league = League.get_league_by_id(self.leagueTeams.league_id)
 
         self.profile = Profile(self, self.player)
         self.matches = None
@@ -188,9 +189,9 @@ class Profile(ctk.CTkFrame):
         self.teamLogo = TeamLogo(self, teamLogo, self.parent.team, TKINTER_BACKGROUND, 0.83, 0.15, "center", self.parent.parent)
 
         if not self.parent.caStars:
-            self.parent.caStars, = Players.get_players_star_ratings([self.player], self.parent.league.league_id).values()
+            self.parent.caStars, = Players.get_players_star_ratings([self.player], self.parent.league.id).values()
 
-        paStars, = Players.get_players_star_ratings([self.player], self.parent.league.league_id, CA = False).values()
+        paStars, = Players.get_players_star_ratings([self.player], self.parent.league.id, CA = False).values()
 
         caFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 200, height = 30, corner_radius = 15)
         caFrame.place(relx = 0.83, rely = 0.3, anchor = "center")
@@ -244,7 +245,7 @@ class Profile(ctk.CTkFrame):
 
     def addStats(self):
 
-        ctk.CTkLabel(self.statsFrame, text = "Eclipse League stats: ", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.03, rely = 0.5, anchor = "w")
+        ctk.CTkLabel(self.statsFrame, text = f"{self.parent.league.name} stats: ", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.03, rely = 0.5, anchor = "w")
         
         if self.suspended:
             src = Image.open(f"Images/redCard_{self.susBan.suspension}.png")
@@ -252,10 +253,10 @@ class Profile(ctk.CTkFrame):
             img = ctk.CTkImage(src, None, (src.width, src.height))
             ctk.CTkLabel(self.statsFrame, image = img, text = "").place(relx = 0.98, rely = 0.5, anchor = "e")
 
-        played = TeamLineup.get_number_matches_by_player(self.player.id, self.parent.league.league_id)
+        played = TeamLineup.get_number_matches_by_player(self.player.id, self.parent.league.id)
         yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id)
         redCards = MatchEvents.get_red_cards_by_player(self.player.id)
-        averageRating = TeamLineup.get_player_average_rating(self.player.id, self.parent.league.league_id)
+        averageRating = TeamLineup.get_player_average_rating(self.player.id, self.parent.league.id)
 
         if self.player.position != "goalkeeper":
             goals = MatchEvents.get_goals_and_pens_by_player(self.player.id)

@@ -846,8 +846,9 @@ class Analysis(ctk.CTkFrame):
             frame = ctk.CTkFrame(meetingsFrame, fg_color = DARK_GREY, width = 80, height = 80)
             frame.pack(side = "left", padx = 5) if scrollable else frame.grid(row = 0, column  = i, padx = 5)
 
+            league = League.get_league_by_id(match.league_id)
             MatchProfileLink(frame, match, f"{match.score_home} - {match.score_away}", "white", 0.5, 0.3, "center", DARK_GREY, self.parent, 20, APP_FONT_BOLD)
-            ctk.CTkLabel(frame, text = "Eclipse League", font = (APP_FONT, 10), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.6, anchor = "center")
+            ctk.CTkLabel(frame, text = league.name, font = (APP_FONT, 10), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.6, anchor = "center")
             ctk.CTkLabel(frame, text = "H" if match.home_id == self.opponent.id else "A", font = (APP_FONT, 12), text_color = "white", fg_color = DARK_GREY, height = 0).place(relx = 0.5, rely = 0.85, anchor = "center")
 
             if scrollable:

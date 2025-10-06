@@ -5507,12 +5507,15 @@ def searchResults(search, limit = SEARCH_LIMIT):
             "sort_key": f"{r.first_name or ''} {r.last_name or ''}".strip()
         } for r in query_results['referees']]
 
-        match_results = [{
-            "type": "match",
-            "data": m,
-            "sort_key": f"{Teams.get_team_by_id(m.home_id).name} vs {Teams.get_team_by_id(m.away_id).name}"
-        } for m in query_results['matches'] 
-        if m.matchday < League.get_league_by_name("Eclipse League").current_matchday]
+        match_results = []
+        for m in query_results['matches']:
+            league = League.get_league_by_id(m.league_id)
+            if league and m.matchday < league.current_matchday:
+                match_results.append({
+                    "type": "match",
+                    "data": m,
+                    "sort_key": f"{Teams.get_team_by_id(m.home_id).name} vs {Teams.get_team_by_id(m.away_id).name}"
+                })
 
         combined = (
             player_results + manager_results + team_results +

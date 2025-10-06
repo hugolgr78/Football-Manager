@@ -1380,11 +1380,13 @@ class LeagueTable(ctk.CTkFrame):
 
         self.grid_propagate(False)
 
-    def defineManager(self, manager_id):
+    def defineManager(self, manager_id, managingLeague = True):
         self.manager_id = manager_id
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.league = LeagueTeams.get_league_by_team(self.team.id)
         self.leagueData = League.get_league_by_id(self.league.league_id)
+
+        self.highlightManaged = managingLeague
 
     def addLeagueTable(self):
 

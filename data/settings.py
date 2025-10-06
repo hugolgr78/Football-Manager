@@ -32,12 +32,9 @@ APP_FONT_BOLD = "Arial Bold"
 
 TABLE_COLOURS = ["#C0392B", "#27AE60", "#2980B9", "#8E44AD", "#D35400", "#16A085", "#F39C12", "#E74C3C", "#3498DB", "#9B59B6", "#2ECC71", "#E67E22", "#1ABC9C", "#F1C40F", "#E74C3C", "#2980B9", "#8E44AD", "#27AE60", "#C0392B", "#D35400", "#9B59B6", "#2ECC71", "#E67E22", "#16A085"]
 
-LEAGUE_NAME = "Eclipse League"
-FIRST_YEAR = 2024
-NUM_TEAMS = 20
-SEASON_START_DATE = datetime.datetime(2025, 8, 14, 7, 0, 0, 0)
+SEASON_START_DATE = datetime.datetime(2025, 8, 10, 7, 0, 0, 0)
 
-TOTAL_STEPS = 400
+TOTAL_STEPS = 2111
 PROGRESS = 0
 
 STATES = ["preview", "matchday", "review"]
@@ -115,6 +112,10 @@ POSITION_CODES = {
     "Striker Right": "CF",
 }
 
+REVERSE_POSITION_CODES = {}
+for full, code in POSITION_CODES.items():
+    REVERSE_POSITION_CODES.setdefault(code, []).append(full)
+
 POSITION_ORDER = {
     "goalkeeper": 0,
     "defender": 1,
@@ -145,6 +146,20 @@ POSITIONS_PITCH_POSITIONS = {
     "Center Forward": (0.5, 0.1),  # Center Forward
 }
 
+COMPATIBLE_POSITIONS = {
+    "CB": ["CB", "LB", "RB", "DM"],
+    "LB": ["LB", "CB", "LM"],
+    "RB": ["RB", "CB", "RM"],
+    "DM": ["DM", "CM", "CB"],
+    "CM": ["CM", "DM", "AM"],
+    "AM": ["AM", "CM", "ST"],
+    "LM": ["LM", "LW", "CM"],
+    "RM": ["RM", "RW", "CM"],
+    "LW": ["LW", "LM", "ST"],
+    "RW": ["RW", "RM", "ST"],
+    "ST": ["ST", "AM", "LW", "RW"],
+}
+
 POSITIONS_MAX = {
     "CB": 3,
     "DM": 3,
@@ -159,22 +174,6 @@ RELATED_POSITIONS = {
     "Defensive Midfielder": ["Defensive Midfielder Right", "Defensive Midfielder Left"],
     "Defensive Midfielder Right": ["Defensive Midfielder"],
     "Defensive Midfielder Left": ["Defensive Midfielder"],
-}
-
-FORMATIONS_CHANCES = {
-    "4-4-2 CM": 0.10,
-    "4-4-2 DM": 0.10,
-    "4-3-3 CM": 0.25,
-    "4-3-3 DM": 0.25,
-    "4-5-1 DM": 0.05,
-    "4-5-1 AM": 0.025,
-    "4-5-1 CM": 0.025,
-    "3-4-3": 0.15,
-    "3-5-2 CM": 0.04,
-    "3-5-2 AM": 0.04,
-    "5-3-2": 0.02,
-    "5-4-1": 0.02,
-    "4-2-4": 0.02,
 }
 
 FORMATIONS_POSITIONS = {
@@ -238,9 +237,11 @@ FORMATIONS_POSITIONS = {
               "Center Forward"],
 }
 
-DEFENSIVE_POSITIONS = ["Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back"]
+DEFENDER_POSITIONS = ["Right Back", "Center Back Right", "Center Back", "Center Back Left", "Left Back"]
+DEFENSIVE_POSITIONS = DEFENDER_POSITIONS + ["Goalkeeper", "Defensive Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left"]
 MIDFIELD_POSITIONS = ["Defensive Midfielder", "Central Midfielder", "Central Midfielder Left", "Central Midfielder Right", "Left Midfielder", "Right Midfielder", "Defensive Midfielder Right", "Defensive Midfielder Left", "Attacking Midfielder"]
-ATTACKING_POSITIONS = ["Left Winger", "Right Winger", "Striker Left", "Striker Right", "Center Forward"]
+FORWARD_POSITIONS = ["Left Winger", "Right Winger", "Striker Left", "Striker Right", "Center Forward"]
+ATTACKING_POSITIONS = FORWARD_POSITIONS + ["Attacking Midfielder"]
 
 SCORER_CHANCES = {
     'defender': 0.05,
@@ -253,6 +254,22 @@ GOAL_TYPE_CHANCES = {
     "penalty": 0.15,
     "own_goal": 0.05
 }
+
+BASE_SHOT = 0.2
+MAX_SHOT_PROB = BASE_SHOT + 0.1
+BASE_ON_TARGET = 0.6
+MAX_TARGET_PROB = BASE_ON_TARGET + 0.1
+BASE_GOAL = 0.7
+MAX_GOAL_PROB = BASE_GOAL + 0.1
+
+BASE_FOUL = 0.07 
+BASE_YELLOW = 0.02 
+BASE_RED = 0.001
+
+BASE_INJURY = 0.0005
+MAX_INJURY_PROB = 0.0015 # This gives P(X = 1) = 20%, P(X > 1) = 3%
+
+TICK = 30
 
 PENALTY_SCORE_CHANCE = 0.8
 
@@ -298,25 +315,25 @@ OBJECTIVES = {
     (15, 20): "avoid relegation",
 }
 
-GOAL_RATINGS = [1.00, 1.03, 1.06, 1.09, 1.12, 1.15, 1.17, 1.20]
-PENALTY_GOAL_RATINGS = [0.75, 0.78, 0.82, 0.84, 0.90, 0.94, 1.03, 1.08]
-PENALTY_MISS_RATINGS = [-0.32, -0.42, -0.47, -0.51, -0.57, -0.63, -0.66, -0.72]
-YELLOW_CARD_RATINGS = [-0.21, -0.28, -0.32, -0.37, -0.41, -0.45, -0.49, -0.53]
-RED_CARD_RATINGS = [-1.46, -1.49, -1.52, -1.57, -1.60, -1.63, -1.69, -1.78]
-ASSIST_RATINGS = [0.52, 0.58, 0.65, 0.69, 0.73, 0.78, 0.82, 0.86]
-DEFENDER_GOALS_1 = [0.32, 0.42, 0.47, 0.63, 0.69, 0.78, 0.85, 0.98]
-DEFENDER_GOALS_3 = [0.02, 0.08, 0.15, 0.19, 0.24, 0.29, 0.36, 0.45]
-DEFENDER_GOALS_MORE = [0.89, 0.92, 0.97, 1.03, 1.09, 1.15, 1.22, 1.29]
-NON_SCORER_RATINGS = [-0.56, -0.43, -0.32, -0.21, -0.19, 0.05, 0.09, 0.13, 0.17, 0.24, 0.31, 0.46, 0.49, 0.67]
-
-EVENT_RATINGS = {
-    "goal": GOAL_RATINGS,
-    "penalty_goal": PENALTY_GOAL_RATINGS,
-    "penalty_miss": PENALTY_MISS_RATINGS,
-    "yellow_card": YELLOW_CARD_RATINGS,
-    "red_card": RED_CARD_RATINGS
-}
-
+GOAL_RATINGS = (0.7, 1.00)
+ASSIST_RATINGS = (0.45, 0.7)
+PENALTY_SCORE_RATING = 0.7
+PENALTY_MISS_RATING = -0.3
+PENALTY_SAVED_RATING = 0.7
+OWN_GOAL_RATINGS = (-0.7, -0.4)
+YELLOW_CARD_RATINGS = (-0.5, -0.2)
+RED_CARD_RATINGS = (-1.5, -1.00)
+SAVE_RATING = (0.1, 0.2)
+SHOT_RATING = (0.1, 0.2)
+SHOT_TARGET_RATING = (0.15, 0.3)
+FOUL_RATING = (-0.1, -0.05)
+DEFENSIVE_ACTION_RATING = (0.05, 0.1)
+BIG_CHANCE_CREATED_RATING = (0.2, 0.4)
+BIG_CHANCE_MISSED_RATING = (-0.2, -0.1)
+PASS_RATING = (0.005, 0.01)
+GOAL_CONCEDED_KEEPER_RATING = (-0.6, -0.3)
+GOAL_CONCEDED_DEFENCE_RATING = (-0.3, -0.15)
+    
 FAN_REACTIONS = {
     "big_win":     ["Ecstatic", "Very Happy", "Happy", "Very Happy", "Ecstatic"],
     "win":         ["Neutral", "Happy", "Happy", "Very Happy", "Ecstatic"],
@@ -393,7 +410,7 @@ PROMPT_TO_TEXT = {
     "Motivate": MOTIVATE
 }
 
-ATTACK_STATS = ["Attack", "Goals scored", "Penalties scored", "Goals scored in the first 15", "Goals scored in the last 15", "Goals by substitutes", "Fastest goal scored", "Latest goal scored"]
+ATTACK_STATS = ["Attack", "Goals scored", "Penalties scored", "Goals scored in the first 15", "Goals scored in the last 15", "Goals by substitutes", "Fastest goal scored", "Latest goal scored", "Highest Possession", "Lowest Possession", "Highest xG", "Lowest xG"]
 DEFENSIVE_STATS = ["Defense", "Goals conceded", "Clean sheets", "Yellow cards", "Red cards", "Own goals", "Penalties saved", "Goal conceded in the first 15", "Goal conceded in the last 15", "Fastest goal conceded", "Latest goal conceded"]
 MISC_STATS = ["Misc", "Goal difference", "Winning from losing position", "Losing from winning position", "Biggest win", "Biggest loss", "Home performance", "Away performance"]
 STREAK_STATS = ["Streaks", "Longest unbeaten run", "Longest winning streak", "Longest losing streak", "Longest winless streak", "Longest scoring streak", "Longest scoreless streak"]
@@ -484,6 +501,150 @@ MATCHES_ROLES = {
     "Rotation": 10
 }
 
+DAILY_FITNESS_RECOVERY_RATE = 0.0125
+SHARPNESS_GAIN_PER_MINUTE = 0.2
+DAILY_SHARPNESS_DECAY = 0.04
+MIN_SHARPNESS = 10
+
+MAX_EVENTS = {
+    "Light Training": 3,
+    "Medium Training": 3,
+    "Intense Training": 3,
+    "Team Building": 2,
+    "Recovery": 2
+}
+
+EVENT_COLOURS = {
+    "Light Training": "#90EE90",   # light green
+    "Medium Training": "#32CD32",  # lime green
+    "Intense Training": "#006400", # dark green
+    "Team Building": "#FFD700",    # gold
+    "Recovery": "#1E90FF",         # dodger blue
+    "Match Preparation": "#FF8C00", # dark orange
+    "Match Review": "#FF69B4",     # hot pink
+    "Rest": "#B0C4DE",
+    "Travel": "#D3D3D3"
+}
+
+MORNING_EVENT_TIMES = (9, 12)
+AFTERNOON_EVENT_TIMES = (12, 15)
+EVENING_EVENT_TIMES = (15, 18)
+
+EVENT_TIMES = [MORNING_EVENT_TIMES, AFTERNOON_EVENT_TIMES, EVENING_EVENT_TIMES]
+
+EVENT_CHANGES = {
+    "Light Training": (-5, 5),   
+    "Medium Training": (-12, 10),  
+    "Intense Training": (-20, 15),   
+    "Recovery": (20, 0),        
+}
+
+TEMPLATES_3 = [
+    ["Intense Training", "Medium Training", "Light Training"],
+    ["Medium Training", "Team Building", "Recovery"],
+    ["Light Training", "Recovery", "Intense Training"],
+    ["Team Building", "Medium Training", "Recovery"],
+    ["Recovery", "Team Building", "Medium Training"]
+]
+
+TEMPLATES_2 = [
+    ["Medium Training", "Light Training"],
+    ["Intense Training", "Recovery"],
+    ["Team Building", "Medium Training"],
+    ["Recovery", "Light Training"],
+    ["Intense Training", "Team Building"]
+]
+
+MATCH_STATS = [
+    "Possession",
+    "xG",
+    "Shots",
+    "Shots on target",
+    "Big chances created",
+    "Big chances missed",
+    "Shots in the box",
+    "Shots outside the box",
+    "Shots blocked",
+    "Shots on woodwork",
+    "Passes",
+    "Tackles",
+    "Interceptions",
+    "Saves",
+    "Fouls",
+    "Yellow cards",
+    "Red cards"
+]
+
+SAVED_STATS = [
+    "Possession",
+    "xG",
+    "Shots",
+    "Shots on target",
+    "Big chances created",
+    "Big chances missed",
+    "Shots in the box",
+    "Shots outside the box",
+    "Passes",
+    "Tackles",
+    "Interceptions",
+    "Saves",
+    "Fouls",
+]
+
+PLAYER_STATS = [
+    "Shots",
+    "Shots on target",
+    "Big chances created",
+    "Big chances missed",
+    "Shots in the box",
+    "Shots outside the box",
+    "Passes",
+    "Tackles",
+    "Interceptions",
+    "Saves",
+    "Fouls"
+]
+
+NEGATIVE_STATS = [
+    "Big chances missed",
+    "Fouls",
+    "Yellow cards",
+    "Red cards"
+]
+
+DEFENSIVE_ACTION_POSITIONS = {
+    "goalkeeper": 0.15,
+    "defender": 0.7,
+    "midfielder": 0.1,
+    "forward": 0.05
+}
+
+BIG_CHANCES_POSITIONS = {
+    "goalkeeper": 0.01,
+    "defender": 0.1,
+    "midfielder": 0.45,
+    "forward": 0.44
+}
+
+MAX_XG = 0.15
+
+CARD_FOUL_CHANCE = 0.7
+
+SHOT_CHANCES = {"Shots blocked": 0.3, "Shots on woodwork": 0.05, "wide": 0.65}
+SHOT_DIRECTION_CHANCES = {"Shots in the box": 0.7, "Shots outside the box": 0.3}
+DEFENSIVE_ACTIONS_CHANCES = {"Tackles": 0.0833, "Interceptions": 0.05, "nothing": 0.8667}
+
+SHOT_BIG_CHANCE = 0.3
+SHOT_TARGET_BIG_CHANCE = 0.5
+GOAL_BIG_CHANCE = 0.8
+
+PASSING_POSITIONS = {
+    "£goalkeeper": 0.03,
+    "defender": 0.3,
+    "midfielder": 0.5,
+    "forward": 0.17
+}
+
 from data.database import StatsManager
 
 STAT_FUNCTIONS = {
@@ -494,6 +655,10 @@ STAT_FUNCTIONS = {
     "Goals by substitutes": StatsManager.get_goals_by_substitutes,
     "Fastest goal scored": StatsManager.get_fastest_goal_scored,
     "Latest goal scored": StatsManager.get_latest_goal_scored,
+    "Highest Possession": StatsManager.get_highest_possession,
+    "Lowest Possession": StatsManager.get_lowest_possession,
+    "Highest xG": StatsManager.get_highest_xg,
+    "Lowest xG": StatsManager.get_lowest_xg,
     "Goals conceded": StatsManager.get_goals_conceded,
     "Clean sheets": StatsManager.get_clean_sheets,
     "Yellow cards": StatsManager.get_yellow_cards,

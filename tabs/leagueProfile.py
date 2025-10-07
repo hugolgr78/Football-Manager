@@ -48,10 +48,10 @@ class LeagueProfile(ctk.CTkFrame):
     def createTabs(self):
 
         self.buttonHeight = 40
-        self.buttonWidth = 180
+        self.buttonWidth = 160
         self.button_background = TKINTER_BACKGROUND
         self.hover_background = GREY_BACKGROUND
-        self.gap = 0.09
+        self.gap = 0.08
 
         gapCount = 0
         for i in range(len(self.tabs)):

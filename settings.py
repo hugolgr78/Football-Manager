@@ -37,6 +37,8 @@ SEASON_START_DATE = datetime.datetime(2025, 8, 10, 7, 0, 0, 0)
 TOTAL_STEPS = 2111
 PROGRESS = 0
 
+PLANETS = ["Cryon", "Vorlis", "Zephyra", "Tauron", "Nerath", "Ecliptis", "Lyra", "Solara"]
+
 STATES = ["preview", "matchday", "review"]
 
 Europe = [

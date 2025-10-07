@@ -186,11 +186,11 @@ class StartMenu(ctk.CTkFrame):
 
         ctk.CTkLabel(self.createFrame, text = "Create a Manager", font = (APP_FONT_BOLD, 35), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.08, anchor = "nw")
 
-        self.nextButton = ctk.CTkButton(self.createFrame, text = "Next", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 40, command = self.checkData)
+        self.nextButton = ctk.CTkButton(self.createFrame, text = "Leagues >", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 40, command = self.checkData)
         self.nextButton.place(relx = 0.97, rely = 0.05, anchor = "ne")
 
-        self.backButton = ctk.CTkButton(self.createFrame, text = "Back", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 40, hover_color = CLOSE_RED, command = lambda: self.createFrame.place_forget())
-        self.backButton.place(relx = 0.86, rely = 0.05, anchor = "ne")
+        backButton = ctk.CTkButton(self.createFrame, text = "Quit", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 40, hover_color = CLOSE_RED, command = lambda: self.createFrame.place_forget())
+        backButton.place(relx = 0.86, rely = 0.05, anchor = "ne")
 
         ctk.CTkLabel(self.createFrame, text = "First Name", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.2, anchor = "nw")
         self.first_name_entry = ctk.CTkEntry(self.createFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 300, height = 45)
@@ -263,7 +263,7 @@ class StartMenu(ctk.CTkFrame):
 
         if not self.first_name or not self.last_name or not self.dob or not self.selectedCountry:
             self.nextButton.configure(state = "disabled")
-            error = CTkMessagebox(title = "Error", message = "Please fill in all the fields", icon = "cancel")
+            CTkMessagebox(title = "Error", message = "Please fill in all the fields", icon = "cancel")
             self.nextButton.configure(state = "normal")
             return
         
@@ -271,11 +271,63 @@ class StartMenu(ctk.CTkFrame):
             self.dob = datetime.datetime.strptime(self.dob, "%Y-%m-%d").date()
         except ValueError:
             self.nextButton.configure(state = "disabled")
-            error = CTkMessagebox(title = "Error", message = "Date of birth must be in the format YYYY-MM-DD", icon = "cancel")
+            CTkMessagebox(title = "Error", message = "Date of birth must be in the format YYYY-MM-DD", icon = "cancel")
             self.nextButton.configure(state = "normal")
             return
         
-        self.chooseTeam()
+        self.selectLeagues()
+        
+    def selectLeagues(self):
+
+        try:
+            with open("data/leagues.json", "r") as file:
+                self.leaguesJson = json.load(file)
+        except FileNotFoundError:
+            self.leaguesJson = {}
+
+        self.loadedLeagues = {}
+        for league in self.leaguesJson:
+            if not league["league_above"]:
+                self.loadedLeagues[league["name"]] = 1
+            else:
+                self.loadedLeagues[league["name"]] = 0
+
+        self.chooseLeaguesFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, height = 600, width = 1150, corner_radius = 15, border_width = 2, border_color = APP_BLUE)
+        self.chooseLeaguesFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        ctk.CTkLabel(self.chooseLeaguesFrame, text = "Choose leagues", font = (APP_FONT_BOLD, 35), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.1, anchor = "w")
+        ctk.CTkLabel(self.chooseLeaguesFrame, text = "Any league you do not choose will be unplayable and unsimulated.\n You can only change the loaded leagues at every new season. \nLoad less leagues for better game performance.", font = (APP_FONT, 15), bg_color = TKINTER_BACKGROUND).place(relx = 0.97, rely = 0.1, anchor = "e")
+
+        self.doneLeaguesbutton = ctk.CTkButton(self.chooseLeaguesFrame, text = "Teams >", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 150, height = 45, command = lambda: self.checkLeagues())
+        self.doneLeaguesbutton.place(relx = 0.98, rely = 0.98, anchor = "se")
+
+        backButton = ctk.CTkButton(self.chooseLeaguesFrame, text = "< Manager", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 150, height = 45, hover_color = CLOSE_RED, command = lambda: self.chooseLeaguesFrame.place_forget())
+        backButton.place(relx = 0.84, rely = 0.98, anchor = "se")
+
+        leagueFrameWidth = 135
+        leagueFrameHeight = 400
+        gap = leagueFrameWidth / 1150 + 0.005
+
+        for i, planetName in enumerate(PLANETS):
+            frame = ctk.CTkFrame(self.chooseLeaguesFrame, fg_color = GREY_BACKGROUND, height = leagueFrameHeight, width = leagueFrameWidth, corner_radius = 10)
+            frame.place(relx = 0.012 + gap * i, rely = 0.2, anchor = "nw")
+            frame.checkBoxes = {}
+
+            ctk.CTkLabel(frame, text = planetName, font = (APP_FONT_BOLD, 15), bg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.02, anchor = "n")
+
+            leagues = self.leaguesJson[(i * 4):(i * 4) + 4]
+            gap2 = 0.08
+            for j, league in enumerate(leagues):
+                leagueCheck = ctk.CTkCheckBox(frame, text = "", fg_color = GREY_BACKGROUND, checkbox_height = 20, checkbox_width = 20, border_width = 1, border_color = "white", corner_radius = 0)
+                leagueCheck.place(relx = 0.05, rely = 0.15 + gap2 * j, anchor = "w")
+                frame.checkBoxes[league["name"]] = leagueCheck
+
+                ctk.CTkLabel(frame, text = league["name"], font = (APP_FONT, 11), bg_color = GREY_BACKGROUND).place(relx = 0.25, rely = 0.15 + gap2 * j, anchor = "w")
+
+
+    def checkLeagues(self):
+        # self.chooseTeam()
+        pass
     
     def chooseTeam(self):
 
@@ -290,11 +342,11 @@ class StartMenu(ctk.CTkFrame):
 
         ctk.CTkLabel(self.chooseTeamFrame, text = "Choose a team", font = (APP_FONT_BOLD, 35), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.08, anchor = "nw")
 
-        self.doneButton = ctk.CTkButton(self.chooseTeamFrame, text = "Done", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 45, command = lambda: self.finishCreateManager())
+        self.doneButton = ctk.CTkButton(self.chooseTeamFrame, text = "Finish", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 45, command = lambda: self.finishCreateManager())
         self.doneButton.place(relx = 0.94, rely = 0.075, anchor = "center")
 
-        self.backButton = ctk.CTkButton(self.chooseTeamFrame, text = "Back", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 45, hover_color = CLOSE_RED, command = lambda: self.chooseTeamFrame.place_forget())
-        self.backButton.place(relx = 0.94, rely = 0.165, anchor = "center")
+        backButton = ctk.CTkButton(self.chooseTeamFrame, text = "< Leagues", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 45, hover_color = CLOSE_RED, command = lambda: self.chooseTeamFrame.place_forget())
+        backButton.place(relx = 0.94, rely = 0.165, anchor = "center")
 
         self.teamInfoFrame = ctk.CTkFrame(self.chooseTeamFrame, fg_color = GREY_BACKGROUND, height = 100, width = 570, corner_radius = 15)
         self.teamInfoFrame.place(relx = 0.63, rely = 0.12, anchor = "center")
@@ -343,7 +395,6 @@ class StartMenu(ctk.CTkFrame):
         self.last_selected_team = button
 
         # Calculate the expected finish
-        strength = team["strength"]
         teamStrengths = [(t["name"], t["strength"]) for t in self.teamsJson]
         expectedFinish = expected_finish(team["name"], teamStrengths)
         suffix = getSuffix(expectedFinish)
@@ -356,7 +407,7 @@ class StartMenu(ctk.CTkFrame):
         
         if not self.selectedTeam:
             self.doneButton.configure(state = "disabled")
-            error = CTkMessagebox(title = "Error", message = "Please select a team", icon = "cancel")
+            CTkMessagebox(title = "Error", message = "Please select a team", icon = "cancel")
             self.doneButton.configure(state = "normal")
             return
         

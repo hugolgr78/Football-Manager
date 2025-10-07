@@ -108,8 +108,10 @@ class Search(ctk.CTkFrame):
 
                     onClickCommand = self.openLeagueProfile
                 case "referee":
+                    league = League.get_league_by_id(resultData.league_id)
                     ctk.CTkLabel(resultFrame, text = f"{resultData.first_name} {resultData.last_name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = firstDataX, rely = 0.5, anchor = "w")
                     ctk.CTkLabel(resultFrame, text = "Referee", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
+                    ctk.CTkLabel(resultFrame, text = league.name, font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = thirdDataX, rely = 0.5, anchor = "w")
 
                     onClickCommand = self.openRefereeProfile
                 case "match":

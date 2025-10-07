@@ -7,6 +7,7 @@ import io
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 from utils.matchProfileLink import MatchProfileLink
+from utils.leagueLogo import LeagueLogo
 
 class RefereeProfile(ctk.CTkFrame):
     def __init__(self, parent, referee, changeBackFunction = None):
@@ -100,6 +101,11 @@ class Profile(ctk.CTkFrame):
 
         statsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 750, height = 300, corner_radius = 15)
         statsFrame.place(relx = 0.5, rely = 0.7, anchor = "center")
+
+        league = League.get_league_by_id(self.referee.league_id)
+        leagueLogo = Image.open(io.BytesIO(league.logo))
+        leagueLogo.thumbnail((200, 200))
+        self.leagueLogo = LeagueLogo(self, leagueLogo, league, TKINTER_BACKGROUND, 0.83, 0.22, "center", self.parentTab)
 
         gamesRefereed = Matches.get_all_played_referee_matches(self.referee.id)
 

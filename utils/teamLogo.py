@@ -2,7 +2,6 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
-from PIL import Image
 
 class TeamLogo(ctk.CTkImage):
     def __init__(self, parent, image, team, fg_color, relx, rely, anchor, tab):

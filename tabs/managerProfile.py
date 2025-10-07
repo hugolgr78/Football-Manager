@@ -22,7 +22,12 @@ class ManagerProfile(ctk.CTkFrame):
             self.manager_id = manager_id
 
         self.manager = Managers.get_manager_by_id(self.manager_id)
-        self.team = Teams.get_teams_by_manager(self.manager_id)[0]
+        team = Teams.get_teams_by_manager(self.manager_id)
+
+        if team:
+            self.team = team[0]
+        else:
+            self.team = None
 
         self.profile = Profile(self, self.manager_id)
         self.history = None
@@ -111,9 +116,10 @@ class Profile(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text = f"{self.parent.manager.age} years old / {self.parent.manager.date_of_birth}", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.3, rely = 0.3, anchor = "w")
 
-        teamLogo = Image.open(io.BytesIO(self.parent.team.logo))
-        teamLogo.thumbnail((200, 200))
-        self.teamLogo = TeamLogo(self, teamLogo, self.parent.team, TKINTER_BACKGROUND, 0.83, 0.22, "center", self.parentTab)
+        if self.parent.team:
+            teamLogo = Image.open(io.BytesIO(self.parent.team.logo))
+            teamLogo.thumbnail((200, 200))
+            self.teamLogo = TeamLogo(self, teamLogo, self.parent.team, TKINTER_BACKGROUND, 0.83, 0.22, "center", self.parentTab)
 
         canvas = ctk.CTkCanvas(self, width = 1000, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = 0.5, rely = 0.4, anchor = "center")

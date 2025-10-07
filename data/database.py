@@ -214,17 +214,18 @@ class Managers(Base):
             session.commit()
 
             updateProgress(1)
-            nameas_id_mapping = Teams.add_teams(chosenTeam, userManagerID)
-            updateProgress(2)
-            Players.add_players(flags)
+            names_id_mapping = Teams.add_teams(chosenTeam, userManagerID)
             updateProgress(3)
             League.add_leagues()
 
             leagues = League.get_all_leagues()
-            LeagueTeams.add_league_teams(nameas_id_mapping, leagues)
+            LeagueTeams.add_league_teams(names_id_mapping, leagues)
             updateProgress(4)
             Referees.add_referees(leagues, flags)
             Matches.add_all_matches(leagues)
+
+            updateProgress(2)
+            Players.add_players(flags)
 
             updateProgress(5)
             Emails.add_emails(userManagerID)
@@ -592,6 +593,10 @@ class Players(Base):
         players_dict = []
         try:
             for team in teams:
+                league_ID = LeagueTeams.get_league_by_team(team.id).league_id
+                league_depth = League.calculate_league_depth(league_ID)
+                min_CA_level = 150 - (league_depth * 50) 
+
                 team_players = []
                 team_id = team.id
 
@@ -638,7 +643,7 @@ class Players(Base):
                         if specific_pos not in new_player_positions:
                             new_player_positions[0] = specific_pos
 
-                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength)
+                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, min_level = min_CA_level)
                         playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
 
                         team_players.append({
@@ -673,7 +678,7 @@ class Players(Base):
                                                     weights=position_weights[:min(len(specific_pos_list), 4)])[0]
                         new_player_positions = random.sample(specific_pos_list, k=num_positions)
 
-                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength)
+                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, min_level = min_CA_level)
                         playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
 
                         team_players.append({
@@ -2731,6 +2736,7 @@ class MatchStats(Base):
             return team_total
         finally:
             session.close()
+
 class League(Base):
     __tablename__ = 'leagues'
     
@@ -2741,6 +2747,8 @@ class League(Base):
     current_matchday = Column(Integer, nullable = False, default = 1) # the matchday stored has not yet been simulated (once one is, this value is incremented)
     promotion = Column(Integer, nullable = False)
     relegation = Column(Integer, nullable = False)
+    league_above = Column(String(256))
+    league_below = Column(String(256))
 
     @classmethod
     def add_leagues(cls):
@@ -2750,21 +2758,33 @@ class League(Base):
                 data = json.load(file)
 
             leagues_dict = []
+            league_ids = {}
 
             for league in data:
 
                 with open(league["logo"], 'rb') as file:
                     logo = file.read()
 
+                leagueID = str(uuid.uuid4())
+                league_ids[league["name"]] = leagueID
+
                 leagues_dict.append({
-                    "id": str(uuid.uuid4()),
+                    "id": leagueID,
                     "name": league["name"],
                     "year": 2024,
                     "logo": logo,
                     "promotion": league["promotion"],
                     "relegation": league["relegation"],
                 })
-                updateProgress(None)
+
+            # Populate the league above and below with the corresponding ids
+            for league_entry, league_json in zip(leagues_dict, data):
+                if league_json.get("league_above"):
+                    league_entry["league_above"] = league_ids.get(league_json["league_above"])
+                if league_json.get("league_below"):
+                    league_entry["league_below"] = league_ids.get(league_json["league_below"])
+                
+            updateProgress(None)
 
             session.bulk_insert_mappings(League, leagues_dict)
             session.commit()
@@ -2850,7 +2870,22 @@ class League(Base):
             return None
         finally:
             session.close()
+    
+    @classmethod
+    def calculate_league_depth(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            depth = 0
+            league = session.query(League).filter(League.id == league_id).first()
+            
+            while league and league.league_above:
+                depth += 1
+                league = session.query(League).filter(League.id == league.league_above).first()
 
+            return depth
+        finally:
+            session.close()
+            
 class LeagueTeams(Base):
     __tablename__ = 'league_teams'
     

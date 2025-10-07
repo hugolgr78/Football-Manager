@@ -823,11 +823,16 @@ for league, divisions in league_names.items():
         promotion = 0 if i == 0 else 3
         relegation = 0 if i == 3 else 3
 
+        league_above = divisions[i - 1] if i - 1 >= 0 else None
+        league_below = divisions[i + 1] if i + 1 < len(divisions) else None
+
         league_entry = {
             "name": division,
             "logo": league_logo_path,  # just take the first division logo
             "promotion": promotion,
-            "relegation": relegation
+            "relegation": relegation,
+            "league_above": league_above,
+            "league_below": league_below
         }
         leagues_json.append(league_entry)
 

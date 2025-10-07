@@ -3,192 +3,256 @@
         "name": "Cryonese Primera",
         "logo": "Images/Leagues\\Cryonese_Primera.png",
         "promotion": 0,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": null,
+        "league_below": "Cryonese Segunda"
     },
     {
         "name": "Cryonese Segunda",
         "logo": "Images/Leagues\\Cryonese_Primera.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Cryonese Primera",
+        "league_below": "Cryonese Tercera"
     },
     {
         "name": "Cryonese Tercera",
         "logo": "Images/Leagues\\Cryonese_Primera.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Cryonese Segunda",
+        "league_below": "Cryonese Cuarta"
     },
     {
         "name": "Cryonese Cuarta",
         "logo": "Images/Leagues\\Cryonese_Primera.png",
         "promotion": 3,
-        "relegation": 0
+        "relegation": 0,
+        "league_above": "Cryonese Tercera",
+        "league_below": null
     },
     {
         "name": "Vorlis Liga",
         "logo": "Images/Leagues\\Vorlis_Liga.png",
         "promotion": 0,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": null,
+        "league_below": "Vorlis National"
     },
     {
         "name": "Vorlis National",
         "logo": "Images/Leagues\\Vorlis_Liga.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Vorlis Liga",
+        "league_below": "Vorlis Continental"
     },
     {
         "name": "Vorlis Continental",
         "logo": "Images/Leagues\\Vorlis_Liga.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Vorlis National",
+        "league_below": "Vorlis Regional"
     },
     {
         "name": "Vorlis Regional",
         "logo": "Images/Leagues\\Vorlis_Liga.png",
         "promotion": 3,
-        "relegation": 0
+        "relegation": 0,
+        "league_above": "Vorlis Continental",
+        "league_below": null
     },
     {
         "name": "Zephyra Pro",
         "logo": "Images/Leagues\\Zephyra_Pro.png",
         "promotion": 0,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": null,
+        "league_below": "Zephyra Challenge"
     },
     {
         "name": "Zephyra Challenge",
         "logo": "Images/Leagues\\Zephyra_Pro.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Zephyra Pro",
+        "league_below": "Zephyra Series"
     },
     {
         "name": "Zephyra Series",
         "logo": "Images/Leagues\\Zephyra_Pro.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Zephyra Challenge",
+        "league_below": "Zephyra B"
     },
     {
         "name": "Zephyra B",
         "logo": "Images/Leagues\\Zephyra_Pro.png",
         "promotion": 3,
-        "relegation": 0
+        "relegation": 0,
+        "league_above": "Zephyra Series",
+        "league_below": null
     },
     {
         "name": "Tauron Premier",
         "logo": "Images/Leagues\\Tauron_Premier.png",
         "promotion": 0,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": null,
+        "league_below": "Tauron Elite"
     },
     {
         "name": "Tauron Elite",
         "logo": "Images/Leagues\\Tauron_Premier.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Tauron Premier",
+        "league_below": "Tauron Division 2"
     },
     {
         "name": "Tauron Division 2",
         "logo": "Images/Leagues\\Tauron_Premier.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Tauron Elite",
+        "league_below": "Tauron Division 3"
     },
     {
         "name": "Tauron Division 3",
         "logo": "Images/Leagues\\Tauron_Premier.png",
         "promotion": 3,
-        "relegation": 0
+        "relegation": 0,
+        "league_above": "Tauron Division 2",
+        "league_below": null
     },
     {
         "name": "Nerathoul",
         "logo": "Images/Leagues\\Nerathoul.png",
         "promotion": 0,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": null,
+        "league_below": "Nerathoul Prime"
     },
     {
         "name": "Nerathoul Prime",
         "logo": "Images/Leagues\\Nerathoul.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Nerathoul",
+        "league_below": "Nerathoul Ascend"
     },
     {
         "name": "Nerathoul Ascend",
         "logo": "Images/Leagues\\Nerathoul.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Nerathoul Prime",
+        "league_below": "Nerathoul Minor"
     },
     {
         "name": "Nerathoul Minor",
         "logo": "Images/Leagues\\Nerathoul.png",
         "promotion": 3,
-        "relegation": 0
+        "relegation": 0,
+        "league_above": "Nerathoul Ascend",
+        "league_below": null
     },
     {
         "name": "Ecliptus",
         "logo": "Images/Leagues\\Ecliptus.png",
         "promotion": 0,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": null,
+        "league_below": "Ecliptus B"
     },
     {
         "name": "Ecliptus B",
         "logo": "Images/Leagues\\Ecliptus.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Ecliptus",
+        "league_below": "Ecliptus C"
     },
     {
         "name": "Ecliptus C",
         "logo": "Images/Leagues\\Ecliptus.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Ecliptus B",
+        "league_below": "Ecliptus D"
     },
     {
         "name": "Ecliptus D",
         "logo": "Images/Leagues\\Ecliptus.png",
         "promotion": 3,
-        "relegation": 0
+        "relegation": 0,
+        "league_above": "Ecliptus C",
+        "league_below": null
     },
     {
         "name": "Lyraxis",
         "logo": "Images/Leagues\\Lyraxis.png",
         "promotion": 0,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": null,
+        "league_below": "Lyraxis Nova"
     },
     {
         "name": "Lyraxis Nova",
         "logo": "Images/Leagues\\Lyraxis.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Lyraxis",
+        "league_below": "Lyraxis Minor"
     },
     {
         "name": "Lyraxis Minor",
         "logo": "Images/Leagues\\Lyraxis.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Lyraxis Nova",
+        "league_below": "Lyraxis Rising"
     },
     {
         "name": "Lyraxis Rising",
         "logo": "Images/Leagues\\Lyraxis.png",
         "promotion": 3,
-        "relegation": 0
+        "relegation": 0,
+        "league_above": "Lyraxis Minor",
+        "league_below": null
     },
     {
         "name": "Solarion",
         "logo": "Images/Leagues\\Solarion.png",
         "promotion": 0,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": null,
+        "league_below": "Solarion 2"
     },
     {
         "name": "Solarion 2",
         "logo": "Images/Leagues\\Solarion.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Solarion",
+        "league_below": "Solarion 3"
     },
     {
         "name": "Solarion 3",
         "logo": "Images/Leagues\\Solarion.png",
         "promotion": 3,
-        "relegation": 3
+        "relegation": 3,
+        "league_above": "Solarion 2",
+        "league_below": "Solarion 4"
     },
     {
         "name": "Solarion 4",
         "logo": "Images/Leagues\\Solarion.png",
         "promotion": 3,
-        "relegation": 0
+        "relegation": 0,
+        "league_above": "Solarion 3",
+        "league_below": null
     }
 ]

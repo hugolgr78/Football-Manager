@@ -173,7 +173,7 @@ class Managers(Base):
 
             non_loaded = len([v for v in loadedLeagues.values() if v == 0])
             cls.total_steps = TOTAL_STEPS - non_loaded
-            
+
             faker = Faker()
             flags = {}
             for continent in COUNTRIES:
@@ -5539,12 +5539,15 @@ def searchResults(search, limit = SEARCH_LIMIT):
             "data": t,
             "sort_key": t.name or ""
         } for t in query_results['teams']]
-
-        league_results = [{
-            "type": "league",
-            "data": l,
-            "sort_key": l.name or ""
-        } for l in query_results['leagues']]
+        
+        league_results = []
+        for l in query_results['leagues']:
+            if l.loaded:
+                league_results.append({
+                    "type": "league",
+                    "data": l,
+                    "sort_key": l.name or ""
+                })
 
         referee_results = [{
             "type": "referee",

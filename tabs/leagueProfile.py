@@ -119,7 +119,7 @@ class Profile(ctk.CTkFrame):
 
         titleFrame = ctk.CTkFrame(self.statsFrame, fg_color = GREY_BACKGROUND, width = 310, height = 30, corner_radius = 15)
         titleFrame.pack(pady = 5, padx = 5)
-        ctk.CTkLabel(titleFrame, text = "Player Stats", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+        ctk.CTkLabel(titleFrame, text = "Player Stats", font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.55, anchor = "center")
 
         self.playerStatsFrame = ctk.CTkScrollableFrame(self.statsFrame, fg_color = GREY_BACKGROUND, width = 290, height = 400, corner_radius = 15)
         self.playerStatsFrame.pack(pady = 5, padx = 5)

@@ -1262,6 +1262,7 @@ class Matches(Base):
         session = DatabaseManager().get_session()
         try:
             matches_dict = []
+            links_dict = []
 
             for league in leagues:
 
@@ -1383,8 +1384,9 @@ class Matches(Base):
                     ]
 
                     assigned_referees = set()
+                    ids = []
 
-                    for (date, time_str) in playoff_dates:
+                    for i, (date, time_str) in enumerate(playoff_dates):
                         available_referees = [r for r in referees if r.id not in assigned_referees]
 
                         if not available_referees:
@@ -1399,8 +1401,10 @@ class Matches(Base):
                             datetime.datetime.strptime(time_str, "%H:%M").time()
                         )
 
+                        matchID = str(uuid.uuid4())
+                        ids.append(matchID)
                         matches_dict.append({
-                            "id": str(uuid.uuid4()),
+                            "id": matchID,
                             "league_id": league_id,
                             "home_id": None,
                             "away_id": None,
@@ -1409,8 +1413,13 @@ class Matches(Base):
                             "date": kickoff_datetime,
                         })
 
+                        if i == 2:
+                            links_dict.append((matchID, ids[0]))
+                            links_dict.append((matchID, ids[1]))
+
                 updateProgress(None)
 
+            LinkedMatches.batch_add_links(links_dict)
             session.bulk_insert_mappings(Matches, matches_dict)
             session.commit()
 
@@ -1763,6 +1772,34 @@ class Matches(Base):
                 func.date(Matches.date) == date.date()
             ).order_by(Matches.date.asc()).first()
             return match
+        finally:
+            session.close()
+
+class LinkedMatches(Base):
+    __tablename__ = 'linked_matches'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    next_match_id = Column(String(256), ForeignKey('matches.id'))
+    prev_match_id = Column(String(256), ForeignKey('matches.id'))
+
+    @classmethod
+    def batch_add_links(cls, links):
+        session = DatabaseManager().get_session()
+        try:
+            links_dict = [{
+                    "id": str(uuid.uuid4()),
+                    "next_match_id": link[0],
+                    "prev_match_id": link[1],
+                }
+                for link in links
+            ]
+
+            session.bulk_insert_mappings(LinkedMatches, links_dict)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.exception("Error in batch_add_links: %s", e)
+            raise e
         finally:
             session.close()
 

@@ -2973,6 +2973,17 @@ class League(Base):
             return depth
         finally:
             session.close()
+
+    @classmethod
+    def get_league_state(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            league = session.query(League).filter(League.id == league_id).first()
+            if league:
+                return league.loaded
+            return None
+        finally:
+            session.close()
             
 class LeagueTeams(Base):
     __tablename__ = 'league_teams'

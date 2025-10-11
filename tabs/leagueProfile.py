@@ -10,11 +10,12 @@ from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 
 class LeagueProfile(ctk.CTkFrame):
-    def __init__(self, parent, league_id = None, changeBackFunction = None):
+    def __init__(self, parent, league_id = None, changeBackFunction = None, userLeagueProfile = None):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
         self.changeBackFunction = changeBackFunction
+        self.userLeagueProfile = userLeagueProfile
 
         if not league_id:
             self.manager_id = Managers.get_all_user_managers()[0].id
@@ -26,6 +27,9 @@ class LeagueProfile(ctk.CTkFrame):
             self.league_id = league_id
             self.league = League.get_league_by_id(self.league_id)
             self.leagueTeams = LeagueTeams.get_teams_by_league(self.league_id)
+
+        self.leagueAbove = self.league.league_above is not None
+        self.leagueBelow = self.league.league_below is not None
 
         self.profile = Profile(self, self.league)
         self.matchdays = None
@@ -70,10 +74,6 @@ class LeagueProfile(ctk.CTkFrame):
         if self.changeBackFunction:
             backButton = ctk.CTkButton(self.tabsFrame, text = "Back", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, corner_radius = 5, height = self.buttonHeight - 10, width = 100, hover_color = CLOSE_RED, command = lambda: self.changeBackFunction())
             backButton.place(relx = 0.94, rely = 0, anchor = "ne")
-
-
-        self.leagueAbove = self.league.league_above is not None
-        self.leagueBelow = self.league.league_below is not None
 
         self.legendRows = 1
         self.legendRows += 2 if self.leagueAbove else 0
@@ -140,7 +140,6 @@ class LeagueProfile(ctk.CTkFrame):
 
             ctk.CTkLabel(self.legendFrame, text = "Relegation", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = row, column = 1, sticky = "w", padx = (8, 0), pady = (0, 2))
 
-
 class Profile(ctk.CTkFrame):
     def __init__(self, parent, league):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
@@ -178,7 +177,33 @@ class Profile(ctk.CTkFrame):
         self.playerStatsFrame = ctk.CTkScrollableFrame(self.statsFrame, fg_color = GREY_BACKGROUND, width = 290, height = 400, corner_radius = 15)
         self.playerStatsFrame.pack(pady = 5, padx = 5)
 
+        if self.parent.leagueAbove or self.parent.leagueBelow and League.get_league_state(self.league.league_below):
+            self.upLeagueButton = ctk.CTkButton(self, width = 50, height = 50, text = "⯅", text_color = "white", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND, command = lambda: self.loadleague(self.league.league_above))
+            self.upLeagueButton.place(relx = 0.963, rely = 0, anchor = "ne")
+
+            self.downLeagueButton = ctk.CTkButton(self, width = 50, height = 50, text = "⯆", text_color = "white", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND, command = lambda: self.loadleague(self.league.league_below))
+            self.downLeagueButton.place(relx = 0.963, rely = 0.09, anchor = "ne")
+
+            if not self.parent.leagueAbove:
+                self.upLeagueButton.configure(state = "disabled")
+
+            if not self.parent.leagueBelow or not League.get_league_state(self.league.league_below):
+                self.downLeagueButton.configure(state = "disabled")
+
         self.addStats()
+
+    def loadleague(self, league_id):
+
+        userTeam = Teams.get_teams_by_manager(Managers.get_all_user_managers()[0].id)[0]
+        userLeague = LeagueTeams.get_league_by_team(userTeam.id)
+
+        if userLeague.league_id == self.league.id:
+            userLeagueProfile = self.parent
+        else:
+            userLeagueProfile = self.parent.userLeagueProfile
+
+        profile = LeagueProfile(userLeagueProfile, league_id, self.parent.changeBackFunction, userLeagueProfile)
+        profile.place(relx = 0, rely = 0, anchor = "nw")
 
     def addStats(self):
         self.topScorers = MatchEvents.get_all_goals(self.league.id)

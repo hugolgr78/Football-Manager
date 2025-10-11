@@ -554,7 +554,7 @@ class StartMenu(ctk.CTkFrame):
         self.db_manager = DatabaseManager()
         self.db_manager.set_database(f"{self.first_name}{self.last_name}", create_tables = True)
         self.db_manager.start_copy()
-        self.chosenManagerID = Managers.add_managers(self.first_name, self.last_name, self.selectedCountry, self.dob, self.selectedTeam)
+        self.chosenManagerID = Managers.add_managers(self.first_name, self.last_name, self.selectedCountry, self.dob, self.selectedTeam, self.loadedLeagues)
 
         Game.add_game(self.chosenManagerID, self.first_name,self.last_name)
         self.parent.creatingManager = False

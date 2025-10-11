@@ -167,9 +167,13 @@ class Managers(Base):
     age = Column(Integer, nullable = False)
 
     @classmethod
-    def add_managers(cls, first_name = None, last_name = None, nationality = None, date_of_birth = None, chosenTeam = None):
+    def add_managers(cls, first_name, last_name, nationality, date_of_birth, chosenTeam, loadedLeagues):
         session = DatabaseManager().get_session()
         try:
+
+            non_loaded = len([v for v in loadedLeagues.values() if v == 0])
+            cls.total_steps = TOTAL_STEPS - non_loaded
+            
             faker = Faker()
             flags = {}
             for continent in COUNTRIES:
@@ -216,7 +220,7 @@ class Managers(Base):
             updateProgress(1)
             names_id_mapping = Teams.add_teams(chosenTeam, userManagerID)
             updateProgress(3)
-            League.add_leagues()
+            League.add_leagues(loadedLeagues)
 
             leagues = League.get_all_leagues()
             LeagueTeams.add_league_teams(names_id_mapping, leagues)
@@ -1260,6 +1264,10 @@ class Matches(Base):
             matches_dict = []
 
             for league in leagues:
+
+                if not league.loaded:
+                    continue
+
                 schedule = []
                 referees = Referees.get_all_referees_by_league(league.id)
                 team_ids = [t.team_id for t in LeagueTeams.get_teams_by_league(league.id)]
@@ -2749,9 +2757,10 @@ class League(Base):
     relegation = Column(Integer, nullable = False)
     league_above = Column(String(256))
     league_below = Column(String(256))
+    loaded = Column(Boolean, nullable = False)
 
     @classmethod
-    def add_leagues(cls):
+    def add_leagues(cls, loadedLeagues):
         session = DatabaseManager().get_session()
         try:
             with open("data/leagues.json", 'r') as file:
@@ -2775,6 +2784,7 @@ class League(Base):
                     "logo": logo,
                     "promotion": league["promotion"],
                     "relegation": league["relegation"],
+                    "loaded": loadedLeagues[league["name"]] == 1
                 })
 
             # Populate the league above and below with the corresponding ids
@@ -5382,7 +5392,7 @@ def updateProgress(textIndex):
     if textIndex:
         progressLabel.configure(text = textLabels[textIndex])
     else:
-        percentage = PROGRESS / TOTAL_STEPS * 100
+        percentage = PROGRESS / Managers.total_steps * 100
         progressBar.set(percentage)
 
         percentageLabel.configure(text = f"{round(percentage)}%")

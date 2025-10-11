@@ -1368,6 +1368,47 @@ class Matches(Base):
                             "matchday": i + 1,
                             "date": kickoff_datetime,
                         })
+                
+                # --- Playoffs ---
+                if league.league_above is not None:
+                    last_match_saturday, _ = matchdays_dates[-1]
+                    first_playoff_saturday = last_match_saturday + datetime.timedelta(weeks = 2)
+                    final_playoff_sunday = first_playoff_saturday + datetime.timedelta(days = 8)
+
+                    # Two semi-finals on the same Saturday, different times
+                    playoff_dates = [
+                        (first_playoff_saturday, "15:00"),  # Semi-final 1
+                        (first_playoff_saturday, "15:00"),  # Semi-final 2
+                        (final_playoff_sunday, "15:00"),    # Final
+                    ]
+
+                    assigned_referees = set()
+
+                    for (date, time_str) in playoff_dates:
+                        available_referees = [r for r in referees if r.id not in assigned_referees]
+
+                        if not available_referees:
+                            available_referees = referees
+                            assigned_referees.clear()
+
+                        referee = random.choice(available_referees)
+                        assigned_referees.add(referee.id)
+
+                        kickoff_datetime = datetime.datetime.combine(
+                            date,
+                            datetime.datetime.strptime(time_str, "%H:%M").time()
+                        )
+
+                        matches_dict.append({
+                            "id": str(uuid.uuid4()),
+                            "league_id": league_id,
+                            "home_id": None,
+                            "away_id": None,
+                            "referee_id": referee.id,
+                            "matchday": 39,
+                            "date": kickoff_datetime,
+                        })
+
                 updateProgress(None)
 
             session.bulk_insert_mappings(Matches, matches_dict)
@@ -5391,6 +5432,11 @@ def updateProgress(textIndex):
 
     if textIndex:
         progressLabel.configure(text = textLabels[textIndex])
+
+        if textIndex == 5:
+            progressBar.set(1)
+
+        percentageLabel.configure(text = "100%")
     else:
         percentage = PROGRESS / Managers.total_steps * 100
         progressBar.set(percentage)
@@ -5539,7 +5585,7 @@ def searchResults(search, limit = SEARCH_LIMIT):
             "data": t,
             "sort_key": t.name or ""
         } for t in query_results['teams']]
-        
+
         league_results = []
         for l in query_results['leagues']:
             if l.loaded:

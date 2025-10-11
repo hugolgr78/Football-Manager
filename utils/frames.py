@@ -964,7 +964,10 @@ class MatchdayFrame(ctk.CTkFrame):
         self.rely = rely
         self.anchor = anchor
         
-        ctk.CTkLabel(self, text = f"Matchday {self.matchdayNum}", fg_color = fgColor, font = (APP_FONT_BOLD, 30)).place(relx = 0.5, rely = 0.05, anchor = "center")
+        if self.matchdayNum != 39:
+            ctk.CTkLabel(self, text = f"Matchday {self.matchdayNum}", fg_color = fgColor, font = (APP_FONT_BOLD, 30)).place(relx = 0.5, rely = 0.05, anchor = "center")
+        else:
+            ctk.CTkLabel(self, text = f"Playoffs", fg_color = fgColor, font = (APP_FONT_BOLD, 30)).place(relx = 0.5, rely = 0.05, anchor = "center")
 
         startY = 0.17
         gap = 0.075
@@ -991,15 +994,32 @@ class MatchdayFrame(ctk.CTkFrame):
             homeTeam = Teams.get_team_by_id(match.home_id)
             awayTeam = Teams.get_team_by_id(match.away_id) 
 
-            homeSrc = Image.open(io.BytesIO(homeTeam.logo))
-            homeSrc.thumbnail((35, 35))
-            homeLogo = TeamLogo(self, homeSrc, homeTeam, fgColor, 0.4, startY + gap * index, "center", self.parentTab)
-            ctk.CTkLabel(self, text = homeTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
+            if homeTeam:
+                homeSrc = Image.open(io.BytesIO(homeTeam.logo))
+                homeSrc.thumbnail((35, 35))
+                TeamLogo(self, homeSrc, homeTeam, fgColor, 0.4, startY + gap * index, "center", self.parentTab)
+                ctk.CTkLabel(self, text = homeTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
+            else:
+                # PlayOffs
+                if i == 0:
+                    ctk.CTkLabel(self, text = "4th Place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
+                elif i == 1:
+                    ctk.CTkLabel(self, text = "5th Place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
+                else:
+                    ctk.CTkLabel(self, text = "4th / 5th place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
 
-            awaySrc = Image.open(io.BytesIO(awayTeam.logo))
-            awaySrc.thumbnail((35, 35))
-            awayLogo = TeamLogo(self, awaySrc, awayTeam, fgColor, 0.6, startY + gap * index, "center", self.parentTab)
-            ctk.CTkLabel(self, text = awayTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
+            if awayTeam:
+                awaySrc = Image.open(io.BytesIO(awayTeam.logo))
+                awaySrc.thumbnail((35, 35))
+                TeamLogo(self, awaySrc, awayTeam, fgColor, 0.6, startY + gap * index, "center", self.parentTab)
+                ctk.CTkLabel(self, text = awayTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
+            else:
+                if i == 0:
+                    ctk.CTkLabel(self, text = "6th Place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
+                elif i == 1:
+                    ctk.CTkLabel(self, text = "7th Place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
+                else:
+                    ctk.CTkLabel(self, text = "6th / 7th place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
 
             if Matches.check_game_played(match, Game.get_game_date(Managers.get_all_user_managers()[0].id)):
                 MatchProfileLink(self, match, f"{match.score_home} - {match.score_away}", "white", 0.5, startY + gap * index, "center", fgColor, self.parentTab, 20, APP_FONT_BOLD)

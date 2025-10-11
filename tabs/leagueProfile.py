@@ -240,7 +240,7 @@ class Matchdays(ctk.CTkFrame):
 
         self.frames = []
         self.activeFrame = self.currentMatchday - 1
-        self.numMacthdays = 38
+        self.numMatchdays = 38 if not self.league.league_above else 39
 
         self.buttonsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 980, height = 60, corner_radius = 15)
         self.buttonsFrame.place(relx = 0, rely = 0.98, anchor = "sw")
@@ -249,7 +249,7 @@ class Matchdays(ctk.CTkFrame):
         self.addButtons()
 
     def createFrames(self):
-        for i in range(self.numMacthdays):
+        for i in range(self.numMatchdays):
             if i == self.currentMatchday - 1:
                 matchday = Matches.get_matchday_for_league(self.league.id, self.currentMatchday)
                 frame = MatchdayFrame(self, matchday, self.currentMatchday, self.currentMatchday, self, self.parentTab, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
@@ -277,10 +277,10 @@ class Matchdays(ctk.CTkFrame):
     def changeFrame(self, direction):
         self.frames[self.activeFrame].place_forget()
 
-        if self.activeFrame + direction > self.numMacthdays - 1:
-            self.activeFrame = (direction - (self.numMacthdays - self.activeFrame))
+        if self.activeFrame + direction > self.numMatchdays - 1:
+            self.activeFrame = (direction - (self.numMatchdays - self.activeFrame))
         elif self.activeFrame + direction < 0:
-            self.activeFrame = self.numMacthdays - (abs(direction) - self.activeFrame)
+            self.activeFrame = self.numMatchdays - (abs(direction) - self.activeFrame)
         else:
             self.activeFrame += direction
 

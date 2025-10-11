@@ -1408,23 +1408,22 @@ class LeagueTable(ctk.CTkFrame):
         self.leagueData = League.get_league_by_id(self.league.league_id)
 
         self.highlightManaged = managingLeague
+        self.div1 = self.leagueData.league_above is None
 
     def addLeagueTable(self):
 
         teamsData = LeagueTeams.get_teams_by_position(self.league.league_id)
 
         for i, team in enumerate(teamsData):
-            teamName = Teams.get_team_by_id(team.team_id)
-            team_logo_blob = teamName.logo
-            team_image = Image.open(io.BytesIO(team_logo_blob))
+            teamData = Teams.get_team_by_id(team.team_id)
+            team_image = Image.open(io.BytesIO(teamData.logo))
             team_image.thumbnail((20, 20))
             ctk_team_image = ctk.CTkImage(team_image, None, (team_image.width, team_image.height))
 
-            if self.highlightManaged and self.team.name == teamName.name:    
+            if self.highlightManaged and self.team.name == teamData.name:    
                 font = (APP_FONT_BOLD, 12)
             else:
                 font = (APP_FONT, 12)
-
             
             if self.small:
                 ctk.CTkLabel(self, text = team.goals_scored - team.goals_conceded, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 4)
@@ -1432,20 +1431,22 @@ class LeagueTable(ctk.CTkFrame):
 
                 ctk.CTkLabel(self, text = i + 1, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 0, sticky = "e")
                 ctk.CTkLabel(self, image = ctk_team_image, text = "", fg_color = self.fgColor).grid(row = i + 1, column = 1)
-                ctk.CTkLabel(self, text = teamName.name, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 2, sticky = "w")
+                ctk.CTkLabel(self, text = teamData.name, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 2, sticky = "w")
                 ctk.CTkLabel(self, text = team.games_won + team.games_lost + team.games_drawn, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 3)
             else:
-
                 if i < self.leagueData.promotion:
                     canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0)
                 elif i + 1 > 20 - self.leagueData.relegation:
                     canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = PIE_RED, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0)
+                elif not self.div1 and i in [3, 4, 5, 6]:
+                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
+                    canvas.grid(row = i + 1, column = 0)
 
                 ctk.CTkLabel(self, text = i + 1, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 1, sticky = "w")
                 ctk.CTkLabel(self, image = ctk_team_image, text = "", fg_color = self.fgColor).grid(row = i + 1, column = 2, sticky = "w")
-                ctk.CTkLabel(self, text = teamName.name, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 3, sticky = "w")
+                ctk.CTkLabel(self, text = teamData.name, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 3, sticky = "w")
                 
                 ctk.CTkLabel(self, text = team.games_won + team.games_lost + team.games_drawn, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 4)
                 ctk.CTkLabel(self, text = team.games_won, fg_color = self.fgColor, text_color = self.textColor, height = 5, font = font).grid(row = i + 1, column = 5)

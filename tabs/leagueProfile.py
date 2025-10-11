@@ -69,7 +69,31 @@ class LeagueProfile(ctk.CTkFrame):
 
         if self.changeBackFunction:
             backButton = ctk.CTkButton(self.tabsFrame, text = "Back", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, corner_radius = 5, height = self.buttonHeight - 10, width = 100, hover_color = CLOSE_RED, command = lambda: self.changeBackFunction())
-            backButton.place(relx = 0.975, rely = 0, anchor = "ne")
+            backButton.place(relx = 0.94, rely = 0, anchor = "ne")
+
+
+        self.leagueAbove = self.league.league_above is not None
+        self.leagueBelow = self.league.league_below is not None
+
+        self.legendRows = 1
+        self.legendRows += 2 if self.leagueAbove else 0
+        self.legendRows += 1 if self.leagueBelow else 0
+
+        self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 30 * self.legendRows, corner_radius = 0, background_corner_colors = [TKINTER_BACKGROUND, TKINTER_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND])
+
+        src = Image.open("Images/information.png")
+        src.thumbnail((20, 20))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        self.helpButton = ctk.CTkButton(self.tabsFrame, text = "", image = img, fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, corner_radius = 5, height = 30, width = 30)
+        self.helpButton.place(relx = 0.975, rely = 0, anchor = "ne")
+        self.helpButton.bind("<Enter>", lambda e: self.showLegend(e))
+        self.helpButton.bind("<Leave>", lambda e: self.legendFrame.place_forget())
+
+        self.legend()
+
+    def showLegend(self, event):
+        self.legendFrame.place(relx = 0.975, rely = 0.1, anchor = "ne")
+        self.legendFrame.lift()
 
     def canvas(self, width, height, relx):
         canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
@@ -86,6 +110,36 @@ class LeagueProfile(ctk.CTkFrame):
             self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.league)
 
         self.tabs[self.activeButton].pack()
+
+    def legend(self):
+
+        self.legendFrame.grid_rowconfigure(tuple(range(self.legendRows)), weight = 0)
+        self.legendFrame.grid_columnconfigure((0), weight = 0)
+        self.legendFrame.grid_columnconfigure((1), weight = 1)
+        self.legendFrame.grid_propagate(False)
+
+        ctk.CTkLabel(self.legendFrame, text = "Legend", font = (APP_FONT_BOLD, 18), fg_color = GREY_BACKGROUND).grid(row = 0, column = 0, columnspan = 2, pady = (5, 0))
+
+        row = 1
+        if self.leagueAbove:
+            canvas = ctk.CTkCanvas(self.legendFrame, width = 5, height = 200 / 14.74, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
+            canvas.grid(row = row, column = 0, sticky = "w", padx = (8, 0), pady = (0, 2))
+
+            ctk.CTkLabel(self.legendFrame, text = "Promotion", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = row, column = 1, sticky = "w", padx = (8, 0), pady = (0, 2))
+
+            row += 1
+            canvas = ctk.CTkCanvas(self.legendFrame, width = 5, height = 200 / 14.74, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
+            canvas.grid(row = row, column = 0, sticky = "w", padx = (8, 0), pady = (0, 2))
+
+            ctk.CTkLabel(self.legendFrame, text = "Playoffs", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = row, column = 1, sticky = "w", padx = (8, 0), pady = (0, 2))
+            row += 1
+        
+        if self.leagueBelow:
+            canvas = ctk.CTkCanvas(self.legendFrame, width = 5, height = 200 / 14.74, bg = PIE_RED, bd = 0, highlightthickness = 0)
+            canvas.grid(row = row, column = 0, sticky = "w", padx = (8, 0), pady = (0, 2))
+
+            ctk.CTkLabel(self.legendFrame, text = "Relegation", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = row, column = 1, sticky = "w", padx = (8, 0), pady = (0, 2))
+
 
 class Profile(ctk.CTkFrame):
     def __init__(self, parent, league):

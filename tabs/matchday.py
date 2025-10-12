@@ -929,8 +929,6 @@ class MatchDay(ctk.CTkFrame):
                     matchInstance.appendScore(1, True if side == "home" else False)
                 else:
                     goalType = "penalty_miss"
-            elif goalType == "own_goal":
-                matchInstance.appendScore(1, False if side == "home" else True)
             else:
                 matchInstance.appendScore(1, True if side == "home" else False)
             

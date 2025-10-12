@@ -310,8 +310,6 @@ class Match():
                     self.appendScore(1, True if side == "home" else False)
                 else:
                     goalType = "penalty_miss"
-            elif goalType == "own_goal":
-                self.appendScore(1, False if side == "home" else True)
             else:
                 self.appendScore(1, True if side == "home" else False)
 
@@ -964,7 +962,7 @@ class Match():
                 lockfile = shared_copy_path + ".write.lock"
                 lock_fd = None
                 acquired_lock = False
-                max_attempts = 200  # allow longer waits if many workers
+                max_attempts = 1000  # allow longer waits if many workers
                 for attempt_lock in range(max_attempts):
                     try:
                         # atomic create

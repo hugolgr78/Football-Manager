@@ -352,7 +352,7 @@ class MainMenu(ctk.CTkFrame):
                     for event in events:
                         events_to_update.append(event.id)
                         if event.event_type == "Team Building":
-                            update_dict_values(playerMorales, 20, 0, 100)
+                            update_dict_values(playerMorales, 10, 0, 100)
                         elif event.event_type in EVENT_CHANGES.keys():
                             fitness, sharpness = EVENT_CHANGES[event.event_type]
                             update_fitness_dict_values(playerFitnesses, fitness, 0, 100)

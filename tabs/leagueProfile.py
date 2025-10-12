@@ -193,17 +193,9 @@ class Profile(ctk.CTkFrame):
         self.addStats()
 
     def loadleague(self, league_id):
-
-        userTeam = Teams.get_teams_by_manager(Managers.get_all_user_managers()[0].id)[0]
-        userLeague = LeagueTeams.get_league_by_team(userTeam.id)
-
-        if userLeague.league_id == self.league.id:
-            userLeagueProfile = self.parent
-        else:
-            userLeagueProfile = self.parent.userLeagueProfile
-
-        profile = LeagueProfile(userLeagueProfile, league_id, self.parent.changeBackFunction, userLeagueProfile)
+        profile = LeagueProfile(self.parent, league_id, getattr(self.parent, 'changeBackFunction', None), getattr(self.parent, 'userLeagueProfile', None))
         profile.place(relx = 0, rely = 0, anchor = "nw")
+        append_overlapping_profile(self.parent, profile)
 
     def addStats(self):
         self.topScorers = MatchEvents.get_all_goals(self.league.id)

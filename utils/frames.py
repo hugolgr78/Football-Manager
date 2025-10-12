@@ -2831,7 +2831,8 @@ class PlayerMatchFrame(ctk.CTkFrame):
 
         self.profile = MatchProfile(self.parentTab, self.game, self.parentTab, changeBackFunction = self.changeBack)
         self.profile.place(x = 0, y = 0, anchor = "nw")
-        self.parentTab.parent.overlappingProfiles.append(self.profile)
+        from utils.util_functions import append_overlapping_profile
+        append_overlapping_profile(self.parentTab, self.profile)
 
     def changeBack(self):
         self.profile.place_forget()

@@ -2,6 +2,7 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
+from utils.util_functions import append_overlapping_profile
 
 class RefereeProfileLabel(ctk.CTkFrame):
     def __init__(self, parent, referee, referee_name, prefix_text, suffix_text, width, height, tab, textColor = "white", fg_color = TKINTER_BACKGROUND, fontSize = 20):
@@ -63,8 +64,7 @@ class RefereeProfileLink(ctk.CTkLabel):
 
         self.profile = RefereeProfile(self.tab, self.referee, self.changeBack)
         self.profile.place(x = 0, y = 0, anchor = "nw")
-
-        self.tab.parent.overlappingProfiles.append(self.profile)
+        append_overlapping_profile(self.tab, self.profile)
 
     def changeBack(self):
         self.profile.place_forget()

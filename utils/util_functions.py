@@ -10,6 +10,50 @@ def get_objective_for_level(teamAverages, teamID):
         if min_rank <= teamRank <= max_rank:
             return objective
 
+
+def append_overlapping_profile(start, profile):
+    """Safely append a profile frame to the nearest overlappingProfiles container.
+
+    Walks up common parent attributes (parent, parentTab) looking for an
+    object with an 'overlappingProfiles' list. If none is found, creates the
+    list on the top-most parent and appends there. This centralises the logic
+    so other modules don't have to repeat parent-walking code.
+    """
+    c = start
+    visited = set()
+    while c is not None and id(c) not in visited:
+        if hasattr(c, 'overlappingProfiles'):
+            try:
+                c.overlappingProfiles.append(profile)
+                return
+            except Exception:
+                break
+        visited.add(id(c))
+        c = getattr(c, 'parent', None) or getattr(c, 'parentTab', None)
+
+    # Not found: attach to the top-most parent
+    c = start
+    last = c
+    visited = set()
+    while c is not None and id(c) not in visited:
+        visited.add(id(c))
+        nextc = getattr(c, 'parent', None) or getattr(c, 'parentTab', None)
+        if not nextc:
+            break
+        last = nextc
+        c = nextc
+
+    try:
+        if not hasattr(last, 'overlappingProfiles'):
+            last.overlappingProfiles = []
+        last.overlappingProfiles.append(profile)
+        return
+    except Exception:
+        # Final fallback: attach to the original start object
+        if not hasattr(start, 'overlappingProfiles'):
+            start.overlappingProfiles = []
+        start.overlappingProfiles.append(profile)
+
 def generate_lower_div_objectives(min_level, max_level):
     range_size = (max_level - min_level) // 3
     return {

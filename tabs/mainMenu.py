@@ -212,34 +212,44 @@ class MainMenu(ctk.CTkFrame):
             matches = []
             matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
             if matchesToSim:
-                self._logger.info("Preparing to simulate %d matches", len(matchesToSim))
+                total_to_sim = len(matchesToSim)
+                self._logger.info("Preparing to simulate %d matches", total_to_sim)
                 self._logger.info("Starting match initialization")
 
-                self._logger.info("Starting parallel match simulation with %d workers", max(1, len(matchesToSim)))
+                # We limit concurrent worker count to a safe maximum (61).
+                CHUNK_SIZE = 61
+                total_batches = (total_to_sim + CHUNK_SIZE - 1) // CHUNK_SIZE
+
+                self._logger.info("Starting parallel match simulation in up to %d batches (chunk=%d)", total_batches, CHUNK_SIZE)
 
                 sim_start = time.perf_counter()
 
-                # Run in ProcessPoolExecutor
+                # Run batches sequentially to respect the maximum worker count
                 matches = []
-                with ProcessPoolExecutor(max_workers=len(matchesToSim)) as ex:
-                    # compute base name once (we're on the main process and DB is already set)
-                    mgr = Managers.get_manager_by_id(self.manager_id)
-                    base_name = f"{mgr.first_name}{mgr.last_name}"
-                    futures = [ex.submit(_simulate_match, g, base_name) for g in matchesToSim]
+                mgr = Managers.get_manager_by_id(self.manager_id)
+                base_name = f"{mgr.first_name}{mgr.last_name}"
 
-                    for fut in as_completed(futures):
-                        try:
-                            result = fut.result()
-                            matches.append(Matches.get_match_by_id(result["id"]))
-                            self._logger.info("Finished match %s with score %s", result["id"], result["score"])
-                        except Exception:
-                            self._logger.exception("Match worker raised an exception")
-                            traceback.print_exc()
+                for batch_index in range(0, total_to_sim, CHUNK_SIZE):
+                    batch = matchesToSim[batch_index:batch_index + CHUNK_SIZE]
+                    workers = min(len(batch), CHUNK_SIZE)
+                    batch_no = (batch_index // CHUNK_SIZE) + 1
+                    self._logger.info("Simulating batch %d/%d: %d matches with %d workers", batch_no, total_batches, len(batch), workers)
+
+                    with ProcessPoolExecutor(max_workers=workers) as ex:
+                        futures = [ex.submit(_simulate_match, g, base_name) for g in batch]
+
+                        for fut in as_completed(futures):
+                            try:
+                                result = fut.result()
+                                matches.append(Matches.get_match_by_id(result["id"]))
+                                self._logger.info("Finished match %s with score %s", result["id"], result["score"])
+                            except Exception:
+                                self._logger.exception("Match worker raised an exception")
+                                traceback.print_exc()
 
                 sim_end = time.perf_counter()
-
                 elapsed = sim_end - sim_start
-                self._logger.info("Match smulation completed in %.3f seconds for %d matches", elapsed, len(matchesToSim))
+                self._logger.info("Match simulation completed in %.3f seconds for %d matches", elapsed, total_to_sim)
 
             return matches
 
@@ -249,6 +259,11 @@ class MainMenu(ctk.CTkFrame):
         self.currDate = Game.get_game_date(self.manager_id)
         self._logger.debug("moveDate start - manager_id=%s currDate=%s", self.manager_id, self.currDate)
         teamIDs = [t.id for t in Teams.get_all_teams()]
+
+        leagues = League.get_all_leagues()
+        loaded_leagues = [league.id for league in leagues if league.loaded]
+        teamIDs = [t for t in teamIDs if LeagueTeams.get_league_by_team(t).league_id in loaded_leagues]
+        self._logger.debug("Filtered teamIDs to %d teams in loaded leagues", len(teamIDs))
 
         dates = []
         dates.append(Matches.get_team_next_match(self.team.id, self.currDate).date)
@@ -272,11 +287,13 @@ class MainMenu(ctk.CTkFrame):
             current_day += timedelta(days = 1)
 
         if createEvents:
-            team_list = list(teamIDs)
+            team_list = teamIDs.copy()
+            self._logger.info("Creating calendar events for %d teams", len(team_list))
             if not Settings.get_setting("events_delegated") and self.team.id in team_list:
                 team_list.remove(self.team.id)
 
             max_workers = len(team_list)
+            all_events_to_add = []
             with ThreadPoolExecutor(max_workers = max_workers) as ex:
                 self._logger.info("Preparing futures for creating calendar events (count=%d)", len(team_list))
                 futures = [ex.submit(create_events_for_other_teams, team_id, current_day, managing_team = team_id == self.team.id) for team_id in team_list]
@@ -284,10 +301,18 @@ class MainMenu(ctk.CTkFrame):
 
                 for fut in as_completed(futures):
                     try:
-                        fut.result()
-                        self._logger.info("Finished creating events for a team")
+                        events = fut.result()
+                        if events:
+                            all_events_to_add.extend(events)
+                        self._logger.info("Finished creating events for a team (returned %d events)", len(events) if events else 0)
                     except Exception:
                         self._logger.exception("Calendar events worker raised an exception")
+            try:
+                if all_events_to_add:
+                    CalendarEvents.batch_add_events(all_events_to_add)
+                    self._logger.info("Batch-added %d calendar events", len(all_events_to_add))
+            except Exception:
+                self._logger.exception("Failed to batch-add calendar events")
 
         self._logger.debug("Created/checked calendar events between %s and %s for %d teams", self.currDate, stopDate, len(teamIDs))
 
@@ -301,41 +326,102 @@ class MainMenu(ctk.CTkFrame):
 
         self._logger.info("Starting player attribute updates and event processing across %d intervals", len(intervals))
 
-        for teamID in teamIDs:
-            team_start = time.perf_counter()
-            injuredPlayers = PlayerBans.get_team_injured_player_ids(teamID)
-            playerFitnesses = {player.id: [player.fitness, True if player.id in injuredPlayers else False] for player in Players.get_all_players_by_team(teamID, youths = False)}
-            playerSharpnesses = {player.id: player.sharpness for player in Players.get_all_players_by_team(teamID, youths = False)}
-            playerMorales = {player.id: player.morale for player in Players.get_all_players_by_team(teamID, youths = False)}
+        def _process_team(teamID):
+            start_time = time.perf_counter()
+            try:
+                injuredPlayers = PlayerBans.get_team_injured_player_ids(teamID)
+                players = Players.get_all_players_by_team(teamID, youths=False)
 
-            for start, end in intervals:
-                timeInBetween = end - start
+                playerFitnesses = {player.id: [player.fitness, True if player.id in injuredPlayers else False] for player in players}
+                playerSharpnesses = {player.id: player.sharpness for player in players}
+                playerMorales = {player.id: player.morale for player in players}
 
-                eventsToUpdate = []
-                events = CalendarEvents.get_events_dates(teamID, start, end)
+                events_to_update = []
+                reduce_intervals = []
 
-                if len(events) == 0:
-                    self._logger.debug("No calendar events for team %s in interval %s - %s: updating sharpness/fitness", teamID, start, end)
-                    apply_attribute_changes(playerFitnesses, playerSharpnesses, timeInBetween)
-                    continue
+                for start, end in intervals:
+                    timeInBetween = end - start
 
-                for event in events:
-                    eventsToUpdate.append(event.id)
-                    self._logger.debug("Carrying out event %s for team %s", event.event_type, teamID)
-                    if event.event_type == "Team Building":
-                        update_dict_values(playerMorales, 20, 0, 100)
-                    elif event.event_type in EVENT_CHANGES.keys():
-                        fitness, sharpness = EVENT_CHANGES[event.event_type]
-                        update_fitness_dict_values(playerFitnesses, fitness, 0, 100)
-                        update_dict_values(playerSharpnesses, sharpness, 10, 100)
-                
-                PlayerBans.reduce_injuries_for_team(timeInBetween, stopDate, teamID)
-        
-            CalendarEvents.batch_update_events(eventsToUpdate)
-            Players.batch_update_player_stats(playerFitnesses, playerSharpnesses, playerMorales)
+                    events = CalendarEvents.get_events_dates(teamID, start, end)
 
-            team_elapsed = time.perf_counter() - team_start
-            self._logger.info("Finished processing team %s in %.3f seconds", teamID, team_elapsed)
+                    if len(events) == 0:
+                        # No events: update sharpness/fitness for the interval
+                        apply_attribute_changes(playerFitnesses, playerSharpnesses, timeInBetween)
+                        continue
+
+                    for event in events:
+                        events_to_update.append(event.id)
+                        if event.event_type == "Team Building":
+                            update_dict_values(playerMorales, 20, 0, 100)
+                        elif event.event_type in EVENT_CHANGES.keys():
+                            fitness, sharpness = EVENT_CHANGES[event.event_type]
+                            update_fitness_dict_values(playerFitnesses, fitness, 0, 100)
+                            update_dict_values(playerSharpnesses, sharpness, 10, 100)
+
+                    # Record interval to later reduce injuries for this team (DB write)
+                    reduce_intervals.append(timeInBetween)
+
+                elapsed = time.perf_counter() - start_time
+                self._logger.info("Finished preparing team %s in %.3f seconds", teamID, elapsed)
+
+                return {
+                    'team_id': teamID,
+                    'events': events_to_update,
+                    'fitness': playerFitnesses,
+                    'sharpness': playerSharpnesses,
+                    'morale': playerMorales,
+                    'reduce_intervals': reduce_intervals,
+                }
+            except Exception:
+                self._logger.exception("Error while processing team %s", teamID)
+                return {
+                    'team_id': teamID,
+                    'events': [],
+                    'fitness': {},
+                    'sharpness': {},
+                    'morale': {},
+                    'reduce_intervals': [],
+                }
+
+        # Run workers in a ThreadPoolExecutor (reads and in-memory computations)
+        combined_events = []
+        combined_fitness = {}
+        combined_sharpness = {}
+        combined_morale = {}
+        reduce_tasks = []
+
+        with ThreadPoolExecutor(max_workers = len(teamIDs)) as ex:
+            futures = {ex.submit(_process_team, tid): tid for tid in teamIDs}
+
+            for fut in as_completed(futures):
+                res = fut.result()
+                # aggregate events
+
+                combined_events.extend(res.get('events', []))
+                combined_fitness.update(res.get('fitness', {}))
+                combined_sharpness.update(res.get('sharpness', {}))
+                combined_morale.update(res.get('morale', {}))
+
+                # collect reduce intervals to call PlayerBans.reduce_injuries_for_team in main thread
+                if res.get('reduce_intervals'):
+                    reduce_tasks.append((res['team_id'], res['reduce_intervals']))
+
+        # After all workers finished, perform DB writes in main thread (timed)
+        try:
+            if combined_events:
+                unique_events = list(set(combined_events))
+                CalendarEvents.batch_update_events(unique_events)
+
+            if combined_fitness or combined_sharpness or combined_morale:
+                Players.batch_update_player_stats(combined_fitness, combined_sharpness, combined_morale)
+
+            try:
+                PlayerBans.batch_reduce_injuries(overallTimeInBetween, stopDate)
+                self._logger.info("Applied batch injury reductions via PlayerBans.batch_reduce_injuries")
+            except Exception:
+                self._logger.exception("Failed to apply batch injury reductions")
+        except Exception:
+            self._logger.exception("Error applying batch DB updates for teams")
 
         update_ages(self.currDate, stopDate)
         self._logger.debug("Updated player ages between %s and %s", self.currDate, stopDate)

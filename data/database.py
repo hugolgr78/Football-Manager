@@ -3754,6 +3754,27 @@ class PlayerBans(Base):
             session.close()
 
     @classmethod
+    def batch_reduce_injuries(cls, time, stopDate):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).filter(PlayerBans.ban_type == "injury").all()
+
+            for ban in bans:
+                if ban.injury <= stopDate:
+                    session.delete(ban)
+                else:
+                    ban.injury -= time
+
+            session.commit()
+
+            return bans
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def remove_ban(cls, ban_id):
         session = DatabaseManager().get_session()
         try:
@@ -6137,6 +6158,7 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
         current_date += timedelta(days=1)
 
     # === SECOND PASS: fill in gaps and insert ===
+    return_events = []
     for day, events in planned_events.items():
         days_left = (end_date.date() - day).days
         if weekly_usage["Recovery"] < 2 and days_left <= (2 - weekly_usage["Recovery"]):
@@ -6170,7 +6192,9 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
             )
 
         if len(eventsToAdd) != 0:
-            CalendarEvents.batch_add_events(eventsToAdd)
+            return_events.extend(eventsToAdd)
+
+    return return_events
 
 def teamStrength(playerIDs, role, playerOBJs):
     if not playerIDs:

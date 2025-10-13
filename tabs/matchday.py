@@ -2157,7 +2157,7 @@ class MatchDay(ctk.CTkFrame):
             if frame.matchInstance:
                 frame.matchInstance.saveData(auto = False)
 
-        self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away", auto = False)
+        self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away",)
 
         LeagueTeams.update_team_positions(self.league.id)
         Game.increment_game_date(Managers.get_all_user_managers()[0].id, timedelta(hours = 2))

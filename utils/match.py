@@ -921,10 +921,9 @@ class Match():
                 else:
                     teamMatch.awayLineupPitch.addPlayer(playerPosition, playerOn.last_name)
 
-    def saveData(self, managing_team = None, auto = True):
+    def saveData(self, managing_team = None):
 
         logger = logging.getLogger(__name__)
-        # prepare a match id prefix for all logs in this method
         prefix = f"[{getattr(self.match, 'id', None)}]:"
 
         try:
@@ -934,150 +933,46 @@ class Match():
             self.returnWinner()
             logger.debug(f"{prefix} Winner resolved: {self.winner.id if self.winner else None}")
 
-            logger.debug(f"{prefix} Reducing suspensions for home={self.homeTeam.id} away={self.awayTeam.id} league={self.match.league_id}")
-            PlayerBans.reduce_suspensions_for_team(self.homeTeam.id, self.match.league_id)
-            PlayerBans.reduce_suspensions_for_team(self.awayTeam.id, self.match.league_id)
-
-            homeManager = Managers.get_manager_by_id(self.homeTeam.manager_id)
-            awayManager = Managers.get_manager_by_id(self.awayTeam.manager_id)
+            # logger.debug(f"{prefix} Reducing suspensions for home={self.homeTeam.id} away={self.awayTeam.id} league={self.match.league_id}")
+            # PlayerBans.reduce_suspensions_for_team(self.homeTeam.id, self.match.league_id)
+            # PlayerBans.reduce_suspensions_for_team(self.awayTeam.id, self.match.league_id)
 
             # debug counts
             logger.debug(f"{prefix} Processed events counts: home={len(self.homeProcessedEvents)} away={len(self.awayProcessedEvents)}")
-
-            # If this is an automatic simulation run (worker/process), acquire the write lock
-            # and switch the DatabaseManager connection to a shared per-manager copy so all
-            # processes serialize writes. If this is a manual save (self.auto == False)
-            # we skip locking and connection switching and write directly to the current DB.
-            dbm = DatabaseManager()
-            if auto:
-                # Determine the shared per-manager copy filename (manager first+last)_copy.db
-                try:
-                    user_mgr = Managers.get_all_user_managers()[0]
-                    base_name_shared = f"{user_mgr.first_name}{user_mgr.last_name}"
-                    shared_copy_path = f"data/{base_name_shared}_copy.db"
-                except Exception:
-                    # Fallback to DatabaseManager.copy_path if user manager not available
-                    shared_copy_path = dbm.copy_path or "data/unknown_copy.db"
-
-                lockfile = shared_copy_path + ".write.lock"
-                lock_fd = None
-                acquired_lock = False
-                max_attempts = 1000  # allow longer waits if many workers
-                for attempt_lock in range(max_attempts):
-                    try:
-                        # atomic create
-                        flags = os.O_CREAT | os.O_EXCL | os.O_RDWR
-                        lock_fd = os.open(lockfile, flags)
-                        try:
-                            os.write(lock_fd, str(os.getpid()).encode('utf-8'))
-                        except Exception:
-                            pass
-                        acquired_lock = True
-                        logger.debug("%s Acquired DB write lock %s", prefix, lockfile)
-                        break
-                    except FileExistsError:
-                        # wait a bit and retry
-                        if attempt_lock % 10 == 0:
-                            logger.debug("%s Waiting for DB write lock %s (attempt %d)", prefix, lockfile, attempt_lock)
-                        time.sleep(0.05)
-                    except Exception as e:
-                        logger.exception(f"{prefix} Unexpected error acquiring DB write lock: %s", e)
-                        time.sleep(0.05)
-
-                if not acquired_lock:
-                    logger.error("%s Could not acquire DB write lock after %d attempts; aborting saveData for match %s", prefix, max_attempts, self.match.id)
-                    return
-
-                # Perform DB writes while holding the lock. Ensure lock is always released and
-                # DatabaseManager is reconnected back to the original DB in the finally block.
-                try:
-                    # Ensure there are no lingering sessions/engines pointing at other DBs
-                    try:
-                        if dbm.scoped_session:
-                            dbm.scoped_session.remove()
-                    except Exception:
-                        pass
-                    try:
-                        if dbm.engine:
-                            dbm.engine.dispose()
-                    except Exception:
-                        pass
-                    gc.collect()
-
-                    # Reconnect to the shared copy (where writes should go)
-                    # Switch connection to the shared per-manager copy so all processes write to the same shared copy
-                    dbm.copy_path = shared_copy_path
-                    try:
-                        dbm._connect(shared_copy_path)
-                        dbm.copy_active = True
-                        logger.debug("%s Switched DB connection to shared copy %s for writing", prefix, shared_copy_path)
-                    except Exception as e:
-                        logger.exception(f"{prefix} Failed to connect to shared copy %s: %s", shared_copy_path, e)
-
-                    # Submit DB update tasks to ThreadPoolExecutor
-                    self.writeToDB(managing_team, homeManager, awayManager, currDate)
-                    
-                except Exception as inner_e:
-                    logger.exception(f"{prefix} Error while performing DB writes: %s", inner_e)
-                    raise
-                finally:
-                    # Always release the lock and reconnect to the original DB
-                    try:
-                        if acquired_lock and lock_fd is not None:
-                            try:
-                                os.close(lock_fd)
-                            except Exception:
-                                pass
-                            try:
-                                os.remove(lockfile)
-                            except Exception:
-                                pass
-                            logger.debug("%s Released DB write lock %s", prefix, lockfile)
-                    except Exception as e:
-                        logger.debug("%s Failed during lock release: %s", prefix, e)
-
-                    # Reconnect DatabaseManager back to original DB path
-                    try:
-                        if dbm.original_path:
-                            try:
-                                if dbm.scoped_session:
-                                    dbm.scoped_session.remove()
-                            except Exception:
-                                pass
-                            try:
-                                if dbm.engine:
-                                    dbm.engine.dispose()
-                            except Exception:
-                                pass
-                            dbm._connect(dbm.original_path)
-                            dbm.copy_active = False
-                            logger.debug("%s Reconnected DatabaseManager to original DB %s", prefix, dbm.original_path)
-                    except Exception as e:
-                        logger.debug("%s Failed to reconnect to original DB: %s", prefix, e)
-            else:
-                # Manual save: no cross-process locking or connection switching. Write directly
-                try:
-                    self.writeToDB(managing_team, homeManager, awayManager, currDate)
-                except Exception as inner_e:
-                    logger.exception(f"{prefix} Error while performing DB writes (manual save): %s", inner_e)
-                    raise
-            
+            try:
+                self.payload = self.getPayload(currDate)
+            except Exception:
+                self.payload = None
+                raise
         except Exception as e:
             logger.error(f"{prefix} Exception in saveData: {str(e)}", exc_info = True)
         finally:
             if self.auto:
                 self.timerThread_running = False
 
-    def writeToDB(self, managing_team, homeManager, awayManager, currDate):
-        # prepare a match id prefix for logs in this method
+    def getPayload(self, currDate):
         prefix = f"[{getattr(self.match, 'id', None)}]:"
-        logger.debug(f"{prefix} Submitting DB update tasks to ThreadPoolExecutor")
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = []
+
+        try: 
+            payload = {
+                "team_updates": [],
+                "manager_updates": [],
+                "match_events": [],
+                "player_bans": [],
+                "yellow_card_checks": [],
+                "score_updates": [],
+                "fitness_updates": [],
+                "sharpness_updates": [],
+                "morale_updates": [],
+                "lineup_updates": [],
+                "stats_updates": [],
+            }
+
+            homeManager = Managers.get_manager_by_id(self.homeTeam.manager_id)
+            awayManager = Managers.get_manager_by_id(self.awayTeam.manager_id)
 
             # LeagueTeams updates
-            futures.append(executor.submit(
-                LeagueTeams.update_team,
+            payload["team_updates"].append((
                 self.homeTeam.id,
                 3 if self.winner == self.homeTeam else 1 if self.winner is None else 0,
                 1 if self.winner == self.homeTeam else 0,
@@ -1087,8 +982,7 @@ class Match():
                 self.score[1]
             ))
 
-            futures.append(executor.submit(
-                LeagueTeams.update_team,
+            payload["team_updates"].append((
                 self.awayTeam.id,
                 3 if self.winner == self.awayTeam else 1 if self.winner is None else 0,
                 1 if self.winner == self.awayTeam else 0,
@@ -1099,13 +993,17 @@ class Match():
             ))
 
             # Managers updates
-            futures.append(executor.submit(Managers.update_games, homeManager.id,
-                                            1 if self.winner == self.homeTeam else 0,
-                                            1 if self.winner == self.awayTeam else 0))
+            payload["manager_updates"].append((
+                homeManager.id,
+                1 if self.winner == self.homeTeam else 0,
+                1 if self.winner == self.awayTeam else 0
+            ))
 
-            futures.append(executor.submit(Managers.update_games, awayManager.id,
-                                            1 if self.winner == self.awayTeam else 0,
-                                            1 if self.winner == self.homeTeam else 0))
+            payload["manager_updates"].append((
+                awayManager.id,
+                1 if self.winner == self.awayTeam else 0,
+                1 if self.winner == self.homeTeam else 0
+            ))
 
             # Match events
             events_to_add = []
@@ -1140,19 +1038,22 @@ class Match():
                     events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
                 elif event["type"] in ("injury", "red_card"):
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
-                    ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
+                    ban = get_player_ban(event["type"], currDate)
                     logger.debug(f"{prefix} Computed ban length={ban} for player={player_id} type={event['type']}")
-                    sendEmail, _ = PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate)
+                    payload["player_bans"].append((player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate))
 
-                    if sendEmail:
-                        emailDate = currDate + timedelta(days = 1)
-                        if managing_team == "home" and event["type"] == "injury":
-                            Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
-                        elif managing_team == "home" and event["type"] == "red_card":
-                            Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                    # sendEmail, _ = PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate)
+
+                    # if sendEmail:
+                    #     emailDate = currDate + timedelta(days = 1)
+                    #     if managing_team == "home" and event["type"] == "injury":
+                    #         Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                    #     elif managing_team == "home" and event["type"] == "red_card":
+                    #         Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
                 elif event["type"] == "yellow_card":
                     events_to_add.append((self.match.id, "yellow_card", minute, player_id))
-                    MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, YELLOW_THRESHOLD, Game.get_game_date(Managers.get_all_user_managers()[0].id))
+                    payload["yellow_card_checks"].append((player_id, self.match.league_id, YELLOW_THRESHOLD, currDate))
+                    # MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, YELLOW_THRESHOLD, Game.get_game_date(Managers.get_all_user_managers()[0].id))
                     logger.debug(f"{prefix} Home yellow card queued: match={self.match.id} player={player_id} minute={minute}")
                 else:
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
@@ -1189,37 +1090,33 @@ class Match():
                     events_to_add.append((self.match.id, "sub_on", minute, player_on_id))
                 elif event["type"] in ("injury", "red_card"):
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
-                    ban = get_player_ban(event["type"], Game.get_game_date(Managers.get_all_user_managers()[0].id))
+                    ban = get_player_ban(event["type"], currDate)
                     logger.debug(f"{prefix} Computed ban length={ban} for player={player_id} type={event['type']}")
-                    sendEmail, _ = PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate)
-
-                    if sendEmail:
-                        emailDate = currDate + timedelta(days = 1)
-                        if managing_team == "away" and event["type"] == "injury":
-                            Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
-                        elif managing_team == "away" and event["type"] == "red_card":
-                            Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                    payload["player_bans"].append((player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate))
                 elif event["type"] == "yellow_card":
                     events_to_add.append((self.match.id, "yellow_card", minute, player_id))
-                    MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, YELLOW_THRESHOLD, Game.get_game_date(Managers.get_all_user_managers()[0].id))
+                    payload["yellow_card_checks"].append((player_id, self.match.league_id, YELLOW_THRESHOLD, currDate))
                     logger.debug(f"{prefix} Away yellow card queued: match={self.match.id} player={player_id} minute={minute}")
                 else:
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
                     logger.debug(f"{prefix} Away event queued: event={event["type"]}, match={self.match.id}, player={player_id}, minute={minute}")
-                            
+                
             if self.homeCleanSheet:
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"]))
 
             if self.awayCleanSheet:
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"]))
 
-            if len(events_to_add) > 0:
-                logger.debug(f"{prefix} Submitting {len(events_to_add)} match events for insertion")
-                futures.append(executor.submit(MatchEvents.batch_add_events, events_to_add))
+            payload["match_events"] = events_to_add
+
+            # if len(events_to_add) > 0:
+            #     logger.debug(f"{prefix} Submitting {len(events_to_add)} match events for insertion")
+            #     futures.append(executor.submit(MatchEvents.batch_add_events, events_to_add))
 
             # Matches update
             logger.debug(f"{prefix} Submitting match score update: {self.score[0]} : {self.score[1]}")
-            futures.append(executor.submit(Matches.update_score, self.match.id, self.score[0], self.score[1]))
+            payload["score_updates"].append((self.match.id, self.score[0], self.score[1]))
+            # futures.append(executor.submit(Matches.update_score, self.match.id, self.score[0], self.score[1]))
 
             # Players updates
             fitness_to_update = []
@@ -1231,13 +1128,13 @@ class Match():
                 fitness_to_update.append((playerID, round(fitness)))
 
             logger.debug(f"{prefix} Submitting fitness updates for {len(fitness_to_update)} players")
-            futures.append(executor.submit(Players.batch_update_fitness, fitness_to_update))
+            payload["fitness_updates"] = fitness_to_update
+            # futures.append(executor.submit(Players.batch_update_fitness, fitness_to_update))
 
             # Lineups and morales
             lineups_to_add = []
             morales_to_update = []
             sharpnesses_to_update = []
-
 
             for player in self.homePlayersOBJ.values():
                 final_ids = {pl_id for _, pl_id in self.homeFinalLineup}
@@ -1429,8 +1326,10 @@ class Match():
 
             # submit morales update
             logger.debug(f"{prefix} Submitting {len(morales_to_update)} morale updates")
-            futures.append(executor.submit(Players.batch_update_morales, morales_to_update))
-            futures.append(executor.submit(Players.batch_update_sharpnesses, sharpnesses_to_update))
+            payload["morale_updates"] = morales_to_update
+            payload["sharpness_updates"] = sharpnesses_to_update            
+            # futures.append(executor.submit(Players.batch_update_morales, morales_to_update))
+            # futures.append(executor.submit(Players.batch_update_sharpnesses, sharpnesses_to_update))
 
             # extra debug: how many rating entries we will store
             logger.debug(f"{prefix} Ratings stored: home={len(self.homeRatings)} away={len(self.awayRatings)}")
@@ -1461,16 +1360,22 @@ class Match():
 
             if len(stats_to_add) > 0:
                 logger.debug(f"{prefix} Submitting {len(stats_to_add)} match stats for insertion")
-                futures.append(executor.submit(MatchStats.batch_add_stats, stats_to_add))
+                payload["stats_updates"] = stats_to_add
+                # futures.append(executor.submit(MatchStats.batch_add_stats, stats_to_add))
 
             # debug total DB tasks
-            logger.debug(f"{prefix} Total DB tasks submitted: {len(futures)}")
+            # logger.debug(f"{prefix} Total DB tasks submitted: {len(futures)}")
 
             logger.debug(f"{prefix} Submitting {len(lineups_to_add)} lineups for insertion")
-            futures.append(executor.submit(TeamLineup.batch_add_lineups, lineups_to_add))
+            payload["lineup_updates"] = lineups_to_add
+            # futures.append(executor.submit(TeamLineup.batch_add_lineups, lineups_to_add))
 
-            concurrent.futures.wait(futures)
-            logger.debug(f"{prefix} All DB futures completed")
+            # concurrent.futures.wait(futures)
+            # logger.debug(f"{prefix} All DB futures completed")
+        except Exception as e:
+            logger.error(f"{prefix} Exception in getPayload: {str(e)}", exc_info = True)
+        finally:
+            return payload
 
     def getGameTime(self, playerID, events):
         sub_off_time = None

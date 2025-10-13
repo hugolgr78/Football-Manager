@@ -54,9 +54,11 @@ def _simulate_match(game, manager_base_name):
         except Exception:
             logging.getLogger(__name__).exception("Failed to remove per-process DB copy %s", per_process_copy)
 
+    # return payload if available to allow pooling in the main process
     result = {
         "id": getattr(game, "id", None),
         "score": match.score,
+        "payload": getattr(match, "payload", None)
     }
 
     return result
@@ -235,7 +237,7 @@ class MainMenu(ctk.CTkFrame):
                     batch_no = (batch_index // CHUNK_SIZE) + 1
                     self._logger.info("Simulating batch %d/%d: %d matches with %d workers", batch_no, total_batches, len(batch), workers)
 
-                    with ProcessPoolExecutor(max_workers=workers) as ex:
+                    with ProcessPoolExecutor(max_workers = workers) as ex:
                         futures = [ex.submit(_simulate_match, g, base_name) for g in batch]
 
                         for fut in as_completed(futures):
@@ -243,6 +245,12 @@ class MainMenu(ctk.CTkFrame):
                                 result = fut.result()
                                 matches.append(Matches.get_match_by_id(result["id"]))
                                 self._logger.info("Finished match %s with score %s", result["id"], result["score"])
+
+                                worker_payload = result.get("payload")
+                                if worker_payload:
+                                    if not hasattr(self, 'worker_payloads'):
+                                        self.worker_payloads = []
+                                    self.worker_payloads.append(worker_payload)
                             except Exception:
                                 self._logger.exception("Match worker raised an exception")
                                 traceback.print_exc()
@@ -250,6 +258,41 @@ class MainMenu(ctk.CTkFrame):
                 sim_end = time.perf_counter()
                 elapsed = sim_end - sim_start
                 self._logger.info("Match simulation completed in %.3f seconds for %d matches", elapsed, total_to_sim)
+
+                # After all batches complete, aggregate pooled payloads (no computation, just concatenation)
+                pooled = {
+                    "team_updates": [],
+                    "manager_updates": [],
+                    "match_events": [],
+                    "player_bans": [],
+                    "yellow_card_checks": [],
+                    "score_updates": [],
+                    "fitness_updates": [],
+                    "lineup_updates": [],
+                    "sharpness_updates": [],
+                    "morale_updates": [],
+                    "stats_updates": [],
+                }
+
+                if hasattr(self, 'worker_payloads'):
+                    for p in self.worker_payloads:
+                        for k in pooled.keys():
+                            val = p.get(k)
+                            if not val:
+                                continue
+                            # If list-like, extend; otherwise set (defensive)
+                            if isinstance(p[k], list):
+                                pooled[k].extend(p[k])
+                            else:
+                                # unexpected type: append the value
+                                pooled[k].append(p[k])
+
+                # attach to the MainMenu instance for further processing by caller
+                self.pooled_payload = pooled
+
+                self._logger.debug("Aggregated pooled payload from %d workers", len(getattr(self, 'worker_payloads', [])))
+                process_payload(self.pooled_payload)
+                self._logger.debug("Processed pooled payload")
 
             return matches
 
@@ -454,6 +497,9 @@ class MainMenu(ctk.CTkFrame):
         for match in matches:
             teams.append(Teams.get_team_by_id(match.home_id))
             teams.append(Teams.get_team_by_id(match.away_id))
+
+            PlayerBans.reduce_suspensions_for_team(match.home_id, match.league_id)
+            PlayerBans.reduce_suspensions_for_team(match.away_id, match.league_id)
 
         check_player_games_happy(teams, self.currDate)
 

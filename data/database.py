@@ -308,6 +308,25 @@ class Managers(Base):
             session.close()
 
     @classmethod
+    def batch_update_managers(cls, updates):
+        session = DatabaseManager().get_session()
+        try:
+            for update in updates:
+                entry = session.query(Managers).filter(Managers.id == update[0]).first()
+
+                if entry:
+                    entry.games_played += 1
+                    entry.games_won += update[1]
+                    entry.games_lost += update[2]
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def update_trophies(cls, id):
         session = DatabaseManager().get_session()
         try:
@@ -1567,6 +1586,24 @@ class Matches(Base):
         except Exception as e:
             session.rollback()
             logger.exception("[DB ERROR] Update match score failed")
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_update_scores(cls, scores):
+        session = DatabaseManager().get_session()
+        try:
+            for score in scores:
+                entry = session.query(Matches).filter(Matches.id == score[0]).first()
+                if entry:
+                    entry.score_home = score[1]
+                    entry.score_away = score[2]
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.exception("[DB ERROR] Batch update of match scores failed")
             raise e
         finally:
             session.close()
@@ -3116,6 +3153,30 @@ class LeagueTeams(Base):
             session.close()
 
     @classmethod
+    def batch_update_teams(cls, updates):
+        session = DatabaseManager().get_session()
+        try:
+            for update in updates:
+
+                entry = session.query(LeagueTeams).filter(LeagueTeams.team_id == update[0]).first()
+
+                if entry:
+                    entry.points += update[1]
+                    entry.games_won += update[2]
+                    entry.games_drawn += update[3]
+                    entry.games_lost += update[4]
+                    entry.goals_scored += update[5]
+                    entry.goals_conceded += update[6]
+                
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.exception("Error in batch_update_teams: %s", e)
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def update_team_positions(cls, league_id):
         session = DatabaseManager().get_session()
         try:
@@ -3627,7 +3688,7 @@ class PlayerBans(Base):
                 existing_ban.ban_type = "red_card"
 
                 session.commit()
-                return False, existing_ban
+                return False
             else:
 
                 new_ban = PlayerBans(
@@ -3646,7 +3707,7 @@ class PlayerBans(Base):
                 session.add(new_ban)
                 session.commit()
 
-                return True, new_ban
+                return True
         except Exception as e:
             session.rollback()
             raise e
@@ -3659,7 +3720,7 @@ class PlayerBans(Base):
         try:
             ban_dicts = []
             for ban in bans:
-                player_id, competition_id, ban_length, ban_type = ban
+                player_id, competition_id, ban_length, ban_type, date = ban
 
                 entry = {
                     "id": str(uuid.uuid4()),
@@ -6215,3 +6276,37 @@ def teamStrength(playerIDs, role, playerOBJs):
     avg = sum(weights) / len(weights)
     return avg * (len(weights) ** 0.5)   # sublinear scaling with numbers
     
+def process_payload(payload):
+    try: 
+        LeagueTeams.batch_update_teams(payload["team_updates"])
+        Managers.batch_update_managers(payload["manager_updates"])
+        MatchEvents.batch_add_events(payload["match_events"])
+        Matches.batch_update_scores(payload["score_updates"])
+        Players.batch_update_fitness(payload["fitness_updates"])
+        Players.batch_update_sharpnesses(payload["sharpness_updates"])
+        Players.batch_update_morales(payload["morale_updates"])
+        TeamLineup.batch_add_lineups(payload["lineup_updates"])
+        MatchStats.batch_add_stats(payload["stats_updates"])
+
+        for ban in payload["player_bans"]:
+
+            player_id, competition_id, ban_length, ban_type, date = ban
+
+            sendEmail = PlayerBans.add_player_ban(player_id, competition_id, ban_length, ban_type, date)
+            player = Players.get_player_by_id(player_id)
+            userTeam = Teams.get_teams_by_manager(Managers.get_all_user_managers()[0].id)[0]
+
+            if player.team_id == userTeam.id and sendEmail:
+                emailDate = date + timedelta(days = 1)
+                if ban_type == "injury":
+                    Emails.add_email("player_injury", None, player_id, ban_length, None, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                else:
+                    Emails.add_email("player_ban", None, player_id, ban_length, competition_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+
+        for check in payload["yellow_card_checks"]:
+
+            player_id, competition_id, threshold, date = check
+            MatchEvents.check_yellow_card_ban(player_id, competition_id, threshold, date)
+
+    except Exception as e:
+        print(f"Error updating teams: {e}")

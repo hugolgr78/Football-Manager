@@ -31,7 +31,7 @@ def _simulate_match(game, manager_base_name):
     except Exception:
         logging.getLogger(__name__).exception("Failed to start DB copy for manager %s", base_name)
 
-    match = Match(game, auto=True)
+    match = Match(game, auto = True)
     match.startGame()
     match.join()
 

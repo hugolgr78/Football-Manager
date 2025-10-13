@@ -932,12 +932,6 @@ class Match():
 
             self.returnWinner()
             logger.debug(f"{prefix} Winner resolved: {self.winner.id if self.winner else None}")
-
-            # logger.debug(f"{prefix} Reducing suspensions for home={self.homeTeam.id} away={self.awayTeam.id} league={self.match.league_id}")
-            # PlayerBans.reduce_suspensions_for_team(self.homeTeam.id, self.match.league_id)
-            # PlayerBans.reduce_suspensions_for_team(self.awayTeam.id, self.match.league_id)
-
-            # debug counts
             logger.debug(f"{prefix} Processed events counts: home={len(self.homeProcessedEvents)} away={len(self.awayProcessedEvents)}")
             try:
                 self.payload = self.getPayload(currDate)
@@ -1041,19 +1035,9 @@ class Match():
                     ban = get_player_ban(event["type"], currDate)
                     logger.debug(f"{prefix} Computed ban length={ban} for player={player_id} type={event['type']}")
                     payload["player_bans"].append((player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate))
-
-                    # sendEmail, _ = PlayerBans.add_player_ban(player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate)
-
-                    # if sendEmail:
-                    #     emailDate = currDate + timedelta(days = 1)
-                    #     if managing_team == "home" and event["type"] == "injury":
-                    #         Emails.add_email("player_injury", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
-                    #     elif managing_team == "home" and event["type"] == "red_card":
-                    #         Emails.add_email("player_ban", None, player_id, ban, self.match.league_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
                 elif event["type"] == "yellow_card":
                     events_to_add.append((self.match.id, "yellow_card", minute, player_id))
                     payload["yellow_card_checks"].append((player_id, self.match.league_id, YELLOW_THRESHOLD, currDate))
-                    # MatchEvents.check_yellow_card_ban(player_id, self.match.league_id, YELLOW_THRESHOLD, Game.get_game_date(Managers.get_all_user_managers()[0].id))
                     logger.debug(f"{prefix} Home yellow card queued: match={self.match.id} player={player_id} minute={minute}")
                 else:
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
@@ -1109,14 +1093,9 @@ class Match():
 
             payload["match_events"] = events_to_add
 
-            # if len(events_to_add) > 0:
-            #     logger.debug(f"{prefix} Submitting {len(events_to_add)} match events for insertion")
-            #     futures.append(executor.submit(MatchEvents.batch_add_events, events_to_add))
-
             # Matches update
             logger.debug(f"{prefix} Submitting match score update: {self.score[0]} : {self.score[1]}")
             payload["score_updates"].append((self.match.id, self.score[0], self.score[1]))
-            # futures.append(executor.submit(Matches.update_score, self.match.id, self.score[0], self.score[1]))
 
             # Players updates
             fitness_to_update = []
@@ -1129,7 +1108,6 @@ class Match():
 
             logger.debug(f"{prefix} Submitting fitness updates for {len(fitness_to_update)} players")
             payload["fitness_updates"] = fitness_to_update
-            # futures.append(executor.submit(Players.batch_update_fitness, fitness_to_update))
 
             # Lineups and morales
             lineups_to_add = []
@@ -1328,8 +1306,6 @@ class Match():
             logger.debug(f"{prefix} Submitting {len(morales_to_update)} morale updates")
             payload["morale_updates"] = morales_to_update
             payload["sharpness_updates"] = sharpnesses_to_update            
-            # futures.append(executor.submit(Players.batch_update_morales, morales_to_update))
-            # futures.append(executor.submit(Players.batch_update_sharpnesses, sharpnesses_to_update))
 
             # extra debug: how many rating entries we will store
             logger.debug(f"{prefix} Ratings stored: home={len(self.homeRatings)} away={len(self.awayRatings)}")
@@ -1361,17 +1337,9 @@ class Match():
             if len(stats_to_add) > 0:
                 logger.debug(f"{prefix} Submitting {len(stats_to_add)} match stats for insertion")
                 payload["stats_updates"] = stats_to_add
-                # futures.append(executor.submit(MatchStats.batch_add_stats, stats_to_add))
-
-            # debug total DB tasks
-            # logger.debug(f"{prefix} Total DB tasks submitted: {len(futures)}")
 
             logger.debug(f"{prefix} Submitting {len(lineups_to_add)} lineups for insertion")
             payload["lineup_updates"] = lineups_to_add
-            # futures.append(executor.submit(TeamLineup.batch_add_lineups, lineups_to_add))
-
-            # concurrent.futures.wait(futures)
-            # logger.debug(f"{prefix} All DB futures completed")
         except Exception as e:
             logger.error(f"{prefix} Exception in getPayload: {str(e)}", exc_info = True)
         finally:

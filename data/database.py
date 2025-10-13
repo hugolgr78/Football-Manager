@@ -1752,7 +1752,7 @@ class Matches(Base):
         try:
             matches = session.query(Matches).filter(
                 Matches.date >= start,
-                Matches.date < end - timedelta(hours=2)
+                Matches.date <= end - timedelta(hours=2)
             ).order_by(Matches.date.asc()).all()
             return matches
         finally:

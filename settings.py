@@ -279,6 +279,12 @@ GOAL_TYPE_CHANCES = {
     "own_goal": 0.05
 }
 
+# GOAL_TYPE_CHANCES = {
+#     "goal": 0.05,
+#     "penalty": 0.15,
+#     "own_goal": 0.8
+# }
+
 BASE_SHOT = 0.2
 MAX_SHOT_PROB = BASE_SHOT + 0.1
 BASE_ON_TARGET = 0.6

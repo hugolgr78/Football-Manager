@@ -298,7 +298,7 @@ class Match():
         defendingLevel = teamStrength(defendingPlayers, "defend", oppPlayersOBJs)
 
         # ------------------ GOALS ------------------
-        event = goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper)
+        event = goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper, goalBoost = 10.0)
 
         if event == "goal":
 
@@ -928,6 +928,16 @@ class Match():
 
         try:
             currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
+
+            try:
+                home_goals = sum(1 for ev in self.homeProcessedEvents.values() if ev.get("type") in ("goal", "penalty_goal", "own_goal"))
+                away_goals = sum(1 for ev in self.awayProcessedEvents.values() if ev.get("type") in ("goal", "penalty_goal", "own_goal"))
+                if [home_goals, away_goals] != self.score:
+                    logger.warning("%s Score mismatch detected - events indicate %s:%s but self.score=%s. Reconciling to events.", prefix, home_goals, away_goals, self.score)
+                    self.score = [home_goals, away_goals]
+            except Exception:
+                logger.exception("%s Error while reconciling score from events", prefix)
+
             logger.debug(f"{prefix} saveData START: match_id={self.match.id}, auto={self.auto}, managing_team={managing_team}, score = {self.score}")
 
             self.returnWinner()
@@ -1414,10 +1424,7 @@ class Match():
             sharpnesses_to_update.append((player.id, sharpnessGain))
 
         elif reason == "benched":
-            # Benched but available -> morale decrease by role
             morales_to_update.append((player.id, get_morale_decrease_role(player)))
-
-        # reason == "unavailable": no morale change, just log the lineup entry
 
     def returnWinner(self):
         finalScore = self.score

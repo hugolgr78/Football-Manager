@@ -556,7 +556,7 @@ def fitnessWeight(fitness):
     fitness_factor = (100 - fitness) / 100.0
     return max(fitness_factor, 0.01)  # avoid 0 prob
 
-def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
+def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper, goalBoost = 1.0):
     attackRatio = attackingLevel / max(1, defendingLevel)
 
     # Sharpness has less weight now
@@ -569,7 +569,7 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
     # Attack ratio dominates
     weight_ratio = 0.8
     weight_modifier = 1 - weight_ratio
-    effective_attack = attackRatio * weight_ratio + attackModifier * weight_modifier
+    effective_attack = attackRatio * weight_ratio + attackModifier * weight_modifier * goalBoost
 
     if oppKeeper:
         if oppKeeper.position == "goalkeeper":

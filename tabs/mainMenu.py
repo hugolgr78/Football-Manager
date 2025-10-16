@@ -1,4 +1,4 @@
-import gc, traceback, logging, time, os
+import gc, traceback, logging, time, os, glob
 import customtkinter as ctk
 from settings import *
 from data.database import *
@@ -17,51 +17,58 @@ from tabs.leagueProfile import LeagueProfile
 from tabs.managerProfile import ManagerProfile
 from tabs.search import Search
 from tabs.settingsTab import SettingsTab
-from utils.match import Match
 
-def _simulate_match(game, manager_base_name):
+def _init_worker(base_name):
+    global _worker_dbm, _worker_base_name, _worker_db_copy_path
+    _worker_base_name = base_name
+    _worker_dbm = DatabaseManager()
+    _worker_dbm.set_database(base_name)
 
-    base_name = manager_base_name
-    dbm = DatabaseManager()
-    dbm.set_database(base_name)
+    # Each worker gets its own database copy
+    pid = os.getpid()
+    copy_path = f"data/{base_name}_copy_{pid}.db"
+    _worker_dbm.copy_path = copy_path
+
     try:
-        per_process_copy = f"data/{base_name}_copy_{os.getpid()}.db"
-        dbm.copy_path = per_process_copy
-        dbm.start_copy()
+        _worker_dbm.start_copy()
     except Exception:
-        logging.getLogger(__name__).exception("Failed to start DB copy for manager %s", base_name)
+        logging.getLogger(__name__).exception("Failed to start DB copy for worker %d", pid)
+        _worker_dbm = None
+        _worker_db_copy_path = None
+        return
 
-    match = Match(game, auto = True)
+    _worker_db_copy_path = copy_path
+    logging.getLogger(__name__).debug("Worker %d ready with DB copy %s", pid, copy_path)
+
+def _simulate_match(game):
+    global _worker_dbm, _worker_db_copy_path
+    from utils.match import Match
+    import logging
+
+    if _worker_dbm is None:
+        logging.getLogger(__name__).error("Worker database manager not initialized.")
+        return {"id": getattr(game, "id", None), "score": None, "payload": None}
+
+    match = Match(game, auto=True)
     match.startGame()
     match.join()
 
+    # cleanup session for next match (but not engine or db copy)
     try:
-        if dbm.scoped_session:
-            dbm.scoped_session.remove()
-    except Exception:
-        pass
-    try:
-        if dbm.engine:
-            dbm.engine.dispose()
+        if _worker_dbm.scoped_session:
+            _worker_dbm.scoped_session.remove()
     except Exception:
         pass
     gc.collect()
 
-    if 'per_process_copy' in locals() and per_process_copy and os.path.exists(per_process_copy):
-        try:
-            os.remove(per_process_copy)
-            logging.getLogger(__name__).debug("Removed per-process DB copy %s", per_process_copy)
-        except Exception:
-            logging.getLogger(__name__).exception("Failed to remove per-process DB copy %s", per_process_copy)
-
-    # return payload if available to allow pooling in the main process
     result = {
         "id": getattr(game, "id", None),
         "score": match.score,
-        "payload": getattr(match, "payload", None)
+        "payload": getattr(match, "payload", None),
     }
 
     return result
+
 class MainMenu(ctk.CTkFrame):
     def __init__(self, parent, manager_id, created):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND)
@@ -219,7 +226,7 @@ class MainMenu(ctk.CTkFrame):
                 self._logger.info("Starting match initialization")
 
                 # We limit concurrent worker count to a safe maximum (61).
-                CHUNK_SIZE = 61
+                CHUNK_SIZE = 15
                 total_batches = (total_to_sim + CHUNK_SIZE - 1) // CHUNK_SIZE
 
                 self._logger.info("Starting parallel match simulation in up to %d batches (chunk=%d)", total_batches, CHUNK_SIZE)
@@ -231,14 +238,21 @@ class MainMenu(ctk.CTkFrame):
                 mgr = Managers.get_manager_by_id(self.manager_id)
                 base_name = f"{mgr.first_name}{mgr.last_name}"
 
-                for batch_index in range(0, total_to_sim, CHUNK_SIZE):
-                    batch = matchesToSim[batch_index:batch_index + CHUNK_SIZE]
-                    workers = min(len(batch), CHUNK_SIZE)
-                    batch_no = (batch_index // CHUNK_SIZE) + 1
-                    self._logger.info("Simulating batch %d/%d: %d matches with %d workers", batch_no, total_batches, len(batch), workers)
+                # Create the pool once, outside the batch loop
+                with ProcessPoolExecutor(max_workers=CHUNK_SIZE, initializer=_init_worker, initargs=(base_name,)) as ex:
+                    for batch_index in range(0, total_to_sim, CHUNK_SIZE):
+                        batch = matchesToSim[batch_index:batch_index + CHUNK_SIZE]
+                        workers = min(len(batch), CHUNK_SIZE)
+                        batch_no = (batch_index // CHUNK_SIZE) + 1
+                        self._logger.info(
+                            "Simulating batch %d/%d: %d matches with %d workers",
+                            batch_no, total_batches, len(batch), workers
+                        )
 
-                    with ProcessPoolExecutor(max_workers = workers) as ex:
-                        futures = [ex.submit(_simulate_match, g, base_name) for g in batch]
+                        # Submit tasks to the already-running pool
+                        self._logger.info("Submitting %d match tasks...", len(batch))
+                        futures = [ex.submit(_simulate_match, g) for g in batch]
+                        self._logger.info("All match tasks submitted.")
 
                         for fut in as_completed(futures):
                             try:
@@ -254,6 +268,14 @@ class MainMenu(ctk.CTkFrame):
                             except Exception:
                                 self._logger.exception("Match worker raised an exception")
                                 traceback.print_exc()
+
+                # Remove worker DB copies
+                for f in glob.glob(f"data/{base_name}_copy_*.db"):
+                    try:
+                        os.remove(f)
+                        self._logger.debug("Removed worker DB copy %s", f)
+                    except Exception:
+                        self._logger.warning("Could not remove DB copy %s", f)
 
                 sim_end = time.perf_counter()
                 elapsed = sim_end - sim_start

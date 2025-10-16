@@ -298,7 +298,7 @@ class Match():
         defendingLevel = teamStrength(defendingPlayers, "defend", oppPlayersOBJs)
 
         # ------------------ GOALS ------------------
-        event = goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper, goalBoost = 10.0)
+        event = goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper)
 
         if event == "goal":
 

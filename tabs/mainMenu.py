@@ -18,58 +18,6 @@ from tabs.managerProfile import ManagerProfile
 from tabs.search import Search
 from tabs.settingsTab import SettingsTab
 
-def _init_worker(base_name):
-    global _worker_dbm, _worker_base_name, _worker_db_copy_path
-    _worker_base_name = base_name
-    _worker_dbm = DatabaseManager()
-    _worker_dbm.set_database(base_name)
-
-    # Each worker gets its own database copy
-    pid = os.getpid()
-    copy_path = f"data/{base_name}_copy_{pid}.db"
-    _worker_dbm.copy_path = copy_path
-
-    try:
-        _worker_dbm.start_copy()
-    except Exception:
-        logging.getLogger(__name__).exception("Failed to start DB copy for worker %d", pid)
-        _worker_dbm = None
-        _worker_db_copy_path = None
-        return
-
-    _worker_db_copy_path = copy_path
-    logging.getLogger(__name__).debug("Worker %d ready with DB copy %s", pid, copy_path)
-
-def _simulate_match(gameID):
-    global _worker_dbm, _worker_db_copy_path
-    from utils.match import Match
-    import logging
-
-    if _worker_dbm is None:
-        logging.getLogger(__name__).error("Worker database manager not initialized.")
-        return {"id": getattr(gameID, "id", None), "score": None, "payload": None}
-
-    game = Matches.get_match_by_id(gameID)
-    match = Match(game, auto=True)
-    match.startGame()
-    match.join()
-
-    # cleanup session for next match (but not engine or db copy)
-    try:
-        if _worker_dbm.scoped_session:
-            _worker_dbm.scoped_session.remove()
-    except Exception:
-        pass
-    gc.collect()
-
-    result = {
-        "id": getattr(game, "id", None),
-        "score": match.score,
-        "payload": getattr(match, "payload", None),
-    }
-
-    return result
-
 class MainMenu(ctk.CTkFrame):
     def __init__(self, parent, manager_id, created):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND)
@@ -218,127 +166,6 @@ class MainMenu(ctk.CTkFrame):
 
     def moveDate(self):
     
-        def run_match_simulation(self, stopDate):
-            matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
-            if matchesToSim:
-                total_to_sim = len(matchesToSim)
-                self._logger.info("Preparing to simulate %d matches", total_to_sim)
-                self._logger.info("Starting match initialization")
-
-                # We limit concurrent worker count to a safe maximum (61).
-                CHUNK_SIZE = os.cpu_count()
-                total_batches = (total_to_sim + CHUNK_SIZE - 1) // CHUNK_SIZE
-
-                self._logger.info("Starting parallel match simulation in up to %d batches (chunk=%d)", total_batches, CHUNK_SIZE)
-
-                sim_start = time.perf_counter()
-
-                # Run batches sequentially to respect the maximum worker count
-                matches = []
-                teams = {}
-                mgr = Managers.get_manager_by_id(self.manager_id)
-                base_name = f"{mgr.first_name}{mgr.last_name}"
-
-                # Create the pool once, outside the batch loop
-                with ProcessPoolExecutor(max_workers=CHUNK_SIZE, initializer=_init_worker, initargs=(base_name,)) as ex:
-                    for batch_index in range(0, total_to_sim, CHUNK_SIZE):
-                        batch = matchesToSim[batch_index:batch_index + CHUNK_SIZE]
-                        workers = min(len(batch), CHUNK_SIZE)
-                        batch_no = (batch_index // CHUNK_SIZE) + 1
-                        self._logger.info(
-                            "Simulating batch %d/%d: %d matches with %d workers",
-                            batch_no, total_batches, len(batch), workers
-                        )
-
-                        # Submit tasks to the already-running pool
-                        self._logger.info("Submitting %d match tasks...", len(batch))
-                        futures = [ex.submit(_simulate_match, g.id) for g in batch]
-                        self._logger.info("All match tasks submitted.")
-
-                        for fut in as_completed(futures):
-                            try:
-                                result = fut.result()
-                                match = Matches.get_match_by_id(result["id"])
-                                # matches.append(Matches.get_match_by_id(result["id"]))
-                                self._logger.info("Finished match %s with score %s", result["id"], result["score"])
-
-                                worker_payload = result.get("payload")
-                                if worker_payload:
-
-                                    self._logger.debug("Checking player game happiness for match %s", match.id)
-                                    homePayload = check_player_games_happy(match.home_id, self.currDate)
-                                    awayPayload = check_player_games_happy(match.away_id, self.currDate)
-                
-                                    self._logger.debug("Updating worker payload for match %s", match.id)
-                                    worker_payload["players_to_update"] = homePayload["players_to_update"]
-                                    worker_payload["players_to_update"] = awayPayload["players_to_update"]
-                                    worker_payload["emails_to_send"] = homePayload["emails_to_send"]
-                                    worker_payload["emails_to_send"] = awayPayload["emails_to_send"]
-
-                                    if not match.league_id in teams:
-                                        teams[match.league_id] = []
-                                    teams[match.league_id].append(match.home_id)
-                                    teams[match.league_id].append(match.away_id)
-
-                                    if not hasattr(self, 'worker_payloads'):
-                                        self.worker_payloads = []
-                                    self.worker_payloads.append(worker_payload)
-                            except Exception:
-                                self._logger.exception("Match worker raised an exception")
-                                traceback.print_exc()
-
-                # Remove worker DB copies
-                for f in glob.glob(f"data/{base_name}_copy_*.db"):
-                    try:
-                        os.remove(f)
-                        self._logger.debug("Removed worker DB copy %s", f)
-                    except Exception:
-                        self._logger.warning("Could not remove DB copy %s", f)
-
-                sim_end = time.perf_counter()
-                elapsed = sim_end - sim_start
-                # self._logger.info("Match simulation completed in %.3f seconds for %d matches", elapsed, total_to_sim)
-                print(f"Match simulation completed in {elapsed:.3f} seconds for {total_to_sim} matches")
-
-                # After all batches complete, aggregate pooled payloads (no computation, just concatenation)
-                pooled = {
-                    "team_updates": [],
-                    "manager_updates": [],
-                    "match_events": [],
-                    "player_bans": [],
-                    "yellow_card_checks": [],
-                    "score_updates": [],
-                    "fitness_updates": [],
-                    "lineup_updates": [],
-                    "sharpness_updates": [],
-                    "morale_updates": [],
-                    "stats_updates": [],
-                    "players_to_update": [],
-                    "emails_to_send": [],
-                }
-
-                if hasattr(self, 'worker_payloads'):
-                    for p in self.worker_payloads:
-                        for k in pooled.keys():
-                            val = p.get(k)
-                            if not val:
-                                continue
-                            # If list-like, extend; otherwise set (defensive)
-                            if isinstance(p[k], list):
-                                pooled[k].extend(p[k])
-                            else:
-                                # unexpected type: append the value
-                                pooled[k].append(p[k])
-
-                # attach to the MainMenu instance for further processing by caller
-                self.pooled_payload = pooled
-
-                self._logger.debug("Aggregated pooled payload from %d workers", len(getattr(self, 'worker_payloads', [])))
-                process_payload(self.pooled_payload)
-                self._logger.debug("Processed pooled payload")
-
-            return matches, teams
-
         db = DatabaseManager()
         db.start_copy()
 
@@ -518,28 +345,11 @@ class MainMenu(ctk.CTkFrame):
             SavedLineups.delete_current_lineup()
             self.tabs[4].saveLineup()
     
-        matches, teams = run_match_simulation(self, stopDate)
+        run_match_simulation([self.currDate, stopDate], self.currDate)
 
         self.currDate += overallTimeInBetween
         Game.increment_game_date(self.manager_id, overallTimeInBetween)
         self._logger.debug("Updated game date to %s with %s difference", self.currDate, overallTimeInBetween)
-
-        # ------------------- Post-match updates -------------------
-
-        leagueIDs = list({match.league_id for match in matches})
-        for id_ in leagueIDs:
-            LeagueTeams.update_team_positions(id_)
-            if League.check_all_matches_complete(id_, self.currDate):
-                for team in LeagueTeams.get_teams_by_league(id_):
-                    matchday = League.get_current_matchday(id_)
-                    TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
-
-                League.update_current_matchday(id_)
-            self._logger.debug("Updated league standings and matchdays for league %d", id_)
-
-        self._logger.debug("Starting suspension reductions for %d leagues", len(teams))
-        PlayerBans.reduce_suspensions_for_teams(teams)
-        self._logger.debug("Completed suspension reductions for teams")
 
         # ------------------- Reset/End -------------------
 

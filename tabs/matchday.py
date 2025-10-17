@@ -2157,7 +2157,7 @@ class MatchDay(ctk.CTkFrame):
             if frame.matchInstance:
                 frame.matchInstance.saveData(auto = False)
 
-        self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away",)
+        self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away")
 
         LeagueTeams.update_team_positions(self.league.id)
         Game.increment_game_date(Managers.get_all_user_managers()[0].id, timedelta(hours = 2))
@@ -2170,6 +2170,8 @@ class MatchDay(ctk.CTkFrame):
 
             League.update_current_matchday(self.league.id)
 
+
+
         teams = [self.matchFrame.matchInstance.homeTeam, self.matchFrame.matchInstance.awayTeam]
         for frame in self.otherMatchesFrame.winfo_children():
             if frame.matchInstance:
@@ -2177,6 +2179,9 @@ class MatchDay(ctk.CTkFrame):
                 teams.append(frame.matchInstance.awayTeam)
 
         check_player_games_happy(teams, currDate)
+
+
+
         SavedLineups.delete_current_lineup()
         Players.reset_talked_to()
 

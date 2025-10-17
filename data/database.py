@@ -1760,12 +1760,16 @@ class Matches(Base):
             session.close()
 
     @classmethod
-    def get_matches_time_frame(cls, start, end):
+    def get_matches_time_frame(cls, start, end, exclude_leagues = []):
         session = DatabaseManager().get_session()
         try:
+            subquery = session.query(TeamLineup.match_id).distinct().subquery()
+
             matches = session.query(Matches).filter(
-                Matches.date >= start,
-                Matches.date <= end - timedelta(hours=2),
+                Matches.date >= start - timedelta(hours = 2), # Checks for any games that started within 2 hours before the start time
+                Matches.date <= end - timedelta(hours = 2), # Doesnt select games that start within 2 hours of the end time
+                Matches.league_id.notin_(exclude_leagues),
+                ~Matches.id.in_(subquery)
             ).order_by(Matches.date.asc()).all()
             return matches
         finally:
@@ -1777,7 +1781,7 @@ class Matches(Base):
         try:
             played = session.query(Matches).filter(
                 Matches.id == match.id,
-                Matches.date < curr_date
+                Matches.date <= curr_date - timedelta(hours = 2)
             ).first()
             return played is not None
         finally:
@@ -2094,6 +2098,16 @@ class TeamLineup(Base):
                 TeamLineup.reason == "benched" or TeamLineup.reason == "not_in_squad"
             ).first()
             return availability is not None
+        finally:
+            session.close()
+
+    def check_game_played(cls, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            played = session.query(TeamLineup).filter(
+                TeamLineup.match_id == match_id
+            ).first()
+            return played is not None
         finally:
             session.close()
 
@@ -6302,22 +6316,14 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
 def teamStrength(playerIDs, role, playerOBJs):
     if not playerIDs:
         return 0
-    
-    weights = []
-    for pid in playerIDs:
-        p = playerOBJs[pid]
-        ability = p.current_ability
 
-        # attackers scale harder when more of them
-        if role == "attack":
-            weights.append(ability ** 1.1)  # slight bias
-        else:  # defenders
-            weights.append(ability ** 1.0)  # normal
+    abilities = [playerOBJs[pid].current_ability for pid in playerIDs]
+    if role == "attack":
+        abilities = [a ** 1.05 for a in abilities]
 
-    # geometric mean balances numbers and ability
-    avg = sum(weights) / len(weights)
-    return avg * (len(weights) ** 0.5)   # sublinear scaling with numbers
-    
+    geom_mean = math.exp(sum(math.log(a + 1e-9) for a in abilities) / len(abilities))
+    return geom_mean * (1 + 0.1 * math.log(len(abilities) + 1))
+
 def process_payload(payload):
     try: 
         call_if_not_empty(payload["team_updates"], LeagueTeams.batch_update_teams)
@@ -6329,8 +6335,10 @@ def process_payload(payload):
         call_if_not_empty(payload["morale_updates"], Players.batch_update_morales)
         call_if_not_empty(payload["lineup_updates"], TeamLineup.batch_add_lineups)
         call_if_not_empty(payload["stats_updates"], MatchStats.batch_add_stats)
-        call_if_not_empty(payload["players_to_update"], Players.batch_reduce_morales_to_25)
-        call_if_not_empty(payload["emails_to_send"], Emails.batch_add_emails)
+
+        if "players_to_update" in payload:
+            call_if_not_empty(payload["players_to_update"], Players.batch_reduce_morales_to_25)
+            call_if_not_empty(payload["emails_to_send"], Emails.batch_add_emails)
 
         for ban in payload["player_bans"]:
 

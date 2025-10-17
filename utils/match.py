@@ -953,6 +953,8 @@ class Match():
         finally:
             if self.auto:
                 self.timerThread_running = False
+            else:
+                return self.payload
 
     def getPayload(self, currDate):
         prefix = f"[{getattr(self.match, 'id', None)}]:"

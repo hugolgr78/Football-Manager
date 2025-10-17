@@ -557,7 +557,8 @@ def fitnessWeight(fitness):
     return max(fitness_factor, 0.01)  # avoid 0 prob
 
 def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper, goalBoost = 1.0):
-    attackRatio = attackingLevel / max(1, defendingLevel)
+    # attackRatio = min(attackingLevel / max(1, defendingLevel), 2.0)
+    attackRatio = 0.5 + 1 / (1 + math.exp(-(attackingLevel - defendingLevel) / 20))
 
     # Sharpness has less weight now
     combined_form = (0.25 * (avgSharpness / 100)) + (0.75 * (avgMorale / 100))
@@ -983,22 +984,21 @@ def get_all_league_teams(jsonData, leagueName):
 
     return teamOBJs
 
-def run_match_simulation(interval, currDate):
+def run_match_simulation(interval, currDate, exclude_leagues = []):
     from data.database import Matches, Managers, League, LeagueTeams, PlayerBans, TeamHistory, process_payload, check_player_games_happy
     from concurrent.futures import ProcessPoolExecutor, as_completed
     import os, time, logging, glob, traceback
 
     _logger = logging.getLogger(__name__)
 
-    matchesToSim = Matches.get_matches_time_frame(interval[0], interval[1])
+    matchesToSim = Matches.get_matches_time_frame(interval[0], interval[1], exclude_leagues)
     worker_payloads = []
     if matchesToSim:
         total_to_sim = len(matchesToSim)
         _logger.info("Preparing to simulate %d matches", total_to_sim)
         _logger.info("Starting match initialization")
 
-        # We limit concurrent worker count to a safe maximum (61).
-        CHUNK_SIZE = os.cpu_count()
+        CHUNK_SIZE = min(len(matchesToSim), os.cpu_count())
         total_batches = (total_to_sim + CHUNK_SIZE - 1) // CHUNK_SIZE
 
         _logger.info("Starting parallel match simulation in up to %d batches (chunk=%d)", total_batches, CHUNK_SIZE)
@@ -1067,7 +1067,7 @@ def run_match_simulation(interval, currDate):
 
         sim_end = time.perf_counter()
         elapsed = sim_end - sim_start
-        # _logger.info("Match simulation completed in %.3f seconds for %d matches", elapsed, total_to_sim)
+        _logger.info("Match simulation completed in %.3f seconds for %d matches", elapsed, total_to_sim)
         print(f"Match simulation completed in {elapsed:.3f} seconds for {total_to_sim} matches")
 
         # After all batches complete, aggregate pooled payloads (no computation, just concatenation)

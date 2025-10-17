@@ -1135,15 +1135,28 @@ class Players(Base):
         try:
             player = session.query(Players).filter(Players.id == player_id).first()
 
-            if not player:
-                return False  # or raise Exception if you prefer strict handling
-
-            if player.morale <= 25:
-                return False
+            if not player or player.morale <= 25:
+                return
 
             player.morale = 25
             session.commit()
-            return True
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_reduce_morales_to_25(cls, player_ids):
+        session = DatabaseManager().get_session()
+        try:
+            players = session.query(Players).filter(Players.id.in_(player_ids), Players.morale > 25).all()
+
+            for player in players:
+                player.morale = 25
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.exception("[DB ERROR] Batch reduce morales to 25 failed")
+            raise e
         finally:
             session.close()
 
@@ -3769,6 +3782,28 @@ class PlayerBans(Base):
             session.close()
 
     @classmethod
+    def reduce_suspensions_for_teams(cls, teams):
+        session = DatabaseManager().get_session()
+
+        try:
+            for league_id, teams in teams.items():
+                for team_id in teams:
+                    bans = session.query(PlayerBans).join(Players).filter(Players.team_id == team_id).all()
+
+                    for ban in bans:
+                        if ban.ban_type in ["red_card", "yellow_cards"] and ban.competition_id == league_id:
+                            ban.suspension -= 1
+
+                        if ban.suspension == 0:
+                            session.delete(ban)
+
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def reduce_injuries(cls, time, stopDate):
         session = DatabaseManager().get_session()
         try:
@@ -6121,33 +6156,40 @@ def update_ages(start_date, end_date):
     finally:
         session.close()
 
-def check_player_games_happy(teams, currDate):
-    for team in teams:
-        players = Players.get_all_players_by_team(team.id, youths = False)
-        for player in players:
+def check_player_games_happy(teamID, currDate):
+    
+    payload = {
+        "players_to_update": [],
+        "emails_to_send": []
+    }
 
-            if player.player_role == "Backup":
-                continue
+    players = Players.get_all_players_by_team(teamID, youths = False)
+    players = [p for p in players if p.player_role != "Backup" and p.morale > 25]
+    matches = Matches.get_all_played_matches_by_team(teamID, currDate)
+    user = Managers.get_all_user_managers()[0]
+    managed_team = Teams.get_teams_by_manager(user.id)[0]
 
-            matchesToCheck = MATCHES_ROLES[player.player_role]
-            matches = Matches.get_all_played_matches_by_team(team.id, currDate)
-            matches = [m for m in matches if not TeamLineup.check_player_availability(player.id, m.id)]
+    for player in players:
 
-            if len(matches) < matchesToCheck:
-                continue
+        matchesToCheck = MATCHES_ROLES[player.player_role]
+        matches = [m for m in matches if not TeamLineup.check_player_availability(player.id, m.id)]
 
-            last_matches = matches[-matchesToCheck:]  # last n matches
-            avg_minutes = sum(MatchEvents.get_player_game_time(player.id, match.id) for match in last_matches) / matchesToCheck
+        if len(matches) < matchesToCheck:
+            continue
 
-            if player_gametime(avg_minutes, player):
-                reduced = Players.reduce_morale_to_25(player.id)
+        last_matches = matches[-matchesToCheck:]  # last n matches
+        avg_minutes = sum(MatchEvents.get_player_game_time(player.id, match.id) for match in last_matches) / matchesToCheck
 
-                user = Managers.get_all_user_managers()[0]
-                managed_team = Teams.get_teams_by_manager(user.id)[0]
+        if player_gametime(avg_minutes, player):
+            # reduced = Players.reduce_morale_to_25(player.id)
+            payload["players_to_update"].append(player.id)
 
-                if team.id == managed_team.id and reduced:
-                    email_date = currDate + timedelta(days = 1)
-                    Emails.add_email("player_games_issue", None, player.id, None, None, email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+            if teamID == managed_team.id:
+                email_date = currDate + timedelta(days = 1)
+                payload["emails_to_send"].append(("player_games_issue", None, player.id, None, None, email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0)))
+                # Emails.add_email("player_games_issue", None, player.id, None, None, email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+
+    return payload
 
 def create_events_for_other_teams(team_id, start_date, managing_team):
     end_date = start_date + timedelta(days=7)
@@ -6278,15 +6320,17 @@ def teamStrength(playerIDs, role, playerOBJs):
     
 def process_payload(payload):
     try: 
-        LeagueTeams.batch_update_teams(payload["team_updates"])
-        Managers.batch_update_managers(payload["manager_updates"])
-        MatchEvents.batch_add_events(payload["match_events"])
-        Matches.batch_update_scores(payload["score_updates"])
-        Players.batch_update_fitness(payload["fitness_updates"])
-        Players.batch_update_sharpnesses(payload["sharpness_updates"])
-        Players.batch_update_morales(payload["morale_updates"])
-        TeamLineup.batch_add_lineups(payload["lineup_updates"])
-        MatchStats.batch_add_stats(payload["stats_updates"])
+        call_if_not_empty(payload["team_updates"], LeagueTeams.batch_update_teams)
+        call_if_not_empty(payload["manager_updates"], Managers.batch_update_managers)
+        call_if_not_empty(payload["match_events"], MatchEvents.batch_add_events)
+        call_if_not_empty(payload["score_updates"], Matches.batch_update_scores)
+        call_if_not_empty(payload["fitness_updates"], Players.batch_update_fitness)
+        call_if_not_empty(payload["sharpness_updates"], Players.batch_update_sharpnesses)
+        call_if_not_empty(payload["morale_updates"], Players.batch_update_morales)
+        call_if_not_empty(payload["lineup_updates"], TeamLineup.batch_add_lineups)
+        call_if_not_empty(payload["stats_updates"], MatchStats.batch_add_stats)
+        call_if_not_empty(payload["players_to_update"], Players.batch_reduce_morales_to_25)
+        call_if_not_empty(payload["emails_to_send"], Emails.batch_add_emails)
 
         for ban in payload["player_bans"]:
 
@@ -6310,3 +6354,7 @@ def process_payload(payload):
 
     except Exception as e:
         print(f"Error updating teams: {e}")
+
+def call_if_not_empty(data, func):
+    if data:
+        func(data)

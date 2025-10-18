@@ -3050,6 +3050,21 @@ class League(Base):
             return None
         finally:
             session.close()
+
+    @classmethod
+    def update_loaded_leagues(cls, loaded_leagues):
+        session = DatabaseManager().get_session()
+        try:
+            for league_name, is_loaded in loaded_leagues.items():
+                league = session.query(League).filter(League.name == league_name).first()
+                if league:
+                    league.to_be_loaded = is_loaded
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
             
 class LeagueTeams(Base):
     __tablename__ = 'league_teams'

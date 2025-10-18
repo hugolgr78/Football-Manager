@@ -2900,6 +2900,7 @@ class League(Base):
     league_above = Column(String(256))
     league_below = Column(String(256))
     loaded = Column(Boolean, nullable = False)
+    to_be_loaded = Column(Boolean, nullable = False)
 
     @classmethod
     def add_leagues(cls, loadedLeagues):
@@ -2926,7 +2927,8 @@ class League(Base):
                     "logo": logo,
                     "promotion": league["promotion"],
                     "relegation": league["relegation"],
-                    "loaded": loadedLeagues[league["name"]] == 1
+                    "loaded": loadedLeagues[league["name"]] == 1,
+                    "to_be_loaded": loadedLeagues[league["name"]] == 1
                 })
 
             # Populate the league above and below with the corresponding ids

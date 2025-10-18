@@ -361,7 +361,7 @@ def generate_CA(age: int, team_strength: float, min_level: int = 150) -> int:
                    for ca, w in zip(CAs, weights)]
 
     level = random.choices(CAs, weights=weights, k=1)[0]
-    return level
+    return max(5, level)
 
 def generate_youth_player_level(max_level: int = 150) -> int:
     """
@@ -405,14 +405,21 @@ def generate_youth_player_level(max_level: int = 150) -> int:
     # Pick uniformly inside interval
     return random.randint(chosen_interval[0], chosen_interval[1])
 
+import random
+
 def calculate_potential_ability(age: int, CA: int) -> int:
     """
     Calculate Potential Ability (PA) based on age and CA.
     - Younger players can have huge jumps (wonderkids), but those are rarer.
-    - Older players have small gaps.
+    - Older players have smaller growth potential.
     - PA capped at 200.
+    - Ensures minimum improvement based on CA:
+        * CA < 100 → at least +50
+        * 100 ≤ CA < 150 → at least +25
+        * CA ≥ 150 → no forced minimum (uses normal logic)
     """
 
+    # Base growth logic by age
     if age <= 18:
         max_gap = 200 - CA
         min_gap = 25
@@ -432,9 +439,15 @@ def calculate_potential_ability(age: int, CA: int) -> int:
         max_gap = min(5, 200 - CA)
         min_gap = 0
 
-    # Ensure min_gap never exceeds max_gap
+    # Extra rule based on CA
+    if CA < 100:
+        min_gap = max(min_gap, 50)
+    elif CA < 150:
+        min_gap = max(min_gap, 25)
+
+    # Ensure min_gap does not exceed max_gap
     if min_gap > max_gap:
-        min_gap = 0
+        min_gap = max_gap
 
     if max_gap <= 0:
         return CA  # already at cap or no growth possible
@@ -443,7 +456,7 @@ def calculate_potential_ability(age: int, CA: int) -> int:
     gaps = list(range(min_gap, max_gap + 1))
 
     # Weighting: smaller gaps are more likely, big gaps rarer
-    weights = [1 / (g + 1) for g in gaps]
+    weights = [1 / (g - min_gap + 1) for g in gaps]
 
     gap = random.choices(gaps, weights=weights, k=1)[0]
 

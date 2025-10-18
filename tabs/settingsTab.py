@@ -68,6 +68,8 @@ class SettingsTab(ctk.CTkFrame):
         else:
             self.delegateOn.configure(text="Off")
 
+        self.checkSave()
+
     def chooseLeagues(self):
         self.chooseLeaguesFrame = ChoosingLeagueFrame(self.parent, fgColor = TKINTER_BACKGROUND, width = 1200, height = 700, corner_radius = 0, border_width = 0, border_color = APP_BLUE, endFunction = self.finishLeagues, settings = True)
         self.chooseLeaguesFrame.place(relx = 0.5, rely = 0.5, anchor = "center")

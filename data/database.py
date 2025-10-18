@@ -6237,8 +6237,7 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
     while current_date.date() < end_date.date():
         events = []
 
-        templates_2 = TEMPLATES_2.copy()
-        templates_3 = TEMPLATES_3.copy()
+        templates = [TEMPLATES_2.copy(), TEMPLATES_3.copy()]
 
         is_prep = getDayIndex(current_date + timedelta(days=1)) in match_days
         is_match = getDayIndex(current_date) in match_days
@@ -6254,67 +6253,65 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
                 is_home = Matches.get_team_match_no_time(team_id, date_check).home_id == team_id
 
                 if is_home:
-                    template = random.choice(TEMPLATES_2)
-                    for t_event in template:
-                        if weekly_usage[t_event] < MAX_EVENTS[t_event]:
-                            events.append(t_event)
-                            weekly_usage[t_event] += 1
-                    templates_2.remove(template)
-
-                    if is_review:
-                        events = ["Match Review"] + events[:2]
-                    elif is_prep:
-                        events = events[:2] + ["Match Preparation"]
-                else:
-                    possible = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e]]
+                    possible = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e] and e != "Recovery"]
                     event = random.choice(possible) if possible else None
-                    if event:
-                        weekly_usage[event] += 1
 
                     if is_review:
-                        events = ["Travel", "Match Review"]
-                        if event:
-                            events.append(event)
+                        events = ["Match Review", "Recovery"] + ([event] if event else [])
                     elif is_prep:
-                        events = ["Travel", "Match Preparation"]
-                        if event:
-                            events.insert(0, event)
+                        events = ([event] if event else []) + ["Recovery", "Match Preparation"]
+
+                        weekly_usage["Recovery"] += 1
+                else:
+                    if is_review:
+                        events = ["Travel", "Match Review", "Recovery"]
+                    elif is_prep:
+                        events = ["Recovery", "Travel", "Match Preparation"]
+                    
+                        weekly_usage["Recovery"] += 1
             else:
-                template = random.choice(TEMPLATES_3)
+                template_group = random.choice(templates)
+
+                if len(template_group) == 0:
+                    template_group = templates[0] if templates[0] != template_group else templates[1]
+                if len(template_group) == 0:
+                    current_date += timedelta(days=1)
+                    continue
+
+                template = random.choice(template_group)
                 for t_event in template:
                     if weekly_usage[t_event] < MAX_EVENTS[t_event]:
                         events.append(t_event)
                         weekly_usage[t_event] += 1
-                templates_3.remove(template)
+                template_group.remove(template)
 
             planned_events[current_date.date()] = events[:3]
 
         current_date += timedelta(days=1)
 
-    # === SECOND PASS: fill in gaps and insert ===
+    # === SECOND PASS: fill in recoveries and insert ===
     return_events = []
-    for day, events in planned_events.items():
-        days_left = (end_date.date() - day).days
-        if weekly_usage["Recovery"] < 2 and days_left <= (2 - weekly_usage["Recovery"]):
-            if events:
-                if "Recovery" not in events:
-                    weekly_usage[events[-1]] -= 1
-                    events[-1] = "Recovery"
-                    weekly_usage["Recovery"] += 1
-            else:
-                events.append("Recovery")
+    recoveries_needed = max(0, 2 - weekly_usage["Recovery"])
+    if recoveries_needed > 0:
+        sorted_days = sorted(planned_events.keys(), reverse = True)
+        for day in sorted_days:
+            if recoveries_needed == 0:
+                break
+
+            events = planned_events[day]
+
+            # Replace last event if possible
+            if events and "Recovery" not in events and events[-1] not in ("Travel", "Match Preparation"):
+                weekly_usage[events[-1]] -= 1
+                events[-1] = "Recovery"
                 weekly_usage["Recovery"] += 1
+                recoveries_needed -= 1
+            elif not events:
+                planned_events[day].append("Recovery")
+                weekly_usage["Recovery"] += 1
+                recoveries_needed -= 1
 
-        # # Fill remaining slots up to 3
-        # while len(events) < 3:
-        #     possible = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e] and e not in events]
-        #     if not possible:
-        #         break
-        #     choice = random.choice(possible)
-        #     events.append(choice)
-        #     weekly_usage[choice] += 1
-
-        # Insert into DB
+    for day, events in planned_events.items():
         eventsToAdd = []
         for i, event in enumerate(events):
             startHour, endHour = EVENT_TIMES[i]

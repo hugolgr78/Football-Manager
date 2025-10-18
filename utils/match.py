@@ -627,7 +627,7 @@ class Match():
                 event["player"] = playerID
 
                 rating = random.uniform(OWN_GOAL_RATINGS[0], OWN_GOAL_RATINGS[1])
-                oppRatings[playerID] = oppRatings.get(playerID, 0) + round(rating, 2)
+                oppRatings[playerID] = min(10, max(0, round(oppRatings.get(playerID, 0) + rating, 2)))
 
             elif event["type"] == "yellow_card":
                 weights = [ownGoalFoulWeight(player) for player in players_dict.values()]
@@ -1142,7 +1142,7 @@ class Match():
                         player=player,
                         start_position=start_position,
                         end_position=None,
-                        rating=self.homeRatings[player.id],
+                        rating=min(10, max(0, round(self.homeRatings[player.id], 2)), 10),
                         reason=None,  # was selected
                         morales_to_update=morales_to_update,
                         lineups_to_add=lineups_to_add,
@@ -1167,7 +1167,7 @@ class Match():
                         player=player,
                         start_position=start_position,
                         end_position=end_position,
-                        rating=self.homeRatings[player.id],
+                        rating=min(10, max(0, round(self.homeRatings[player.id], 2)), 10),
                         reason=None,  # was selected
                         morales_to_update=morales_to_update,
                         lineups_to_add=lineups_to_add,
@@ -1181,8 +1181,6 @@ class Match():
                 # Player not in final lineup OR current lineup
                 if player.id not in self.homeCurrentLineup.values() and player.id not in final_ids and player.id in self.homeCurrentSubs:
                     playerAdded = True
-                    
-                    # Player benched
                     self.add_player_lineup(
                         player=player,
                         start_position=None,
@@ -1236,7 +1234,7 @@ class Match():
                         player=player,
                         start_position=start_position,
                         end_position=None,
-                        rating=self.awayRatings[player.id],
+                        rating=min(10, max(0, round(self.awayRatings[player.id], 2)), 10),
                         reason=None,  # was selected
                         morales_to_update=morales_to_update,
                         lineups_to_add=lineups_to_add,
@@ -1261,7 +1259,7 @@ class Match():
                         player=player,
                         start_position=start_position,
                         end_position=end_position,
-                        rating=self.awayRatings[player.id],
+                        rating=min(10, max(0, round(self.awayRatings[player.id], 2)), 10),
                         reason=None,  # was selected
                         morales_to_update=morales_to_update,
                         lineups_to_add=lineups_to_add,
@@ -1314,7 +1312,7 @@ class Match():
                         goal_diff=self.goalDiffAway
                     )
 
-            # submit morales update
+            # submit morale updates
             logger.debug(f"{prefix} Submitting {len(morales_to_update)} morale updates")
             payload["morale_updates"] = morales_to_update
             payload["sharpness_updates"] = sharpnesses_to_update            

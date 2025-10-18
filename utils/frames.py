@@ -1498,11 +1498,11 @@ class next5Matches(ctk.CTkFrame):
 
             homeImage = Image.open(io.BytesIO(homeTeam.logo))
             homeImage.thumbnail((50, 50))
-            homeLogo = TeamLogo(matchFrame, homeImage, homeTeam, self.fgColor, 0.35, 0.5, "center", self.parentTab)
+            homeLogo = TeamLogo(matchFrame, homeImage, homeTeam, self.fgColor, 0.35, 0.5, "center", self.parentTab, clickable = match.home_id != self.team.id)
 
             awayImage = Image.open(io.BytesIO(awayTeam.logo))
             awayImage.thumbnail((50, 50))
-            awayLogo = TeamLogo(matchFrame, awayImage, awayTeam, self.fgColor, 0.65, 0.5, "center", self.parentTab)
+            awayLogo = TeamLogo(matchFrame, awayImage, awayTeam, self.fgColor, 0.65, 0.5, "center", self.parentTab, clickable = match.away_id != self.team.id)
 
             ctk.CTkLabel(matchFrame, text = homeTeam.name.split()[0], font = (APP_FONT, 13), text_color = "white", fg_color = self.fgColor).place(relx = 0.15, rely = self.textY, anchor = "center")
             ctk.CTkLabel(matchFrame, text = homeTeam.name.split()[1], font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = self.fgColor).place(relx = 0.15, rely = 0.63, anchor = "center")

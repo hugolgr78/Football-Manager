@@ -5,7 +5,7 @@ from data.gamesDatabase import *
 from utils.util_functions import append_overlapping_profile
 
 class TeamLogo(ctk.CTkImage):
-    def __init__(self, parent, image, team, fg_color, relx, rely, anchor, tab):
+    def __init__(self, parent, image, team, fg_color, relx, rely, anchor, tab, clickable = True):
         super().__init__(image, None, (image.width, image.height))
         
         self.parent = parent
@@ -16,7 +16,8 @@ class TeamLogo(ctk.CTkImage):
         self.imageLabel = ctk.CTkLabel(self.parent, image = self, text = "", fg_color = self.fg_color)
         self.imageLabel.place(relx = relx, rely = rely, anchor = anchor)
 
-        self.imageLabel.bind("<Enter><Button-1>", lambda event: self.openClubProfile())
+        if clickable:
+            self.imageLabel.bind("<Enter><Button-1>", lambda event: self.openClubProfile())
 
     def openClubProfile(self):
         from tabs.teamProfile import TeamProfile

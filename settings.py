@@ -564,25 +564,22 @@ EVENT_TIMES = [MORNING_EVENT_TIMES, AFTERNOON_EVENT_TIMES, EVENING_EVENT_TIMES]
 
 EVENT_CHANGES = {
     "Light Training": (-5, 5),   
-    "Medium Training": (-12, 10),  
-    "Intense Training": (-20, 15),   
+    "Medium Training": (-10, 10),  
+    "Intense Training": (-15, 15),   
     "Recovery": (20, 0),        
 }
 
 TEMPLATES_3 = [
     ["Intense Training", "Medium Training", "Light Training"],
-    ["Medium Training", "Team Building", "Recovery"],
-    ["Light Training", "Recovery", "Intense Training"],
-    ["Team Building", "Medium Training", "Recovery"],
-    ["Recovery", "Team Building", "Medium Training"]
+    ["Medium Training", "Team Building", "Light Training"],
+    ["Team Building", "Medium Training", "Intense Training"],
+    ["Light Training", "Team Building", "Medium Training"]
 ]
 
 TEMPLATES_2 = [
     ["Medium Training", "Light Training"],
-    ["Intense Training", "Recovery"],
     ["Team Building", "Medium Training"],
-    ["Recovery", "Light Training"],
-    ["Intense Training", "Team Building"]
+    ["Intense Training", "Medium Training"]
 ]
 
 MATCH_STATS = [

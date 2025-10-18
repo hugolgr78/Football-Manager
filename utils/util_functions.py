@@ -1011,7 +1011,7 @@ def run_match_simulation(interval, currDate, exclude_leagues = []):
         _logger.info("Preparing to simulate %d matches", total_to_sim)
         _logger.info("Starting match initialization")
 
-        CHUNK_SIZE = min(len(matchesToSim), os.cpu_count())
+        CHUNK_SIZE = min(len(matchesToSim), os.cpu_count() - 1)
         total_batches = (total_to_sim + CHUNK_SIZE - 1) // CHUNK_SIZE
 
         _logger.info("Starting parallel match simulation in up to %d batches (chunk=%d)", total_batches, CHUNK_SIZE)

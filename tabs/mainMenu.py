@@ -1,11 +1,11 @@
-import gc, traceback, logging, time, os, glob
+import logging, time
 import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
 from PIL import Image
 from utils.util_functions import *
-from concurrent.futures import ProcessPoolExecutor, as_completed, ThreadPoolExecutor
+from concurrent.futures import as_completed, ThreadPoolExecutor
 
 from tabs.hub import Hub
 from tabs.inbox import Inbox
@@ -25,6 +25,7 @@ class MainMenu(ctk.CTkFrame):
 
         self.parent = parent
         self.manager_id = manager_id
+        self.movingDate = True
 
         if created:
             db = DatabaseManager()
@@ -165,6 +166,8 @@ class MainMenu(ctk.CTkFrame):
                 self.tabs[4].turnSubsOn()
 
     def moveDate(self):
+
+        self.movingDate = True
     
         db = DatabaseManager()
         db.start_copy()
@@ -355,6 +358,7 @@ class MainMenu(ctk.CTkFrame):
 
         self.resetTabs(0, 1, 2, 3, 4, 5, 6)
         self.addDate()
+        self.movingDate = False
         
     def getIntervals(self, start_date, end_date, teamIDs):
         intervals = set()

@@ -98,6 +98,10 @@ class FootballManager(ctk.CTk):
 
         if self.creatingManager:
             return
+        
+        if hasattr(self.loginMenu, "main") and self.loginMenu.main and self.loginMenu.main.movingDate:
+            return
+
 
         # List all files in the data folder ending with _copy.db
         copy_files = [f for f in os.listdir("data") if f.endswith("_copy.db")]

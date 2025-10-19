@@ -2173,7 +2173,7 @@ class MatchDay(ctk.CTkFrame):
         for frame in self.otherMatchesFrame.winfo_children():
             if frame.matchInstance:
                 # frame.matchInstance.saveData(auto = False)
-                payloads.append(frame.matchInstance.saveData(auto = False))
+                payloads.append(frame.matchInstance.saveData())
 
         logger.debug("Saving data for the managed match.")
         # self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away")

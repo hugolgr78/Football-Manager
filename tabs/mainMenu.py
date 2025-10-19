@@ -62,6 +62,32 @@ class MainMenu(ctk.CTkFrame):
         self.tabsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 200, height = 700)
         self.tabsFrame.place(x = 0, y = 0, anchor = "nw")
 
+        self.movingFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 200)
+        self.movingFrame.place(relx = 0, rely = -1.0, anchor = "nw")
+
+        self.bottom_border = ctk.CTkFrame(self.movingFrame, height = 2, width = 1000, fg_color = APP_BLUE)
+        self.bottom_border.place(relx = 0, rely = 1, anchor = "sw")  
+
+        self.progressBar = ctk.CTkProgressBar(
+            self.movingFrame,
+            width = 900,
+            height = 40,
+            fg_color = GREY_BACKGROUND,     
+            progress_color = APP_BLUE,     
+            corner_radius = 0               
+        )   
+        self.progressBar.place(relx = 0.02, rely = 0.55, anchor = "w")
+        self.progressBar.set(0)
+        self.completedSteps = 0
+
+        self.progressLabel = ctk.CTkLabel(self.movingFrame, text = "0%", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = TKINTER_BACKGROUND)
+        self.progressLabel.place(relx = 0.96, rely = 0.55, anchor = "e")
+
+        self.dateLabel = ctk.CTkLabel(self.movingFrame, text = f"", font = (APP_FONT_BOLD, 25), text_color = "white", fg_color = TKINTER_BACKGROUND)
+        self.dateLabel.place(relx = 0.02, rely = 0.12, anchor = "w")
+        self.textTimeLabel = ctk.CTkLabel(self.movingFrame, text = f"", font = (APP_FONT, 20), text_color = "white", fg_color = TKINTER_BACKGROUND)
+        self.textTimeLabel.place(relx = 0.02, rely = 0.27, anchor = "w")
+
         canvas = ctk.CTkCanvas(self, width = 5, height = 1000, bg = APP_BLUE, bd = 0, highlightthickness = 0)
         canvas.place(x = 245, y = 0, anchor = "nw")
 
@@ -145,18 +171,18 @@ class MainMenu(ctk.CTkFrame):
             self.timeLabel.destroy()
             self.continueButton.destroy()
 
-        currDate = Game.get_game_date(self.manager_id)
-        day, text, time = format_datetime_split(currDate)
+        self.currDate = Game.get_game_date(self.manager_id)
+        day, text, time = format_datetime_split(self.currDate)
 
         self.dayLabel = ctk.CTkLabel(self.tabsFrame, text = day, font = (APP_FONT, 13), text_color = "white", fg_color = TKINTER_BACKGROUND)
         self.dayLabel.place(relx = 0.03, rely = 0.86, anchor = "w")
         self.timeLabel = ctk.CTkLabel(self.tabsFrame, text = f"{text} {time}", font = (APP_FONT_BOLD, 13), text_color = "white", fg_color = TKINTER_BACKGROUND)
         self.timeLabel.place(relx = 0.03, rely = 0.89, anchor = "w")
 
-        gameTime = Matches.check_if_game_time(self.team.id, currDate)
+        gameTime = Matches.check_if_game_time(self.team.id, self.currDate)
 
         if not gameTime:
-            self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Continue >>", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = APP_BLUE, corner_radius = 10, height = 50, width = 127, hover_color = APP_BLUE, command = self.moveDate)
+            self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Continue >>", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = APP_BLUE, corner_radius = 10, height = 50, width = 127, hover_color = APP_BLUE, command = self.showProgressBar)
             self.continueButton.place(relx = 0.32, rely = 0.99, anchor = "sw")
         else:
             self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Matchday >>", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = PIE_RED, corner_radius = 10, height = 50, width = 127, hover_color = PIE_RED, command = lambda: self.changeTab(4))
@@ -164,6 +190,11 @@ class MainMenu(ctk.CTkFrame):
 
             if self.tabs[4]:
                 self.tabs[4].turnSubsOn()
+
+    def showProgressBar(self):
+        day, text, _ = format_datetime_split(self.currDate)
+        self.configureMovingFrame(day, text)
+        self.addMovingFrame()
 
     def moveDate(self):
 
@@ -188,7 +219,7 @@ class MainMenu(ctk.CTkFrame):
         overallTimeInBetween = stopDate - self.currDate
         self._logger.debug("Computed stopDate=%s overallTimeInBetween=%s", stopDate, overallTimeInBetween)
 
-        # ------------------- Creating calendar events for other teams -------------------
+        # ------------------- Checking if we need to create events -------------------
         self._logger.info("Starting calendar events generation from %s to %s", self.currDate, stopDate)
         
         # Checking if we are going past a monday at 8.59am
@@ -201,6 +232,20 @@ class MainMenu(ctk.CTkFrame):
                     createEvents = True
                     break
             current_day += timedelta(days = 1)
+
+        # ------------------- Counting total steps for progress bar -------------------
+        self.totalSteps = 0
+
+        if createEvents:
+            self.totalSteps += len(teamIDs) # for calendar event creations
+        
+        self.totalSteps += len(teamIDs)  # for player attribute updates
+        matchesToSim = Matches.get_matches_time_frame(self.currDate, stopDate)
+
+        if matchesToSim:
+            self.totalSteps += len(matchesToSim)  # for match simulations
+
+        # ------------------- Creating calendar events for other teams -------------------
 
         if createEvents:
             team_list = teamIDs.copy()
@@ -221,6 +266,7 @@ class MainMenu(ctk.CTkFrame):
                         if events:
                             all_events_to_add.extend(events)
                         self._logger.info("Finished creating events for a team (returned %d events)", len(events) if events else 0)
+                        self.updateProgressBar(1)
                     except Exception:
                         self._logger.exception("Calendar events worker raised an exception")
             try:
@@ -238,7 +284,7 @@ class MainMenu(ctk.CTkFrame):
         intervals = self.getIntervals(self.currDate, stopDate, teamIDs)
         self._logger.debug("Computed intervals count=%d", len(intervals))
 
-        # ------------------- Update player attributes and carry out events -------------------
+        # ------------------- Update player attributes and carry out events ------------
 
         self._logger.info("Starting player attribute updates and event processing across %d intervals", len(intervals))
 
@@ -322,6 +368,8 @@ class MainMenu(ctk.CTkFrame):
                 if res.get('reduce_intervals'):
                     reduce_tasks.append((res['team_id'], res['reduce_intervals']))
 
+                self.updateProgressBar(1)
+
         # After all workers finished, perform DB writes in main thread (timed)
         try:
             if combined_events:
@@ -348,7 +396,7 @@ class MainMenu(ctk.CTkFrame):
             SavedLineups.delete_current_lineup()
             self.tabs[4].saveLineup()
     
-        run_match_simulation([self.currDate, stopDate], self.currDate)
+        run_match_simulation([self.currDate, stopDate], self.currDate, progress_callback = self.updateProgressBar)
 
         self.currDate += overallTimeInBetween
         Game.increment_game_date(self.manager_id, overallTimeInBetween)
@@ -356,9 +404,9 @@ class MainMenu(ctk.CTkFrame):
 
         # ------------------- Reset/End -------------------
 
-        self.resetTabs(0, 1, 2, 3, 4, 5, 6)
-        self.addDate()
-        self.movingDate = False
+        self.progressBar.set(1.0)
+        self.progressLabel.configure(text = "100%")
+        self.removeMovingFrame()
         
     def getIntervals(self, start_date, end_date, teamIDs):
         intervals = set()
@@ -427,3 +475,49 @@ class MainMenu(ctk.CTkFrame):
                 frame.place_forget()
 
         self.overlappingProfiles = []
+
+    def configureMovingFrame(self, day, text):
+
+        self.dateLabel.configure(text = f"{day}")
+        self.textTimeLabel.configure(text = f"{text}")
+
+        self.movingFrame.update_idletasks()
+
+    def updateProgressBar(self, step = 1):
+
+        self.completedSteps += 1
+        progress = self.completedSteps / self.totalSteps
+        self.progressBar.set(progress)
+        self.progressLabel.configure(text = f"{int(progress * 100)}%")
+
+        self.movingFrame.update_idletasks()
+
+    def addMovingFrame(self):
+        self.movingFrame.lift()
+        current_rely = float(self.movingFrame.place_info().get("rely"))
+        target_rely = 0.0
+
+        if current_rely < target_rely:
+            new_rely = current_rely + 0.02  # animation speed
+            self.movingFrame.place(x = 200, rely = new_rely, anchor = "nw")
+            self.after(10, self.addMovingFrame)
+        else:
+            self.movingFrame.place(x = 200, rely = target_rely, anchor = "nw")
+            self.moveDate()
+
+    def removeMovingFrame(self):
+        current_rely = float(self.movingFrame.place_info().get("rely"))
+        target_rely = -1.0
+
+        if current_rely > target_rely:
+            new_rely = current_rely - 0.02  # animation speed
+            self.movingFrame.place(x = 200, rely = new_rely, anchor = "nw")
+            self.after(10, self.removeMovingFrame)
+        else:
+            self.movingFrame.place(x = 200, rely = target_rely, anchor = "nw")
+            self.progressBar.set(0)
+            self.completedSteps = 0
+            self.progressLabel.configure(text = "0%")
+            self.resetTabs(0, 1, 2, 3, 4, 5, 6)
+            self.addDate()
+            self.movingDate = False

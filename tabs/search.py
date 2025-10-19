@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from settings import *
 from data.database import Matches, searchResults, Teams, LeagueTeams, League, Players, Managers, Referees
-from utils.util_functions import getSuffix
+from utils.util_functions import getSuffix, append_overlapping_profile
 
 class Search(ctk.CTkFrame):
     def __init__(self, parent):
@@ -162,7 +162,7 @@ class Search(ctk.CTkFrame):
 
             self.profile = TeamProfile(self, manager_id = team.manager_id, parentTab = self, changeBackFunction = self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
-            self.parent.overlappingProfiles.append(self.profile)
+            append_overlapping_profile(self, self.profile)
 
     def openPlayerProfile(self, player_id):
         from tabs.playerProfile import PlayerProfile
@@ -170,7 +170,7 @@ class Search(ctk.CTkFrame):
         player = Players.get_player_by_id(player_id)
         self.profile = PlayerProfile(self, player, changeBackFunction = self.changeBack)
         self.profile.place(x = 0, y = 0, anchor = "nw")
-        self.parent.overlappingProfiles.append(self.profile)
+        append_overlapping_profile(self, self.profile)
 
     def openManagerProfile(self, manager_id):
         from tabs.managerProfile import ManagerProfile
@@ -179,7 +179,7 @@ class Search(ctk.CTkFrame):
         if manager.user != 1:
             self.profile = ManagerProfile(self, manager_id = manager_id, changeBackFunction = self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
-            self.parent.overlappingProfiles.append(self.profile)
+            append_overlapping_profile(self, self.profile)
         else:
             self.parent.changeTab(7)
 
@@ -189,7 +189,7 @@ class Search(ctk.CTkFrame):
         if league_id != self.team_league_id:
             self.profile = LeagueProfile(self, league_id = league_id, changeBackFunction = self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
-            self.parent.overlappingProfiles.append(self.profile)
+            append_overlapping_profile(self, self.profile)
         else:
             self.parent.changeTab(6)
 
@@ -199,7 +199,7 @@ class Search(ctk.CTkFrame):
         referee = Referees.get_referee_by_id(referee_id)
         self.profile = RefereeProfile(self, referee, changeBackFunction = self.changeBack)
         self.profile.place(x = 0, y = 0, anchor = "nw")
-        self.parent.overlappingProfiles.append(self.profile)
+        append_overlapping_profile(self, self.profile)
 
     def openMatchProfile(self, match_id):
         from tabs.matchProfile import MatchProfile
@@ -207,7 +207,7 @@ class Search(ctk.CTkFrame):
         match = Matches.get_match_by_id(match_id)
         self.profile = MatchProfile(self, match, self, changeBackFunction = self.changeBack)
         self.profile.place(x = 0, y = 0, anchor = "nw")
-        self.parent.overlappingProfiles.append(self.profile)
+        append_overlapping_profile(self, self.profile)
 
     def changeBack(self):
         self.profile.place_forget()

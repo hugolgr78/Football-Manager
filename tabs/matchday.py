@@ -5,10 +5,8 @@ from data.gamesDatabase import *
 from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame, SubstitutePlayer, FormGraph, InGamePlayerFrame, InGameStatFrame
 from utils.shouts import ShoutFrame
 from utils.util_functions import *
-import threading, time
-import logging
+import threading, time, logging, math, io
 from PIL import Image, ImageTk
-import math
 
 class MatchDay(ctk.CTkFrame):
     def __init__(self, parent, teamLineup, teamSubstitutes, team, players):
@@ -929,8 +927,6 @@ class MatchDay(ctk.CTkFrame):
                     matchInstance.appendScore(1, True if side == "home" else False)
                 else:
                     goalType = "penalty_miss"
-            elif goalType == "own_goal":
-                matchInstance.appendScore(1, False if side == "home" else True)
             else:
                 matchInstance.appendScore(1, True if side == "home" else False)
             
@@ -1843,11 +1839,11 @@ class MatchDay(ctk.CTkFrame):
         self.HTplayersFrame = ctk.CTkFrame(self.halfTimeFrame, width = 520, height = 550, fg_color = GREY_BACKGROUND, corner_radius = 10)
 
         ## Half time score data frame
-        src = Image.open(f"Images/Teams/{self.team.name}.png")
+        src = Image.open(io.BytesIO(self.team.logo))
         src.thumbnail((75, 75))
         teamImage = ctk.CTkImage(src, None, (src.width, src.height))
 
-        src = Image.open(f"Images/Teams/{self.opposition.name}.png")
+        src = Image.open(io.BytesIO(self.opposition.logo))
         src.thumbnail((75, 75))
         opponentImage = ctk.CTkImage(src, None, (src.width, src.height))
         
@@ -2155,16 +2151,55 @@ class MatchDay(ctk.CTkFrame):
 
     def endSimulation(self):
 
+        payload = {
+                "team_updates": [],
+                "manager_updates": [],
+                "match_events": [],
+                "player_bans": [],
+                "yellow_card_checks": [],
+                "score_updates": [],
+                "fitness_updates": [],
+                "sharpness_updates": [],
+                "morale_updates": [],
+                "lineup_updates": [],
+                "stats_updates": [],
+            }
+        
+        payloads = []
+
+        logger = logging.getLogger(__name__)
+
+        logger.debug("Saving data for other matches in the league.")
         for frame in self.otherMatchesFrame.winfo_children():
             if frame.matchInstance:
-                frame.matchInstance.saveData(auto = False)
+                # frame.matchInstance.saveData(auto = False)
+                payloads.append(frame.matchInstance.saveData(auto = False))
 
-        self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away", auto = False)
+        logger.debug("Saving data for the managed match.")
+        # self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away")
+        payloads.append(self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away"))
 
+        logger.debug("Combining payloads.")
+        for p in payloads:
+            for k in payload.keys():
+                val = p.get(k)
+                if not val:
+                    continue
+                if isinstance(p[k], list):
+                    payload[k].extend(p[k])
+                else:
+                    payload[k].append(p[k])
+
+        logger.debug("Processing combined payload.")
+        process_payload(payload)
+        logger.debug("Payload processing complete.")
+
+        ## Post match updates
+        logger.debug("Updating team positions.")
         LeagueTeams.update_team_positions(self.league.id)
-        Game.increment_game_date(Managers.get_all_user_managers()[0].id, timedelta(hours = 2))
         currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
 
+        logger.debug("Checking if all matches are complete for the matchday.")
         if League.check_all_matches_complete(self.league.id, currDate):
             for team in LeagueTeams.get_teams_by_league(self.league.id):
                 matchday = League.get_current_matchday(self.league.id)
@@ -2172,13 +2207,19 @@ class MatchDay(ctk.CTkFrame):
 
             League.update_current_matchday(self.league.id)
 
-        teams = [self.matchFrame.matchInstance.homeTeam, self.matchFrame.matchInstance.awayTeam]
+        logger.debug("Checking player game happiness.")
+        check_player_games_happy(self.matchFrame.matchInstance.homeTeam.id, currDate)
+        check_player_games_happy(self.matchFrame.matchInstance.awayTeam.id, currDate)
         for frame in self.otherMatchesFrame.winfo_children():
             if frame.matchInstance:
-                teams.append(frame.matchInstance.homeTeam)
-                teams.append(frame.matchInstance.awayTeam)
+                check_player_games_happy(frame.matchInstance.homeTeam.id, currDate)
+                check_player_games_happy(frame.matchInstance.awayTeam.id, currDate)
 
-        check_player_games_happy(teams, currDate)
+        ## Simulate other leagues' matches in the given interval
+        logger.debug("Simulating matches for other leagues.")
+        run_match_simulation([currDate, currDate + timedelta(hours = 2)], currDate, exclude_leagues = [self.league.id])
+        logger.debug("Match simulation complete.")
+
         SavedLineups.delete_current_lineup()
         Players.reset_talked_to()
 
@@ -2193,4 +2234,7 @@ class MatchDay(ctk.CTkFrame):
             logger = logging.getLogger(__name__)
             logger.exception("Error occurred while saving game: %s", Ex)
 
+        logger.debug("Incrementing game date.")
+        Game.increment_game_date(Managers.get_all_user_managers()[0].id, timedelta(hours = 2))
+        logger.debug("All done, resetting menu.")
         self.parent.resetMenu()

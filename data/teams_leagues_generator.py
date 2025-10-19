@@ -692,6 +692,8 @@ teams = {
     "Tempest Tigers": "Mystic Void",
 }
 
+teams = dict(sorted(teams.items()))
+
 PLACEHOLDER_COLOR = (15, 234, 234) # #0feaea
 # --- HELPER FUNCTIONS ---
 def replace_color(img_path, new_color, save_path):

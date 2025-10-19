@@ -10,6 +10,50 @@ def get_objective_for_level(teamAverages, teamID):
         if min_rank <= teamRank <= max_rank:
             return objective
 
+
+def append_overlapping_profile(start, profile):
+    """Safely append a profile frame to the nearest overlappingProfiles container.
+
+    Walks up common parent attributes (parent, parentTab) looking for an
+    object with an 'overlappingProfiles' list. If none is found, creates the
+    list on the top-most parent and appends there. This centralises the logic
+    so other modules don't have to repeat parent-walking code.
+    """
+    c = start
+    visited = set()
+    while c is not None and id(c) not in visited:
+        if hasattr(c, 'overlappingProfiles'):
+            try:
+                c.overlappingProfiles.append(profile)
+                return
+            except Exception:
+                break
+        visited.add(id(c))
+        c = getattr(c, 'parent', None) or getattr(c, 'parentTab', None)
+
+    # Not found: attach to the top-most parent
+    c = start
+    last = c
+    visited = set()
+    while c is not None and id(c) not in visited:
+        visited.add(id(c))
+        nextc = getattr(c, 'parent', None) or getattr(c, 'parentTab', None)
+        if not nextc:
+            break
+        last = nextc
+        c = nextc
+
+    try:
+        if not hasattr(last, 'overlappingProfiles'):
+            last.overlappingProfiles = []
+        last.overlappingProfiles.append(profile)
+        return
+    except Exception:
+        # Final fallback: attach to the original start object
+        if not hasattr(start, 'overlappingProfiles'):
+            start.overlappingProfiles = []
+        start.overlappingProfiles.append(profile)
+
 def generate_lower_div_objectives(min_level, max_level):
     range_size = (max_level - min_level) // 3
     return {
@@ -317,7 +361,7 @@ def generate_CA(age: int, team_strength: float, min_level: int = 150) -> int:
                    for ca, w in zip(CAs, weights)]
 
     level = random.choices(CAs, weights=weights, k=1)[0]
-    return level
+    return max(5, level)
 
 def generate_youth_player_level(max_level: int = 150) -> int:
     """
@@ -361,14 +405,21 @@ def generate_youth_player_level(max_level: int = 150) -> int:
     # Pick uniformly inside interval
     return random.randint(chosen_interval[0], chosen_interval[1])
 
+import random
+
 def calculate_potential_ability(age: int, CA: int) -> int:
     """
     Calculate Potential Ability (PA) based on age and CA.
     - Younger players can have huge jumps (wonderkids), but those are rarer.
-    - Older players have small gaps.
+    - Older players have smaller growth potential.
     - PA capped at 200.
+    - Ensures minimum improvement based on CA:
+        * CA < 100 → at least +50
+        * 100 ≤ CA < 150 → at least +25
+        * CA ≥ 150 → no forced minimum (uses normal logic)
     """
 
+    # Base growth logic by age
     if age <= 18:
         max_gap = 200 - CA
         min_gap = 25
@@ -388,9 +439,15 @@ def calculate_potential_ability(age: int, CA: int) -> int:
         max_gap = min(5, 200 - CA)
         min_gap = 0
 
-    # Ensure min_gap never exceeds max_gap
+    # Extra rule based on CA
+    if CA < 100:
+        min_gap = max(min_gap, 50)
+    elif CA < 150:
+        min_gap = max(min_gap, 25)
+
+    # Ensure min_gap does not exceed max_gap
     if min_gap > max_gap:
-        min_gap = 0
+        min_gap = max_gap
 
     if max_gap <= 0:
         return CA  # already at cap or no growth possible
@@ -399,7 +456,7 @@ def calculate_potential_ability(age: int, CA: int) -> int:
     gaps = list(range(min_gap, max_gap + 1))
 
     # Weighting: smaller gaps are more likely, big gaps rarer
-    weights = [1 / (g + 1) for g in gaps]
+    weights = [1 / (g - min_gap + 1) for g in gaps]
 
     gap = random.choices(gaps, weights=weights, k=1)[0]
 
@@ -512,8 +569,9 @@ def fitnessWeight(fitness):
     fitness_factor = (100 - fitness) / 100.0
     return max(fitness_factor, 0.01)  # avoid 0 prob
 
-def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper):
-    attackRatio = attackingLevel / max(1, defendingLevel)
+def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper, goalBoost = 1.0):
+    # attackRatio = min(attackingLevel / max(1, defendingLevel), 2.0)
+    attackRatio = 0.5 + 1 / (1 + math.exp(-(attackingLevel - defendingLevel) / 20))
 
     # Sharpness has less weight now
     combined_form = (0.25 * (avgSharpness / 100)) + (0.75 * (avgMorale / 100))
@@ -525,7 +583,7 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
     # Attack ratio dominates
     weight_ratio = 0.8
     weight_modifier = 1 - weight_ratio
-    effective_attack = attackRatio * weight_ratio + attackModifier * weight_modifier
+    effective_attack = attackRatio * weight_ratio + attackModifier * weight_modifier * goalBoost
 
     if oppKeeper:
         if oppKeeper.position == "goalkeeper":
@@ -938,3 +996,201 @@ def get_all_league_teams(jsonData, leagueName):
             teamOBJs.append(team)
 
     return teamOBJs
+
+def run_match_simulation(interval, currDate, exclude_leagues = []):
+    from data.database import Matches, Managers, League, LeagueTeams, PlayerBans, TeamHistory, process_payload, check_player_games_happy
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+    import os, time, logging, glob, traceback
+
+    _logger = logging.getLogger(__name__)
+
+    matchesToSim = Matches.get_matches_time_frame(interval[0], interval[1], exclude_leagues)
+    worker_payloads = []
+    if matchesToSim:
+        total_to_sim = len(matchesToSim)
+        _logger.info("Preparing to simulate %d matches", total_to_sim)
+        _logger.info("Starting match initialization")
+
+        CHUNK_SIZE = min(len(matchesToSim), os.cpu_count() - 1)
+        total_batches = (total_to_sim + CHUNK_SIZE - 1) // CHUNK_SIZE
+
+        _logger.info("Starting parallel match simulation in up to %d batches (chunk=%d)", total_batches, CHUNK_SIZE)
+
+        sim_start = time.perf_counter()
+
+        # Run batches sequentially to respect the maximum worker count
+        matches = []
+        teams = {}
+        mgr = Managers.get_all_user_managers()[0]
+        base_name = f"{mgr.first_name}{mgr.last_name}"
+
+        # Create the pool once, outside the batch loop
+        with ProcessPoolExecutor(max_workers=CHUNK_SIZE, initializer=_init_worker, initargs=(base_name,)) as ex:
+            for batch_index in range(0, total_to_sim, CHUNK_SIZE):
+                batch = matchesToSim[batch_index:batch_index + CHUNK_SIZE]
+                workers = min(len(batch), CHUNK_SIZE)
+                batch_no = (batch_index // CHUNK_SIZE) + 1
+                _logger.info(
+                    "Simulating batch %d/%d: %d matches with %d workers",
+                    batch_no, total_batches, len(batch), workers
+                )
+
+                # Submit tasks to the already-running pool
+                _logger.info("Submitting %d match tasks...", len(batch))
+                futures = [ex.submit(_simulate_match, g.id) for g in batch]
+                _logger.info("All match tasks submitted.")
+
+                for fut in as_completed(futures):
+                    try:
+                        result = fut.result()
+                        match = Matches.get_match_by_id(result["id"])
+                        matches.append(Matches.get_match_by_id(result["id"]))
+                        _logger.info("Finished match %s with score %s", result["id"], result["score"])
+
+                        worker_payload = result.get("payload")
+                        if worker_payload:
+
+                            _logger.debug("Checking player game happiness for match %s", match.id)
+                            homePayload = check_player_games_happy(match.home_id, currDate)
+                            awayPayload = check_player_games_happy(match.away_id, currDate)
+        
+                            _logger.debug("Updating worker payload for match %s", match.id)
+                            worker_payload["players_to_update"] = homePayload["players_to_update"]
+                            worker_payload["players_to_update"] = awayPayload["players_to_update"]
+                            worker_payload["emails_to_send"] = homePayload["emails_to_send"]
+                            worker_payload["emails_to_send"] = awayPayload["emails_to_send"]
+
+                            if not match.league_id in teams:
+                                teams[match.league_id] = []
+                            teams[match.league_id].append(match.home_id)
+                            teams[match.league_id].append(match.away_id)
+
+                            worker_payloads.append(worker_payload)
+                    except Exception:
+                        _logger.exception("Match worker raised an exception")
+                        traceback.print_exc()
+
+        # Remove worker DB copies
+        for f in glob.glob(f"data/{base_name}_copy_*.db"):
+            try:
+                os.remove(f)
+                _logger.debug("Removed worker DB copy %s", f)
+            except Exception:
+                _logger.warning("Could not remove DB copy %s", f)
+
+        sim_end = time.perf_counter()
+        elapsed = sim_end - sim_start
+        _logger.info("Match simulation completed in %.3f seconds for %d matches", elapsed, total_to_sim)
+        print(f"Match simulation completed in {elapsed:.3f} seconds for {total_to_sim} matches")
+
+        # After all batches complete, aggregate pooled payloads (no computation, just concatenation)
+        pooled = {
+            "team_updates": [],
+            "manager_updates": [],
+            "match_events": [],
+            "player_bans": [],
+            "yellow_card_checks": [],
+            "score_updates": [],
+            "fitness_updates": [],
+            "lineup_updates": [],
+            "sharpness_updates": [],
+            "morale_updates": [],
+            "stats_updates": [],
+            "players_to_update": [],
+            "emails_to_send": [],
+        }
+
+        for p in worker_payloads:
+            for k in pooled.keys():
+                val = p.get(k)
+                if not val:
+                    continue
+                # If list-like, extend; otherwise set (defensive)
+                if isinstance(p[k], list):
+                    pooled[k].extend(p[k])
+                else:
+                    # unexpected type: append the value
+                    pooled[k].append(p[k])
+
+        # attach to the MainMenu instance for further processing by caller
+        pooled_payload = pooled
+
+        _logger.debug("Aggregated pooled payload from %d workers", len(worker_payloads))
+        process_payload(pooled_payload)
+        _logger.debug("Processed pooled payload")
+
+        leagueIDs = list({match.league_id for match in matches})
+        for id_ in leagueIDs:
+            LeagueTeams.update_team_positions(id_)
+            if League.check_all_matches_complete(id_, currDate):
+                for team in LeagueTeams.get_teams_by_league(id_):
+                    matchday = League.get_current_matchday(id_)
+                    TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
+
+                League.update_current_matchday(id_)
+            _logger.debug(f"Updated league standings and matchdays for league {id_}")
+
+        _logger.debug("Starting suspension reductions for %d leagues", len(teams))
+        PlayerBans.reduce_suspensions_for_teams(teams)
+        _logger.debug("Completed suspension reductions for teams")
+
+def _init_worker(base_name):
+    from data.database import DatabaseManager
+    import os
+    import logging
+
+    _logger = logging.getLogger(__name__)
+
+    global _worker_dbm, _worker_base_name, _worker_db_copy_path
+    _worker_base_name = base_name
+    _worker_dbm = DatabaseManager()
+    _worker_dbm.set_database(base_name)
+
+    # Each worker gets its own database copy
+    pid = os.getpid()
+    copy_path = f"data/{base_name}_copy_{pid}.db"
+    _worker_dbm.copy_path = copy_path
+
+    try:
+        _worker_dbm.start_copy()
+    except Exception:
+        _logger.exception("Failed to start DB copy for worker %d", pid)
+        _worker_dbm = None
+        _worker_db_copy_path = None
+        return
+
+    _worker_db_copy_path = copy_path
+    _logger.debug("Worker %d ready with DB copy %s", pid, copy_path)
+
+def _simulate_match(gameID):
+    global _worker_dbm, _worker_db_copy_path
+    from utils.match import Match
+    from data.database import Matches
+    import logging, gc
+
+    _logger = logging.getLogger(__name__)
+
+    if _worker_dbm is None:
+        _logger.error("Worker database manager not initialized.")
+        return {"id": getattr(gameID, "id", None), "score": None, "payload": None}
+
+    game = Matches.get_match_by_id(gameID)
+    match = Match(game, auto=True)
+    match.startGame()
+    match.join()
+
+    # cleanup session for next match (but not engine or db copy)
+    try:
+        if _worker_dbm.scoped_session:
+            _worker_dbm.scoped_session.remove()
+    except Exception:
+        pass
+    gc.collect()
+
+    result = {
+        "id": getattr(game, "id", None),
+        "score": match.score,
+        "payload": getattr(match, "payload", None),
+    }
+
+    return result

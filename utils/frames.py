@@ -1,4 +1,3 @@
-from datetime import date
 import customtkinter as ctk
 from settings import *
 from data.database import *
@@ -14,6 +13,7 @@ from utils.match import Match
 from utils.matchProfileLink import MatchProfileLink
 from utils.util_functions import *
 from utils.matchProfileLink import MatchProfileLink
+from CTkMessagebox import CTkMessagebox
 
 class MatchFrame(ctk.CTkFrame):
     def __init__(self, parent, manager_id, match, parentFrame, matchInfoFrame, parentTab):
@@ -964,7 +964,10 @@ class MatchdayFrame(ctk.CTkFrame):
         self.rely = rely
         self.anchor = anchor
         
-        ctk.CTkLabel(self, text = f"Matchday {self.matchdayNum}", fg_color = fgColor, font = (APP_FONT_BOLD, 30)).place(relx = 0.5, rely = 0.05, anchor = "center")
+        if self.matchdayNum != 39:
+            ctk.CTkLabel(self, text = f"Matchday {self.matchdayNum}", fg_color = fgColor, font = (APP_FONT_BOLD, 30)).place(relx = 0.5, rely = 0.05, anchor = "center")
+        else:
+            ctk.CTkLabel(self, text = f"Playoffs", fg_color = fgColor, font = (APP_FONT_BOLD, 30)).place(relx = 0.5, rely = 0.05, anchor = "center")
 
         startY = 0.17
         gap = 0.075
@@ -991,15 +994,32 @@ class MatchdayFrame(ctk.CTkFrame):
             homeTeam = Teams.get_team_by_id(match.home_id)
             awayTeam = Teams.get_team_by_id(match.away_id) 
 
-            homeSrc = Image.open(io.BytesIO(homeTeam.logo))
-            homeSrc.thumbnail((35, 35))
-            homeLogo = TeamLogo(self, homeSrc, homeTeam, fgColor, 0.4, startY + gap * index, "center", self.parentTab)
-            ctk.CTkLabel(self, text = homeTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
+            if homeTeam:
+                homeSrc = Image.open(io.BytesIO(homeTeam.logo))
+                homeSrc.thumbnail((35, 35))
+                TeamLogo(self, homeSrc, homeTeam, fgColor, 0.4, startY + gap * index, "center", self.parentTab)
+                ctk.CTkLabel(self, text = homeTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
+            else:
+                # PlayOffs
+                if i == 0:
+                    ctk.CTkLabel(self, text = "4th Place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
+                elif i == 1:
+                    ctk.CTkLabel(self, text = "5th Place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
+                else:
+                    ctk.CTkLabel(self, text = "4th / 5th place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
 
-            awaySrc = Image.open(io.BytesIO(awayTeam.logo))
-            awaySrc.thumbnail((35, 35))
-            awayLogo = TeamLogo(self, awaySrc, awayTeam, fgColor, 0.6, startY + gap * index, "center", self.parentTab)
-            ctk.CTkLabel(self, text = awayTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
+            if awayTeam:
+                awaySrc = Image.open(io.BytesIO(awayTeam.logo))
+                awaySrc.thumbnail((35, 35))
+                TeamLogo(self, awaySrc, awayTeam, fgColor, 0.6, startY + gap * index, "center", self.parentTab)
+                ctk.CTkLabel(self, text = awayTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
+            else:
+                if i == 0:
+                    ctk.CTkLabel(self, text = "6th Place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
+                elif i == 1:
+                    ctk.CTkLabel(self, text = "7th Place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
+                else:
+                    ctk.CTkLabel(self, text = "6th / 7th place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
 
             if Matches.check_game_played(match, Game.get_game_date(Managers.get_all_user_managers()[0].id)):
                 MatchProfileLink(self, match, f"{match.score_home} - {match.score_away}", "white", 0.5, startY + gap * index, "center", fgColor, self.parentTab, 20, APP_FONT_BOLD)
@@ -1388,23 +1408,22 @@ class LeagueTable(ctk.CTkFrame):
         self.leagueData = League.get_league_by_id(self.league.league_id)
 
         self.highlightManaged = managingLeague
+        self.div1 = self.leagueData.league_above is None
 
     def addLeagueTable(self):
 
         teamsData = LeagueTeams.get_teams_by_position(self.league.league_id)
 
         for i, team in enumerate(teamsData):
-            teamName = Teams.get_team_by_id(team.team_id)
-            team_logo_blob = teamName.logo
-            team_image = Image.open(io.BytesIO(team_logo_blob))
+            teamData = Teams.get_team_by_id(team.team_id)
+            team_image = Image.open(io.BytesIO(teamData.logo))
             team_image.thumbnail((20, 20))
             ctk_team_image = ctk.CTkImage(team_image, None, (team_image.width, team_image.height))
 
-            if self.highlightManaged and self.team.name == teamName.name:    
+            if self.highlightManaged and self.team.name == teamData.name:    
                 font = (APP_FONT_BOLD, 12)
             else:
                 font = (APP_FONT, 12)
-
             
             if self.small:
                 ctk.CTkLabel(self, text = team.goals_scored - team.goals_conceded, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 4)
@@ -1412,20 +1431,22 @@ class LeagueTable(ctk.CTkFrame):
 
                 ctk.CTkLabel(self, text = i + 1, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 0, sticky = "e")
                 ctk.CTkLabel(self, image = ctk_team_image, text = "", fg_color = self.fgColor).grid(row = i + 1, column = 1)
-                ctk.CTkLabel(self, text = teamName.name, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 2, sticky = "w")
+                ctk.CTkLabel(self, text = teamData.name, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 2, sticky = "w")
                 ctk.CTkLabel(self, text = team.games_won + team.games_lost + team.games_drawn, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 3)
             else:
-
                 if i < self.leagueData.promotion:
                     canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0)
                 elif i + 1 > 20 - self.leagueData.relegation:
                     canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = PIE_RED, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0)
+                elif not self.div1 and i in [3, 4, 5, 6]:
+                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
+                    canvas.grid(row = i + 1, column = 0)
 
                 ctk.CTkLabel(self, text = i + 1, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 1, sticky = "w")
                 ctk.CTkLabel(self, image = ctk_team_image, text = "", fg_color = self.fgColor).grid(row = i + 1, column = 2, sticky = "w")
-                ctk.CTkLabel(self, text = teamName.name, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 3, sticky = "w")
+                ctk.CTkLabel(self, text = teamData.name, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 3, sticky = "w")
                 
                 ctk.CTkLabel(self, text = team.games_won + team.games_lost + team.games_drawn, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 4)
                 ctk.CTkLabel(self, text = team.games_won, fg_color = self.fgColor, text_color = self.textColor, height = 5, font = font).grid(row = i + 1, column = 5)
@@ -1477,11 +1498,11 @@ class next5Matches(ctk.CTkFrame):
 
             homeImage = Image.open(io.BytesIO(homeTeam.logo))
             homeImage.thumbnail((50, 50))
-            homeLogo = TeamLogo(matchFrame, homeImage, homeTeam, self.fgColor, 0.35, 0.5, "center", self.parentTab)
+            homeLogo = TeamLogo(matchFrame, homeImage, homeTeam, self.fgColor, 0.35, 0.5, "center", self.parentTab, clickable = match.home_id != self.team.id)
 
             awayImage = Image.open(io.BytesIO(awayTeam.logo))
             awayImage.thumbnail((50, 50))
-            awayLogo = TeamLogo(matchFrame, awayImage, awayTeam, self.fgColor, 0.65, 0.5, "center", self.parentTab)
+            awayLogo = TeamLogo(matchFrame, awayImage, awayTeam, self.fgColor, 0.65, 0.5, "center", self.parentTab, clickable = match.away_id != self.team.id)
 
             ctk.CTkLabel(matchFrame, text = homeTeam.name.split()[0], font = (APP_FONT, 13), text_color = "white", fg_color = self.fgColor).place(relx = 0.15, rely = self.textY, anchor = "center")
             ctk.CTkLabel(matchFrame, text = homeTeam.name.split()[1], font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = self.fgColor).place(relx = 0.15, rely = 0.63, anchor = "center")
@@ -2810,7 +2831,8 @@ class PlayerMatchFrame(ctk.CTkFrame):
 
         self.profile = MatchProfile(self.parentTab, self.game, self.parentTab, changeBackFunction = self.changeBack)
         self.profile.place(x = 0, y = 0, anchor = "nw")
-        self.parentTab.parent.overlappingProfiles.append(self.profile)
+        from utils.util_functions import append_overlapping_profile
+        append_overlapping_profile(self.parentTab, self.profile)
 
     def changeBack(self):
         self.profile.place_forget()
@@ -2898,3 +2920,136 @@ class InGameStatFrame(ctk.CTkFrame):
             self.valueLabel.configure(fg_color = "white", text_color = "black")
         else:
             self.valueLabel.configure(fg_color = self.fgColor, text_color = "white")
+class ChoosingLeagueFrame(ctk.CTkFrame):
+    def __init__(self, parent, fgColor, width, height, corner_radius, border_width, border_color, endFunction, settings = False):
+        super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = corner_radius, border_width = border_width, border_color = border_color)
+
+        self.parent = parent
+        self.endFunction = endFunction
+        self.settings = settings
+        self.loadedLeagues = {}
+        self.unCheckable = []
+
+        if self.settings:
+            mng = Managers.get_all_user_managers()[0]
+            team = Teams.get_teams_by_manager(mng.id)[0]
+            league = LeagueTeams.get_league_by_team(team.id)
+            leagueObj = League.get_league_by_id(league.league_id)
+
+            self.unCheckable = [leagueObj.name]
+
+            while leagueObj.league_above:
+                leagueObj = League.get_league_by_id(leagueObj.league_above)
+                self.unCheckable.append(leagueObj.name)
+
+        self.selectLeagues()
+
+    def selectLeagues(self):
+
+        if not self.settings:
+            try:
+                with open("data/leagues.json", "r") as file:
+                    self.leaguesJson = json.load(file)
+            except FileNotFoundError:
+                self.leaguesJson = {}
+
+            if len(self.loadedLeagues) == 0:
+                for league in self.leaguesJson:
+                    if not league["league_above"]:
+                        self.loadedLeagues[league["name"]] = 1
+                    else:
+                        self.loadedLeagues[league["name"]] = 0
+        else:
+            leagues = League.get_all_leagues()
+            self.leaguesJson = []
+            for league in leagues:
+                self.loadedLeagues[league.name] = 1 if league.to_be_loaded else 0
+                self.leaguesJson.append({
+                    "name": league.name,
+                })
+
+        ctk.CTkLabel(self, text = "Choose leagues", font = (APP_FONT_BOLD, 35), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.1, anchor = "w")
+        ctk.CTkLabel(self, text = "Any league you do not choose will be unplayable and unsimulated. You can only change the loaded leagues at every new season. Load less leagues for better game performance.", font = (APP_FONT, 13.5), bg_color = TKINTER_BACKGROUND).place(relx = 0.012, rely = 0.93, anchor = "w")
+
+        if not self.settings:
+            okText = "Teams >"
+            backText = "< Manager"
+        else:
+            okText = "OK"
+            backText = "< Settings"
+
+        self.doneLeaguesbutton = ctk.CTkButton(self, text = okText, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 150, height = 45, command = lambda: self.finishLeagues())
+        self.doneLeaguesbutton.place(relx = 0.97, rely = 0.05, anchor = "ne")
+
+        backButton = ctk.CTkButton(self, text = backText, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 150, height = 45, hover_color = CLOSE_RED, command = lambda: self.place_forget())
+        backButton.place(relx = 0.82, rely = 0.05, anchor = "ne")
+
+        leagueFrameWidth = 135
+        leagueFrameHeight = 400
+        gap = leagueFrameWidth / 1150 + 0.005
+
+        for i, planetName in enumerate(PLANETS):
+            frame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, height = leagueFrameHeight, width = leagueFrameWidth, corner_radius = 10)
+            frame.place(relx = 0.012 + gap * i, rely = 0.2, anchor = "nw")
+            frame.checkBoxes = {}
+
+            ctk.CTkLabel(frame, text = planetName, font = (APP_FONT_BOLD, 15), bg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.02, anchor = "n")
+
+            leagues = self.leaguesJson[(i * 4):(i * 4) + 4]
+            gap2 = 0.08
+            for j, league in enumerate(leagues):
+                leagueCheck = ctk.CTkCheckBox(frame, text = "", fg_color = GREY_BACKGROUND, checkbox_height = 20, checkbox_width = 20, border_width = 1, border_color = "white", corner_radius = 0)
+                leagueCheck.place(relx = 0.05, rely = 0.15 + gap2 * j, anchor = "w")
+                frame.checkBoxes[league["name"]] = leagueCheck
+
+                leagueCheck.configure(command = lambda f = frame, c = leagueCheck, n = league["name"]: self.checkLeague(f, c, n))
+
+                if self.loadedLeagues[league["name"]] == 1:
+                    leagueCheck.select()
+                
+                if league["name"] in self.unCheckable:
+                    leagueCheck.configure(state = "disabled")
+
+                ctk.CTkLabel(frame, text = league["name"], font = (APP_FONT, 11), bg_color = GREY_BACKGROUND).place(relx = 0.25, rely = 0.15 + gap2 * j, anchor = "w")
+
+            ctk.CTkLabel(frame, text = PLANET_DESCRIPTIONS[planetName], font = (APP_FONT, 12), bg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.45, anchor = "n")
+
+
+    def checkLeague(self, frame, checkbox, leagueName):
+
+        if checkbox.get() == 0:
+            # unchecking
+            self.loadedLeagues[leagueName] = 0
+
+            below = False
+            for name, cb in frame.checkBoxes.items():
+                
+                if below:
+                    cb.deselect()
+                    self.loadedLeagues[name] = 0
+                
+                if name == leagueName:
+                    below = True
+
+        else:
+            # checking 
+            self.loadedLeagues[leagueName] = 1
+
+            above = True
+            for name, cb in frame.checkBoxes.items():
+                
+                if above:
+                    cb.select()
+                    self.loadedLeagues[name] = 1
+                
+                if name == leagueName:
+                    above = False
+
+    def finishLeagues(self):
+    
+        if 1 not in self.loadedLeagues.values():
+            CTkMessagebox(title = "Error", message = "Please select at least one league to load", icon = "cancel")
+            return
+    
+        else:
+            self.endFunction()

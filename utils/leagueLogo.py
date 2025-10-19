@@ -2,6 +2,7 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
+from utils.util_functions import append_overlapping_profile
 
 class LeagueLogo(ctk.CTkImage):
     def __init__(self, parent, image, league, fg_color, relx, rely, anchor, tab):
@@ -22,8 +23,7 @@ class LeagueLogo(ctk.CTkImage):
 
         self.profile = LeagueProfile(self.tab, league_id = self.league.id, changeBackFunction = self.changeBack)
         self.profile.place(x = 0, y = 0, anchor = "nw")
-
-        self.tab.parent.overlappingProfiles.append(self.profile)
+        append_overlapping_profile(self.tab, self.profile)
 
     def changeBack(self):
         self.profile.place_forget()

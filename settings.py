@@ -37,6 +37,30 @@ SEASON_START_DATE = datetime.datetime(2025, 8, 10, 7, 0, 0, 0)
 TOTAL_STEPS = 2111
 PROGRESS = 0
 
+PLANETS = ["Cryon", "Vorlis", "Zephyra", "Tauron", "Nerath", "Ecliptis", "Lyra", "Solara"]
+
+PLANET_DESCRIPTIONS = {
+    "Cryon": "Cryon is a frozen\nworld of endless ice\nplains and shimmering\nglaciers. Vast crystal\nformations stretch\nbeneath pale blue\nskies, and ancient\nstorms sculpt the\nfrozen surface into\never-changing\npatterns of frost.",
+    "Vorlis": "Vorlis burns beneath\na crimson haze, its\nsurface split by\nrivers of lava and\nvolcanic spires. The\nair is thick with ash,\nand the ground\ntrembles with the\nheartbeat of the\nplanet’s molten\ncore.",
+    "Zephyra": "Zephyra is a gas\ngiant where colossal\ncloud continents drift\nthrough violet skies.\nWinds coil and twist\nendlessly, forming\nluminous tempests\nthat dance around\nfloating cities\nsuspended in the\nupper atmosphere.",
+    "Tauron": "Tauron is a\nmountainous planet\ncarved by time and\nweather. Towering\npeaks pierce the\nclouds, while valleys\necho with distant\navalanches. Ancient\nstone citadels cling\nto cliffs above\nroaring winds.",
+    "Nerath": "Nerath is an ocean\nworld, its surface a\nvast expanse of deep\nblue water. Islands\nrise like emerald\njewels amid the sea,\nand bioluminescent\nlife glows beneath\nits tranquil waves,\nlighting the abyss\nbelow.",
+    "Ecliptis": "Ecliptis orbits two\ndying stars, forever\nlocked in twilight.\nEmerald auroras\nshimmer across the\nskies, and the land\nglows faintly from\ncrystalline minerals\nthat absorb the\nscarce light\nreaching the\nsurface.",
+    "Lyra": "Lyra resonates with\ncolor and sound, its\natmosphere alive\nwith harmonic\nenergy. The air\nhums softly, and\ncrystalline flora\nrespond to tones.\nCities shimmer like\nprisms under a sky\nthat sings with\nliving light.",
+    "Solara": "Solara blazes with\nradiant intensity,\nits surface a land\nof golden deserts\nand luminous\nstorms. Energy flows\nthrough the air,\nlighting the horizon\nin arcs that paint\nthe world in dawn."
+}
+
+PLANET_LEAGUES = {
+    "Cryon": ["Cryonese Primera", "Cryonese Segunda", "Cryonese Tercera", "Cryonese Cuarta"],
+    "Vorlis": ["Vorlis Liga", "Vorlis National", "Vorlis Continental", "Vorlis Regional"],
+    "Zephyra": ["Zephyra Pro", "Zephyra Challenge", "Zephyra Series", "Zephyra B"],
+    "Tauron": ["Tauron Premier", "Tauron Elite", "Tauron Division 2", "Tauron Division 3"],
+    "Nerath": ["Nerathoul", "Nerathoul Prime", "Nerathoul Ascend", "Nerathoul Minor"],
+    "Ecliptis": ["Ecliptus", "Ecliptus B", "Ecliptus C", "Ecliptus D"],
+    "Lyra": ["Lyraxis", "Lyraxis Nova", "Lyraxis Minor", "Lyraxis Rising"],
+    "Solara": ["Solarion", "Solarion 2", "Solarion 3", "Solarion 4"]
+}
+
 STATES = ["preview", "matchday", "review"]
 
 Europe = [
@@ -254,6 +278,12 @@ GOAL_TYPE_CHANCES = {
     "penalty": 0.15,
     "own_goal": 0.05
 }
+
+# GOAL_TYPE_CHANCES = {
+#     "goal": 0.05,
+#     "penalty": 0.15,
+#     "own_goal": 0.8
+# }
 
 BASE_SHOT = 0.2
 MAX_SHOT_PROB = BASE_SHOT + 0.1
@@ -534,25 +564,22 @@ EVENT_TIMES = [MORNING_EVENT_TIMES, AFTERNOON_EVENT_TIMES, EVENING_EVENT_TIMES]
 
 EVENT_CHANGES = {
     "Light Training": (-5, 5),   
-    "Medium Training": (-12, 10),  
-    "Intense Training": (-20, 15),   
+    "Medium Training": (-10, 10),  
+    "Intense Training": (-15, 15),   
     "Recovery": (20, 0),        
 }
 
 TEMPLATES_3 = [
     ["Intense Training", "Medium Training", "Light Training"],
-    ["Medium Training", "Team Building", "Recovery"],
-    ["Light Training", "Recovery", "Intense Training"],
-    ["Team Building", "Medium Training", "Recovery"],
-    ["Recovery", "Team Building", "Medium Training"]
+    ["Medium Training", "Team Building", "Light Training"],
+    ["Team Building", "Medium Training", "Intense Training"],
+    ["Light Training", "Team Building", "Medium Training"]
 ]
 
 TEMPLATES_2 = [
     ["Medium Training", "Light Training"],
-    ["Intense Training", "Recovery"],
     ["Team Building", "Medium Training"],
-    ["Recovery", "Light Training"],
-    ["Intense Training", "Team Building"]
+    ["Intense Training", "Medium Training"]
 ]
 
 MATCH_STATS = [

@@ -167,9 +167,13 @@ class Managers(Base):
     age = Column(Integer, nullable = False)
 
     @classmethod
-    def add_managers(cls, first_name = None, last_name = None, nationality = None, date_of_birth = None, chosenTeam = None):
+    def add_managers(cls, first_name, last_name, nationality, date_of_birth, chosenTeam, loadedLeagues):
         session = DatabaseManager().get_session()
         try:
+
+            non_loaded = len([v for v in loadedLeagues.values() if v == 0])
+            cls.total_steps = TOTAL_STEPS - non_loaded
+
             faker = Faker()
             flags = {}
             for continent in COUNTRIES:
@@ -216,7 +220,7 @@ class Managers(Base):
             updateProgress(1)
             names_id_mapping = Teams.add_teams(chosenTeam, userManagerID)
             updateProgress(3)
-            League.add_leagues()
+            League.add_leagues(loadedLeagues)
 
             leagues = League.get_all_leagues()
             LeagueTeams.add_league_teams(names_id_mapping, leagues)
@@ -297,6 +301,25 @@ class Managers(Base):
                 session.commit()
             else:
                 return None
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_update_managers(cls, updates):
+        session = DatabaseManager().get_session()
+        try:
+            for update in updates:
+                entry = session.query(Managers).filter(Managers.id == update[0]).first()
+
+                if entry:
+                    entry.games_played += 1
+                    entry.games_won += update[1]
+                    entry.games_lost += update[2]
+
+            session.commit()
         except Exception as e:
             session.rollback()
             raise e
@@ -1112,15 +1135,28 @@ class Players(Base):
         try:
             player = session.query(Players).filter(Players.id == player_id).first()
 
-            if not player:
-                return False  # or raise Exception if you prefer strict handling
-
-            if player.morale <= 25:
-                return False
+            if not player or player.morale <= 25:
+                return
 
             player.morale = 25
             session.commit()
-            return True
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_reduce_morales_to_25(cls, player_ids):
+        session = DatabaseManager().get_session()
+        try:
+            players = session.query(Players).filter(Players.id.in_(player_ids), Players.morale > 25).all()
+
+            for player in players:
+                player.morale = 25
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.exception("[DB ERROR] Batch reduce morales to 25 failed")
+            raise e
         finally:
             session.close()
 
@@ -1258,8 +1294,13 @@ class Matches(Base):
         session = DatabaseManager().get_session()
         try:
             matches_dict = []
+            links_dict = []
 
             for league in leagues:
+
+                if not league.loaded:
+                    continue
+
                 schedule = []
                 referees = Referees.get_all_referees_by_league(league.id)
                 team_ids = [t.team_id for t in LeagueTeams.get_teams_by_league(league.id)]
@@ -1360,8 +1401,57 @@ class Matches(Base):
                             "matchday": i + 1,
                             "date": kickoff_datetime,
                         })
+                
+                # --- Playoffs ---
+                if league.league_above is not None:
+                    last_match_saturday, _ = matchdays_dates[-1]
+                    first_playoff_saturday = last_match_saturday + datetime.timedelta(weeks = 2)
+                    final_playoff_sunday = first_playoff_saturday + datetime.timedelta(days = 8)
+
+                    # Two semi-finals on the same Saturday, different times
+                    playoff_dates = [
+                        (first_playoff_saturday, "15:00"),  # Semi-final 1
+                        (first_playoff_saturday, "15:00"),  # Semi-final 2
+                        (final_playoff_sunday, "15:00"),    # Final
+                    ]
+
+                    assigned_referees = set()
+                    ids = []
+
+                    for i, (date, time_str) in enumerate(playoff_dates):
+                        available_referees = [r for r in referees if r.id not in assigned_referees]
+
+                        if not available_referees:
+                            available_referees = referees
+                            assigned_referees.clear()
+
+                        referee = random.choice(available_referees)
+                        assigned_referees.add(referee.id)
+
+                        kickoff_datetime = datetime.datetime.combine(
+                            date,
+                            datetime.datetime.strptime(time_str, "%H:%M").time()
+                        )
+
+                        matchID = str(uuid.uuid4())
+                        ids.append(matchID)
+                        matches_dict.append({
+                            "id": matchID,
+                            "league_id": league_id,
+                            "home_id": None,
+                            "away_id": None,
+                            "referee_id": referee.id,
+                            "matchday": 39,
+                            "date": kickoff_datetime,
+                        })
+
+                        if i == 2:
+                            links_dict.append((matchID, ids[0]))
+                            links_dict.append((matchID, ids[1]))
+
                 updateProgress(None)
 
+            LinkedMatches.batch_add_links(links_dict)
             session.bulk_insert_mappings(Matches, matches_dict)
             session.commit()
 
@@ -1514,6 +1604,24 @@ class Matches(Base):
             session.close()
 
     @classmethod
+    def batch_update_scores(cls, scores):
+        session = DatabaseManager().get_session()
+        try:
+            for score in scores:
+                entry = session.query(Matches).filter(Matches.id == score[0]).first()
+                if entry:
+                    entry.score_home = score[1]
+                    entry.score_away = score[2]
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.exception("[DB ERROR] Batch update of match scores failed")
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def get_all_matches_by_matchday(cls, matchday):
         session = DatabaseManager().get_session()
         try:
@@ -1652,12 +1760,16 @@ class Matches(Base):
             session.close()
 
     @classmethod
-    def get_matches_time_frame(cls, start, end):
+    def get_matches_time_frame(cls, start, end, exclude_leagues = []):
         session = DatabaseManager().get_session()
         try:
+            subquery = session.query(TeamLineup.match_id).distinct().subquery()
+
             matches = session.query(Matches).filter(
-                Matches.date >= start,
-                Matches.date < end - timedelta(hours=2)
+                Matches.date >= start - timedelta(hours = 2), # Checks for any games that started within 2 hours before the start time
+                Matches.date <= end - timedelta(hours = 2), # Doesnt select games that start within 2 hours of the end time
+                Matches.league_id.notin_(exclude_leagues),
+                ~Matches.id.in_(subquery)
             ).order_by(Matches.date.asc()).all()
             return matches
         finally:
@@ -1669,7 +1781,7 @@ class Matches(Base):
         try:
             played = session.query(Matches).filter(
                 Matches.id == match.id,
-                Matches.date < curr_date
+                Matches.date <= curr_date - timedelta(hours = 2)
             ).first()
             return played is not None
         finally:
@@ -1714,6 +1826,34 @@ class Matches(Base):
                 func.date(Matches.date) == date.date()
             ).order_by(Matches.date.asc()).first()
             return match
+        finally:
+            session.close()
+
+class LinkedMatches(Base):
+    __tablename__ = 'linked_matches'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    next_match_id = Column(String(256), ForeignKey('matches.id'))
+    prev_match_id = Column(String(256), ForeignKey('matches.id'))
+
+    @classmethod
+    def batch_add_links(cls, links):
+        session = DatabaseManager().get_session()
+        try:
+            links_dict = [{
+                    "id": str(uuid.uuid4()),
+                    "next_match_id": link[0],
+                    "prev_match_id": link[1],
+                }
+                for link in links
+            ]
+
+            session.bulk_insert_mappings(LinkedMatches, links_dict)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.exception("Error in batch_add_links: %s", e)
+            raise e
         finally:
             session.close()
 
@@ -1958,6 +2098,16 @@ class TeamLineup(Base):
                 TeamLineup.reason == "benched" or TeamLineup.reason == "not_in_squad"
             ).first()
             return availability is not None
+        finally:
+            session.close()
+
+    def check_game_played(cls, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            played = session.query(TeamLineup).filter(
+                TeamLineup.match_id == match_id
+            ).first()
+            return played is not None
         finally:
             session.close()
 
@@ -2749,9 +2899,11 @@ class League(Base):
     relegation = Column(Integer, nullable = False)
     league_above = Column(String(256))
     league_below = Column(String(256))
+    loaded = Column(Boolean, nullable = False)
+    to_be_loaded = Column(Boolean, nullable = False)
 
     @classmethod
-    def add_leagues(cls):
+    def add_leagues(cls, loadedLeagues):
         session = DatabaseManager().get_session()
         try:
             with open("data/leagues.json", 'r') as file:
@@ -2775,6 +2927,8 @@ class League(Base):
                     "logo": logo,
                     "promotion": league["promotion"],
                     "relegation": league["relegation"],
+                    "loaded": loadedLeagues[league["name"]] == 1,
+                    "to_be_loaded": loadedLeagues[league["name"]] == 1
                 })
 
             # Populate the league above and below with the corresponding ids
@@ -2883,6 +3037,32 @@ class League(Base):
                 league = session.query(League).filter(League.id == league.league_above).first()
 
             return depth
+        finally:
+            session.close()
+
+    @classmethod
+    def get_league_state(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            league = session.query(League).filter(League.id == league_id).first()
+            if league:
+                return league.loaded
+            return None
+        finally:
+            session.close()
+
+    @classmethod
+    def update_loaded_leagues(cls, loaded_leagues):
+        session = DatabaseManager().get_session()
+        try:
+            for league_name, is_loaded in loaded_leagues.items():
+                league = session.query(League).filter(League.name == league_name).first()
+                if league:
+                    league.to_be_loaded = is_loaded
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
             session.close()
             
@@ -3012,6 +3192,30 @@ class LeagueTeams(Base):
         except Exception as e:
             session.rollback()
             logger.exception("Error in update_team: %s", e)
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_update_teams(cls, updates):
+        session = DatabaseManager().get_session()
+        try:
+            for update in updates:
+
+                entry = session.query(LeagueTeams).filter(LeagueTeams.team_id == update[0]).first()
+
+                if entry:
+                    entry.points += update[1]
+                    entry.games_won += update[2]
+                    entry.games_drawn += update[3]
+                    entry.games_lost += update[4]
+                    entry.goals_scored += update[5]
+                    entry.goals_conceded += update[6]
+                
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.exception("Error in batch_update_teams: %s", e)
             raise e
         finally:
             session.close()
@@ -3528,7 +3732,7 @@ class PlayerBans(Base):
                 existing_ban.ban_type = "red_card"
 
                 session.commit()
-                return False, existing_ban
+                return False
             else:
 
                 new_ban = PlayerBans(
@@ -3547,7 +3751,7 @@ class PlayerBans(Base):
                 session.add(new_ban)
                 session.commit()
 
-                return True, new_ban
+                return True
         except Exception as e:
             session.rollback()
             raise e
@@ -3560,7 +3764,7 @@ class PlayerBans(Base):
         try:
             ban_dicts = []
             for ban in bans:
-                player_id, competition_id, ban_length, ban_type = ban
+                player_id, competition_id, ban_length, ban_type, date = ban
 
                 entry = {
                     "id": str(uuid.uuid4()),
@@ -3609,6 +3813,28 @@ class PlayerBans(Base):
             session.close()
 
     @classmethod
+    def reduce_suspensions_for_teams(cls, teams):
+        session = DatabaseManager().get_session()
+
+        try:
+            for league_id, teams in teams.items():
+                for team_id in teams:
+                    bans = session.query(PlayerBans).join(Players).filter(Players.team_id == team_id).all()
+
+                    for ban in bans:
+                        if ban.ban_type in ["red_card", "yellow_cards"] and ban.competition_id == league_id:
+                            ban.suspension -= 1
+
+                        if ban.suspension == 0:
+                            session.delete(ban)
+
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
     def reduce_injuries(cls, time, stopDate):
         session = DatabaseManager().get_session()
         try:
@@ -3638,6 +3864,27 @@ class PlayerBans(Base):
                 PlayerBans.ban_type == "injury",
                 Players.team_id == teamID
             ).all()
+
+            for ban in bans:
+                if ban.injury <= stopDate:
+                    session.delete(ban)
+                else:
+                    ban.injury -= time
+
+            session.commit()
+
+            return bans
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_reduce_injuries(cls, time, stopDate):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).filter(PlayerBans.ban_type == "injury").all()
 
             for ban in bans:
                 if ban.injury <= stopDate:
@@ -5381,8 +5628,13 @@ def updateProgress(textIndex):
 
     if textIndex:
         progressLabel.configure(text = textLabels[textIndex])
+
+        if textIndex == 5:
+            progressBar.set(1)
+
+        percentageLabel.configure(text = "100%")
     else:
-        percentage = PROGRESS / TOTAL_STEPS * 100
+        percentage = PROGRESS / Managers.total_steps * 100
         progressBar.set(percentage)
 
         percentageLabel.configure(text = f"{round(percentage)}%")
@@ -5530,11 +5782,14 @@ def searchResults(search, limit = SEARCH_LIMIT):
             "sort_key": t.name or ""
         } for t in query_results['teams']]
 
-        league_results = [{
-            "type": "league",
-            "data": l,
-            "sort_key": l.name or ""
-        } for l in query_results['leagues']]
+        league_results = []
+        for l in query_results['leagues']:
+            if l.loaded:
+                league_results.append({
+                    "type": "league",
+                    "data": l,
+                    "sort_key": l.name or ""
+                })
 
         referee_results = [{
             "type": "referee",
@@ -5932,33 +6187,40 @@ def update_ages(start_date, end_date):
     finally:
         session.close()
 
-def check_player_games_happy(teams, currDate):
-    for team in teams:
-        players = Players.get_all_players_by_team(team.id, youths = False)
-        for player in players:
+def check_player_games_happy(teamID, currDate):
+    
+    payload = {
+        "players_to_update": [],
+        "emails_to_send": []
+    }
 
-            if player.player_role == "Backup":
-                continue
+    players = Players.get_all_players_by_team(teamID, youths = False)
+    players = [p for p in players if p.player_role != "Backup" and p.morale > 25]
+    matches = Matches.get_all_played_matches_by_team(teamID, currDate)
+    user = Managers.get_all_user_managers()[0]
+    managed_team = Teams.get_teams_by_manager(user.id)[0]
 
-            matchesToCheck = MATCHES_ROLES[player.player_role]
-            matches = Matches.get_all_played_matches_by_team(team.id, currDate)
-            matches = [m for m in matches if not TeamLineup.check_player_availability(player.id, m.id)]
+    for player in players:
 
-            if len(matches) < matchesToCheck:
-                continue
+        matchesToCheck = MATCHES_ROLES[player.player_role]
+        matches = [m for m in matches if not TeamLineup.check_player_availability(player.id, m.id)]
 
-            last_matches = matches[-matchesToCheck:]  # last n matches
-            avg_minutes = sum(MatchEvents.get_player_game_time(player.id, match.id) for match in last_matches) / matchesToCheck
+        if len(matches) < matchesToCheck:
+            continue
 
-            if player_gametime(avg_minutes, player):
-                reduced = Players.reduce_morale_to_25(player.id)
+        last_matches = matches[-matchesToCheck:]  # last n matches
+        avg_minutes = sum(MatchEvents.get_player_game_time(player.id, match.id) for match in last_matches) / matchesToCheck
 
-                user = Managers.get_all_user_managers()[0]
-                managed_team = Teams.get_teams_by_manager(user.id)[0]
+        if player_gametime(avg_minutes, player):
+            # reduced = Players.reduce_morale_to_25(player.id)
+            payload["players_to_update"].append(player.id)
 
-                if team.id == managed_team.id and reduced:
-                    email_date = currDate + timedelta(days = 1)
-                    Emails.add_email("player_games_issue", None, player.id, None, None, email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+            if teamID == managed_team.id:
+                email_date = currDate + timedelta(days = 1)
+                payload["emails_to_send"].append(("player_games_issue", None, player.id, None, None, email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0)))
+                # Emails.add_email("player_games_issue", None, player.id, None, None, email_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+
+    return payload
 
 def create_events_for_other_teams(team_id, start_date, managing_team):
     end_date = start_date + timedelta(days=7)
@@ -5975,8 +6237,7 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
     while current_date.date() < end_date.date():
         events = []
 
-        templates_2 = TEMPLATES_2.copy()
-        templates_3 = TEMPLATES_3.copy()
+        templates = [TEMPLATES_2.copy(), TEMPLATES_3.copy()]
 
         is_prep = getDayIndex(current_date + timedelta(days=1)) in match_days
         is_match = getDayIndex(current_date) in match_days
@@ -5992,66 +6253,65 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
                 is_home = Matches.get_team_match_no_time(team_id, date_check).home_id == team_id
 
                 if is_home:
-                    template = random.choice(TEMPLATES_2)
-                    for t_event in template:
-                        if weekly_usage[t_event] < MAX_EVENTS[t_event]:
-                            events.append(t_event)
-                            weekly_usage[t_event] += 1
-                    templates_2.remove(template)
-
-                    if is_review:
-                        events = ["Match Review"] + events[:2]
-                    elif is_prep:
-                        events = events[:2] + ["Match Preparation"]
-                else:
-                    possible = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e]]
+                    possible = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e] and e != "Recovery"]
                     event = random.choice(possible) if possible else None
-                    if event:
-                        weekly_usage[event] += 1
 
                     if is_review:
-                        events = ["Travel", "Match Review"]
-                        if event:
-                            events.append(event)
+                        events = ["Match Review", "Recovery"] + ([event] if event else [])
                     elif is_prep:
-                        events = ["Travel", "Match Preparation"]
-                        if event:
-                            events.insert(0, event)
+                        events = ([event] if event else []) + ["Recovery", "Match Preparation"]
+
+                        weekly_usage["Recovery"] += 1
+                else:
+                    if is_review:
+                        events = ["Travel", "Match Review", "Recovery"]
+                    elif is_prep:
+                        events = ["Recovery", "Travel", "Match Preparation"]
+                    
+                        weekly_usage["Recovery"] += 1
             else:
-                template = random.choice(TEMPLATES_3)
+                template_group = random.choice(templates)
+
+                if len(template_group) == 0:
+                    template_group = templates[0] if templates[0] != template_group else templates[1]
+                if len(template_group) == 0:
+                    current_date += timedelta(days=1)
+                    continue
+
+                template = random.choice(template_group)
                 for t_event in template:
                     if weekly_usage[t_event] < MAX_EVENTS[t_event]:
                         events.append(t_event)
                         weekly_usage[t_event] += 1
-                templates_3.remove(template)
+                template_group.remove(template)
 
             planned_events[current_date.date()] = events[:3]
 
         current_date += timedelta(days=1)
 
-    # === SECOND PASS: fill in gaps and insert ===
-    for day, events in planned_events.items():
-        days_left = (end_date.date() - day).days
-        if weekly_usage["Recovery"] < 2 and days_left <= (2 - weekly_usage["Recovery"]):
-            if events:
-                if "Recovery" not in events:
-                    weekly_usage[events[-1]] -= 1
-                    events[-1] = "Recovery"
-                    weekly_usage["Recovery"] += 1
-            else:
-                events.append("Recovery")
+    # === SECOND PASS: fill in recoveries and insert ===
+    return_events = []
+    recoveries_needed = max(0, 2 - weekly_usage["Recovery"])
+    if recoveries_needed > 0:
+        sorted_days = sorted(planned_events.keys(), reverse = True)
+        for day in sorted_days:
+            if recoveries_needed == 0:
+                break
+
+            events = planned_events[day]
+
+            # Replace last event if possible
+            if events and "Recovery" not in events and events[-1] not in ("Travel", "Match Preparation"):
+                weekly_usage[events[-1]] -= 1
+                events[-1] = "Recovery"
                 weekly_usage["Recovery"] += 1
+                recoveries_needed -= 1
+            elif not events:
+                planned_events[day].append("Recovery")
+                weekly_usage["Recovery"] += 1
+                recoveries_needed -= 1
 
-        # # Fill remaining slots up to 3
-        # while len(events) < 3:
-        #     possible = [e for e in MAX_EVENTS if weekly_usage[e] < MAX_EVENTS[e] and e not in events]
-        #     if not possible:
-        #         break
-        #     choice = random.choice(possible)
-        #     events.append(choice)
-        #     weekly_usage[choice] += 1
-
-        # Insert into DB
+    for day, events in planned_events.items():
         eventsToAdd = []
         for i, event in enumerate(events):
             startHour, endHour = EVENT_TIMES[i]
@@ -6063,24 +6323,60 @@ def create_events_for_other_teams(team_id, start_date, managing_team):
             )
 
         if len(eventsToAdd) != 0:
-            CalendarEvents.batch_add_events(eventsToAdd)
+            return_events.extend(eventsToAdd)
+
+    return return_events
 
 def teamStrength(playerIDs, role, playerOBJs):
     if not playerIDs:
         return 0
-    
-    weights = []
-    for pid in playerIDs:
-        p = playerOBJs[pid]
-        ability = p.current_ability
 
-        # attackers scale harder when more of them
-        if role == "attack":
-            weights.append(ability ** 1.1)  # slight bias
-        else:  # defenders
-            weights.append(ability ** 1.0)  # normal
+    abilities = [playerOBJs[pid].current_ability for pid in playerIDs]
+    if role == "attack":
+        abilities = [a ** 1.05 for a in abilities]
 
-    # geometric mean balances numbers and ability
-    avg = sum(weights) / len(weights)
-    return avg * (len(weights) ** 0.5)   # sublinear scaling with numbers
-    
+    geom_mean = math.exp(sum(math.log(a + 1e-9) for a in abilities) / len(abilities))
+    return geom_mean * (1 + 0.1 * math.log(len(abilities) + 1))
+
+def process_payload(payload):
+    try: 
+        call_if_not_empty(payload["team_updates"], LeagueTeams.batch_update_teams)
+        call_if_not_empty(payload["manager_updates"], Managers.batch_update_managers)
+        call_if_not_empty(payload["match_events"], MatchEvents.batch_add_events)
+        call_if_not_empty(payload["score_updates"], Matches.batch_update_scores)
+        call_if_not_empty(payload["fitness_updates"], Players.batch_update_fitness)
+        call_if_not_empty(payload["sharpness_updates"], Players.batch_update_sharpnesses)
+        call_if_not_empty(payload["morale_updates"], Players.batch_update_morales)
+        call_if_not_empty(payload["lineup_updates"], TeamLineup.batch_add_lineups)
+        call_if_not_empty(payload["stats_updates"], MatchStats.batch_add_stats)
+
+        if "players_to_update" in payload:
+            call_if_not_empty(payload["players_to_update"], Players.batch_reduce_morales_to_25)
+            call_if_not_empty(payload["emails_to_send"], Emails.batch_add_emails)
+
+        for ban in payload["player_bans"]:
+
+            player_id, competition_id, ban_length, ban_type, date = ban
+
+            sendEmail = PlayerBans.add_player_ban(player_id, competition_id, ban_length, ban_type, date)
+            player = Players.get_player_by_id(player_id)
+            userTeam = Teams.get_teams_by_manager(Managers.get_all_user_managers()[0].id)[0]
+
+            if player.team_id == userTeam.id and sendEmail:
+                emailDate = date + timedelta(days = 1)
+                if ban_type == "injury":
+                    Emails.add_email("player_injury", None, player_id, ban_length, None, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                else:
+                    Emails.add_email("player_ban", None, player_id, ban_length, competition_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+
+        for check in payload["yellow_card_checks"]:
+
+            player_id, competition_id, threshold, date = check
+            MatchEvents.check_yellow_card_ban(player_id, competition_id, threshold, date)
+
+    except Exception as e:
+        print(f"Error updating teams: {e}")
+
+def call_if_not_empty(data, func):
+    if data:
+        func(data)

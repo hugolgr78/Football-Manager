@@ -1,5 +1,4 @@
 import customtkinter as ctk
-import tkinter.font as tkFont
 from settings import *
 from data.database import Matches, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players, Managers, League
 from data.gamesDatabase import *

@@ -10,11 +10,12 @@ from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 
 class LeagueProfile(ctk.CTkFrame):
-    def __init__(self, parent, league_id = None, changeBackFunction = None):
+    def __init__(self, parent, league_id = None, changeBackFunction = None, userLeagueProfile = None):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
         self.changeBackFunction = changeBackFunction
+        self.userLeagueProfile = userLeagueProfile
 
         if not league_id:
             self.manager_id = Managers.get_all_user_managers()[0].id
@@ -26,6 +27,9 @@ class LeagueProfile(ctk.CTkFrame):
             self.league_id = league_id
             self.league = League.get_league_by_id(self.league_id)
             self.leagueTeams = LeagueTeams.get_teams_by_league(self.league_id)
+
+        self.leagueAbove = self.league.league_above is not None
+        self.leagueBelow = self.league.league_below is not None
 
         self.profile = Profile(self, self.league)
         self.matchdays = None
@@ -48,10 +52,10 @@ class LeagueProfile(ctk.CTkFrame):
     def createTabs(self):
 
         self.buttonHeight = 40
-        self.buttonWidth = 180
+        self.buttonWidth = 160
         self.button_background = TKINTER_BACKGROUND
         self.hover_background = GREY_BACKGROUND
-        self.gap = 0.09
+        self.gap = 0.08
 
         gapCount = 0
         for i in range(len(self.tabs)):
@@ -69,7 +73,27 @@ class LeagueProfile(ctk.CTkFrame):
 
         if self.changeBackFunction:
             backButton = ctk.CTkButton(self.tabsFrame, text = "Back", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, corner_radius = 5, height = self.buttonHeight - 10, width = 100, hover_color = CLOSE_RED, command = lambda: self.changeBackFunction())
-            backButton.place(relx = 0.975, rely = 0, anchor = "ne")
+            backButton.place(relx = 0.94, rely = 0, anchor = "ne")
+
+        self.legendRows = 1
+        self.legendRows += 2 if self.leagueAbove else 0
+        self.legendRows += 1 if self.leagueBelow else 0
+
+        self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 30 * self.legendRows, corner_radius = 0, background_corner_colors = [TKINTER_BACKGROUND, TKINTER_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND])
+
+        src = Image.open("Images/information.png")
+        src.thumbnail((20, 20))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        self.helpButton = ctk.CTkButton(self.tabsFrame, text = "", image = img, fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, corner_radius = 5, height = 30, width = 30)
+        self.helpButton.place(relx = 0.975, rely = 0, anchor = "ne")
+        self.helpButton.bind("<Enter>", lambda e: self.showLegend(e))
+        self.helpButton.bind("<Leave>", lambda e: self.legendFrame.place_forget())
+
+        self.legend()
+
+    def showLegend(self, event):
+        self.legendFrame.place(relx = 0.975, rely = 0.1, anchor = "ne")
+        self.legendFrame.lift()
 
     def canvas(self, width, height, relx):
         canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
@@ -86,6 +110,35 @@ class LeagueProfile(ctk.CTkFrame):
             self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.league)
 
         self.tabs[self.activeButton].pack()
+
+    def legend(self):
+
+        self.legendFrame.grid_rowconfigure(tuple(range(self.legendRows)), weight = 0)
+        self.legendFrame.grid_columnconfigure((0), weight = 0)
+        self.legendFrame.grid_columnconfigure((1), weight = 1)
+        self.legendFrame.grid_propagate(False)
+
+        ctk.CTkLabel(self.legendFrame, text = "Legend", font = (APP_FONT_BOLD, 18), fg_color = GREY_BACKGROUND).grid(row = 0, column = 0, columnspan = 2, pady = (5, 0))
+
+        row = 1
+        if self.leagueAbove:
+            canvas = ctk.CTkCanvas(self.legendFrame, width = 5, height = 200 / 14.74, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
+            canvas.grid(row = row, column = 0, sticky = "w", padx = (8, 0), pady = (0, 2))
+
+            ctk.CTkLabel(self.legendFrame, text = "Promotion", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = row, column = 1, sticky = "w", padx = (8, 0), pady = (0, 2))
+
+            row += 1
+            canvas = ctk.CTkCanvas(self.legendFrame, width = 5, height = 200 / 14.74, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
+            canvas.grid(row = row, column = 0, sticky = "w", padx = (8, 0), pady = (0, 2))
+
+            ctk.CTkLabel(self.legendFrame, text = "Playoffs", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = row, column = 1, sticky = "w", padx = (8, 0), pady = (0, 2))
+            row += 1
+        
+        if self.leagueBelow:
+            canvas = ctk.CTkCanvas(self.legendFrame, width = 5, height = 200 / 14.74, bg = PIE_RED, bd = 0, highlightthickness = 0)
+            canvas.grid(row = row, column = 0, sticky = "w", padx = (8, 0), pady = (0, 2))
+
+            ctk.CTkLabel(self.legendFrame, text = "Relegation", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = row, column = 1, sticky = "w", padx = (8, 0), pady = (0, 2))
 
 class Profile(ctk.CTkFrame):
     def __init__(self, parent, league):
@@ -119,12 +172,30 @@ class Profile(ctk.CTkFrame):
 
         titleFrame = ctk.CTkFrame(self.statsFrame, fg_color = GREY_BACKGROUND, width = 310, height = 30, corner_radius = 15)
         titleFrame.pack(pady = 5, padx = 5)
-        ctk.CTkLabel(titleFrame, text = "Player Stats", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+        ctk.CTkLabel(titleFrame, text = "Player Stats", font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.55, anchor = "center")
 
         self.playerStatsFrame = ctk.CTkScrollableFrame(self.statsFrame, fg_color = GREY_BACKGROUND, width = 290, height = 400, corner_radius = 15)
         self.playerStatsFrame.pack(pady = 5, padx = 5)
 
+        if self.parent.leagueAbove or self.parent.leagueBelow and League.get_league_state(self.league.league_below):
+            self.upLeagueButton = ctk.CTkButton(self, width = 50, height = 50, text = "⯅", text_color = "white", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND, command = lambda: self.loadleague(self.league.league_above))
+            self.upLeagueButton.place(relx = 0.963, rely = 0, anchor = "ne")
+
+            self.downLeagueButton = ctk.CTkButton(self, width = 50, height = 50, text = "⯆", text_color = "white", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND, command = lambda: self.loadleague(self.league.league_below))
+            self.downLeagueButton.place(relx = 0.963, rely = 0.09, anchor = "ne")
+
+            if not self.parent.leagueAbove:
+                self.upLeagueButton.configure(state = "disabled")
+
+            if not self.parent.leagueBelow or not League.get_league_state(self.league.league_below):
+                self.downLeagueButton.configure(state = "disabled")
+
         self.addStats()
+
+    def loadleague(self, league_id):
+        profile = LeagueProfile(self.parent, league_id, getattr(self.parent, 'changeBackFunction', None), getattr(self.parent, 'userLeagueProfile', None))
+        profile.place(relx = 0, rely = 0, anchor = "nw")
+        append_overlapping_profile(self.parent, profile)
 
     def addStats(self):
         self.topScorers = MatchEvents.get_all_goals(self.league.id)
@@ -240,7 +311,7 @@ class Matchdays(ctk.CTkFrame):
 
         self.frames = []
         self.activeFrame = self.currentMatchday - 1
-        self.numMacthdays = 38
+        self.numMatchdays = 38 if not self.league.league_above else 39
 
         self.buttonsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 980, height = 60, corner_radius = 15)
         self.buttonsFrame.place(relx = 0, rely = 0.98, anchor = "sw")
@@ -249,7 +320,7 @@ class Matchdays(ctk.CTkFrame):
         self.addButtons()
 
     def createFrames(self):
-        for i in range(self.numMacthdays):
+        for i in range(self.numMatchdays):
             if i == self.currentMatchday - 1:
                 matchday = Matches.get_matchday_for_league(self.league.id, self.currentMatchday)
                 frame = MatchdayFrame(self, matchday, self.currentMatchday, self.currentMatchday, self, self.parentTab, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
@@ -277,10 +348,10 @@ class Matchdays(ctk.CTkFrame):
     def changeFrame(self, direction):
         self.frames[self.activeFrame].place_forget()
 
-        if self.activeFrame + direction > self.numMacthdays - 1:
-            self.activeFrame = (direction - (self.numMacthdays - self.activeFrame))
+        if self.activeFrame + direction > self.numMatchdays - 1:
+            self.activeFrame = (direction - (self.numMatchdays - self.activeFrame))
         elif self.activeFrame + direction < 0:
-            self.activeFrame = self.numMacthdays - (abs(direction) - self.activeFrame)
+            self.activeFrame = self.numMatchdays - (abs(direction) - self.activeFrame)
         else:
             self.activeFrame += direction
 

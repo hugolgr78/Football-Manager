@@ -98,8 +98,39 @@ class SettingsTab(ctk.CTkFrame):
             self.saveAndExitButton.configure(state = "normal")
 
     def quitGame(self, menu):
+        if self.canSave:
+            response = CTkMessagebox(
+                title="Exit",
+                message="Would you like to save before quitting?",
+                icon="question",
+                option_1="Save and Exit",
+                option_2="Exit without Saving",
+                option_3="Cancel",
+                button_color=(CLOSE_RED, APP_BLUE, APP_BLUE),
+                button_hover_color=(CLOSE_RED, APP_BLUE, APP_BLUE)
+            )
 
-        if not self.canSave:
+            try:
+                if hasattr(response, "button_1"):
+                    response.button_1.configure(hover_color=CLOSE_RED)
+                if hasattr(response, "button_2"):
+                    response.button_2.configure(hover_color=APP_BLUE)
+                if hasattr(response, "button_3"):
+                    response.button_3.configure(hover_color=APP_BLUE)
+            except Exception:
+                pass
+
+            choice = response.get()
+
+            if choice == "Save and Exit":
+                self.save(exit_=False)
+                self.exit_(menu)
+
+            elif choice == "Exit without Saving":
+                self.rollBack()
+                self.exit_(menu)
+
+        else:
             response = CTkMessagebox(
                 title="Exit",
                 message="Are you sure you want to exit?",
@@ -109,23 +140,7 @@ class SettingsTab(ctk.CTkFrame):
                 button_color=(CLOSE_RED, APP_BLUE),
                 button_hover_color=(CLOSE_RED, APP_BLUE)
             )
-            try:
-                if hasattr(response, "button_1"):
-                    response.button_1.configure(hover_color=CLOSE_RED)
-                if hasattr(response, "button_2"):
-                    response.button_2.configure(hover_color=APP_BLUE)
-            except Exception:
-                pass
-        else:
-            response = CTkMessagebox(
-                title="Exit",
-                message="Would you like to save before quitting?",
-                icon="question",
-                option_1="Yes",
-                option_2="No",
-                button_color=(CLOSE_RED, APP_BLUE),
-                button_hover_color=(CLOSE_RED, APP_BLUE)
-            )
+
             try:
                 if hasattr(response, "button_1"):
                     response.button_1.configure(hover_color=CLOSE_RED)
@@ -134,15 +149,7 @@ class SettingsTab(ctk.CTkFrame):
             except Exception:
                 pass
 
-        if response.get() == "Yes":
-
-            if self.canSave:
-                self.save(exit_ = False)
-
-            self.exit_(menu)
-        else:
-            if self.canSave:
-                self.rollBack()
+            if response.get() == "Yes":
                 self.exit_(menu)
 
     def exit_(self, menu):
@@ -163,7 +170,30 @@ class SettingsTab(ctk.CTkFrame):
         db.commit_copy()
 
         if exit_:
-            self.parent.quit()
+
+            response = CTkMessagebox(
+                title="Exit",
+                message="Are you sure you want to exit?",
+                icon="question",
+                option_1="Yes",
+                option_2="No",
+                button_color=(CLOSE_RED, APP_BLUE),
+                button_hover_color=(CLOSE_RED, APP_BLUE)
+            )
+            try:
+                if hasattr(response, "button_1"):
+                    response.button_1.configure(hover_color=CLOSE_RED)
+                if hasattr(response, "button_2"):
+                    response.button_2.configure(hover_color=APP_BLUE)
+            except Exception:
+                pass
+
+            if response.get() == "Yes":
+                self.parent.quit()
+            else:
+                self.saveButton.configure(state = "disabled")
+                self.saveAndExitButton.configure(state = "disabled")
+                self.canSave = False
         else:
             self.saveButton.configure(state = "disabled")
             self.saveAndExitButton.configure(state = "disabled")

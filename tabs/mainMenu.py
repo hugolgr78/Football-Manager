@@ -25,7 +25,7 @@ class MainMenu(ctk.CTkFrame):
 
         self.parent = parent
         self.manager_id = manager_id
-        self.movingDate = True
+        self.movingDate = False
 
         if created:
             db = DatabaseManager()

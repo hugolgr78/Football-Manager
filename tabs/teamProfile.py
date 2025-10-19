@@ -116,11 +116,14 @@ class Profile(ctk.CTkFrame):
         logo = ctk.CTkImage(src, None, (src.width, src.height))
         ctk.CTkLabel(self, image = logo, text = "", fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.2, anchor = "center")
 
-        ctk.CTkLabel(self, text = self.parent.team.name, font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.18, anchor = "w")
+        ctk.CTkLabel(self, text = self.parent.team.name, font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.22, rely = 0.18, anchor = "w")
         position = self.parent.leagueData.position
 
-        leagueLabel = LeagueProfileLabel(self, self.manager_id, self.league.name, f"{position}{getSuffix(position)} in ", "", 0, 0, self.parent)
-        leagueLabel.place(relx = 0.2, rely = 0.23, anchor = "w")
+        if self.league.loaded:
+            leagueLabel = LeagueProfileLabel(self, self.manager_id, self.league.name, f"{position}{getSuffix(position)} in ", "", 0, 0, self.parent)
+            leagueLabel.place(relx = 0.22, rely = 0.23, anchor = "w")
+        else:
+            ctk.CTkLabel(self, text = f"{position}{getSuffix(position)} in {self.league.name}", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND, text_color = "white").place(relx = 0.22, rely = 0.23, anchor = "w")
 
         canvas = ctk.CTkCanvas(self, width = 5, height = 300, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = 0.55, rely = 0.2, anchor = "center")

@@ -6,7 +6,7 @@ from PIL import Image
 import os, datetime, io
 from CTkMessagebox import CTkMessagebox
 from tabs.mainMenu import MainMenu
-from utils.frames import LeagueTable, WinRatePieChart
+from utils.frames import LeagueTable, WinRatePieChart, ChoosingLeagueFrame
 from utils.util_functions import getSuffix
 
 TOTAL_STEPS = 1003
@@ -186,11 +186,11 @@ class StartMenu(ctk.CTkFrame):
 
         ctk.CTkLabel(self.createFrame, text = "Create a Manager", font = (APP_FONT_BOLD, 35), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.08, anchor = "nw")
 
-        self.nextButton = ctk.CTkButton(self.createFrame, text = "Next", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 40, command = self.checkData)
+        self.nextButton = ctk.CTkButton(self.createFrame, text = "Leagues >", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 40, command = self.checkData)
         self.nextButton.place(relx = 0.97, rely = 0.05, anchor = "ne")
 
-        self.backButton = ctk.CTkButton(self.createFrame, text = "Back", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 40, hover_color = CLOSE_RED, command = lambda: self.createFrame.place_forget())
-        self.backButton.place(relx = 0.86, rely = 0.05, anchor = "ne")
+        backButton = ctk.CTkButton(self.createFrame, text = "Quit", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 40, hover_color = CLOSE_RED, command = lambda: self.createFrame.place_forget())
+        backButton.place(relx = 0.86, rely = 0.05, anchor = "ne")
 
         ctk.CTkLabel(self.createFrame, text = "First Name", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.2, anchor = "nw")
         self.first_name_entry = ctk.CTkEntry(self.createFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 300, height = 45)
@@ -263,7 +263,7 @@ class StartMenu(ctk.CTkFrame):
 
         if not self.first_name or not self.last_name or not self.dob or not self.selectedCountry:
             self.nextButton.configure(state = "disabled")
-            error = CTkMessagebox(title = "Error", message = "Please fill in all the fields", icon = "cancel")
+            CTkMessagebox(title = "Error", message = "Please fill in all the fields", icon = "cancel")
             self.nextButton.configure(state = "normal")
             return
         
@@ -271,11 +271,15 @@ class StartMenu(ctk.CTkFrame):
             self.dob = datetime.datetime.strptime(self.dob, "%Y-%m-%d").date()
         except ValueError:
             self.nextButton.configure(state = "disabled")
-            error = CTkMessagebox(title = "Error", message = "Date of birth must be in the format YYYY-MM-DD", icon = "cancel")
+            CTkMessagebox(title = "Error", message = "Date of birth must be in the format YYYY-MM-DD", icon = "cancel")
             self.nextButton.configure(state = "normal")
             return
         
-        self.chooseTeam()
+        self.selectLeagues()
+        
+    def selectLeagues(self):
+        self.choosingLeaguesFrame = ChoosingLeagueFrame(self, TKINTER_BACKGROUND, 1150, 600, 15, 2, APP_BLUE, self.chooseTeam)
+        self.choosingLeaguesFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
     
     def chooseTeam(self):
 
@@ -290,11 +294,11 @@ class StartMenu(ctk.CTkFrame):
 
         ctk.CTkLabel(self.chooseTeamFrame, text = "Choose a team", font = (APP_FONT_BOLD, 35), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.08, anchor = "nw")
 
-        self.doneButton = ctk.CTkButton(self.chooseTeamFrame, text = "Done", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 45, command = lambda: self.finishCreateManager())
+        self.doneButton = ctk.CTkButton(self.chooseTeamFrame, text = "Finish", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 45, command = lambda: self.finishCreateManager())
         self.doneButton.place(relx = 0.94, rely = 0.075, anchor = "center")
 
-        self.backButton = ctk.CTkButton(self.chooseTeamFrame, text = "Back", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 45, hover_color = CLOSE_RED, command = lambda: self.chooseTeamFrame.place_forget())
-        self.backButton.place(relx = 0.94, rely = 0.165, anchor = "center")
+        backButton = ctk.CTkButton(self.chooseTeamFrame, text = "< Leagues", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 45, hover_color = CLOSE_RED, command = lambda: self.chooseTeamFrame.place_forget())
+        backButton.place(relx = 0.94, rely = 0.165, anchor = "center")
 
         self.teamInfoFrame = ctk.CTkFrame(self.chooseTeamFrame, fg_color = GREY_BACKGROUND, height = 100, width = 570, corner_radius = 15)
         self.teamInfoFrame.place(relx = 0.63, rely = 0.12, anchor = "center")
@@ -314,11 +318,71 @@ class StartMenu(ctk.CTkFrame):
         self.teamsFrame.grid_rowconfigure((0, 1, 2, 3), weight = 1)
         self.teamsFrame.grid_propagate(False)
 
-        for i, team in enumerate(self.teamsJson):
+        self.planetDropDown = ctk.CTkComboBox(self.chooseTeamFrame,
+            font = (APP_FONT, 15),
+            fg_color = DARK_GREY,
+            border_color = DARK_GREY,
+            button_color = DARK_GREY,
+            button_hover_color = DARK_GREY,
+            corner_radius = 10,
+            dropdown_fg_color = DARK_GREY,
+            dropdown_hover_color = DARK_GREY,
+            width = 150,
+            height = 30,
+            state = "readonly",
+            command = self.choosePlanet)
+        self.planetDropDown.place(relx = 0.03, rely = 0.18, anchor = "nw")
 
-            if i > 19:
-                return
+        values = []
+        for planet, leagues in PLANET_LEAGUES.items():
+            addPlanet = False
+            for league in leagues:
+                if self.choosingLeaguesFrame.loadedLeagues[league] == 1:
+                    addPlanet = True
+                    break
+            
+            if addPlanet:
+                values.append(planet)
 
+        self.planetDropDown.configure(values = values)
+        
+        self.leagueDropDown = ctk.CTkComboBox(self.chooseTeamFrame,
+            font = (APP_FONT, 13),
+            fg_color = DARK_GREY,
+            border_color = DARK_GREY,
+            button_color = DARK_GREY,
+            button_hover_color = DARK_GREY,
+            corner_radius = 10,
+            dropdown_fg_color = DARK_GREY,
+            dropdown_hover_color = DARK_GREY,
+            width = 150,
+            height = 30,
+            state = "readonly",
+            command = self.chooseLeague)
+        self.leagueDropDown.place(relx = 0.18, rely = 0.18, anchor = "nw")
+
+    def choosePlanet(self, planet):
+        
+        values = []
+        for league, val in self.choosingLeaguesFrame.loadedLeagues.items():
+            if league in PLANET_LEAGUES[planet] and val == 1:
+                values.append(league)
+
+        self.leagueDropDown.configure(values = values)
+
+    def chooseLeague(self, league):
+        count = 0
+        self.currentTeams = []
+
+        for child in self.teamsFrame.winfo_children():
+            child.destroy()
+
+        for team in self.teamsJson:
+
+            if team["league"] != league:
+                continue
+
+            self.currentTeams.append(team)
             path = team["logo"]
 
             src = Image.open(path)
@@ -327,11 +391,13 @@ class StartMenu(ctk.CTkFrame):
             ctk_image = ctk.CTkImage(src, None, (src.width, src.height))
 
             button = ctk.CTkButton(self.teamsFrame, image = ctk_image, text = "", fg_color = TKINTER_BACKGROUND, width = 100, height = 100, border_width = 2, border_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND)
-            button.grid(row = i // 5, column = i % 5, padx = 10, pady = 10)
+            button.grid(row = count // 5, column = count % 5, padx = 10, pady = 10)
             button.configure(command = lambda b = button, t = team: self.selectTeam(b, t))
 
             if self.selectedTeam and self.selectedTeam == team["name"]:
                 self.selectTeam(button, team)
+
+            count += 1
 
     def selectTeam(self, button, team):
         button.configure(border_color=APP_BLUE)
@@ -343,8 +409,7 @@ class StartMenu(ctk.CTkFrame):
         self.last_selected_team = button
 
         # Calculate the expected finish
-        strength = team["strength"]
-        teamStrengths = [(t["name"], t["strength"]) for t in self.teamsJson]
+        teamStrengths = [(t["name"], t["strength"]) for t in self.currentTeams]
         expectedFinish = expected_finish(team["name"], teamStrengths)
         suffix = getSuffix(expectedFinish)
 
@@ -356,7 +421,7 @@ class StartMenu(ctk.CTkFrame):
         
         if not self.selectedTeam:
             self.doneButton.configure(state = "disabled")
-            error = CTkMessagebox(title = "Error", message = "Please select a team", icon = "cancel")
+            CTkMessagebox(title = "Error", message = "Please select a team", icon = "cancel")
             self.doneButton.configure(state = "normal")
             return
         
@@ -399,7 +464,7 @@ class StartMenu(ctk.CTkFrame):
         self.db_manager = DatabaseManager()
         self.db_manager.set_database(f"{self.first_name}{self.last_name}", create_tables = True)
         self.db_manager.start_copy()
-        self.chosenManagerID = Managers.add_managers(self.first_name, self.last_name, self.selectedCountry, self.dob, self.selectedTeam)
+        self.chosenManagerID = Managers.add_managers(self.first_name, self.last_name, self.selectedCountry, self.dob, self.selectedTeam, self.choosingLeaguesFrame.loadedLeagues)
 
         Game.add_game(self.chosenManagerID, self.first_name,self.last_name)
         self.parent.creatingManager = False

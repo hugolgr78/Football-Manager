@@ -2,6 +2,7 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
+from utils.util_functions import append_overlapping_profile
 
 class TeamProfileLabel(ctk.CTkFrame):
     def __init__(self, parent, manager_id, team_name, prefix_text, suffix_text, width, height, tab, textColor = "white", fg_color = TKINTER_BACKGROUND, fontSize = 20):
@@ -66,8 +67,7 @@ class TeamProfileLink(ctk.CTkLabel):
         if manager.user != 1:
             self.profile = TeamProfile(self.tab, manager_id = self.manager_id, parentTab = self.tab, changeBackFunction = self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
-
-            self.tab.parent.overlappingProfiles.append(self.profile)
+            append_overlapping_profile(self.tab, self.profile)
         else:
             self.tab.parent.changeTab(5)
 

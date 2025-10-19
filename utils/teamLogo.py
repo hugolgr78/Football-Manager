@@ -2,9 +2,10 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
+from utils.util_functions import append_overlapping_profile
 
 class TeamLogo(ctk.CTkImage):
-    def __init__(self, parent, image, team, fg_color, relx, rely, anchor, tab):
+    def __init__(self, parent, image, team, fg_color, relx, rely, anchor, tab, clickable = True):
         super().__init__(image, None, (image.width, image.height))
         
         self.parent = parent
@@ -15,7 +16,8 @@ class TeamLogo(ctk.CTkImage):
         self.imageLabel = ctk.CTkLabel(self.parent, image = self, text = "", fg_color = self.fg_color)
         self.imageLabel.place(relx = relx, rely = rely, anchor = anchor)
 
-        self.imageLabel.bind("<Enter><Button-1>", lambda event: self.openClubProfile())
+        if clickable:
+            self.imageLabel.bind("<Enter><Button-1>", lambda event: self.openClubProfile())
 
     def openClubProfile(self):
         from tabs.teamProfile import TeamProfile
@@ -25,8 +27,7 @@ class TeamLogo(ctk.CTkImage):
         if manager.user != 1:
             self.profile = TeamProfile(self.tab, manager_id = self.team.manager_id, parentTab = self.tab, changeBackFunction = self.changeBack)
             self.profile.place(x = 0, y = 0, anchor = "nw")
-
-            self.tab.parent.overlappingProfiles.append(self.profile)
+            append_overlapping_profile(self.tab, self.profile)
         else:
             self.tab.parent.changeTab(5)
 

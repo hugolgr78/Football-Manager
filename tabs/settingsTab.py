@@ -106,17 +106,18 @@ class SettingsTab(ctk.CTkFrame):
                 option_1="Save and Exit",
                 option_2="Exit without Saving",
                 option_3="Cancel",
-                button_color=(CLOSE_RED, APP_BLUE, APP_BLUE),
-                button_hover_color=(CLOSE_RED, APP_BLUE, APP_BLUE)
+                button_color=(CLOSE_RED, APP_BLUE),
+                button_hover_color=(CLOSE_RED, APP_BLUE)
             )
 
             try:
+                # Customize button colors individually
                 if hasattr(response, "button_1"):
-                    response.button_1.configure(hover_color=CLOSE_RED)
+                    response.button_1.configure(fg_color=CLOSE_RED, hover_color=CLOSE_RED)  # Save and Exit
                 if hasattr(response, "button_2"):
-                    response.button_2.configure(hover_color=APP_BLUE)
+                    response.button_2.configure(fg_color=APP_BLUE, hover_color=APP_BLUE)   # Exit without Saving
                 if hasattr(response, "button_3"):
-                    response.button_3.configure(hover_color=APP_BLUE)
+                    response.button_3.configure(fg_color=APP_BLUE, hover_color=APP_BLUE)  # Cancel
             except Exception:
                 pass
 

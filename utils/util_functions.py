@@ -997,7 +997,7 @@ def get_all_league_teams(jsonData, leagueName):
 
     return teamOBJs
 
-def run_match_simulation(interval, currDate, exclude_leagues = []):
+def run_match_simulation(interval, currDate, exclude_leagues = [], progress_callback = None):
     from data.database import Matches, Managers, League, LeagueTeams, PlayerBans, TeamHistory, process_payload, check_player_games_happy
     from concurrent.futures import ProcessPoolExecutor, as_completed
     import os, time, logging, glob, traceback
@@ -1066,6 +1066,10 @@ def run_match_simulation(interval, currDate, exclude_leagues = []):
                             teams[match.league_id].append(match.away_id)
 
                             worker_payloads.append(worker_payload)
+
+                            if progress_callback:
+                                progress_callback(1)
+
                     except Exception:
                         _logger.exception("Match worker raised an exception")
                         traceback.print_exc()

@@ -60,17 +60,19 @@ Here are some screenshots from the project (as of 21/10/25):
 
   <img src="Images/Screenshots/main_menu.png" alt="Home screen" width="300"/>
   <img src="Images/Screenshots/main_hub.png" alt="Main hub" width="300"/>
-  <img src="Images/Screenshots/inbox.png" alt="Inbox" width="300"/>
 
+  <img src="Images/Screenshots/inbox.png" alt="Inbox" width="300"/>
   <img src="Images/Screenshots/squad_profile.png" alt="Squad profile" width="300"/>
+
   <img src="Images/Screenshots/calendar.png" alt="Calendar" width="300"/>
   <img src="Images/Screenshots/tactics_page.png" alt="Tactics page" width="300"/>
 
   <img src="Images/Screenshots/league_profile.png" alt="League profile" width="300"/>
   <img src="Images/Screenshots/league_graphs.png" alt="League graphs" width="300"/>
-  <img src="Images/Screenshots/player_profile.png" alt="Player profile" width="300"/>
 
+  <img src="Images/Screenshots/player_profile.png" alt="Player profile" width="300"/>
   <img src="Images/Screenshots/in_game.png" alt="Match screen 1" width="300"/>
+
   <img src="Images/Screenshots/match_profile.png" alt="Match profile" width="300"/>
-  
+
 </div>

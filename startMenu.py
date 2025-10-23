@@ -13,6 +13,13 @@ TOTAL_STEPS = 1003
 
 class StartMenu(ctk.CTkFrame):
     def __init__(self, parent):
+        """
+        The start menu frame where users can choose or create a manager.
+        
+        Args:
+            parent (ctk.CTk): The parent tkinter window.
+        """
+
         super().__init__(parent, fg_color = TKINTER_BACKGROUND)
         self.pack(fill = "both", expand = True)
         
@@ -124,11 +131,21 @@ class StartMenu(ctk.CTkFrame):
         ctk.CTkButton(self.menuFrame, text = "", image = logo, fg_color = DARK_GREY, hover_color = CLOSE_RED, width = 10, height = 10, corner_radius = 15, command = lambda: self.closeApp()).place(relx = 0.98, rely = 0.01, anchor = "ne")
 
     def closeApp(self):
+        """
+        Handles the application close event with confirmation.
+        """
+        
         response = CTkMessagebox(title = "Exit", message = "Are you sure you want to exit?", icon = "question", option_1 = "Yes", option_2 = "No")
         if response.get() == "Yes":
             self.parent.destroy()
 
     def chooseManager(self, value):
+        """
+        Handles the selection of a manager from the dropdown.
+        
+        Args:
+            value (str): The selected manager's name.
+        """
 
         if value != self.chosenManager:
             self.chosenManager = value
@@ -147,7 +164,6 @@ class StartMenu(ctk.CTkFrame):
             managedTeam = Teams.get_teams_by_manager(manager.id)
 
             self.chosenManagerID = manager.id
-
             self.tableFrame.defineManager(self.chosenManagerID)
 
             logo_blob = managedTeam[0].logo
@@ -160,6 +176,7 @@ class StartMenu(ctk.CTkFrame):
             self.tableFrame.clearTable()
             self.tableFrame.addLeagueTable()
 
+            # Add the manager statistics and pie chart
             if int(manager.games_played) == 0:
                 winRate = 0
             else:
@@ -172,6 +189,14 @@ class StartMenu(ctk.CTkFrame):
             self.gamesPieChart(int(manager.games_played), int(manager.games_won), int(manager.games_lost))
 
     def gamesPieChart(self, gamesPlayed, gamesWon, gamesLost):
+        """
+        Creates or updates the win rate pie chart in the stats frame.
+
+        Args:
+            gamesPlayed (int): The total number of games played.
+            gamesWon (int): The number of games won.
+            gamesLost (int): The number of games lost.
+        """
 
         if self.piechart:
             self.piechart.clear()
@@ -180,7 +205,10 @@ class StartMenu(ctk.CTkFrame):
         self.pieChart = WinRatePieChart(self.statsFrame, gamesPlayed, gamesWon, gamesLost, (3, 1.8), GREY_BACKGROUND, 0.5, 0.72, "center")
 
     def createManager(self):
-            
+        """
+        Opens the create manager frame.
+        """
+
         self.createFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, height = 600, width = 1150, corner_radius = 15, border_width = 2, border_color = APP_BLUE)
         self.createFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
 
@@ -214,6 +242,7 @@ class StartMenu(ctk.CTkFrame):
         self.countriesFrame.grid_rowconfigure((0, 1, 2, 3, 4, 5), weight = 1)
         self.countriesFrame.grid_propagate(False)
 
+        # Add the country buttons
         for i, country in enumerate(os.listdir("Images/Countries")):
             path = os.path.join("Images/Countries", country)
 
@@ -230,6 +259,13 @@ class StartMenu(ctk.CTkFrame):
                 self.last_selected_country = button
 
     def format_dob(self, event):
+        """
+        Formats the date of birth entry to the YYYY-MM-DD format.
+        
+        Args:
+            event: The key release event.
+        """
+
         text = self.dob_entry.get().replace("-", "")
         formatted_text = ""
 
@@ -247,6 +283,14 @@ class StartMenu(ctk.CTkFrame):
         self.dob_entry.insert(0, formatted_text)
 
     def selectCountry(self, button, country):
+        """
+        Handles the selection of a country
+        
+        Args:
+            button (ctk.CTkButton): The button representing the country.
+            country (str): The selected country's filename.
+        """
+
         country = country.split(".")[0]
         button.configure(border_color = APP_BLUE)
         self.selectedCountry = country
@@ -257,6 +301,10 @@ class StartMenu(ctk.CTkFrame):
         self.last_selected_team = button
 
     def checkData(self):
+        """
+        Validates the input data before proceeding to league selection.
+        """
+
         self.first_name = self.first_name_entry.get().strip()
         self.last_name = self.last_name_entry.get().strip()
         self.dob = self.dob_entry.get().strip()
@@ -278,10 +326,18 @@ class StartMenu(ctk.CTkFrame):
         self.selectLeagues()
         
     def selectLeagues(self):
+        """
+        Opens the league selection frame.
+        """
+
         self.choosingLeaguesFrame = ChoosingLeagueFrame(self, TKINTER_BACKGROUND, 1150, 600, 15, 2, APP_BLUE, self.chooseTeam)
         self.choosingLeaguesFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
     
     def chooseTeam(self):
+
+        """
+        Creates the team selection frame.
+        """
 
         try:
             with open("data/teams.json", "r") as file:
@@ -333,6 +389,7 @@ class StartMenu(ctk.CTkFrame):
             command = self.choosePlanet)
         self.planetDropDown.place(relx = 0.03, rely = 0.18, anchor = "nw")
 
+        # Populates the planet dropdown based on the chosen leagues
         values = []
         for planet, leagues in PLANET_LEAGUES.items():
             addPlanet = False
@@ -362,6 +419,9 @@ class StartMenu(ctk.CTkFrame):
         self.leagueDropDown.place(relx = 0.18, rely = 0.18, anchor = "nw")
 
     def choosePlanet(self, planet):
+        """
+        Populates the league dropdown based on the chosen planet.
+        """
         
         values = []
         for league, val in self.choosingLeaguesFrame.loadedLeagues.items():
@@ -371,6 +431,13 @@ class StartMenu(ctk.CTkFrame):
         self.leagueDropDown.configure(values = values)
 
     def chooseLeague(self, league):
+        """
+        Handles the selection of a league and displays the corresponding teams.
+
+        Args:
+            league (str): The selected league.
+        """
+
         count = 0
         self.currentTeams = []
 
@@ -400,6 +467,14 @@ class StartMenu(ctk.CTkFrame):
             count += 1
 
     def selectTeam(self, button, team):
+        """
+        Handles the selection of a team.
+
+        Args:
+            button (ctk.CTkButton): The button representing the team.
+            team (dict): The selected team's data.
+        """
+
         button.configure(border_color=APP_BLUE)
         self.selectedTeam = team["name"]
 
@@ -418,6 +493,9 @@ class StartMenu(ctk.CTkFrame):
         self.expectedFinish.configure(text = f"Expected finish: {expectedFinish}{suffix}")
 
     def finishCreateManager(self):
+        """
+        Finalizes the manager creation process and starts the game.
+        """
         
         if not self.selectedTeam:
             self.doneButton.configure(state = "disabled")
@@ -460,17 +538,25 @@ class StartMenu(ctk.CTkFrame):
 
         setUpProgressBar(self.progressBar, self.progressLabel, self.progressFrame, self.percentageLabel)
         
+        # Create the database and copy it to add the data
         self.parent.creatingManager = True
         self.db_manager = DatabaseManager()
         self.db_manager.set_database(f"{self.first_name}{self.last_name}", create_tables = True)
         self.db_manager.start_copy()
+
+        # Add the data to the database
         self.chosenManagerID = Managers.add_managers(self.first_name, self.last_name, self.selectedCountry, self.dob, self.selectedTeam, self.choosingLeaguesFrame.loadedLeagues)
 
+        # Add the game to the games database
         Game.add_game(self.chosenManagerID, self.first_name,self.last_name)
         self.parent.creatingManager = False
 
         self.startGame(created = True)
 
     def startGame(self, created = False):
+        """
+        Starts the main game menu.
+        """
+        
         self.pack_forget()
         self.main = MainMenu(self.parent, self.chosenManagerID, created)

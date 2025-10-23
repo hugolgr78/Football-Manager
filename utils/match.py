@@ -1,13 +1,20 @@
-import threading, os, time, gc, logging
+import threading, logging
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
-import concurrent.futures
 from utils.util_functions import *
 
 logger = logging.getLogger(__name__)
 class Match():
     def __init__(self, match, auto = False, teamMatch = False):
+        """
+        Class for a football match, either a simulation or a team management match.
+
+        Args:
+            match (Match): The match object containing all relevant match data.
+            auto (bool): Whether the match is automated (simulation) or not (team management/other matches during team management match).
+            teamMatch (bool): Whether the match is the team management match or not.
+        """
 
         self.match = match
         self.auto = auto
@@ -84,18 +91,29 @@ class Match():
         if self.auto:
             self.seconds, self.minutes = 0, 0
 
+        # Create lineups for non-team management matches
         if not teamMatch:
             self.createTeamLineup(self.homeTeam.id, True)
             self.createTeamLineup(self.awayTeam.id, False)
-
-            self.homeRatings = {playerID: 6.0 for playerID in list(self.homeCurrentLineup.values()) + self.homeCurrentSubs}
-            self.awayRatings = {playerID: 6.0 for playerID in list(self.awayCurrentLineup.values()) + self.awayCurrentSubs}
+            self.setUpRatings()
 
     def setUpRatings(self):
+        """
+        Set up initial player ratings for both teams at the start of the match.
+        """
+
         self.homeRatings = {playerID: 6.0 for playerID in list(self.homeCurrentLineup.values()) + self.homeCurrentSubs}
         self.awayRatings = {playerID: 6.0 for playerID in list(self.awayCurrentLineup.values()) + self.awayCurrentSubs}
 
     def createTeamLineup(self, teamID, home):
+        """
+        Create the starting lineup and substitutes for a team.
+        
+        Args:
+            teamID (int): The ID of the team for which to create the lineup.
+            home (bool): Whether the team is the home team or away team.
+        """
+
         opponentID = self.match.away_id if home else self.match.home_id
         nonBanned = PlayerBans.get_all_non_banned_players_for_comp(teamID, self.league.league_id)
         nonBannedYouth = PlayerBans.get_all_non_banned_youth_players_for_comp(teamID, self.league.league_id)
@@ -114,16 +132,25 @@ class Match():
             self.awayFitness = {playerID: self.awayPlayersOBJ[playerID].fitness for playerID in list(lineup.values()) + substitutes}
 
     def startGame(self):
+        """
+        Starts the game loop in a thread.
+        """
+
         self.timerThread_running = True
         self.timerThread = threading.Thread(target = self.gameLoop)
         self.timerThread.daemon = True
         self.timerThread.start()
 
     def gameLoop(self):
+        """
+        The main game loop that runs the match, updating time, generating events, and processing them.
+        """
+
         while self.timerThread_running:
             # prepare a bracketed match id prefix for logs
             prefix = f"[{getattr(self.match, 'id', None)}]"
 
+            # Update the game time
             total_seconds = self.minutes * 60 + self.seconds
             logger.debug("%s gameLoop tick: minutes=%s seconds=%s total_seconds=%s", prefix, self.minutes, self.seconds, total_seconds)
             if self.seconds == 59:
@@ -132,6 +159,11 @@ class Match():
             else:
                 self.seconds += 1
 
+            """
+            FITNESS - Every 90 seconds, reduce the fitness of every player on the pitch
+            - Reduce fitness of players who are currently on the pitch for team game as well as other matches
+            - Reduce fitness based on player's fitness attribute and current fitness level (lower fitness = lower drop)
+            """
             total_seconds = self.minutes * 60 + self.seconds
             if total_seconds % 90 == 0:
                 for playerID, fitness in self.homeFitness.items():
@@ -152,7 +184,11 @@ class Match():
 
                         logger.debug("%s fitness reduced: player_id=%s new_fitness=%s", prefix, playerID, self.awayFitness[playerID])
 
-            # ----------- half time ------------
+            """
+            HALF TIME - First Half time procedure
+            - Calculate extra time for every match based on events that have happened (team match and other matches)
+            - Get the maximum extra time from all matches and set that as the extra time for the first half
+            """
             if self.minutes == 45 and self.seconds == 0:
 
                 self.halfTime = True
@@ -181,6 +217,10 @@ class Match():
 
                 logger.debug("%s Computed extraTimeHalf=%s", prefix, self.extraTimeHalf)
 
+            """
+            HALF TIME - Second Half time procedure
+            - Set half time as false and reset minutes and seconds to 45:00
+            """
             if self.halfTime and self.minutes == 45 + self.extraTimeHalf and self.seconds == 0:
                 self.halfTime = False
                 self.minutes = 45
@@ -188,7 +228,11 @@ class Match():
 
                 logger.info("%s End of half time, resume at %02d:%02d", prefix, self.minutes, self.seconds)
 
-            # ----------- full time ------------
+            """
+            FULL TIME - First Full time procedure
+            - Calculate extra time for every match based on events that have happened (team match and other matches)
+            - Get the maximum extra time from all matches and set that as the extra time for the full time
+            """
             if self.minutes == 90 and self.seconds == 0:
 
                 self.fullTime = True
@@ -217,6 +261,11 @@ class Match():
 
                 logger.debug("%s Computed extraTimeFull=%s", prefix, self.extraTimeFull)
 
+            """
+            FULL TIME - Second Full time procedure
+            - Set full time as false and save match data
+            - If not full time, generate events and update possession every TICK seconds, and process events for both teams
+            """
             if self.fullTime and self.minutes == 90 + self.extraTimeFull and self.seconds == 0:
                 self.fullTime = False
                 self.saveData()
@@ -227,7 +276,10 @@ class Match():
                     self.generateEvents("away")
                     passesAndPossession(self)
 
-                # ----------- home events ------------
+                """
+                EVENTS - Home
+                - Check the home events that need to be processed at the current time
+                """
                 for event_time, event_details in list(self.homeEvents.items()):
                     if event_time == str(self.minutes) + ":" + str(self.seconds) and event_time not in self.homeProcessedEvents:
                         logger.debug("%s Processing home event at %s: %s", prefix, event_time, event_details)
@@ -242,7 +294,10 @@ class Match():
                                 self.homeProcessedEvents[event_time] = event_details
                                 logger.info("%s Processed home event: %s at %s", prefix, event_details.get("type"), event_time)
 
-                # ----------- away events ------------
+                """
+                EVENTS - Away
+                - Check the away events that need to be processed at the current time
+                """
                 for event_time, event_details in list(self.awayEvents.items()):
                     if event_time == str(self.minutes) + ":" + str(self.seconds) and event_time not in self.awayProcessedEvents:
                         logger.debug("%s Processing away event at %s: %s", prefix, event_time, event_details)
@@ -258,6 +313,13 @@ class Match():
                                 logger.info("%s Processed away event: %s at %s", prefix, event_details.get("type"), event_time)
 
     def generateEvents(self, side):
+        """
+        Generate match events for a given side (home or away) based on team and player attributes.
+
+        Args:
+            side (str): "home" or "away" indicating which team's events to generate.
+        """
+
         eventsToAdd = []
         statsToAdd = []
 
@@ -276,6 +338,8 @@ class Match():
         playerOBJs = self.homePlayersOBJ if side == "home" else self.awayPlayersOBJ
         oppPlayersOBJs = self.awayPlayersOBJ if side == "home" else self.homePlayersOBJ
 
+
+        # ------------------ STATS CALCULATION ------------------
         sharpness = [playerOBJs[playerID].sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
 
@@ -354,10 +418,12 @@ class Match():
         futureTotalSecs = currTotalSecs + 30
 
         if extraTime:
+            # Get the max total seconds including extra time
             maxMinute = self.extraTimeHalf if self.halfTime else self.extraTimeFull
             finalMinute = 45 if self.halfTime else 90
             maxTotalSecs = (finalMinute + maxMinute) * 60
         else:
+            # otherwise, max is normal time
             maxMinute = 45 if self.halfTime else 90
             maxTotalSecs = maxMinute * 60
 
@@ -376,16 +442,18 @@ class Match():
             eventTime = f"{eventMin}:{eventSec:02d}"
 
             if event == "substitution":
+                # substitution event needs entries such as player off/on and positions
                 matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player_off": subsChosen[subsChosenCount][0], "player_on": subsChosen[subsChosenCount][2], "old_position": subsChosen[subsChosenCount][1], "new_position": subsChosen[subsChosenCount][3]}
                 subsChosenCount += 1
             elif event == "penalty_miss":
+                # penalty miss needs to know the opponent keeper
                 matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"] if "Goalkeeper" in oppLineup else None}
             else:
                 matchEvents[eventTime] = {"type": event, "extra": extraTime}
 
         for stat in statsToAdd:
-
             if stat in PLAYER_STATS:
+                # Get the player associated with the stat
                 playerID, rating = getStatPlayer(stat, lineup, playerOBJs)
                 ratings[playerID] = min(10, max(0, round(ratings.get(playerID, 0) + rating, 2)))
 
@@ -399,6 +467,8 @@ class Match():
 
                 match stat:
                     case "Shots":
+                        # For shots, get the direction, outcome, xG and big chance created/missed
+
                         shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
                         if not playerID in stats[shotDirection]:
                             stats[shotDirection][playerID] = 0
@@ -426,6 +496,8 @@ class Match():
                         stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
                         stats["xG"] = round(stats["xG"], 2)
                     case "Shots on target":
+                        # For shots on target, add to shots, xG, big chance created/missed, and add a save to opponent keeper stats
+
                         if playerID not in stats["Shots"]:
                             stats["Shots"][playerID] = 0
                         
@@ -466,10 +538,24 @@ class Match():
                 stats[stat] += 1
 
     def join(self):
+        """
+        Joins the timer thread to wait for its completion.
+        """
+        
         if self.timerThread:
             self.timerThread.join()
 
     def getEventPlayer(self, event, home, time, teamMatch = None, managing_team = False):
+        """
+        Assigns a player to a given event based on the event type and team.
+        
+        Args:
+            event (dict): The event details.
+            home (bool): Whether the event is for the home team or away team.
+            time (str): The time of the event in "mm:ss" format.
+            teamMatch (bool): Whether the match is a team management match or not.
+            managing_team (bool): Whether the team for which the event is being processed is the team being managed.
+        """
 
         lineup = self.homeCurrentLineup if home else self.awayCurrentLineup
         oppLineup = self.awayCurrentLineup if home else self.homeCurrentLineup
@@ -492,7 +578,7 @@ class Match():
 
         try:
             if event["type"] == "goal":
-                ## scorer
+                ## ---- scorer
                 scorerPosition = random.choices(list(SCORER_CHANCES.keys()), weights = list(SCORER_CHANCES.values()), k = 1)[0]
                 players = [player.id for player in players_dict.values() if player.position == scorerPosition]
 
@@ -542,7 +628,7 @@ class Match():
                         defenderRating = random.uniform(GOAL_CONCEDED_DEFENCE_RATING[0], GOAL_CONCEDED_DEFENCE_RATING[1])
                         oppRatings[playerID] = min(10, max(0, round(oppRatings.get(playerID, 0) + defenderRating, 2)))
 
-                ## assister
+                ## ---- assister
                 assisterPosition = random.choices(list(ASSISTER_CHANCES.keys()), weights = list(ASSISTER_CHANCES.values()), k = 1)[0]
                 players = [player.id for player in players_dict.values() if player.position == assisterPosition]
 
@@ -641,6 +727,7 @@ class Match():
                     
                     stats["Fouls"][playerID] += 1
 
+                # Iterate through processed events to check for second yellow
                 secondYellow = False
                 for _, processedEvent in processedEvents.items():
                     if processedEvent["type"] == "yellow_card" and processedEvent["player"] == playerID:
@@ -715,9 +802,12 @@ class Match():
                 playerPosition = list(lineup.keys())[list(lineup.values()).index(injuredPlayerID)]
 
                 if not managing_team and subsCount < MAX_SUBS:
+                    # If the team can make a substitution, create the sub event
                     self.createSubEvent(lineup, players_dict, processedEvents, time, events, injuredPlayerID, subs, home, playerOBJs, playerPos = playerPosition)
 
                 elif not managing_team and subsCount == MAX_SUBS:
+                    # Otherwise, remove the injured player from the lineup
+
                     lineup.pop(playerPosition)
                     finalLineup.append((playerPosition, injuredPlayerID))
 
@@ -754,6 +844,15 @@ class Match():
             return event
 
     def updateTeamMatch(self, playerOffID, oldPosition, teamMatch, home):
+        """
+        Update the team match GUI to reflect a player being removed from the pitch.
+        
+        Args:
+            playerOffID (str): The ID of the player being removed.
+            oldPosition (str): The position from which the player is being removed.
+            teamMatch (Matchday): The team match GUI object.
+            home (bool): Whether the player is from the home team or away team.
+        """
 
         playerOBJs = self.homePlayersOBJ if home else self.awayPlayersOBJ
 
@@ -762,6 +861,7 @@ class Match():
             teamMatch.homeLineupPitch.removePlayer(oldPosition, playerData.last_name)
             frame = [f for f in teamMatch.homePlayersFrame.winfo_children() if f.playerID == playerOffID]
 
+            # If the frame doesn't exist, create it
             if len(frame) == 0:
                 frame = teamMatch.addPlayerFrame(teamMatch.homePlayersFrame, playerOffID)
             else:
@@ -780,10 +880,27 @@ class Match():
             frame.removeFitness()
 
     def keeperSub(self, subsCount, lineup, players_dict, processedEvents, time, events, teamMatch, subs, home):
+        """
+        Create a substitution event for the goalkeeper to ensure a team is not left without a keeper.
+
+        Args:
+            subsCount (int): The number of substitutions already made by the team.
+            lineup (dict): The current lineup of the team.
+            players_dict (dict): A dictionary of player objects for the team.
+            processedEvents (dict): The events that have already been processed for the team.
+            time (str): The time of the event in "mm:ss" format.
+            events (dict): The events for the team.
+            teamMatch (bool): Whether the match is a team management match or not.
+            subs (list): The list of available substitutes for the team.
+            home (bool): Whether the team is the home team or away team.
+        """
+
         subPossible = subsCount < MAX_SUBS
         playerOBJs = self.homePlayersOBJ if home else self.awayPlayersOBJ
 
         if not subPossible:
+            # If no subs left, randomly select a new keeper from the outfield forwards
+
             players = [player.id for player in players_dict.values() if player.position == "forward"]
 
             if len(players) == 0:
@@ -805,7 +922,23 @@ class Match():
             self.createSubEvent(lineup, players_dict, processedEvents, time, events, None, subs, home, playerOBJs, keeperSub = True)
 
     def createSubEvent(self, lineup, players_dict, processedEvents, time, events, playerOffID, subs, home, playerOBJs, keeperSub = False, playerPos = None):
-        # Create the substitution event
+        """
+        Create a substitution event and add it to the events dictionary.
+        
+        Args:
+            lineup (dict): The current lineup of the team.
+            players_dict (dict): A dictionary of player objects for the team.
+            processedEvents (dict): The events that have already been processed for the team.
+            time (str): The time of the event in "mm:ss" format.
+            events (dict): The events for the team.
+            playerOffID (str): The ID of the player being substituted off. If None, will be determined.
+            subs (list): The list of available substitutes for the team.
+            home (bool): Whether the team is the home team or away team.
+            playerOBJs (dict): A dictionary of player objects for the team.
+            keeperSub (bool): Whether the substitution is for a goalkeeper coming on.
+            playerPos (str): The position of the player being substituted off, if known.
+        """
+
         minute = int(time.split(":")[0])
         seconds = int(time.split(":")[1])
         currTotalSecs = minute * 60 + seconds
@@ -833,6 +966,7 @@ class Match():
             sub_time = "45:10"
 
         if keeperSub:
+            # If it's a keeper coming on, select an outfield player to go off
             players = [player.id for player in players_dict.values() if player.position == "forward"]
 
             if len(players) == 0:
@@ -843,6 +977,7 @@ class Match():
             playerOffID = self.checkPlayerOff(playerOffID, processedEvents, time, lineup, home)
             playerPos = "Goalkeeper"
 
+        # Get the substitute choice
         subChoice = find_substitute(lineup, [(1, playerOffID, playerPos)], subs, 1, playerOBJs)[0]
         playerOnID = subChoice[2]
         newPosition = subChoice[3]
@@ -858,6 +993,17 @@ class Match():
         }
 
     def checkPlayerOff(self, playerID, processEvents, time, lineup, home, checked_players = None):
+        """
+        Recursively checks if a player being substituted off has already been subbed on recently.
+        
+        Args:
+            playerID (str): The ID of the player being substituted off.
+            processEvents (dict): The events that have already been processed for the team.
+            time (str): The time of the event in "mm:ss" format.
+            lineup (dict): The current lineup of the team.
+            home (bool): Whether the team is the home team or away team.
+            checked_players (set): A set of player IDs that have already been checked to avoid infinite recursion.
+        """
 
         playerOBJs = self.homePlayersOBJ if home else self.awayPlayersOBJ
 
@@ -879,12 +1025,27 @@ class Match():
                     if not available_players:
                         return random.choices(list(lineup.values()), k = 1)[0]  # No available players, return a random player
                     
+                    # Recursively check a new player
                     new_player = random.choices(available_players, k = 1)[0]
                     return self.checkPlayerOff(new_player, processEvents, time, lineup, home, checked_players = checked_players)
 
         return playerID  # No substitution event found for the player
 
     def addPlayerToLineup(self, playerOnID, playerOffID, playerPosition, posOff, subs, lineup, teamMatch, home, managing_event = None):
+        """
+        Adds a player to the lineup and updates the team match GUI if applicable.
+        
+        Args:
+            playerOnID (str): The ID of the player being substituted on.
+            playerOffID (str): The ID of the player being substituted off.
+            playerPosition (str): The position for the player being substituted on.
+            posOff (str): The position of the player being substituted off.
+            subs (list): The list of available substitutes for the team.
+            lineup (dict): The current lineup of the team.
+            teamMatch (Matchday): The team match GUI object.
+            home (bool): Whether the team is the home team or away team.
+            managing_event (dict): The substitution event being managed, if applicable.
+        """
 
         playerOBJs = self.homePlayersOBJ if home else self.awayPlayersOBJ
 
@@ -897,6 +1058,7 @@ class Match():
         if not managing_event:
             lineup[playerPosition] = playerOnID # add the player on to the lineup
         else:
+            # Update the event with substitution details
             managing_event["player_on"] = playerOnID
             managing_event["new_position"] = playerPosition
             managing_event["player_off"] = playerOffID
@@ -907,6 +1069,7 @@ class Match():
             playersFrame = teamMatch.homePlayersFrame if home else teamMatch.awayPlayersFrame
             frame = [f for f in playersFrame.winfo_children() if f.playerID == playerOffID]
 
+            # If the frame doesn't exist, create it
             if len(frame) == 0:
                 frame = teamMatch.addPlayerFrame(playersFrame, playerOffID)
             else:
@@ -914,6 +1077,7 @@ class Match():
 
             frame.removeFitness()
 
+            # Update the lineup on the pitch
             if not managing_event:
                 playerOn = playerOBJs[playerOnID] or Players.get_player_by_id(playerOnID)
                 if home:
@@ -922,6 +1086,12 @@ class Match():
                     teamMatch.awayLineupPitch.addPlayer(playerPosition, playerOn.last_name)
 
     def saveData(self, managing_team = None):
+        """
+        Saves the match data, reconciles scores, determines the winner, and prepares the payload for database updates.
+
+        Args:
+            managing_team (bool): Whether the team being processed is the team being managed.
+        """
 
         logger = logging.getLogger(__name__)
         prefix = f"[{getattr(self.match, 'id', None)}]:"
@@ -930,6 +1100,7 @@ class Match():
             currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
 
             try:
+                # Reconcile score from processed events in case of discrepancies
                 home_goals = sum(1 for ev in self.homeProcessedEvents.values() if ev.get("type") in ("goal", "penalty_goal", "own_goal"))
                 away_goals = sum(1 for ev in self.awayProcessedEvents.values() if ev.get("type") in ("goal", "penalty_goal", "own_goal"))
                 if [home_goals, away_goals] != self.score:
@@ -957,6 +1128,13 @@ class Match():
                 return self.payload
 
     def getPayload(self, currDate):
+        """
+        Gets the payload for database updates after the match, collecting all necessary information.
+
+        Args:
+            currDate (datetime): The current date in the game world.
+        """
+
         prefix = f"[{getattr(self.match, 'id', None)}]:"
 
         try: 
@@ -1356,6 +1534,14 @@ class Match():
             return payload
 
     def getGameTime(self, playerID, events):
+        """
+        Calculate the total game time played by a player based on match events.
+        
+        Args:
+            playerID (str): The ID of the player.
+            events (dict): The match events.
+        """
+
         sub_off_time = None
         sub_on_time = None
         red_card_time = None
@@ -1378,6 +1564,7 @@ class Match():
         game_time = 0
 
         if not red_card_time and not injury_time:
+            # Normal match, no unscheduled exit
             if sub_on_time and sub_off_time:
                 game_time = sub_off_time - sub_on_time
             elif sub_on_time:
@@ -1387,11 +1574,13 @@ class Match():
             else:
                 game_time = 90
         elif red_card_time and not injury_time:
+            # Red card exit
             if sub_on_time:
                 game_time = red_card_time - sub_on_time
             else:
                 game_time = red_card_time
         else:
+            # Injury exit
             if sub_on_time:
                 game_time = injury_time - sub_on_time
             else:
@@ -1404,7 +1593,22 @@ class Match():
     def add_player_lineup(self, player, start_position, end_position, rating, reason, morales_to_update, lineups_to_add, sharpnesses_to_update, processed_events, winner, team, goal_diff):
         """
         Add player lineup entry and apply morale changes depending on reason.
+        
+        Args:
+            player (Player): The player object.
+            start_position (str): The starting position of the player.
+            end_position (str): The ending position of the player.
+            rating (float): The performance rating of the player.
+            reason (str): The reason for lineup entry (e.g., "benched", "not_in_squad").
+            morales_to_update (list): The list to append morale updates to.
+            lineups_to_add (list): The list to append lineup entries to.
+            sharpnesses_to_update (list): The list to append sharpness updates to.
+            processed_events (dict): The processed match events for the team.
+            winner (Team or None): The winning team, or None for a draw.
+            team (Team): The team the player belongs to.
+            goal_diff (int): The goal difference for the team.
         """
+
         lineups_to_add.append((self.match.id, player.id, start_position, end_position, rating, reason))
 
         if reason is None:  # player played
@@ -1427,6 +1631,10 @@ class Match():
             morales_to_update.append((player.id, get_morale_decrease_role(player)))
 
     def returnWinner(self):
+        """
+        Returns the winner of the match based on the final score.
+        """
+
         finalScore = self.score
         self.goalDiffHome = finalScore[0] - finalScore[1]
         self.goalDiffAway = finalScore[1] - finalScore[0]
@@ -1438,13 +1646,25 @@ class Match():
             self.winner = None
 
     def appendScore(self, value, home):
+        """
+        Appends to the match score for the home or away team.
+        """
+        
         if home:
             self.score[0] += value
         else:
             self.score[1] += value
 
     def setRatingsBoost(self, team):
+        """
+        Sets the ratings boost for the team.
+        """
+        
         self.ratingsBoost = team
     
     def setRatingsDecay(self, team):
+        """
+        Sets the ratings decay for the team.
+        """
+        
         self.ratingsDecay = team

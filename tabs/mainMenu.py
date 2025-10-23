@@ -1,3 +1,4 @@
+import threading
 import logging, time
 import customtkinter as ctk
 from settings import *
@@ -98,7 +99,7 @@ class MainMenu(ctk.CTkFrame):
         self.completedSteps = 0
 
         self.progressLabel = ctk.CTkLabel(self.movingFrame, text = "0%", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = TKINTER_BACKGROUND)
-        self.progressLabel.place(relx = 0.96, rely = 0.55, anchor = "e")
+        self.progressLabel.place(relx = 0.97, rely = 0.55, anchor = "e")
 
         self.dateLabel = ctk.CTkLabel(self.movingFrame, text = f"", font = (APP_FONT_BOLD, 25), text_color = "white", fg_color = TKINTER_BACKGROUND)
         self.dateLabel.place(relx = 0.02, rely = 0.12, anchor = "w")
@@ -107,6 +108,21 @@ class MainMenu(ctk.CTkFrame):
 
         self.tipLabel = ctk.CTkLabel(self.movingFrame, text = f"Tip: {random.choice(TIPS)}", font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND)
         self.tipLabel.place(relx = 0.02, rely = 0.82, anchor = "w")
+
+        src = Image.open("Images/Loading/1.png")
+        src.thumbnail((50, 50))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        self.loadingImage = ctk.CTkLabel(self.movingFrame, image = img, text = "", fg_color = TKINTER_BACKGROUND)
+        self.loadingImage.place(relx = 0.96, rely = 0.22, anchor = "e")
+
+        self.loadingImages = [Image.open(f"Images/Loading/{i}.png") for i in range(1, 31)]
+        self.loadingObjects = []
+        for image in self.loadingImages:
+            image.thumbnail((50, 50))
+            ctkImage = ctk.CTkImage(image, None, (image.width, image.height))
+            self.loadingObjects.append(ctkImage)
+
+        self.loadingIndex = 0
 
         canvas = ctk.CTkCanvas(self, width = 5, height = 1000, bg = APP_BLUE, bd = 0, highlightthickness = 0)
         canvas.place(x = 245, y = 0, anchor = "nw")
@@ -216,7 +232,7 @@ class MainMenu(ctk.CTkFrame):
         self.currDate = Game.get_game_date(self.manager_id)
         day, text, time = format_datetime_split(self.currDate)
 
-        self.dayLabel = ctk.CTkLabel(self.tabsFrame, text = day, font = (APP_FONT, 13), text_color = "white", fg_color = TKINTER_BACKGROUND)
+        self.dayLabel = ctk.CTkLabel(self.tabsFrame, text = day, font = (APP_FONT_BOLD, 13), text_color = "white", fg_color = TKINTER_BACKGROUND)
         self.dayLabel.place(relx = 0.03, rely = 0.86, anchor = "w")
         self.timeLabel = ctk.CTkLabel(self.tabsFrame, text = f"{text} {time}", font = (APP_FONT_BOLD, 13), text_color = "white", fg_color = TKINTER_BACKGROUND)
         self.timeLabel.place(relx = 0.03, rely = 0.89, anchor = "w")
@@ -428,10 +444,12 @@ class MainMenu(ctk.CTkFrame):
             if combined_events:
                 unique_events = list(set(combined_events))
                 CalendarEvents.batch_update_events(unique_events)
+            self._logger.info("Applied batch calendar event updates via CalendarEvents.batch_update_events")
 
             if combined_fitness or combined_sharpness or combined_morale:
                 Players.batch_update_player_stats(combined_fitness, combined_sharpness, combined_morale)
-
+                self._logger.info("Applied batch player stats updates via Players.batch_update_player_stats")
+                
             try:
                 PlayerBans.batch_reduce_injuries(overallTimeInBetween, stopDate)
                 self._logger.info("Applied batch injury reductions via PlayerBans.batch_reduce_injuries")
@@ -586,7 +604,8 @@ class MainMenu(ctk.CTkFrame):
             self.after(10, self.addMovingFrame)
         else:
             self.movingFrame.place(x = 200, rely = target_rely, anchor = "nw")
-            self.moveDate()
+            self.animateID = self.after(0, self.animateLoadingImage)
+            threading.Thread(target = self.moveDate, daemon = True).start()
 
     def removeMovingFrame(self):
         """
@@ -605,6 +624,19 @@ class MainMenu(ctk.CTkFrame):
             self.progressBar.set(0)
             self.completedSteps = 0
             self.progressLabel.configure(text = "0%")
+            self.after_cancel(self.animateID)
             self.resetTabs(0, 1, 2, 3, 4, 5, 6)
             self.addDate()
             self.movingDate = False
+
+    def animateLoadingImage(self):
+        """
+        Animates the loading image in the moving frame.
+        """
+
+        img = self.loadingObjects[self.loadingIndex]
+        self.loadingImage.configure(image = img)
+
+        self.loadingIndex = (self.loadingIndex + 1) % len(self.loadingObjects)
+        self.movingFrame.update_idletasks()
+        self.animateID = self.after(20, self.animateLoadingImage)

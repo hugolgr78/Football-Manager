@@ -1068,7 +1068,7 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
                             worker_payloads.append(worker_payload)
 
                             if progress_callback:
-                                progress_callback(1)
+                                progress_callback()
 
                     except Exception:
                         _logger.exception("Match worker raised an exception")

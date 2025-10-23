@@ -6,6 +6,23 @@ from utils.util_functions import *
 
 class ShoutFrame(ctk.CTkFrame):
     def __init__(self, parent, width, height, corner_radius, fgColor, shout, matchFrame, home, time, shoutMadeFunction, closeFunction):
+        """
+        A frame representing a shout action during a match. Each shout has a class with actions to perform given the shout was made.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame where the shout frame will be
+            width (int): The width of the shout frame.
+            height (int): The height of the shout frame.
+            corner_radius (int): The corner radius of the shout frame.
+            fgColor (str): The background color of the shout frame.
+            shout (str): The type of shout (e.g., "Encourage", "Praise", etc.).
+            matchFrame (MatchFrame): The match frame instance where the shout is made.
+            home (bool): True if the shout is for the home team, False for away team.
+            time (str): The current time in the match when the shout is made.
+            shoutMadeFunction (function): The function to call when a shout is made.
+            closeFunction (function): The function to call to close the shout frame.
+        """
+        
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = corner_radius)
         self.pack(fill = "both", padx = 10, pady = 5)
 
@@ -26,6 +43,13 @@ class ShoutFrame(ctk.CTkFrame):
         self.button.place(relx = 0.5, rely = 0.5, anchor = "center")
 
     def addGoal(self, home):
+        """
+        Adds a goal event to the match for the specified team (home or away).
+         
+        Args:
+            home (bool): True to add a goal for the home team, False for the away team. 
+        """
+
         events = self.match.homeEvents if home else self.match.awayEvents
         type_ = random.choices(list(GOAL_TYPE_CHANCES.keys()), weights = [GOAL_TYPE_CHANCES[goalType] for goalType in GOAL_TYPE_CHANCES])[0]
         if type_ == "penalty":
@@ -42,6 +66,13 @@ class ShoutFrame(ctk.CTkFrame):
         self.match.appendScore(1, home)
 
     def removeGoal(self, home):
+        """
+        Removes a goal event from the match for the specified team (home or away).
+
+        Args:
+            home (bool): True to remove a goal for the home team, False
+        """
+
         events = self.match.homeEvents if home else self.match.awayEvents
         
         for event_time, event_data in events.items():
@@ -52,6 +83,13 @@ class ShoutFrame(ctk.CTkFrame):
                 break
 
     def getCurrResult(self, score):
+        """
+        Gets the current result of the match for the shouting team.
+
+        Args:
+            score (tuple): The current score of the match.
+        """
+
         if score[0] > score[1]:
             return "win" if self.home else "lose"
         elif score[0] < score[1]:
@@ -60,9 +98,23 @@ class ShoutFrame(ctk.CTkFrame):
             return "draw"
 
     def getGoalDiff(self, score):
+        """
+        Gets the goal difference of the match.
+        
+        Args:
+            score (tuple): The current score of the match.
+        """
+
         return abs(int(score[0]) - int(score[1]))
 
     def getWinThenDraw(self, managingTeam):
+        """
+        Checks if the shouting team was winning but the opponent has equalized in the last 10 minutes.
+        
+        Args:
+            managingTeam (bool): True if the shouting team is the user's team, False otherwise.
+        """
+
         teamEvents = self.match.homeEvents if self.home else self.match.awayEvents
         oppEvents = self.match.awayEvents if self.home else self.match.homeEvents
 
@@ -110,6 +162,10 @@ class ShoutFrame(ctk.CTkFrame):
             return False
 
     def opponentScoredLast5(self):
+        """
+        Checks if the opponent has scored a goal in the last 5 minutes.
+        """
+        
         oppEvents = self.match.awayEvents if self.home else self.match.homeEvents
 
         for time in sorted(oppEvents.keys(), reverse = True):

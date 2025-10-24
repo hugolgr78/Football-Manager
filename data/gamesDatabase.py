@@ -53,18 +53,16 @@ class Game(Base):
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     manager_id = Column(String(256), nullable = False)
-    first_name = Column(String(128), nullable = False)
-    last_name = Column(String(128), nullable = False)
+    save_name = Column(String(128), nullable = False)
     curr_date = Column(DateTime, nullable = False, default = SEASON_START_DATE)
 
     @classmethod
-    def add_game(cls, manager_id, first_name, last_name):
+    def add_game(cls, manager_id, save_name):
         session = GamesDatabaseManager().get_session()
         try:
             new_game = Game(
                 manager_id = manager_id,
-                first_name = first_name,
-                last_name = last_name
+                save_name = save_name,
             )
 
             session.add(new_game)
@@ -114,5 +112,30 @@ class Game(Base):
             if game:
                 game.curr_date += time
                 session.commit()
+        finally:
+            session.close()
+
+    @classmethod
+    def get_manager_id_by_save_name(cls, save_name):
+        session = GamesDatabaseManager().get_session()
+        try:
+            game = session.query(Game).filter(Game.save_name == save_name).first()
+            return game.manager_id if game else None
+        finally:
+            session.close()
+
+    @classmethod
+    def delete_game_by_save_name(cls, save_name):
+        session = GamesDatabaseManager().get_session()
+        try:
+            game = session.query(Game).filter(Game.save_name == save_name).first()
+            if game:
+                session.delete(game)
+                session.commit()
+
+            # Remove the database file if it exists
+            db_path = os.path.join("data", f"{save_name}.db")
+            if os.path.exists(db_path):
+                os.remove(db_path)
         finally:
             session.close()

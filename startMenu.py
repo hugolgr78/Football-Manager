@@ -90,8 +90,11 @@ class StartMenu(ctk.CTkFrame):
         canvas.place(relx = 0.55, rely = 0.368, anchor = "nw")
 
         ## ----------------------------- Create a Manager ----------------------------- ##
-        self.createButton = ctk.CTkButton(self.menuFrame, text = "Create a Manager", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 200, height = 40, command = self.createManager)
-        self.createButton.place(relx = 0.5, rely = 0.45, anchor = "center")
+        self.createButton = ctk.CTkButton(self.menuFrame, text = "Create a Manager", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 150, height = 40, command = self.createManager)
+        self.createButton.place(relx = 0.48, rely = 0.45, anchor = "e")
+
+        self.importButton = ctk.CTkButton(self.menuFrame, text = "Import a Save", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 150, height = 40, command = self.importSave)
+        self.importButton.place(relx = 0.52, rely = 0.45, anchor = "w")
 
         ## ----------------------------- Logo ----------------------------- ##
         src = Image.open("Images/appLogo.png")
@@ -216,6 +219,13 @@ class StartMenu(ctk.CTkFrame):
         )        
 
         self.exportProgressLabel = ctk.CTkLabel(self.settingsFrame, text = "0.0%", font = (APP_FONT, 15), bg_color = DARK_GREY)
+
+    def importSave(self):
+        """
+        Imports a save from a .fmsave file.
+        """
+        
+        pass
 
     def deleteSave(self):
         """

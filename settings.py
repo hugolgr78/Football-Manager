@@ -672,6 +672,23 @@ PASSING_POSITIONS = {
     "forward": 0.17
 }
 
+TIPS = [
+    "Remember to rotate your squad to keep players fresh and avoid fatigue.",
+    "Keep an eye on player morale; happy players perform better on the pitch.",
+    "Use substitutions strategically to maintain energy levels during matches.",
+    "Fitness drops during matches and in training, make sure your players get enough rest.",
+    "Sharpness increases with match time but decreases when players are benched; manage your lineup accordingly.",
+    "Low fitness can increase the risk of injuries; monitor your players closely.",
+    "Adjust your tactics based on the opponent's formation for better results.",
+    "Make sure to use the Tactics' analysis feature to create a good game plan.",
+    "You can search for any player, match, manager, or team in the database from the search tab.",
+    "Keep an eye on player stats to identify strengths and weaknesses in your squad.",
+    "Remember to set calendar events for week. If you don't want to, delegate to your assistant manager.",
+    "Check your emails regularly for important updates and messages from your staff or board.",
+    "Shouts can affect the game in your favor if you use them wisely based on the situation.",
+]
+
+
 from data.database import StatsManager
 
 STAT_FUNCTIONS = {

@@ -11,6 +11,16 @@ import io
 
 class MatchProfile(ctk.CTkFrame):
     def __init__(self, parent, match, parentTab, changeBackFunction = None):
+        """
+        Frame showing detailed information about a match, including lineups, events, and statistics.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            match (Match): The match object containing match details.
+            parentTab (ctk.CTkFrame): The parent tab frame.
+            changeBackFunction (function, optional): Function to call when the back button is pressed. Defaults to None.
+        """
+
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.match = match
@@ -77,6 +87,12 @@ class MatchProfile(ctk.CTkFrame):
         self.legendFrame.lift()
 
     def changePitch(self, home):
+        """
+        Change the lineup pitch between starting and ending lineups for home or away team.
+
+        Args:
+            home (bool): True if changing home team lineup, False if changing away team lineup.
+        """
 
         if home:
             if self.changeHomeLineupButton.cget("text") == "Start":
@@ -98,6 +114,9 @@ class MatchProfile(ctk.CTkFrame):
                 self.changeAwayLineupButton.configure(text = "Start")
 
     def matchResults(self):
+        """
+        Display the match results including team logos, score, and match events.
+        """
 
         logosFrame = ctk.CTkFrame(self.matchResultsFrame, fg_color = GREY_BACKGROUND, width = 390, height = 70)
         logosFrame.place(relx = 0.5, rely = 0.02, anchor = "n")
@@ -461,6 +480,12 @@ class MatchProfile(ctk.CTkFrame):
         self.addMatchEvents(height)
 
     def addMatchEvents(self, height):
+        """
+        Add detailed match events to the match results frame.
+        
+        Args:
+            height (int): The height of the match events frame.
+        """
 
         maxFrames = height // 50
         eventsCount = 2 # Start at 2 to account for the half time and full time frames
@@ -568,6 +593,9 @@ class MatchProfile(ctk.CTkFrame):
         ctk.CTkLabel(frame, text = "------------------ Full Time ------------------", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
 
     def lineups(self):
+        """
+        Display the lineups for both teams, including player positions and events.
+        """
         
         self.homeLineup = TeamLineup.get_lineup_by_match_and_team(self.match.id, self.homeTeam.id)
         self.awayLineup = TeamLineup.get_lineup_by_match_and_team(self.match.id, self.awayTeam.id)
@@ -930,6 +958,10 @@ class MatchProfile(ctk.CTkFrame):
                     self.awayEndLineupPitch.addInjuryIcon(player.end_position, playerData.last_name, img)
 
     def legend(self):
+        """
+        Create a legend frame that explains the icons used in the lineup pitches.
+        """
+        
         self.legendFrame.grid_columnconfigure((0, 1, 2, 3, 4, 5), weight = 0)
         self.legendFrame.grid_rowconfigure((0, 2), weight = 0)
         self.legendFrame.grid_rowconfigure((1, 3), weight = 1)
@@ -950,6 +982,10 @@ class MatchProfile(ctk.CTkFrame):
             ctk.CTkLabel(self.legendFrame, text = iconName, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = i // 2 + 1, column = i % 2 * 2 + 1, sticky = "w", padx = (8, 0), pady = (0, 2))
 
     def swapData(self):
+        """
+        Swap between displaying match info and match stats.
+        """
+        
         if self.swapDataButton.cget("text") == "Stats":
             self.swapDataButton.configure(text = "Info")
             self.infoFrame.place_forget()
@@ -964,6 +1000,10 @@ class MatchProfile(ctk.CTkFrame):
             self.infoFrame.place(relx = 0, rely = 0, anchor = "nw")
 
     def additionalInfo(self):
+        """
+        Display additional match information such as date, league, stadium, attendance, and referee.
+        """
+        
         frame = ctk.CTkFrame(self.infoFrame, fg_color = GREY_BACKGROUND, width = 100, height = 25)
         frame.pack(fill = "x", expand = True, padx = (5, 0), pady = (5, 0))
 
@@ -1014,6 +1054,10 @@ class MatchProfile(ctk.CTkFrame):
         RefereeProfileLink(frame, referee, f"{referee.first_name} {referee.last_name}", "white", 0.08, 0.5, "w", GREY_BACKGROUND, self.parentTab, 12)
 
     def stats(self):
+        """
+        Display match statistics for both teams.
+        """
+        
         self.statsFrame.grid_columnconfigure((0, 2, 4), weight = 2)
         self.statsFrame.grid_columnconfigure((1, 3, 5), weight = 1)
         self.statsFrame.grid_rowconfigure((0, 1, 2, 3, 4), weight = 1)

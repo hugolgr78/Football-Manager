@@ -3,6 +3,14 @@ from datetime import timedelta
 from settings import *
 
 def get_objective_for_level(teamAverages, teamID):
+    """
+    Determine the objective for a team based on their average team level.
+    
+    Args:
+        teamAverages (dict): A dictionary where keys are team IDs and values are dictionaries containing team stats, including "avg_ca".
+        teamID (str): The ID of the team for which to determine the objective.
+    """
+    
     sorted_teams = sorted(teamAverages.items(), key = lambda x: x[1]["avg_ca"], reverse = True)
     teamRank = next((rank for rank, (tid, _) in enumerate(sorted_teams, start = 1) if tid == teamID), None)
 
@@ -12,13 +20,19 @@ def get_objective_for_level(teamAverages, teamID):
 
 
 def append_overlapping_profile(start, profile):
-    """Safely append a profile frame to the nearest overlappingProfiles container.
+    """
+    Safely append a profile frame to the nearest overlappingProfiles container.
 
     Walks up common parent attributes (parent, parentTab) looking for an
     object with an 'overlappingProfiles' list. If none is found, creates the
     list on the top-most parent and appends there. This centralises the logic
     so other modules don't have to repeat parent-walking code.
+
+    Args:
+        start: The starting object to begin the search from.
+        profile: The profile frame to append.
     """
+   
     c = start
     visited = set()
     while c is not None and id(c) not in visited:
@@ -55,6 +69,14 @@ def append_overlapping_profile(start, profile):
         start.overlappingProfiles.append(profile)
 
 def generate_lower_div_objectives(min_level, max_level):
+    """
+    Generate objectives for lower division teams based on min and max team levels.
+    
+    Args:
+        min_level (int): The minimum team level in the division.
+        max_level (int): The maximum team level in the division.
+    """
+    
     range_size = (max_level - min_level) // 3
     return {
         (max_level, max_level - range_size): "secure promotion",
@@ -63,13 +85,26 @@ def generate_lower_div_objectives(min_level, max_level):
     }
 
 def get_fan_reaction(result, expectation):
-    """ Get the fan reaction based on match result and expectation level. """
+    """ 
+    Get the fan reaction based on match result and expectation level. 
+    
+    Args:
+        result (str): The match result ("win", "draw", "lose").
+        expectation (str): The expectation level ("Must Win", "Should Win", "Even Match", "Should Avoid Defeat", "Must Avoid Defeat").
+    """
 
     index = EXPECTATION_LEVELS.index(expectation)
     return FAN_REACTIONS.get(result, ["Unknown"] * 5)[index]
 
 def get_expectation(team_avg, opponent_avg):
-    """Determine expectation level based on team level difference."""
+    """
+    Determine expectation level based on team level difference.
+    
+    Args:
+        team_avg (float): The average level of the team.
+        opponent_avg (float): The average level of the opponent team.
+    """
+
     level_diff = team_avg - opponent_avg
     for diff_range, expectation in TEAM_EXPECTATIONS.items():
         if level_diff in diff_range:
@@ -77,7 +112,13 @@ def get_expectation(team_avg, opponent_avg):
     return "Even Match"
 
 def get_result_category(game_result, goal_difference):
-    """Determine result category based on game result and goal difference."""
+    """
+    Determine result category based on game result and goal difference.
+    
+    Args:
+        game_result (str): The game result ("win", "draw", "lose").
+        goal_difference (int): The goal difference in the match.
+    """
 
     for gd_range, category in RESULT_CATEGORIES[game_result].items():
         if goal_difference in gd_range:
@@ -86,10 +127,24 @@ def get_result_category(game_result, goal_difference):
     return "unknown"  # Default case (should never happen)
 
 def get_fan_message(fan_reaction):
-    """Return a fan reaction message based on the given fan reaction."""
+    """
+    Return a fan reaction message based on the given fan reaction.
+    
+    Args:
+        fan_reaction (str): The fan reaction category.
+    """
+
     return FAN_MESSAGES.get(fan_reaction, "The fans aren't sure how to react.")
 
 def get_player_ban(ban_type, curr_date):
+    """
+    Generate a ban duration based on the type of ban.
+    
+    Args:
+        ban_type (str): The type of ban ("injury" or "red card").
+        curr_date (datetime): The current date to calculate the ban end date from.
+    """
+    
     if ban_type == "injury":
         # Range: 14 days to ~180 days
         min_days = 14
@@ -106,6 +161,15 @@ def get_player_ban(ban_type, curr_date):
         return games
     
 def get_morale_change(match_result, player_rating, goal_difference):
+    """
+    Calculate morale change based on match result, player rating, and goal difference.
+    
+    Args:
+        match_result (str): The match result ("win", "draw", "lose").
+        player_rating (float): The player's rating in the match (0 to 10).
+        goal_difference (int): The goal difference in the match.
+    """
+    
     # Base morale change based on match result
     if match_result == "win":
         base_morale = 5
@@ -127,6 +191,13 @@ def get_morale_change(match_result, player_rating, goal_difference):
     return final_morale_change
 
 def get_morale_decrease_role(player):
+    """
+    Get morale decrease based on player role.
+    
+    Args:
+        player (Player): The player object with a 'player_role' attribute.
+    """
+    
     role = player.player_role
 
     if role == "Star Player":
@@ -139,6 +210,15 @@ def get_morale_decrease_role(player):
     return 0 # Backup keepers and youth players
 
 def get_player_response(prompt, rating, is_injured):
+    """
+    Generate a player's response based on the prompt, rating, and injury status.
+    
+    Args:
+        prompt (str): The type of prompt ("Congratulate", "Injury", "Criticize", "Motivate").
+        rating (float): The player's rating in the match (0 to 10).
+        is_injured (bool): Whether the player is injured or not.
+    """
+    
     responses = {
         "Congratulate": {
             "accept": [
@@ -200,6 +280,13 @@ def get_player_response(prompt, rating, is_injured):
     return random.choice(responses[prompt][response_type]), accepted
 
 def parse_time(time_str, reverse = False):
+    """
+    Parse a time string like "45+2" into a sortable integer.
+    Args:
+        time_str (str): The time string to parse.
+        reverse (bool): If True, return negative for sorting in reverse order.
+    """
+
     if time_str == "N/A":
         return float("inf") if not reverse else -float("inf")
     
@@ -210,7 +297,16 @@ def parse_time(time_str, reverse = False):
     stoppage_time = int(parts[1].strip()) if len(parts) > 1 else 0
     return main_time + stoppage_time
 
-def player_reaction(score_for: int, score_against: int, player_events: dict) -> str:
+def player_reaction(score_for, score_against, player_events):
+    """
+    Calculate player reaction score based on match outcome and individual events for the half time talks.
+    
+    Args:
+        score_for (int): The number of goals scored by the player's team.
+        score_against (int): The number of goals conceded by the player's team.
+        player_events (dict): A dictionary of events involving the player (e.g., goals, cards).
+    """
+    
     reaction_score = 0
     
     # Adjust based on team performance
@@ -248,17 +344,40 @@ def player_reaction(score_for: int, score_against: int, player_events: dict) -> 
         return reaction_score
     
 def get_reaction_colour(score):
+    """
+    Get the reaction colour based on the reaction score.
+    
+    Args:
+        score (int): The reaction score.
+    """
+    
     for cond, color in REACTION_COLOURS:
         if cond(score):
             return color
 
 def get_reaction_text(score):
+    """
+    Get the reaction text based on the reaction score.
+    
+    Args:
+        score (int): The reaction score.
+    """
+    
     for cond, text in REACTION_TEXTS:
         if cond(score):
             return text
     return "N/A"
 
-def get_prompt_reaction(prompt, score_for: int, score_against: int):
+def get_prompt_reaction(prompt, score_for, score_against):
+    """
+    Get the player's reaction to a prompt based on match outcome.
+    
+    Args:
+        prompt (str): The type of prompt ("Congratulate", "Injury", "Criticize", "Motivate").
+        score_for (int): The number of goals scored by the player's team.
+        score_against (int): The number of goals conceded by the player's team.
+    """
+    
     if score_for > score_against:
         result = "win"
     elif score_for < score_against:
@@ -269,6 +388,13 @@ def get_prompt_reaction(prompt, score_for: int, score_against: int):
     return PROMPT_REACTIONS[prompt][result]
 
 def reset_available_positions(lineup):
+    """
+    Reset available positions based on current lineup.
+    
+    Args:
+        lineup (dict): A dictionary representing the current lineup with positions as keys.
+    """
+    
     new_values = []
     # Add any positions that are not occupied in the lineup
     for position in POSITION_CODES.keys():
@@ -285,13 +411,26 @@ def reset_available_positions(lineup):
     return new_values
 
 def getSuffix(number):
+    """
+    Get the ordinal suffix for a given number.
+    
+    Args:
+        number (int): The number to get the suffix for.
+    """
+    
     if 10 <= number % 100 <= 20:
         return "th"
     else:
         return {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
     
 def sort_time(time_str):
-    """Convert time string to sortable number"""
+    """
+    Convert time string to sortable number
+    
+    Args:
+        time_str (str): The time string to convert (e.g., "45+2").
+    """
+
     if "+" in time_str:
         # Handle injury time like "90+3"
         base_time, injury_time = time_str.split("+")
@@ -300,7 +439,17 @@ def sort_time(time_str):
         return int(time_str)
     
 def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius = 10, **kwargs):
-    """Draw a rounded rectangle on the canvas."""
+    """
+    Draw a rounded rectangle on the canvas.
+    
+    Args:
+        canvas: The Tkinter canvas to draw on.
+        x1, y1: Top-left corner coordinates.
+        x2, y2: Bottom-right corner coordinates.
+        radius: The radius of the rounded corners.
+        **kwargs: Additional options to pass to create_polygon.
+    """
+
     points = [
         x1 + radius, y1,
         x2 - radius, y1,
@@ -317,12 +466,18 @@ def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius = 10, **kwargs):
     ]
     return canvas.create_polygon(points, smooth = True, splinestep = 36, **kwargs)
 
-def generate_CA(age: int, team_strength: float, min_level: int = 150) -> int:
+def generate_CA(age, team_strength, min_level = 150):
     """
     Generate a player's Current Ability (CA) based on age and team strength.
     Young players (<21) are very likely to be within +10 of min_level,
     but it's still (rarely) possible to exceed it.
+    
+    Args:
+        age (int): The age of the player.
+        team_strength (float): The strength of the team (1.0 = average, >1.0 = stronger).
+        min_level (int): The minimum level for the player.
     """
+
     max_level = min_level + 50
     CAs = list(range(min_level, max_level + 1))
 
@@ -360,19 +515,16 @@ def generate_CA(age: int, team_strength: float, min_level: int = 150) -> int:
         weights = [w * math.exp(scale * ((ca - min_level) / (max_level - min_level)))
                    for ca, w in zip(CAs, weights)]
 
-    level = random.choices(CAs, weights=weights, k=1)[0]
+    level = random.choices(CAs, weights = weights, k = 1)[0]
     return max(5, level)
 
-def generate_youth_player_level(max_level: int = 150) -> int:
+def generate_youth_player_level(max_level = 150):
     """
     Generate a youth player level between [max_level - 50, max_level].
     No role/age influence, just weighted by intervals (higher levels rarer).
     
     Args:
         max_level (int): The maximum possible level (capped at 200).
-    
-    Returns:
-        int: The generated player level.
     """
 
     # Clamp max_level to 200
@@ -407,7 +559,7 @@ def generate_youth_player_level(max_level: int = 150) -> int:
 
 import random
 
-def calculate_potential_ability(age: int, CA: int) -> int:
+def calculate_potential_ability(age, CA):
     """
     Calculate Potential Ability (PA) based on age and CA.
     - Younger players can have huge jumps (wonderkids), but those are rarer.
@@ -417,6 +569,10 @@ def calculate_potential_ability(age: int, CA: int) -> int:
         * CA < 100 → at least +50
         * 100 ≤ CA < 150 → at least +25
         * CA ≥ 150 → no forced minimum (uses normal logic)
+    
+    Args:
+        age (int): The age of the player.
+        CA (int): The current ability of the player.
     """
 
     # Base growth logic by age
@@ -462,12 +618,12 @@ def calculate_potential_ability(age: int, CA: int) -> int:
 
     return min(CA + gap, 200)
 
-def star_images(star_rating: float):
+def star_images(star_rating):
     """
     Convert a star rating (0.5 to 5.0 in 0.5 increments) into counts of full, half, and empty stars.
     
-    :param star_rating: float, e.g., 3.5
-    :return: list of strings representing the stars, e.g., ["full", "full", "full", "half", "empty"]
+    Args:
+        star_rating (float): The star rating to convert.
     """
 
     full_stars = int(star_rating)
@@ -481,17 +637,15 @@ def star_images(star_rating: float):
 
     return stars
 
-def expected_finish(team_name: str, team_scores: list) -> int:
+def expected_finish(team_name, team_scores):
     """
     Calculate expected league finish based on team scores.
     
     Args:
         team_name (str): Name of the team to calculate for.
-        team_scores (list): List of tuples [(team_name, score), ...]
-        
-    Returns:
-        int: Expected finishing position (1 = first place).
+        team_scores (list): List of tuples [(team_name, score), ...].
     """
+
     # Sort teams by score descending
     sorted_teams = sorted(team_scores, key = lambda x: x[1], reverse = True)
     
@@ -504,6 +658,13 @@ def expected_finish(team_name: str, team_scores: list) -> int:
     return None
 
 def format_datetime_split(dt):
+    """
+    Format a datetime object into day of the week, date string, and time string.
+    
+    Args:
+        dt (datetime): The datetime object to format.
+    """
+    
     # Day with correct suffix (st, nd, rd, th)
     day = dt.day
     if 10 <= day % 100 <= 20:
@@ -518,13 +679,35 @@ def format_datetime_split(dt):
     return day_of_week, date_str, time_str
 
 def get_next_monday(date):
+    """
+    Get the date of the next Monday from the given date.
+    
+    Args:   
+        date (datetime): The starting date.
+    """
+    
     days_ahead = (0 - date.weekday() + 7) % 7
     return date + timedelta(days = days_ahead)
 
 def calculate_age(dob, today):
+    """
+    Calculate age based on date of birth and current date.
+    
+    Args:
+        dob (datetime): The date of birth.
+        today (datetime): The current date.
+    """
+    
     return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
 
 def player_gametime(avg_minutes, player):
+    """
+    Determine if a player is getting sufficient game time based on their role.
+    
+    Args:
+        avg_minutes (float): The average minutes played by the player.
+        player (Player): The player object with a 'player_role' attribute.
+    """
 
     roles = {
         "Star Player": 50,
@@ -538,6 +721,13 @@ def player_gametime(avg_minutes, player):
     return False
 
 def getFitnessDrop(player, fitness):
+    """
+    Calculate fitness drop during a match based on player position and fitness level.
+    
+    Args:
+        player (Player): The player object with a 'position' attribute.
+        fitness (float): The current fitness level of the player (0 to 100).
+    """
 
     position_ranges = {
         "goalkeeper": (0.1, 0.35),
@@ -552,10 +742,24 @@ def getFitnessDrop(player, fitness):
     return scaled_drop
 
 def getDayIndex(date):
+    """
+    Get the index of the day of the week for a given date.
+
+    Args:
+        date (datetime): The date to get the day index for. 
+    """
+    
     day, _, _ = format_datetime_split(date)
     return list(calendar.day_name).index(day)
 
 def ownGoalFoulWeight(p):
+    """
+    Calculate weight for own goal or foul based on player's ability and sharpness.
+    
+    Args:
+        p (Player): The player object with 'current_ability' and 'sharpness'
+    """
+    
     # Lower ability and sharpness → higher chance
     ability_factor = (200 - p.current_ability) / 200.0
     sharpness_factor = (100 - p.sharpness) / 100.0
@@ -565,11 +769,30 @@ def ownGoalFoulWeight(p):
     return max(base, 0.01)  # avoid zero probability
 
 def fitnessWeight(fitness):
+    """
+    Calculate weight for events based on player's fitness.
+    
+    Args:
+        fitness (float): The current fitness level of the player (0 to 100).
+    """
+    
     # Low fitness → higher chance
     fitness_factor = (100 - fitness) / 100.0
     return max(fitness_factor, 0.01)  # avoid 0 prob
 
 def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeeper, goalBoost = 1.0):
+    """
+    Calculate the chances of scoring a goal based on team levels, sharpness, morale, and opponent keeper.
+    
+    Args:
+        attackingLevel (float): The attacking team's level.
+        defendingLevel (float): The defending team's level.
+        avgSharpness (float): The average sharpness of the attacking team (0 to 100).
+        avgMorale (float): The average morale of the attacking team (0 to 100).
+        oppKeeper (Player or None): The opponent's goalkeeper player object, or None if no keeper.
+        goalBoost (float): A multiplier for goal chances (default is 1.0).
+    """
+    
     # attackRatio = min(attackingLevel / max(1, defendingLevel), 2.0)
     attackRatio = 0.5 + 1 / (1 + math.exp(-(attackingLevel - defendingLevel) / 20))
 
@@ -621,9 +844,17 @@ def goalChances(attackingLevel, defendingLevel, avgSharpness, avgMorale, oppKeep
     events = ["nothing", "Shots", "Shots on target", "goal"]
     probs  = [pNothing, pShotOff, pShotSaved, pGoal]
 
-    return random.choices(events, weights=probs, k=1)[0]
+    return random.choices(events, weights = probs, k = 1)[0]
 
 def foulChances(avgSharpnessWthKeeper, severity):
+    """
+    Calculate the chances of fouls, yellow cards, and red cards based on average sharpness and severity.
+    
+    Args:
+        avgSharpnessWthKeeper (float): The average sharpness of the team including the goalkeeper (0 to 100).
+        severity (str): The severity level ("low", "medium", "high").
+    """
+    
     severity_map = {"low": 0.8, "medium": 1.0, "high": 1.2}
     severity = severity_map.get(severity, 1.0)
 
@@ -656,6 +887,12 @@ def foulChances(avgSharpnessWthKeeper, severity):
     return random.choices(events, weights = probs, k = 1)[0]
 
 def injuryChances(avgFitness):
+    """
+    Calculate the chances of injury based on average fitness.
+    
+    Args:
+        avgFitness (float): The average fitness level of the team (0 to 100).
+    """
 
     if avgFitness == 0:
         return
@@ -673,6 +910,20 @@ def injuryChances(avgFitness):
     return random.choices(events, weights = probs, k = 1)[0]
 
 def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness, playerOBJs, ratings):
+    """
+    Determine substitutions to make during a match based on player fitness and ratings.
+    
+    Args:
+        lineup (dict): Current lineup with positions as keys and player IDs as values.
+        subsMade (int): Number of substitutions already made.
+        subs (list): List of available substitute player IDs.   
+        events (dict): Dictionary of match events with timestamps as keys.
+        currMinute (int): Current minute of the match.
+        fitness (dict): Dictionary mapping player IDs to their fitness levels.
+        playerOBJs (dict): Dictionary mapping player IDs to Player objects.
+        ratings (dict): Dictionary mapping player IDs to their ratings.
+    """
+    
     subsAvailable = MAX_SUBS - subsMade
     if subsAvailable <= 0:
         return []
@@ -696,6 +947,17 @@ def substitutionChances(lineup, subsMade, subs, events, currMinute, fitness, pla
     return chosen
 
 def get_sub_candidates(lineup, currMinute, events, fitness, ratings):
+    """
+    Get list of substitution candidates based on fitness and ratings.
+    
+    Args:
+        lineup (dict): Current lineup with positions as keys and player IDs as values.
+        currMinute (int): Current minute of the match.
+        events (dict): Dictionary of match events with timestamps as keys.
+        fitness (dict): Dictionary mapping player IDs to their fitness levels.
+        ratings (dict): Dictionary mapping player IDs to their ratings.
+    """
+    
     candidates = []
     for pos, playerID in lineup.items():
         played_minutes = currMinute
@@ -713,6 +975,17 @@ def get_sub_candidates(lineup, currMinute, events, fitness, ratings):
     return candidates
 
 def find_substitute(lineup, candidates, subs, num_to_sub, playerOBJs):
+    """
+    Find suitable substitutes for the candidates.
+    
+    Args:
+        lineup (dict): Current lineup with positions as keys and player IDs as values.
+        candidates (list): List of tuples (probability, playerID, position) for substitution candidates.
+        subs (list): List of available substitute player IDs.   
+        num_to_sub (int): Number of substitutions to make.
+        playerOBJs (dict): Dictionary mapping player IDs to Player objects.
+    """
+    
     chosen = []
     # make substitutions
     for prob, playerID, pos in candidates:
@@ -769,7 +1042,15 @@ def find_substitute(lineup, candidates, subs, num_to_sub, playerOBJs):
 
     return chosen
 
-def sub_probability(fitness: float, rating: float) -> float:
+def sub_probability(fitness, rating):
+    """
+    Calculate the probability of substituting a player based on fitness and rating.
+    
+    Args:
+        fitness (float): The current fitness level of the player (0 to 100).
+        rating (float): The current rating of the player (1 to 10).
+    """
+    
     # Base probability from fitness
     if fitness > 50:
         base_prob = 0.0
@@ -793,6 +1074,13 @@ def sub_probability(fitness: float, rating: float) -> float:
     return max(0.0, min(1.0, prob))
     
 def getPasses(homeOBJs, awayOBJs):
+    """
+    Determine number of passes for home and away teams based on effective abilities.
+
+    Args:
+        homeOBJs (dict): Dictionary of home team player objects.
+        awayOBJs (dict): Dictionary of away team player objects.
+    """
 
     overallHome = sum(effective_ability(p) for p in homeOBJs.values())
     overallAway = sum(effective_ability(p) for p in awayOBJs.values())
@@ -818,15 +1106,36 @@ def getPasses(homeOBJs, awayOBJs):
     return home_passes, away_passes
 
 def effective_ability(p):
+    """
+    Calculate the effective ability of a player based on morale, fitness, and sharpness.
+    
+    Args:
+        p (Player): The player object with 'current_ability', 'morale', 'fitness', and 'sharpness' attributes.
+    """
+    
     # weights: morale 20%, fitness 40%, sharpness 40%
     weighted = (0.2 * p.morale + 0.4 * p.fitness + 0.4 * p.sharpness) / 100.0
     multiplier = 0.75 + (weighted * 0.5)
     return p.current_ability * multiplier
 
 def getStatNum(stat):
+    """
+    Sum the values in a stat dictionary.
+    
+    Args:
+        stat (dict): A dictionary mapping player IDs to their stat values.
+    """
+    
     return sum(playerValue for playerValue in stat.values())
 
 def passesAndPossession(matchInstance):
+    """
+    Simulate passes and possession for both teams in a match instance.
+    
+    Args:
+        matchInstance (Match): The match instance containing all relevant data.
+    """
+    
     homeLineup = matchInstance.homeCurrentLineup
     awayLineup = matchInstance.awayCurrentLineup
     homeStats = matchInstance.homeStats
@@ -891,6 +1200,15 @@ def passesAndPossession(matchInstance):
         awayStats["Possession"] = 100 - homeStats["Possession"]
 
 def choosePlayerFromDict(lineup, dict_, playerOBJs):
+    """
+    Choose a player from the lineup based on position weights and effective ability.
+    
+    Args:
+        lineup (dict): Current lineup with positions as keys and player IDs as values.
+        dict_ (dict): Dictionary mapping positions to their selection weights.
+        playerOBJs (dict): Dictionary mapping player IDs to Player objects.
+    """
+    
     playerPosition = random.choices(list(dict_.keys()), weights = list(dict_.values()), k = 1)[0]
     players = [playerID for playerID in lineup.values() if playerOBJs[playerID].position == playerPosition]
 
@@ -905,6 +1223,14 @@ def choosePlayerFromDict(lineup, dict_, playerOBJs):
     return random.choices(players, weights = weights, k = 1)[0]
 
 def getStatPlayer(stat, lineup, playerOBJs):
+    """
+    Get a player responsible for a specific stat event based on lineup and player abilities.
+    
+    Args:
+        stat (str): The type of stat event (e.g., "Saves", "Shots", "Fouls").
+        lineup (dict): Current lineup with positions as keys and player IDs as values.
+        playerOBJs (dict): Dictionary mapping player IDs to Player objects.
+    """
     
     if playerOBJs is None:
         from data.database import Players
@@ -929,6 +1255,14 @@ def getStatPlayer(stat, lineup, playerOBJs):
             return choosePlayerFromDict(lineup, BIG_CHANCES_POSITIONS, playerOBJs), rating
     
 def apply_attribute_changes(fitness_map, sharpness_map, time_in_between):
+    """
+    Apply attribute changes to player fitness and sharpness over a time interval.
+    
+    Args:
+        fitness_map (dict): A dictionary mapping player IDs to [fitness, injured] lists.
+        sharpness_map (dict): A dictionary mapping player IDs to sharpness values.
+        time_in_between (timedelta): The time interval over which to apply changes.
+    """
 
     hours = int(time_in_between.total_seconds() // 3600)
     if hours <= 0:
@@ -957,6 +1291,15 @@ def apply_attribute_changes(fitness_map, sharpness_map, time_in_between):
         fitness_map[pid] = [int(math.ceil(min(100, new_fitness))), injured]
 
 def update_dict_values(values_dict, amount, min_value = None, max_value = None):
+    """
+    Update values in a dictionary by a specified amount, with optional min and max bounds.
+    
+    Args:
+        values_dict (dict): A dictionary with numeric values to update.
+        amount (float): The amount to add to each value.
+        min_value (float, optional): Minimum bound for the updated values.
+        max_value (float, optional): Maximum bound for the updated values.
+    """
 
     for k, v in values_dict.items():
         new_val = v + amount
@@ -971,6 +1314,15 @@ def update_dict_values(values_dict, amount, min_value = None, max_value = None):
     return values_dict
 
 def update_fitness_dict_values(values_dict, amount, min_value = None, max_value = None):
+    """
+    Update fitness values in a dictionary by a specified amount, with optional min and max bounds.
+    
+    Args:
+        values_dict (dict): A dictionary with [fitness, injured] lists to update.
+        amount (float): The amount to add to each fitness value.
+        min_value (float, optional): Minimum bound for the updated fitness values. Defaults to None.
+        max_value (float, optional): Maximum bound for the updated fitness values. Defaults to None.
+    """
 
     for k, (v, injured) in values_dict.items():
 
@@ -989,6 +1341,14 @@ def update_fitness_dict_values(values_dict, amount, min_value = None, max_value 
     return values_dict
 
 def get_all_league_teams(jsonData, leagueName):
+    """
+    Get all teams belonging to a specific league from JSON data.
+    
+    Args:
+        jsonData (list): List of team data in JSON format.
+        leagueName (str): The name of the league to filter teams by.
+    """
+    
     teamOBJs = []
 
     for team in jsonData:
@@ -998,6 +1358,16 @@ def get_all_league_teams(jsonData, leagueName):
     return teamOBJs
 
 def run_match_simulation(interval, currDate, exclude_leagues = [], progress_callback = None):
+    """
+    Run match simulations in parallel for matches within a specified time frame.
+    
+    Args:
+        interval (tuple): A tuple containing start and end datetime objects for the simulation period.
+        currDate (datetime): The current date for the simulation context.
+        exclude_leagues (list, optional): List of league IDs to exclude from simulation. Defaults to [].
+        progress_callback (function, optional): A callback function to report progress. Defaults to None.
+    """
+    
     from data.database import Matches, Managers, League, LeagueTeams, PlayerBans, TeamHistory, process_payload, check_player_games_happy
     from concurrent.futures import ProcessPoolExecutor, as_completed
     import os, time, logging, glob, traceback
@@ -1139,6 +1509,13 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
         _logger.debug("Completed suspension reductions for teams")
 
 def _init_worker(base_name):
+    """
+    Initialize a worker process with its own database copy.
+    
+    Args:
+        base_name (str): The base name of the database to copy.
+    """
+    
     from data.database import DatabaseManager
     import os
     import logging
@@ -1167,6 +1544,13 @@ def _init_worker(base_name):
     _logger.debug("Worker %d ready with DB copy %s", pid, copy_path)
 
 def _simulate_match(gameID):
+    """
+    Simulate a single match given its game ID.
+    
+    Args:
+        gameID (int): The ID of the match to simulate.
+    """
+    
     global _worker_dbm, _worker_db_copy_path
     from utils.match import Match
     from data.database import Matches

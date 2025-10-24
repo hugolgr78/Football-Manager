@@ -10,6 +10,17 @@ from PIL import Image, ImageTk
 
 class MatchDay(ctk.CTkFrame):
     def __init__(self, parent, teamLineup, teamSubstitutes, team, players):
+        """
+        A tab to display the matchday view for a team.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (main menu).
+            teamLineup (dict): The lineup of the team (position: player_id).
+            teamSubstitutes (list): The list of substitute player IDs.
+            team (Team): The team object.
+            players (list): The list of player objects for the team.
+        """
+        
         super().__init__(parent, width = APP_SIZE[0], height = APP_SIZE[1], fg_color = TKINTER_BACKGROUND)
         self.pack(fill = "both", expand = True)
 
@@ -135,6 +146,10 @@ class MatchDay(ctk.CTkFrame):
         self.createStatsFrame(self.awayStatsFrame)
         
     def addSpeedButtons(self):
+        """
+        Add speed control buttons to the matchday view.
+        """
+        
         veryFast = ctk.CTkButton(self.speedButtonsFrame, text = "Very Fast", width = 75, height = 40, font = (APP_FONT, 10), fg_color = APP_BLUE, bg_color = TKINTER_BACKGROUND, command = lambda: self.setSpeed(1 / 120))
         veryFast.place(relx = 0, rely = 0.5, anchor = "w")
 
@@ -151,11 +166,24 @@ class MatchDay(ctk.CTkFrame):
         verySlow.place(relx = 0.8125, rely = 0.5, anchor = "w")
     
     def setSpeed(self, speed):
+        """
+        Set the speed of the match simulation.
+        
+        Args:
+            speed (float): The speed multiplier for the match simulation.
+        """
+        
         self.timerThread_running = False
         self.speed = speed
         self.timerThread_running = True
 
     def createPlayerFrame(self, frame):
+        """
+        Create player frames for the given frame (home or away players).
+        
+        Args:
+            frame (ctk.CTkFrame): The frame to add player frames to.
+        """
 
         lineup = self.matchFrame.matchInstance.homeCurrentLineup if frame == self.homePlayersFrame else self.matchFrame.matchInstance.awayCurrentLineup
 
@@ -163,12 +191,26 @@ class MatchDay(ctk.CTkFrame):
             InGamePlayerFrame(frame, playerID, 220, 18, GREY_BACKGROUND)
 
     def createStatsFrame(self, frame):
+        """
+        Create stats frames for the given frame (home or away stats).
+        
+        Args:
+            frame (ctk.CTkFrame): The frame to add stats frames to.
+        """
+        
         stats = self.matchFrame.matchInstance.homeStats if frame == self.homeStatsFrame else self.matchFrame.matchInstance.awayStats
 
         for stat in stats.keys():
             InGameStatFrame(frame, stat, 220, 17, GREY_BACKGROUND)
 
     def changeData(self, side, selection):
+        """
+        Change the data displayed for the given side (home or away) based on the selection.
+        
+        Args:
+            side (str): "home" or "away" to indicate which side to change.
+            selection (str): The type of data to display ("Lineup", "Players", or "Stats").
+        """
 
         if side == "home":
             self.homeCurrFrame.place_forget()
@@ -217,6 +259,10 @@ class MatchDay(ctk.CTkFrame):
                 self.awayStatsFrame.place(relx = 0.98, rely = 0.06, anchor = "ne")
 
     def addMatches(self):
+        """
+        Add match frames for the current matchday, including the team match and other matches.
+        """
+        
         for match in self.matchDay:
             if match.home_id == self.team.id or match.away_id == self.team.id:
                 # TEAM MATCH
@@ -229,6 +275,7 @@ class MatchDay(ctk.CTkFrame):
 
                 self.opposition = Teams.get_team_by_id(match.away_id if match.home_id == self.team.id else match.home_id)
 
+                # Set the match instance lineups and fitness
                 if match.home_id != self.team.id:
                     self.home = False
                     self.matchFrame.matchInstance.awayCurrentLineup = self.teamLineup
@@ -241,9 +288,14 @@ class MatchDay(ctk.CTkFrame):
                     self.matchFrame.matchInstance.homeStartLineup = self.teamLineup.copy()
                     self.matchFrame.matchInstance.homeFitness = {playerID: Players.get_player_by_id(playerID).fitness for playerID in list(self.teamLineup.values()) + self.teamSubstitutes}
             else:
+                # OTHER MATCHES
                 MatchDayMatchFrame(self.otherMatchesFrame, match, TKINTER_BACKGROUND, 60, 300)
 
     def addTime(self):
+        """
+        Add the time display and control buttons to the matchday view.
+        """
+        
         self.timeLabel = ctk.CTkLabel(self.timeFrame, text = "00:00", font = (APP_FONT_BOLD, 50), fg_color = TKINTER_BACKGROUND)
         self.timeLabel.place(relx = 0.5, rely = 0.4, anchor = "center")
 
@@ -253,6 +305,9 @@ class MatchDay(ctk.CTkFrame):
         self.pauseButton.place(relx = 0.5, rely = 0.8, anchor = "center")
 
     def addLineups(self):
+        """
+        Add the team and opposition lineups to the matchday view.
+        """
         
         teamPitch = self.homeLineupPitch if self.home else self.awayLineupPitch
         teamSubFrame = self.homeSubstituteFrame if self.home else self.awaySubstituteFrame
@@ -285,10 +340,27 @@ class MatchDay(ctk.CTkFrame):
             ctk.CTkLabel(oppSubFrame, text = player.specific_positions, font = (APP_FONT, 10), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.25 + 0.11 * i, anchor = "e")
 
     def addPlayerFrame(self, frame, playerID):
+        """
+        Add a player frame for the given player ID to the specified frame.
+        
+        Args:
+            frame (ctk.CTkFrame): The frame to add the player frame to.
+            playerID (str): The ID of the player.
+        """
+        
         frame = InGamePlayerFrame(frame, playerID, 220, 18, GREY_BACKGROUND)
         return frame
 
     def updateSubFrame(self, home, playerOnID, playerOffID):
+        """
+        Update the substitute frame after a substitution.
+        
+        Args:
+            home (bool): True if the substitution is for the home team, False for the away team.
+            playerOnID (str): The ID of the player coming on.
+            playerOffID (str): The ID of the player going off.
+        """
+
         playerOn = Players.get_player_by_id(playerOnID)
         playerOff = Players.get_player_by_id(playerOffID)
 
@@ -301,6 +373,10 @@ class MatchDay(ctk.CTkFrame):
                 subFrame.winfo_children()[i + 1].place_forget()
 
     def simulateMatch(self):
+        """
+        Start the match simulation.
+        """
+        
         self.pauseButton.configure(text = "Pause", command = self.pauseMatch)
         self.substitutionButton.configure(state = "normal") 
         self.shoutsButton.configure(state = "normal")
@@ -311,10 +387,20 @@ class MatchDay(ctk.CTkFrame):
         self.timerThread.start()
 
     def pauseMatch(self):
+        """
+        Pause the match simulation.
+        """
+        
         self.pauseButton.configure(text = "Resume", command = self.resumeMatch)
         self.timerThread_running = False
 
     def resumeMatch(self, halfTime = False):
+        """
+        Resume the match simulation.
+
+        Args:
+            halfTime (bool): True if resuming after half-time, False otherwise.
+        """
 
         if halfTime:
             self.halfTimeFrame.pack_forget()   
@@ -326,6 +412,10 @@ class MatchDay(ctk.CTkFrame):
         self.timerThread.start()
 
     def gameLoop(self):
+        """
+        The main game loop that updates the match time, player fitness, and handles match events.
+        """
+        
         while self.timerThread_running:
             
             currTime = self.timeLabel.cget("text")
@@ -871,6 +961,15 @@ class MatchDay(ctk.CTkFrame):
             time.sleep(self.speed)
 
     def generateEvents(self, side, matchInstance = None, teamMatch = False):
+        """
+        Generate match events and statistics for a given side (home or away)
+        
+        Args:
+            side (str): "home" or "away" indicating which team's events to generate
+            matchInstance (Match, optional): The match instance to generate events for. Defaults to None.
+            teamMatch (bool, optional): Whether the match is a team match. Defaults to False.
+        """
+        
         eventsToAdd = []
         statsToAdd = []
 
@@ -893,6 +992,7 @@ class MatchDay(ctk.CTkFrame):
             pitch = self.homeLineupPitch if side == "home" else self.awayLineupPitch
             oppPitch = self.awayLineupPitch if side == "home" else self.homeLineupPitch
 
+        # ------------------ STATS CALCULATION ------------------
         sharpness = [playerOBJs[playerID].sharpness for playerID in lineup.values()]
         avgSharpnessWthKeeper = sum(sharpness) / len(sharpness)
 
@@ -977,10 +1077,12 @@ class MatchDay(ctk.CTkFrame):
         futureTotalSecs = currTotalSecs + 30
 
         if extraTime:
+            # Get the max total seconds including extra time
             maxMinute = matchInstance.extraTimeHalf if self.halfTime else matchInstance.extraTimeFull
             finalMinute = 45 if self.halfTime else 90
             maxTotalSecs = (finalMinute + maxMinute) * 60
         else:
+            # otherwise, max is normal time
             maxMinute = 45 if self.halfTime else 90
             maxTotalSecs = maxMinute * 60
 
@@ -999,9 +1101,11 @@ class MatchDay(ctk.CTkFrame):
             eventTime = f"{eventMin}:{eventSec:02d}"
 
             if event == "substitution":
+                # substitution event needs entries such as player off/on and positions
                 matchEvents[eventTime] = {"type": "substitution", "extra": extraTime, "player_off": subsChosen[subsChosenCount][0], "player_on": subsChosen[subsChosenCount][2], "old_position": subsChosen[subsChosenCount][1], "new_position": subsChosen[subsChosenCount][3], "injury": False}
                 subsChosenCount += 1
             elif event == "penalty_miss":
+                # penalty miss needs to know the opponent keeper
                 matchEvents[eventTime] = {"type": event, "extra": extraTime, "keeper": oppLineup["Goalkeeper"] if "Goalkeeper" in oppLineup else None}
             else:
                 matchEvents[eventTime] = {"type": event, "extra": extraTime}
@@ -1009,6 +1113,7 @@ class MatchDay(ctk.CTkFrame):
         for stat in statsToAdd:
 
             if stat in PLAYER_STATS:
+                # Get the player associated with the stat
                 playerID, rating = getStatPlayer(stat, lineup, playerOBJs)
                 ratings[playerID] = min(10, max(0, round(ratings.get(playerID, 0) + rating, 2)))
             
@@ -1025,6 +1130,8 @@ class MatchDay(ctk.CTkFrame):
 
                 match stat:
                     case "Shots":
+                        # For shots, get the direction, outcome, xG and big chance created/missed
+
                         shotDirection = random.choices(population = list(SHOT_DIRECTION_CHANCES.keys()), weights = list(SHOT_DIRECTION_CHANCES.values()), k = 1)[0]
                         if not playerID in stats[shotDirection]:
                             stats[shotDirection][playerID] = 0
@@ -1055,6 +1162,8 @@ class MatchDay(ctk.CTkFrame):
                         stats["xG"] += round(random.uniform(0.02, MAX_XG), 2)
                         stats["xG"] = round(stats["xG"], 2)
                     case "Shots on target":
+                        # For shots on target, add to shots, xG, big chance created/missed, and add a save to opponent keeper stats
+
                         if playerID not in stats["Shots"]:
                             stats["Shots"][playerID] = 0
                         
@@ -1100,6 +1209,9 @@ class MatchDay(ctk.CTkFrame):
                 stats[stat] += 1
 
     def shouts(self):
+        """
+        Open the shouts frame to allow the user to make a shout during the match.
+        """
 
         self.currMin = int(self.timeLabel.cget("text").split(":")[0])
         if self.currMin - self.lastShout < 10 and self.lastShout != 0:
@@ -1123,10 +1235,17 @@ class MatchDay(ctk.CTkFrame):
         closeButton.pack(pady = 10)
 
     def setShoutMade(self):
+        """
+        Set the shoutMade flag to True and disable the shouts button.
+        """
+
         self.shoutMade = True
         self.shoutsButton.configure(state = "disabled")
 
     def closeShouts(self):
+        """
+        Close the shouts frame and resume the match.
+        """
 
         if self.shoutMade:
             self.lastShout = self.currMin + 1 if self.currMin == 0 else self.currMin
@@ -1139,6 +1258,15 @@ class MatchDay(ctk.CTkFrame):
         self.resumeMatch()
 
     def substitution(self, forceSub = False, injuredPlayer = None, redCardPlayer = None, redCardPosition = None):
+        """
+        Open the substitution frame to allow the user to make substitutions during the match.
+        
+        Args:
+            forceSub (bool, optional): Whether the substitution is forced due to injury. Defaults to False.
+            injuredPlayer (int, optional): The ID of the injured player. Defaults to None.
+            redCardPlayer (int, optional): The ID of the player who received a red card. Defaults to None.
+            redCardPosition (str, optional): The position of the player who received a red card. Defaults to None.
+        """
         
         self.startTeamLineup = self.matchFrame.matchInstance.homeCurrentLineup.copy() if self.home else self.matchFrame.matchInstance.awayCurrentLineup.copy()
         self.startTeamSubstitutes = self.matchFrame.matchInstance.homeCurrentSubs.copy() if self.home else self.matchFrame.matchInstance.awayCurrentSubs.copy()
@@ -1188,6 +1316,7 @@ class MatchDay(ctk.CTkFrame):
         self.playerStatsFrame = ctk.CTkFrame(self.substitutionFrame, width = 260, height = 670, fg_color = DARK_GREY, corner_radius = 10)
         self.playerStatsFrame.place(relx = 0.99, rely = 0.02, anchor = "ne")
 
+        # Add the lineup on the pitch
         for position, playerID in self.startTeamLineup.items():
             player = Players.get_player_by_id(playerID)
             positionCode = POSITION_CODES[position]
@@ -1302,6 +1431,10 @@ class MatchDay(ctk.CTkFrame):
                 frame.removeButton.configure(state = "enabled")
     
     def addSubstitutePlayers(self):
+        """
+        Populate the substitutes frame with the available substitute players.
+        """
+        
         for widget in self.substitutesFrame.winfo_children():
             widget.destroy()
 
@@ -1358,6 +1491,12 @@ class MatchDay(ctk.CTkFrame):
             frame.pack(fill = "x", padx = 10, pady = 5)
 
     def showPlayerStats(self, player):
+        """
+        Display the statistics of a selected player in the player stats frame.
+
+        Args:
+            player (Player): The player whose statistics are to be displayed.   
+        """
 
         for widget in self.playerStatsFrame.winfo_children():
             widget.destroy()
@@ -1501,12 +1640,27 @@ class MatchDay(ctk.CTkFrame):
                 ctk.CTkLabel(self.playerStatsFrame, text = f"Average Rating: {averageRating}", font = (APP_FONT, 15), fg_color = DARK_GREY).place(relx = relx, rely = rely + 0.3, anchor = "w")
 
     def swapLineupPositions(self, position_1, position_2):
+        """
+        Swap the players in the two given positions in the lineup.
+
+        Args:
+            position_1 (str): The first position to swap.
+            position_2 (str): The second position to swap.
+        """
 
         temp = self.teamLineup[position_1]
         self.teamLineup[position_1] = self.teamLineup[position_2]
         self.teamLineup[position_2] = temp
 
     def removePlayer(self, frame, playerName, playerPosition): 
+        """
+        Remove a player from the lineup and update the substitutes and lineup accordingly.
+        
+        Args:
+            frame (LineupPlayerFrame): The frame of the player to be removed.
+            playerName (str): The name of the player to be removed.
+            playerPosition (str): The position of the player to be removed.
+        """
     
         frame.place_forget()
 
@@ -1537,7 +1691,14 @@ class MatchDay(ctk.CTkFrame):
         self.confirmButton.configure(state = "disabled")
 
     def updateLineup(self, player, old_position, new_position):
-        # update the lineup with the change of position and upodate the drop down values
+        """
+        Update the lineup when a player is moved to a new position.
+        
+        Args:
+            player (Player): The player being moved.
+            old_position (str): The old position of the player.
+            new_position (str): The new position of the player.
+        """
 
         if old_position in self.teamLineup:
             del self.teamLineup[old_position]
@@ -1548,6 +1709,13 @@ class MatchDay(ctk.CTkFrame):
         self.dropDown.configure(values = new_values)
 
     def choosePlayer(self, selected_position):
+        """
+        Open the choose player frame to allow the user to select a player for the given position.
+        
+        Args:
+            selected_position (str): The position for which a player is to be chosen.
+        """
+        
         self.selected_position = selected_position
         self.dropDown.configure(state = "disabled")
         self.confirmButton.configure(state = "disabled")
@@ -1606,12 +1774,23 @@ class MatchDay(ctk.CTkFrame):
             self.playerDropDown.configure(state = "normal")
 
     def stopChoosePlayer(self):
+        """
+        Close the choose player frame and reset the dropdown and confirm button.
+        """
+        
         self.choosePlayerFrame.place_forget()
         self.dropDown.configure(state = "normal")
         self.playerDropDown.set("Choose Player")
         self.confirmButton.configure(state = "normal")
 
     def choosePosition(self, selected_player):
+        """
+        Add the selected player to the lineup at the selected position.
+        
+        Args:
+            selected_player (str): The name of the player to be added.
+        """
+        
         self.stopChoosePlayer()
 
         playerData = Players.get_player_by_name(selected_player.split(" ")[0], selected_player.split(" ")[1], self.team.id)
@@ -1684,6 +1863,10 @@ class MatchDay(ctk.CTkFrame):
             self.confirmButton.configure(state = "normal")
 
     def finishSubstitution(self):
+        """
+        Finalize the substitutions made and update the lineup, pitch, and events accordingly.
+        """
+        
         lineup = self.matchFrame.matchInstance.homeCurrentLineup if self.home else self.matchFrame.matchInstance.awayCurrentLineup
         finalLineup = self.matchFrame.matchInstance.homeFinalLineup if self.home else self.matchFrame.matchInstance.awayFinalLineup
         subs = self.matchFrame.matchInstance.homeCurrentSubs if self.home else self.matchFrame.matchInstance.awayCurrentSubs
@@ -1799,12 +1982,24 @@ class MatchDay(ctk.CTkFrame):
         self.currentSubs = 0
 
     def stopSubstitution(self):
+        """
+        Cancel the substitution process and reset the lineup and substitutes.
+        """
+        
         self.substitutionFrame.place_forget()
 
         if self.timeLabel.cget("text") != "HT":
             self.resumeMatch()
 
     def checkEventTime(self, events, time):
+        """
+        Ensure that the event time is unique by adjusting seconds if necessary.
+        
+        Args:
+            events (dict): The existing events with their times.
+            time (str): The proposed time for the new event in "MM:SS" format.
+        """
+        
         # Check if the time already exists in the events
         while time in events:
             # If it does, increment the seconds by 1 until a unique time is found
@@ -1817,6 +2012,9 @@ class MatchDay(ctk.CTkFrame):
         return time
 
     def halfTimeTalks(self):
+        """
+        Display the half-time talks frame with options to resume the game or make substitutions.
+        """
 
         ## Create frames
         self.halfTimeFrame = ctk.CTkFrame(self, width = APP_SIZE[0], height = APP_SIZE[1], fg_color = TKINTER_BACKGROUND)
@@ -1937,8 +2135,19 @@ class MatchDay(ctk.CTkFrame):
         self.HTpromptsFrame.pack_propagate(False)
 
     def halfTimePrompt(self, prompt, matchInstance):
+        """
+        Handle the selection of a half-time prompt and update player reactions and potential goals.
+        
+        Args:
+            prompt (str): The selected half-time prompt.
+            matchInstance (Match): The current match instance.
+        """
 
         def addGoal(home):
+            """
+            Add a goal to the match for the specified team (home or away).
+            """
+            
             events = matchInstance.homeEvents if home else matchInstance.awayEvents
             addEvent = True
             for event_time, event_data in events.items():
@@ -1984,9 +2193,25 @@ class MatchDay(ctk.CTkFrame):
             addGoal(not self.home)
     
     def updateTimeLabel(self, minutes, seconds):
+        """
+        Update the time label with the current match time.
+        
+        Args:
+            minutes (int): The current minutes of the match.
+            seconds (int): The current seconds of the match.
+        """
+        
         self.timeLabel.configure(text = f"{str(minutes).zfill(2)}:{str(seconds).zfill(2)}")
 
     def updateMatchDataFrame(self, event, time, home = True):
+        """
+        Update the match data frame with a new event.
+        
+        Args:
+            event (dict): The event data containing type, player IDs, and extra time info.
+            time (str): The time of the event in "MM:SS" format.
+            home (bool): Whether the event is for the home team or away team.
+        """
 
         frame = ctk.CTkFrame(self.matchDataFrame, width = 370, height = 50, fg_color = TKINTER_BACKGROUND)
         frame.pack(expand = True, fill = "both")
@@ -2127,11 +2352,30 @@ class MatchDay(ctk.CTkFrame):
                         self.updateRatingOval(oppPitch, playerID, oppLineup, oppRatings)
 
     def updateRatingOval(self, pitch, playerID, lineup, ratings):
+        """
+        Update the rating oval for a player on the pitch.
+        
+        Args:
+            pitch (LineupPitch): The lineup pitch instance.
+            playerID (str): The ID of the player.
+            lineup (dict): The current lineup mapping positions to player IDs.
+            ratings (dict): The ratings dictionary mapping player IDs to their ratings.
+        """
+        
         position = list(lineup.keys())[list(lineup.values()).index(playerID)]
         playerData = Players.get_player_by_id(playerID)
         pitch.updateRating(position, playerData.last_name, ratings[playerID])
 
     def countPlayerEvents(self, player_id, events, event_type):
+        """
+        Count the number of specific events for a player.
+        
+        Args:
+            player_id (str): The ID of the player.
+            events (dict): The events dictionary containing event data.
+            event_type (str): The type of event to count.
+        """
+        
         group = EVENT_GROUPS.get(event_type, [event_type])
 
         if event_type == "assister":
@@ -2150,6 +2394,9 @@ class MatchDay(ctk.CTkFrame):
             )
 
     def endSimulation(self):
+        """
+        Finalize the match simulation, process the results, and update the game state accordingly.
+        """
 
         payload = {
                 "team_updates": [],

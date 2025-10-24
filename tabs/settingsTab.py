@@ -7,6 +7,13 @@ from utils.frames import ChoosingLeagueFrame
 
 class SettingsTab(ctk.CTkFrame):
     def __init__(self, parent):
+        """
+        Initialize the SettingsTab frame.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent widget (main menu).
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
@@ -49,6 +56,10 @@ class SettingsTab(ctk.CTkFrame):
         self.quitButton.place(relx = 0.35, rely = 0.95, anchor = "w")
 
     def updateSettings(self):
+        """
+        Update the settings displayed in the tab.
+        """
+        
         delegated = Settings.get_setting("events_delegated")
         self.delegateVar.set(delegated)
 
@@ -60,6 +71,10 @@ class SettingsTab(ctk.CTkFrame):
         self.checkSave()
 
     def toggleDelegate(self):
+        """
+        Toggle the event delegation setting.
+        """
+        
         Settings.set_setting("events_delegated", self.delegateVar.get())
         Emails.toggle_send_calendar_emails(Game.get_game_date(self.parent.manager_id))
 
@@ -71,10 +86,18 @@ class SettingsTab(ctk.CTkFrame):
         self.checkSave()
 
     def chooseLeagues(self):
+        """
+        Open the league selection frame.
+        """
+        
         self.chooseLeaguesFrame = ChoosingLeagueFrame(self.parent, fgColor = TKINTER_BACKGROUND, width = 1200, height = 700, corner_radius = 0, border_width = 0, border_color = APP_BLUE, endFunction = self.finishLeagues, settings = True)
         self.chooseLeaguesFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
 
     def finishLeagues(self):
+        """
+        Finalize league selection and update loaded leagues.
+        """
+
         self.chooseLeaguesFrame.place_forget()
         leagues = League.get_all_leagues()
 
@@ -87,6 +110,10 @@ class SettingsTab(ctk.CTkFrame):
             self.checkSave()
 
     def checkSave(self):
+        """
+        Check if there are unsaved changes and update save buttons accordingly.
+        """
+        
         db = DatabaseManager()
         self.canSave = db.has_unsaved_changes()
 
@@ -98,6 +125,13 @@ class SettingsTab(ctk.CTkFrame):
             self.saveAndExitButton.configure(state = "normal")
 
     def quitGame(self, menu):
+        """
+        Handle quitting the game, with options to save changes.
+        
+        Args:
+            menu (bool): If True, return to main menu; if False, exit application.
+        """
+        
         if self.canSave:
             response = CTkMessagebox(
                 title="Exit",
@@ -154,6 +188,13 @@ class SettingsTab(ctk.CTkFrame):
                 self.exit_(menu)
 
     def exit_(self, menu):
+        """
+        Exit the game, either returning to the main menu or quitting the application.
+        
+        Args:
+            menu (bool): If True, return to main menu; if False, exit application.
+        """
+        
         if menu:
             from startMenu import StartMenu
 
@@ -163,6 +204,13 @@ class SettingsTab(ctk.CTkFrame):
             self.parent.quit()
 
     def save(self, exit_):
+        """
+        Save changes to the database.
+        
+        Args:
+            exit_ (bool): If True, prompt for exit after saving.
+        """
+        
         if self.parent.tabs[4]:
             SavedLineups.delete_current_lineup()
             self.parent.tabs[4].saveLineup()
@@ -201,5 +249,9 @@ class SettingsTab(ctk.CTkFrame):
             self.canSave = False
 
     def rollBack(self):
+        """
+        Discard unsaved changes in the database.
+        """
+        
         db = DatabaseManager()
         db.discard_copy()

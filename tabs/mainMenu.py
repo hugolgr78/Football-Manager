@@ -106,7 +106,8 @@ class MainMenu(ctk.CTkFrame):
         self.textTimeLabel = ctk.CTkLabel(self.movingFrame, text = f"", font = (APP_FONT, 20), text_color = "white", fg_color = TKINTER_BACKGROUND)
         self.textTimeLabel.place(relx = 0.02, rely = 0.27, anchor = "w")
 
-        self.tipLabel = ctk.CTkLabel(self.movingFrame, text = f"Tip: {random.choice(TIPS)}", font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND)
+        self.tip = random.choice(TIPS)
+        self.tipLabel = ctk.CTkLabel(self.movingFrame, text = f"Tip: {self.tip}", font = (APP_FONT, 15), text_color = "white", fg_color = TKINTER_BACKGROUND)
         self.tipLabel.place(relx = 0.02, rely = 0.82, anchor = "w")
 
         src = Image.open("Images/Loading/1.png")
@@ -605,6 +606,7 @@ class MainMenu(ctk.CTkFrame):
         else:
             self.movingFrame.place(x = 200, rely = target_rely, anchor = "nw")
             self.animateID = self.after(0, self.animateLoadingImage)
+            self.tipID = self.after(10000, self.changeTip)
             threading.Thread(target = self.moveDate, daemon = True).start()
 
     def removeMovingFrame(self):
@@ -625,6 +627,7 @@ class MainMenu(ctk.CTkFrame):
             self.completedSteps = 0
             self.progressLabel.configure(text = "0%")
             self.after_cancel(self.animateID)
+            self.after_cancel(self.tipID)
             self.resetTabs(0, 1, 2, 3, 4, 5, 6)
             self.addDate()
             self.movingDate = False
@@ -640,3 +643,13 @@ class MainMenu(ctk.CTkFrame):
         self.loadingIndex = (self.loadingIndex + 1) % len(self.loadingObjects)
         self.movingFrame.update_idletasks()
         self.animateID = self.after(20, self.animateLoadingImage)
+    
+    def changeTip(self):
+
+        tip = random.choice(TIPS)
+        while self.tip == tip:
+            tip = random.choice(TIPS)
+        
+        self.tip = tip
+        self.configureMovingFrame(tip = self.tip)
+        self.tipID = self.after(10000, self.changeTip)

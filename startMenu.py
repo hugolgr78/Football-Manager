@@ -27,8 +27,8 @@ class StartMenu(ctk.CTkFrame):
         self.first_name = None
         self.last_name = None
         self.dob = None
-        self.selectedCountry = None
-        self.last_selected_country = None
+        self.selectedPlanet = None
+        self.last_selected_planet = None
         self.selectedTeam = None
         self.last_selected_team = None
         self.chosenManager = None
@@ -233,30 +233,31 @@ class StartMenu(ctk.CTkFrame):
         self.dob_entry.place(relx = 0.67, rely = 0.25, anchor = "nw")
         self.dob_entry.bind("<KeyRelease>", self.format_dob)
 
-        ctk.CTkLabel(self.createFrame, text = "Nationality", font = (APP_FONT, 30), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.37, anchor = "nw")
+        self.natLabel = ctk.CTkLabel(self.createFrame, text = "Nationality", font = (APP_FONT, 30), bg_color = TKINTER_BACKGROUND)
+        self.natLabel.place(relx = 0.03, rely = 0.37, anchor = "nw")
 
-        self.countriesFrame = ctk.CTkFrame(self.createFrame, fg_color = TKINTER_BACKGROUND, height = 330, width = 1050, corner_radius = 15)
-        self.countriesFrame.place(relx = 0.5, rely = 0.7, anchor = "center")
+        self.countriesFrame = ctk.CTkFrame(self.createFrame, fg_color = TKINTER_BACKGROUND, height = 250, width = 800, corner_radius = 15)
+        self.countriesFrame.place(relx = 0.03, rely = 0.45, anchor = "nw")
 
-        self.countriesFrame.grid_columnconfigure((0, 1, 2 ,3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13), weight = 1)
-        self.countriesFrame.grid_rowconfigure((0, 1, 2, 3, 4, 5), weight = 1)
+        self.countriesFrame.grid_columnconfigure((0, 1, 2 ,3, 4, 5, 6, 7), weight = 1)
+        self.countriesFrame.grid_rowconfigure((0, 1, 2), weight = 1)
         self.countriesFrame.grid_propagate(False)
 
-        # Add the country buttons
-        for i, country in enumerate(os.listdir("Images/Countries")):
-            path = os.path.join("Images/Countries", country)
+        # Add the planet buttons
+        for i, planet in enumerate(os.listdir("Images/Planets")):
+            path = os.path.join("Images/Planets", planet)
 
             src = Image.open(path)
-            src.resize((45, 45))
-            image = ctk.CTkImage(src, None, (45, 45))
+            src.thumbnail((75, 75))
+            image = ctk.CTkImage(src, None, (src.width, src.height))
 
-            button = ctk.CTkButton(self.countriesFrame, image = image, text = "", fg_color = TKINTER_BACKGROUND, width = 70, height = 100, border_width = 2, border_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND)
-            button.grid(row = i // 14, column = i % 14, padx = 10, pady = 10)
-            button.configure(command = lambda b = button, c = country: self.selectCountry(b, c))
+            button = ctk.CTkButton(self.countriesFrame, image = image, text = "", fg_color = TKINTER_BACKGROUND, width = 80, height = 80, border_width = 2, border_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND)
+            button.grid(row = i // 8, column = i % 8, padx = 10, pady = 10)
+            button.configure(command = lambda b = button, c = planet: self.selectPlanet(b, c))
 
-            if self.selectedCountry and self.selectedCountry == country:
+            if self.selectedPlanet and self.selectedPlanet == planet:
                 button.configure(border_color = APP_BLUE)
-                self.last_selected_country = button
+                self.last_selected_planet = button
 
     def format_dob(self, event):
         """
@@ -282,18 +283,19 @@ class StartMenu(ctk.CTkFrame):
         self.dob_entry.delete(0, "end")
         self.dob_entry.insert(0, formatted_text)
 
-    def selectCountry(self, button, country):
+    def selectPlanet(self, button, planet):
         """
-        Handles the selection of a country
+        Handles the selection of a planet
         
         Args:
-            button (ctk.CTkButton): The button representing the country.
-            country (str): The selected country's filename.
+            button (ctk.CTkButton): The button representing the planet.
+            planet (str): The selected planet's filename.
         """
 
-        country = country.split(".")[0]
+        planet = planet.split(".")[0]
         button.configure(border_color = APP_BLUE)
-        self.selectedCountry = country
+        self.selectedPlanet = planet
+        self.natLabel.configure(text = f"Nationality: {planet}")
 
         if self.last_selected_team and self.last_selected_team != button:
             self.last_selected_team.configure(border_color = TKINTER_BACKGROUND)
@@ -309,7 +311,7 @@ class StartMenu(ctk.CTkFrame):
         self.last_name = self.last_name_entry.get().strip()
         self.dob = self.dob_entry.get().strip()
 
-        if not self.first_name or not self.last_name or not self.dob or not self.selectedCountry:
+        if not self.first_name or not self.last_name or not self.dob or not self.selectedPlanet:
             self.nextButton.configure(state = "disabled")
             CTkMessagebox(title = "Error", message = "Please fill in all the fields", icon = "cancel")
             self.nextButton.configure(state = "normal")
@@ -545,7 +547,7 @@ class StartMenu(ctk.CTkFrame):
         self.db_manager.start_copy()
 
         # Add the data to the database
-        self.chosenManagerID = Managers.add_managers(self.first_name, self.last_name, self.selectedCountry, self.dob, self.selectedTeam, self.choosingLeaguesFrame.loadedLeagues)
+        self.chosenManagerID = Managers.add_managers(self.first_name, self.last_name, self.selectedPlanet, self.dob, self.selectedTeam, self.choosingLeaguesFrame.loadedLeagues)
 
         # Add the game to the games database
         Game.add_game(self.chosenManagerID, self.first_name,self.last_name)

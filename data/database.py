@@ -2101,6 +2101,7 @@ class TeamLineup(Base):
         finally:
             session.close()
 
+    @classmethod
     def check_game_played(cls, match_id):
         session = DatabaseManager().get_session()
         try:
@@ -3008,7 +3009,7 @@ class League(Base):
                 return False  # no matches found (shouldn't normally happen)
 
             # Step 3: check if all match dates are before currDate
-            all_complete = all(m.date < currDate for m in matches)
+            all_complete = all(TeamLineup.check_game_played(match.id) for match in matches)
 
             return all_complete
         finally:

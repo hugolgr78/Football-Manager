@@ -11,6 +11,16 @@ from utils.util_functions import *
 
 class LeagueProfile(ctk.CTkFrame):
     def __init__(self, parent, league_id = None, changeBackFunction = None, userLeagueProfile = None):
+        """
+        Class for the League Profile tab in the main menu.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (main menu or other) where the League Profile tab will be placed.
+            league_id (str, optional): The ID of the league to display the profile for. If None, displays the user's league. Defaults to None.
+            changeBackFunction (function, optional): Function to call when the back button is pressed. Defaults to None.
+            userLeagueProfile (LeagueProfile, optional): The user's league profile tab, if applicable. Defaults to None.
+        """
+
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
@@ -18,11 +28,13 @@ class LeagueProfile(ctk.CTkFrame):
         self.userLeagueProfile = userLeagueProfile
 
         if not league_id:
+            # If league_id is not provided, use the user's league
             self.manager_id = Managers.get_all_user_managers()[0].id
             self.team = Teams.get_teams_by_manager(self.manager_id)[0]
             self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
             self.league = League.get_league_by_id(self.leagueTeams.league_id)
         else:
+            # Otherwise, use the provided league_id
             self.manager_id = None
             self.league_id = league_id
             self.league = League.get_league_by_id(self.league_id)
@@ -50,6 +62,9 @@ class LeagueProfile(ctk.CTkFrame):
         self.profile.pack(expand = True, fill = "both")
 
     def createTabs(self):
+        """
+        Creates the tab buttons for the League Profile tab.
+        """
 
         self.buttonHeight = 40
         self.buttonWidth = 160
@@ -92,14 +107,37 @@ class LeagueProfile(ctk.CTkFrame):
         self.legend()
 
     def showLegend(self, event):
+        """
+        Shows the legend frame when the help button is hovered over.
+        
+        Args:
+            event: The event that triggered the function.
+        """
+
         self.legendFrame.place(relx = 0.975, rely = 0.1, anchor = "ne")
         self.legendFrame.lift()
 
     def canvas(self, width, height, relx):
+        """
+        Creates a canvas for visual separation between tab buttons.
+        
+        Args:
+            width (int): The width of the canvas.
+            height (int): The height of the canvas.
+            relx (float): The relative x position of the canvas.
+        """
+        
         canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = relx, rely = 0, anchor = "nw")
 
     def changeTab(self, index):
+        """
+        Changes the active tab to the specified index.
+        
+        Args:
+            index (int): The index of the tab to switch to.
+        """
+        
         self.buttons[self.activeButton].configure(state = "normal")
         self.tabs[self.activeButton].pack_forget()
         
@@ -112,6 +150,9 @@ class LeagueProfile(ctk.CTkFrame):
         self.tabs[self.activeButton].pack()
 
     def legend(self):
+        """
+        Creates the legend frame for the league profile tab.
+        """
 
         self.legendFrame.grid_rowconfigure(tuple(range(self.legendRows)), weight = 0)
         self.legendFrame.grid_columnconfigure((0), weight = 0)
@@ -142,6 +183,14 @@ class LeagueProfile(ctk.CTkFrame):
 
 class Profile(ctk.CTkFrame):
     def __init__(self, parent, league):
+        """
+        Class for displaying the league profile information.
+
+        Args:
+            parent (ctk.CTkFrame): The parent widget (LeagueProfile).
+            league (League): The league object containing the profile information.  
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -193,11 +242,22 @@ class Profile(ctk.CTkFrame):
         self.addStats()
 
     def loadleague(self, league_id):
+        """
+        Loads the league profile for the specified league ID.
+        
+        Args:
+            league_id (str): The ID of the league to load the profile for.
+        """
+        
         profile = LeagueProfile(self.parent, league_id, getattr(self.parent, 'changeBackFunction', None), getattr(self.parent, 'userLeagueProfile', None))
         profile.place(relx = 0, rely = 0, anchor = "nw")
         append_overlapping_profile(self.parent, profile)
 
     def addStats(self):
+        """
+        Adds player statistics to the stats frame.
+        """
+        
         self.topScorers = MatchEvents.get_all_goals(self.league.id)
         self.topAssisters = MatchEvents.get_all_assists(self.league.id)
         self.topCleanSheets = MatchEvents.get_all_clean_sheets(self.league.id)
@@ -240,6 +300,13 @@ class Profile(ctk.CTkFrame):
             ctk.CTkLabel(frame, text = round(stat[0][3], 2), font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.75, rely = 0.7, anchor = "center")
 
     def expandStats(self, stats, statName):
+        """
+        Expands the statistics view to show detailed player stats.
+        
+        Args:
+            stats (list): List of player statistics to display.
+            statName (str): The name of the statistic being displayed.
+        """
         
         for frame in self.statsFrame.winfo_children(): 
             for widget in frame.winfo_children():
@@ -286,6 +353,13 @@ class Profile(ctk.CTkFrame):
         frame.place(relx = 0.5, rely = 0.5, anchor = "center")
 
     def closeStats(self, frame):
+        """
+        Closes the expanded statistics view.
+
+        Args:
+            frame (ctk.CTkFrame): The frame to close.  
+        """
+        
         frame.destroy()
 
         for frame in self.statsFrame.winfo_children():
@@ -295,6 +369,14 @@ class Profile(ctk.CTkFrame):
 
 class Matchdays(ctk.CTkFrame):
     def __init__(self, parent, league):
+        """
+        Class for displaying matchdays in the league profile.
+
+        Args:
+            parent (ctk.CTkFrame): The parent widget (LeagueProfile).
+            league (League): The league object containing matchday information.  
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -320,6 +402,10 @@ class Matchdays(ctk.CTkFrame):
         self.addButtons()
 
     def createFrames(self):
+        """
+        Creates frames for each matchday in the league.
+        """
+        
         for i in range(self.numMatchdays):
             if i == self.currentMatchday - 1:
                 matchday = Matches.get_matchday_for_league(self.league.id, self.currentMatchday)
@@ -330,13 +416,17 @@ class Matchdays(ctk.CTkFrame):
             self.frames.append(frame)
 
     def addButtons(self):
+        """
+        Adds navigation buttons for matchdays.
+        """
+        
         self.back5Button = ctk.CTkButton(self.buttonsFrame, text = "<<", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 90, hover_color = GREY_BACKGROUND, command = lambda: self.changeFrame(-5))
         self.back5Button.place(relx = 0.05, rely = 0.5, anchor = "center")
 
         self.back1Button = ctk.CTkButton(self.buttonsFrame, text = "<", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 90, hover_color = GREY_BACKGROUND, command = lambda: self.changeFrame(-1))
         self.back1Button.place(relx = 0.15, rely = 0.5, anchor = "center")
 
-        self.currentMatchdayButton = ctk.CTkButton(self.buttonsFrame, text = "Current Matchday", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 580, hover_color = GREY_BACKGROUND, state = "disabled", command = self.go_currentMatchday)
+        self.currentMatchdayButton = ctk.CTkButton(self.buttonsFrame, text = "Current Matchday", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 580, hover_color = GREY_BACKGROUND, state = "disabled", command = self.goCurrentMatchday)
         self.currentMatchdayButton.place(relx = 0.5, rely = 0.5, anchor = "center")
 
         self.forward1Button = ctk.CTkButton(self.buttonsFrame, text = ">", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 90, hover_color = GREY_BACKGROUND, command = lambda: self.changeFrame(1))
@@ -346,6 +436,13 @@ class Matchdays(ctk.CTkFrame):
         self.forward5Button.place(relx = 0.95, rely = 0.5, anchor = "center")
 
     def changeFrame(self, direction):
+        """
+        Changes the active matchday frame based on the direction.
+        
+        Args:
+            direction (int): The direction to change the frame. Positive values move forward, negative values move backward.
+        """
+        
         self.frames[self.activeFrame].place_forget()
 
         if self.activeFrame + direction > self.numMatchdays - 1:
@@ -366,7 +463,11 @@ class Matchdays(ctk.CTkFrame):
             matchday = Matches.get_matchday_for_league(self.league.id, self.activeFrame + 1)
             self.frames[self.activeFrame] = MatchdayFrame(self, matchday, self.activeFrame + 1, self.currentMatchday, self, self.parent, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
 
-    def go_currentMatchday(self):
+    def goCurrentMatchday(self):
+        """
+        Navigates to the current matchday frame.
+        """
+        
         self.frames[self.activeFrame].place_forget()
 
         self.frames[self.currentMatchday - 1].placeFrame()
@@ -376,6 +477,14 @@ class Matchdays(ctk.CTkFrame):
 
 class Graphs(ctk.CTkFrame):
     def __init__(self, parent, league):
+        """
+        Class for displaying graphs in the league profile.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent widget (LeagueProfile).
+            league (League): The league object containing graph information.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -411,6 +520,7 @@ class Graphs(ctk.CTkFrame):
         self.drawGrid(self.positionsCanvas, self.numTeams - 1, "positions")
         self.drawGrid(self.pointsCanvas, max(15, self.leagueTeams[0].points), "points")  
 
+        # Add the graphs
         for i, team in enumerate(self.leagueTeams):
             team = Teams.get_team_by_id(team.team_id)
 
@@ -425,6 +535,9 @@ class Graphs(ctk.CTkFrame):
                 self.createGraphs(points, i, max(15, self.leagueTeams[0].points), "points", self.pointsCanvas)
 
     def addTeams(self):
+        """
+        Adds the teams to the league table frame (side of the graph).
+        """
 
         for i, team in enumerate(self.leagueTeams):
             teamData = Teams.get_team_by_id(team.team_id)
@@ -453,16 +566,48 @@ class Graphs(ctk.CTkFrame):
             nameLabel.bind("<Button-1>", lambda event, team_id = teamData.id, i = i, f = frame, im = imageLabel, n = nameLabel: self.selectTeam(team_id, i, f, im, n))
             
     def onFrameHover(self, event, frame, img, name):
+        """
+        Changes the frame color on hover.
+        
+        Args:
+            event: The event that triggered the function.
+            frame (ctk.CTkFrame): The frame to change color.
+            img (ctk.CTkLabel): The image label to change color.
+            name (ctk.CTkLabel): The name label to change color.
+        """
+
         frame.configure(fg_color = GREY_BACKGROUND)
         img.configure(fg_color = GREY_BACKGROUND)
         name.configure(fg_color = GREY_BACKGROUND)
 
     def onFrameLeave(self, event, frame, img, name):
+        """
+        Resets the frame color on hover leave.
+        
+        Args:
+            event: The event that triggered the function.
+            frame (ctk.CTkFrame): The frame to reset color.
+            img (ctk.CTkLabel): The image label to reset color.
+            name (ctk.CTkLabel): The name label to reset color.
+        """
+
         frame.configure(fg_color = TKINTER_BACKGROUND)
         img.configure(fg_color = TKINTER_BACKGROUND)
         name.configure(fg_color = TKINTER_BACKGROUND)
 
     def createGraphs(self, positions, index, rows, graph, canvas, first = True, delete = False):
+        """
+        Creates the graphs on the canvas.
+        
+        Args:
+            positions (list): List of positions or points for the team.
+            index (int): The index of the team.
+            rows (int): The number of rows in the graph.
+            graph (str): The type of graph ("positions" or "points").
+            canvas (ctk.CTkCanvas): The canvas to draw the graph on.
+            first (bool): Whether this is the first time drawing the graph.
+            delete (bool): Whether to delete the graph.
+        """
 
         canvas = self.positionsCanvas if graph == "positions" else self.pointsCanvas
 
@@ -505,6 +650,15 @@ class Graphs(ctk.CTkFrame):
                 canvas.create_oval(points[0] - 2, points[1] - 2, points[0] + 2, points[1] + 2, fill=TABLE_COLOURS[index], tags="line" + str(index))
 
     def drawGrid(self, canvas, rows, graph):
+        """
+        Draws the grid on the canvas.
+        
+        Args:
+            canvas (ctk.CTkCanvas): The canvas to draw the grid on.
+            rows (int): The number of rows in the grid.
+            graph (str): The type of graph ("positions" or "points").
+        """
+        
         # Calculate the size of each cell
         cellWidth = (self.canvasWidth - 50) / self.columns  # Subtract 50 to add a space of 20 pixels on the left and 30 on the right
         cellHeight = (self.canvasHeight - 40) / rows  # Subtract 40 to add a space of 20 pixels on the top and bottom
@@ -552,6 +706,10 @@ class Graphs(ctk.CTkFrame):
             canvas.create_text(10, self.canvasHeight - 28, text = "0", anchor = "n", fill = "white")
 
     def addButtons(self):
+        """
+        Adds buttons to switch between graphs and reset the graph.
+        """
+        
         self.positionsButton = ctk.CTkButton(self.buttonsFrame, text = "Positions", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 300, hover_color = GREY_BACKGROUND, state = "disabled", command = lambda: self.changeGraph("positions"))
         self.positionsButton.place(relx = 0.2, rely = 0.5, anchor = "center")
 
@@ -562,6 +720,13 @@ class Graphs(ctk.CTkFrame):
         self.resetButton.place(relx = 0.9, rely = 0.5, anchor = "center")
 
     def changeGraph(self, graph):
+        """
+        Changes the graph type between positions and points.
+        
+        Args:
+            graph (str): The type of graph to display ("positions" or "points").
+        """
+        
         self.resetGraph()
         if graph == "points":
             self.graph = "points"
@@ -578,6 +743,10 @@ class Graphs(ctk.CTkFrame):
             self.pointsButton.configure(state = "normal")
 
     def resetGraph(self):
+        """
+        Resets the graph to show all teams.
+        """
+        
         if self.graph == "positions":
             self.positionsCanvas.delete("all")
 
@@ -621,6 +790,17 @@ class Graphs(ctk.CTkFrame):
             name.bind("<Button-1>", lambda event, team_id = team.id, i = i, f = widget, im = img, n = name: self.selectTeam(team_id, i, f, im, n))
 
     def selectTeam(self, team_id, index, frame, img, name):
+        """
+        Highlights the selected team's graph.
+        
+        Args:
+            team_id (str): The ID of the selected team.
+            index (int): The index of the selected team.
+            frame (ctk.CTkFrame): The frame of the selected team.
+            img (ctk.CTkLabel): The image label of the selected team.
+            name (ctk.CTkLabel): The name label of the selected team.
+        """
+        
         if self.graph == "positions":
             positions_result = TeamHistory.get_positions_by_team(team_id)
             if positions_result:
@@ -642,6 +822,17 @@ class Graphs(ctk.CTkFrame):
         name.bind("<Button-1>", lambda event, team_id = team_id, i = index, f = frame, im = img, n = name: self.deselectTeam(team_id, i, f, im, n))
 
     def deselectTeam(self, team_id, index, frame, img, name):
+        """
+        Removes the highlight from the selected team's graph.
+        
+        Args:
+            team_id (str): The ID of the selected team.
+            index (int): The index of the selected team.
+            frame (ctk.CTkFrame): The frame of the selected team.
+            img (ctk.CTkLabel): The image label of the selected team.
+            name (ctk.CTkLabel): The name label of the selected team.
+        """
+        
         if self.graph == "positions":
             positions_result = TeamHistory.get_positions_by_team(team_id)
             if positions_result:
@@ -664,6 +855,14 @@ class Graphs(ctk.CTkFrame):
 
 class Stats(ctk.CTkFrame):
     def __init__(self, parent, league):
+        """
+        Class for displaying statistics in the league profile.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent widget (LeagueProfile).
+            league (League): The league object containing statistics information.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -722,16 +921,44 @@ class Stats(ctk.CTkFrame):
             frame.pack(pady = 5)
 
     def onFrameHover(self, event, frame, img, name):
+        """
+        Changes the frame color on hover.
+        
+        Args:
+            event: The event that triggered the function.
+            frame (ctk.CTkFrame): The frame to change color.
+            img (ctk.CTkLabel): The image label to change color.
+            name (ctk.CTkLabel): The name label to change color.
+        """
+        
         frame.configure(fg_color = DARK_GREY)
         img.configure(fg_color = DARK_GREY)
         name.configure(fg_color = DARK_GREY)
 
     def onFrameLeave(self, event, frame, img, name):
+        """
+        Resets the frame color on hover leave.
+        
+        Args:
+            event: The event that triggered the function.
+            frame (ctk.CTkFrame): The frame to reset color.
+            img (ctk.CTkLabel): The image label to reset color.
+            name (ctk.CTkLabel): The name label to reset color.
+        """
+        
         frame.configure(fg_color = GREY_BACKGROUND)
         img.configure(fg_color = GREY_BACKGROUND)
         name.configure(fg_color = GREY_BACKGROUND)
     
     def getTeamStats(self, teamData, frame):
+        """
+        Displays the statistics for a specific team.
+        
+        Args:
+            teamData (Team): The team object containing statistics information.
+            frame (ctk.CTkFrame): The frame of the selected team.
+        """
+        
         if self.currentStat == teamData.name:
             return
 
@@ -747,14 +974,16 @@ class Stats(ctk.CTkFrame):
                 team_index = i
                 break
 
-        stat_index = len(STAT_FUNCTIONS) + team_index # no -1 as i is already 0-indexed
+        stat_index = len(STAT_FUNCTIONS) + team_index
         if self.statsFrames[stat_index]:
+            # If the frame already exists, just show it
             self.statsFrames[stat_index].place(relx = 0.98, rely = 0, anchor = "ne")
             self.currentFrame = self.statsFrames[stat_index]
             self.currentStat = teamData.name
 
             frame.configure(border_width = 1)
         else:
+            # Otherwise, create the frame and populate it with data
             statsFrame = ctk.CTkScrollableFrame(self, fg_color = GREY_BACKGROUND, width = 700, height = 590, corner_radius = 15)
             statsFrame.place(relx = 0.98, rely = 0, anchor = "ne")
 
@@ -782,6 +1011,13 @@ class Stats(ctk.CTkFrame):
                 ctk.CTkLabel(frame, text = stat[2], font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
 
     def getStat(self, statName, button):
+        """
+        Displays the statistics for a specific statistic category.
+        
+        Args:
+            statName (str): The name of the statistic category. 
+            button (ctk.CTkButton): The button that was clicked to select the statistic category.
+        """
 
         if self.currentStat == statName:
             return
@@ -795,6 +1031,7 @@ class Stats(ctk.CTkFrame):
         
         stat_index = list(STAT_FUNCTIONS.keys()).index(statName)
         if self.statsFrames[stat_index]:
+            # If the frame already exists, just show it
             self.statsFrames[stat_index].place(relx = 0.98, rely = 0, anchor = "ne")
             self.currentFrame = self.statsFrames[stat_index]
             self.currentStat = statName
@@ -802,6 +1039,7 @@ class Stats(ctk.CTkFrame):
             button.configure(border_width = 1)
 
         else:
+            # Otherwise, create the frame and populate it with data
             statsFrame = ctk.CTkScrollableFrame(self, fg_color = GREY_BACKGROUND, width = 700, height = 590, corner_radius = 15)
             statsFrame.place(relx = 0.98, rely = 0, anchor = "ne")
 
@@ -836,6 +1074,14 @@ class Stats(ctk.CTkFrame):
 
 class History(ctk.CTkScrollableFrame):
     def __init__(self, parent, league):
+        """
+        Class for displaying league history in the league profile.
+
+        Args:
+            parent (ctk.CTk): The parent widget (leagueProfile).
+            league (League): The league object containing history information.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 965, height = 630, corner_radius = 0) 
 
         self.parent = parent

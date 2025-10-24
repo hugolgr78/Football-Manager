@@ -16,6 +16,10 @@ from CTkMessagebox import CTkMessagebox
 
 class EmailFrame(ctk.CTkFrame):
     def __init__(self, parent, manager_id, email, emailFrame, parentTab):
+        """
+        This class represents an email frame in the inbox tab. Each frame has an email class and each class has functions to create and display the email content.
+        """
+
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 260, height = 50)
         self.pack(fill = "both", padx = 10, pady = 5)
 
@@ -57,18 +61,29 @@ class EmailFrame(ctk.CTkFrame):
         self.canvas.bind("<Button-1>", lambda e: self.displayEmailInfo())
 
     def onFrameHover(self):
+        """
+        This method is called when the mouse enters the email frame.
+        """
+
         self.configure(fg_color = DARK_GREY)
         self.subjectLabel.configure(fg_color = DARK_GREY)
         self.senderLabel.configure(fg_color = DARK_GREY)
         self.timeLabel.configure(fg_color = DARK_GREY)
 
     def onFrameLeave(self):
+        """
+        This method is called when the mouse leaves the email frame.
+        """
+
         self.configure(fg_color = TKINTER_BACKGROUND)
         self.subjectLabel.configure(fg_color = TKINTER_BACKGROUND)
         self.senderLabel.configure(fg_color = TKINTER_BACKGROUND)
         self.timeLabel.configure(fg_color = TKINTER_BACKGROUND)
 
     def displayEmailInfo(self):
+        """
+        Displays the full email content in the email frame area.
+        """
 
         if self.emailOpen:
             return
@@ -88,6 +103,10 @@ class EmailFrame(ctk.CTkFrame):
         self.email.openEmail()
         
     def addEmailSubject(self):
+        """
+        Adds the email subject label to the email frame.
+        """
+        
         subject = self.email.subject
         sender = self.email.sender
         fontSize = self.email.subjectFontSize

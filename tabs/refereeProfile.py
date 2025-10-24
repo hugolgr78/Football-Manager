@@ -11,6 +11,15 @@ from utils.leagueLogo import LeagueLogo
 
 class RefereeProfile(ctk.CTkFrame):
     def __init__(self, parent, referee, changeBackFunction = None):
+        """
+        Initialize the RefereeProfile frame with tabs for viewing referee information.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (main menu or other).
+            referee (Referee): The referee object whose profile is to be displayed.
+            changeBackFunction (function, optional): Function to call when the back button is pressed.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
@@ -32,6 +41,9 @@ class RefereeProfile(ctk.CTkFrame):
         self.profile.pack(expand = True, fill = "both")
 
     def createTabs(self):
+        """
+        Create tab buttons for navigating between different referee profile sections.
+        """
 
         self.buttonHeight = 40
         self.buttonWidth = 200
@@ -57,10 +69,26 @@ class RefereeProfile(ctk.CTkFrame):
         backButton.place(relx = 0.975, rely = 0, anchor = "ne")
 
     def canvas(self, width, height, relx):
+        """
+        Create a canvas for visual separation between tab buttons.
+        
+        Args:
+            width (int): The width of the canvas.
+            height (int): The height of the canvas.
+            relx (float): The relative x position to place the canvas.
+        """
+        
         canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = relx, rely = 0, anchor = "nw")
 
     def changeTab(self, index):
+        """
+        Change the active tab to the specified index.
+
+        Args:
+            index (int): The index of the tab to switch to. 
+        """
+        
         self.buttons[self.activeButton].configure(state = "normal")
         self.tabs[self.activeButton].pack_forget()
         
@@ -74,6 +102,14 @@ class RefereeProfile(ctk.CTkFrame):
 
 class Profile(ctk.CTkFrame):
     def __init__(self, parent, referee):
+        """
+        Initialize the Profile tab for displaying referee information.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (refereeProfile).
+            referee (Referee): The referee object whose profile is to be displayed.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -151,18 +187,15 @@ class Profile(ctk.CTkFrame):
 
                 homeSrc = Image.open(io.BytesIO(homeTeam.logo))
                 homeSrc.thumbnail((35, 35))
-                homeLogo = TeamLogo(matchFrame, homeSrc, homeTeam, GREY_BACKGROUND, 0.4, 0.5, "center", self.parentTab)
+                TeamLogo(matchFrame, homeSrc, homeTeam, GREY_BACKGROUND, 0.4, 0.5, "center", self.parentTab)
                 ctk.CTkLabel(matchFrame, text = homeTeam.name, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.35, rely = 0.5, anchor = "e")
 
                 awaySrc = Image.open(io.BytesIO(awayTeam.logo))
                 awaySrc.thumbnail((35, 35))
-                awayLogo = TeamLogo(matchFrame, awaySrc, awayTeam, GREY_BACKGROUND, 0.6, 0.5, "center", self.parentTab)
+                TeamLogo(matchFrame, awaySrc, awayTeam, GREY_BACKGROUND, 0.6, 0.5, "center", self.parentTab)
                 ctk.CTkLabel(matchFrame, text = awayTeam.name, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.65, rely = 0.5, anchor = "w")
 
                 MatchProfileLink(matchFrame, match, f"{match.score_home} - {match.score_away}", "white", 0.5, 0.5, "center", GREY_BACKGROUND, self.parentTab, 15)
-
-                # text = f"{match.score_home} - {match.score_away}"
-                # ctk.CTkLabel(matchFrame, text = text, fg_color = GREY_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
 
                 yellowCards = MatchEvents.get_event_by_type_and_match("yellow_card", match.id)
                 redCards = MatchEvents.get_event_by_type_and_match("red_card", match.id)

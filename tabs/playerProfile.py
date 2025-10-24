@@ -10,6 +10,16 @@ from utils.util_functions import *
 
 class PlayerProfile(ctk.CTkFrame):
     def __init__(self, parent, player, changeBackFunction = None, caStars = None):
+        """
+        Initialize the PlayerProfile tab with multiple sub-tabs for player information.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (main menu or other).
+            player (Player): The player object whose profile is to be displayed.
+            changeBackFunction (function, optional): Function to call when the back button is pressed. Defaults to None.
+            caStars (int, optional): Current Ability star rating of the player. Defaults to None.
+        """
+
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
@@ -39,6 +49,9 @@ class PlayerProfile(ctk.CTkFrame):
         self.profile.pack(expand = True, fill = "both")
 
     def createTabs(self):
+        """
+        Create the tab buttons for navigating between different player profile sections.
+        """
 
         self.buttonHeight = 40
         self.buttonWidth = 200
@@ -76,14 +89,37 @@ class PlayerProfile(ctk.CTkFrame):
         self.legend()
 
     def showLegend(self, event):
+        """
+        Show the legend frame when the help button is hovered over.
+        
+        Args:
+            event: The event object from the hover action.
+        """
+        
         self.legendFrame.place(relx = 0.975, rely = 0.1, anchor = "ne")
         self.legendFrame.lift()
 
     def canvas(self, width, height, relx):
+        """
+        Create a canvas separator between tab buttons.
+        
+        Args:
+            width (int): Width of the canvas.
+            height (int): Height of the canvas.
+            relx (float): Relative x position for placing the canvas.
+        """
+        
         canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = relx, rely = 0, anchor = "nw")
 
     def changeTab(self, index):
+        """
+        Change the active tab to the specified index.
+        
+        Args:
+            index (int): The index of the tab to switch to.
+        """
+        
         self.buttons[self.activeButton].configure(state = "normal")
         self.tabs[self.activeButton].pack_forget()
         
@@ -96,6 +132,10 @@ class PlayerProfile(ctk.CTkFrame):
         self.tabs[self.activeButton].pack()
 
     def legend(self):
+        """
+        Create a legend frame that explains the icons used in the player profile.
+        """
+        
         self.legendFrame.grid_rowconfigure((0, 1, 2, 3, 4, 5), weight = 0)
         self.legendFrame.grid_columnconfigure((0, 2), weight = 0)
         self.legendFrame.grid_columnconfigure((1, 3), weight = 1)
@@ -131,6 +171,14 @@ class PlayerProfile(ctk.CTkFrame):
 
 class Profile(ctk.CTkFrame):
     def __init__(self, parent, player):
+        """
+        Initialize the Profile tab for displaying player information.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (playerProfile).
+            player (Player): The player object whose profile is to be displayed.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -243,6 +291,9 @@ class Profile(ctk.CTkFrame):
         self.addAttr()
 
     def addStats(self):
+        """
+        Add player statistics to the stats frame.
+        """
 
         ctk.CTkLabel(self.statsFrame, text = f"{self.parent.league.name} stats: ", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.03, rely = 0.5, anchor = "w")
         
@@ -284,6 +335,10 @@ class Profile(ctk.CTkFrame):
             ctk.CTkLabel(self.statsFrame, text = stat, font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = relx_position, rely = 0.7, anchor = "center")
 
     def addAttr(self):
+        """
+        Add player attributes (morale, fitness, sharpness, position) to the attributes frame.
+        """
+        
         morale = self.player.morale
 
         if morale > 75:
@@ -345,6 +400,14 @@ class Profile(ctk.CTkFrame):
 
 class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):
+        """
+        Initialize the Matches tab for displaying player's match history.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (playerProfile).
+            player (Player): The player object whose match history is to be displayed.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -363,6 +426,14 @@ class MatchesTab(ctk.CTkFrame):
 
 class Attributes(ctk.CTkFrame):
     def __init__(self, parent, player):
+        """
+        Initialize the Attributes tab for displaying player's attributes.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (playerProfile).
+            player (Player): The player object whose attributes are to be displayed.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -370,6 +441,14 @@ class Attributes(ctk.CTkFrame):
 
 class History(ctk.CTkScrollableFrame):
     def __init__(self, parent, player):
+        """
+        Initialize the History tab for displaying player's history.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (playerProfile).
+            player (Player): The player object whose history is to be displayed.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 965, height = 630, corner_radius = 0) 
 
         self.parent = parent

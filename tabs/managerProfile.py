@@ -11,12 +11,22 @@ from tabs.search import Search
 
 class ManagerProfile(ctk.CTkFrame):
     def __init__(self, parent, manager_id = None, changeBackFunction = None):
+        """
+        A tab to display a manager's profile and history.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (main menu or other).
+            manager_id (str, optional): The ID of the manager to display. Defaults to None.
+            changeBackFunction (function, optional): Function to call when the back button is pressed. Defaults to None.
+        """
+
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
         self.changeBackFunction = changeBackFunction
         
         if not manager_id:
+            # If the manager_id is not provided, use the first user manager.
             self.manager_id = Managers.get_all_user_managers()[0].id
         else:
             self.manager_id = manager_id
@@ -45,6 +55,9 @@ class ManagerProfile(ctk.CTkFrame):
         self.profile.pack(expand = True, fill = "both")
 
     def createTabs(self):
+        """
+        Create the tab buttons for navigating between different sections of the manager profile.
+        """
 
         self.buttonHeight = 40
         self.buttonWidth = 200
@@ -71,10 +84,26 @@ class ManagerProfile(ctk.CTkFrame):
             backButton.place(relx = 0.975, rely = 0, anchor = "ne")
 
     def canvas(self, width, height, relx):
+        """
+        Create a canvas for visual separation between tab buttons.
+        
+        Args:
+            width (int): The width of the canvas.
+            height (int): The height of the canvas.
+            relx (float): The relative x position to place the canvas.
+        """
+        
         canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = relx, rely = 0, anchor = "nw")
 
     def changeTab(self, index):
+        """
+        Change the active tab to the specified index.
+
+        Args:
+            index (int): The index of the tab to switch to.
+        """
+
         self.buttons[self.activeButton].configure(state = "normal")
         self.tabs[self.activeButton].pack_forget()
         
@@ -88,6 +117,14 @@ class ManagerProfile(ctk.CTkFrame):
 
 class Profile(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
+        """
+        A frame to display the profile information of a manager.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (ManagerProfile).
+            manager_id (str): The ID of the manager to display.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -138,6 +175,14 @@ class Profile(ctk.CTkFrame):
 
 class History(ctk.CTkScrollableFrame):
     def __init__(self, parent, manager_id):
+        """
+        A frame to display the history of a manager.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame (ManagerProfile).
+            manager_id (str): The ID of the manager to display. 
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 965, height = 630, corner_radius = 0) 
 
         self.parent = parent

@@ -7,6 +7,13 @@ from utils.util_functions import *
 
 class Inbox(ctk.CTkFrame):
     def __init__(self, parent):
+        """
+        Inbox tab where the user can see all their emails.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (main menu) where the Inbox tab will be placed.
+        """
+
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
@@ -39,6 +46,10 @@ class Inbox(ctk.CTkFrame):
         self.addEmails()
 
     def resetOpenEmail(self):
+        """
+        Reopens a currently opened calendar events email, if any (to update the content).
+        """
+        
         if self.currentEmail and self.currentEmail.email_type == "calendar_events":
 
             for widget in self.emailDataFrame.winfo_children():
@@ -47,6 +58,10 @@ class Inbox(ctk.CTkFrame):
             self.currentEmail.email.openEmail()
 
     def addEmails(self):
+        """
+        Adds all emails to the emails frame, grouped by date.
+        """
+        
         emails = Emails.get_all_emails(Game.get_game_date(self.manager_id))
 
         currentDate = ""
@@ -64,7 +79,8 @@ class Inbox(ctk.CTkFrame):
             self.addEmail(email)
 
     def addEmail(self, email):
+        """
+        Adds a single email to the emails frame.
+        """
+        
         EmailFrame(self.emailsFrame, self.manager_id, email, self.emailDataFrame, self)
-
-    def saveEmail(self, email_type, matchday = None, player_id = None, ban_length = None, comp_id = None, date = None):
-        Emails.add_email(email_type, matchday, player_id, ban_length, comp_id, date)

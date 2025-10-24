@@ -4,18 +4,23 @@ from settings import *
 from data.database import *
 from CTkMessagebox import CTkMessagebox
 from data.gamesDatabase import *
-from utils import match
 from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame, TeamLogo, FootballPitchMatchDay
-from utils.playerProfileLink import PlayerProfileLink, PlayerProfileLabel
+from utils.playerProfileLink import PlayerProfileLink
 from utils.matchProfileLink import MatchProfileLink
 from utils.util_functions import *
 from tabs.matchday import MatchDay
 from PIL import Image
-from collections import defaultdict
 import io
 
 class Tactics(ctk.CTkFrame):
     def __init__(self, parent):
+        """
+        Initialize the Tactics tab for managing team lineups and match analysis.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent tkinter widget (main menu).
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.manager_id = Managers.get_all_user_managers()[0].id
@@ -26,7 +31,6 @@ class Tactics(ctk.CTkFrame):
         self.leagueID = LeagueTeams.get_league_by_team(self.team.id).league_id
         self.league = League.get_league_by_id(self.leagueID)
         self.matchday = League.get_league_by_id(self.leagueID).current_matchday
-
 
         gameTime = Matches.check_if_game_time(self.team.id, Game.get_game_date(self.manager_id))
         if gameTime:
@@ -53,6 +57,9 @@ class Tactics(ctk.CTkFrame):
         self.lineupTab.pack(expand = True, fill = "both")
 
     def createTabs(self):
+        """
+        Create the tab buttons for switching between Lineup and Analysis.
+        """
 
         self.buttonHeight = 40
         self.buttonWidth = 200
@@ -75,10 +82,26 @@ class Tactics(ctk.CTkFrame):
         ctk.CTkCanvas(self.tabsFrame, width = 1220, height = 5, bg = APP_BLUE, bd = 0, highlightthickness = 0).place(relx = 0, rely = 0.82, anchor = "w")
 
     def canvas(self, width, height, relx):
+        """
+        Create a canvas for visual separation between tab buttons.
+        
+        Args:
+            width (int): Width of the canvas.
+            height (int): Height of the canvas.
+            relx (float): Relative x position for placing the canvas.
+        """
+        
         canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = relx, rely = 0, anchor = "nw")
 
     def changeTab(self, index):
+        """
+        Change the active tab to the specified index.
+        
+        Args:
+            index (int): The index of the tab to switch to.
+        """
+        
         self.buttons[self.activeButton].configure(state = "normal")
         self.tabs[self.activeButton].pack_forget()
         
@@ -91,6 +114,10 @@ class Tactics(ctk.CTkFrame):
         self.tabs[self.activeButton].pack(expand = True, fill = "both")
 
     def turnSubsOn(self):
+        """
+        Activate substitutes in the lineup tab if it exists.
+        """
+        
         if getattr(self, 'lineupTab', None):
             try:
                 self.lineupTab.turnSubsOn()
@@ -98,13 +125,32 @@ class Tactics(ctk.CTkFrame):
                 pass
             
     def activateProposed(self, lineup):
+        """
+        Activate the proposed lineup in the lineup tab.
+        
+        Args:
+            lineup (dict): The proposed lineup to be set.
+        """
+        
         self.lineupTab.proposedLineup(lineup = lineup)
     
     def saveLineup(self):
+        """
+        Save the current lineup in the lineup tab.
+        """
+        
         self.lineupTab.saveLineup(current = True)
 
 class Lineup(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
+        """
+        Initialize the Lineup tab for managing team lineups.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent tkinter widget (Tactics tab).
+            manager_id (int): The ID of the manager.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -164,6 +210,10 @@ class Lineup(ctk.CTkFrame):
             self.importLineup()
 
     def createChoosePlayerFrame(self):
+        """
+        Create the frame for choosing a player for a selected position.
+        """
+        
         self.choosePlayerFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 400, height = 50, corner_radius = 0, border_color = APP_BLUE, border_width = 2)
 
         self.backButton = ctk.CTkButton(self.choosePlayerFrame, text = "Back", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 100, hover_color = CLOSE_RED, command = self.stop_choosePlayer)
@@ -174,6 +224,10 @@ class Lineup(ctk.CTkFrame):
         self.playerDropDown.set("Choose Player")
 
     def createSettingsFrame(self):
+        """
+        Create the settings frame for saving, loading, and managing lineups.
+        """
+        
         ctk.CTkButton(self.settingsFrame, text = "Back", font = (APP_FONT, 15), fg_color = DARK_GREY, corner_radius = 10, height = 30, width = 100, hover_color = CLOSE_RED, command = self.settingsFrame.place_forget).place(relx = 0.95, rely = 0.05, anchor = "ne")
 
         ctk.CTkLabel(self.settingsFrame, text = "Save lineup", font = (APP_FONT, 15), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.15, anchor = "w")
@@ -197,6 +251,10 @@ class Lineup(ctk.CTkFrame):
         self.proposedLineupButton.place(relx = 0.5, rely = 0.97, anchor = "s")
 
     def getDropdownValues(self):
+        """
+        Update the dropdown values for available positions based on the current lineup.
+        """
+        
         self.positionsCopy = {}
         for position, position_code in POSITION_CODES.items():
             if position not in self.selectedLineup.keys():
@@ -209,6 +267,14 @@ class Lineup(ctk.CTkFrame):
                         del self.positionsCopy[related_position]
 
     def importLineup(self, loaded = None, auto = None):
+        """
+        Import a lineup either from a saved lineup or automatically generated.
+        
+        Args:
+            loaded (dict, optional): A saved lineup to load. Defaults to None.
+            auto (dict, optional): An automatically generated lineup. Defaults to None.
+        """
+        
         self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
         self.league = League.get_league_by_id(self.leagueTeams.league_id)
         self.players = [player.id for player in Players.get_all_players_by_team(self.team.id, youths = False)]
@@ -218,7 +284,7 @@ class Lineup(ctk.CTkFrame):
         self.starRatings = Players.get_players_star_ratings(playerData, self.leagueID)
 
         if not loaded and not auto:
-
+            # If neither, load from last match
             self.lastTeamMatch = Matches.get_team_last_match(self.team.id, Game.get_game_date(self.manager_id))
 
             if not self.lastTeamMatch:
@@ -293,6 +359,9 @@ class Lineup(ctk.CTkFrame):
         self.dropDown.configure(values = self.positionsCopy)
 
     def checkPositionsForYouth(self):
+        """
+        Ensure all positions have enough players by adding youth players if necessary.
+        """
 
         for position in POSITION_CODES.keys():
             playersForPosition = []
@@ -331,6 +400,14 @@ class Lineup(ctk.CTkFrame):
                     self.players.append(youthForPosition[0].id)
 
     def addSubstitutePlayers(self, importing = False, playersCount = None):
+        """
+        Add substitute players to the substitutes frame.
+        
+        Args:
+            importing (bool, optional): Whether the lineup is being imported. Defaults to False.
+            playersCount (int, optional): The number of players currently in the lineup. Defaults to None.
+        """
+        
         ctk.CTkLabel(self.substituteFrame, text = "Substitutes", font = (APP_FONT_BOLD, 20), fg_color = DARK_GREY).pack(pady = 5)
         
         players_per_row = 4
@@ -390,6 +467,10 @@ class Lineup(ctk.CTkFrame):
                         child.uncheckCheckBox()
 
     def turnSubsOn(self):
+        """
+        Enable substitutes if the lineup is complete and it's game time.
+        """
+        
         self.gameTime = True
         
         if self.lineupPitch.get_counter() == 11:
@@ -400,6 +481,13 @@ class Lineup(ctk.CTkFrame):
                         child.showCheckBox() 
 
     def choosePlayer(self, selected_position):
+        """
+        Handle the selection of a position and display available players for that position.
+        
+        Args:
+            selected_position (str): The position selected from the dropdown.
+        """
+        
         self.selected_position = selected_position
         self.dropDown.configure(state = "disabled")
         self.resetButton.configure(state = "disabled")
@@ -422,12 +510,22 @@ class Lineup(ctk.CTkFrame):
             self.playerDropDown.configure(state = "normal")
 
     def stop_choosePlayer(self):
+        """
+        Close the choose player frame and reset the dropdowns.
+        """
+        
         self.choosePlayerFrame.place_forget()
         self.dropDown.configure(state = "normal")
         self.resetButton.configure(state = "normal")
         self.playerDropDown.set("Choose Player")
 
     def choosePosition(self, selected_player):
+        """
+        Handle the selection of a player for the chosen position and update the lineup.
+
+        Args:
+            selected_player (str): The player selected from the dropdown. 
+        """
 
         self.stop_choosePlayer()
         
@@ -463,6 +561,15 @@ class Lineup(ctk.CTkFrame):
         self.addSubstitutePlayers(importing = True, playersCount = self.lineupPitch.get_counter())
 
     def removePlayer(self, frame, playerName, playerPosition):
+        """
+        Remove a player from the lineup and update the substitutes.
+
+        Args:
+            frame (ctk.CTkFrame): The frame of the player to be removed.
+            playerName (str): The name of the player to be removed.
+            playerPosition (str): The position of the player to be removed.
+        """
+        
         playerData = Players.get_player_by_name(playerName.split(" ")[0], playerName.split(" ")[1], self.team.id)
         for position, playerID in self.selectedLineup.items():
             if playerID == playerData.id:
@@ -485,6 +592,15 @@ class Lineup(ctk.CTkFrame):
         self.subCounter = 0
 
     def updateLineup(self, player, old_position, new_position):
+        """
+        Update the lineup when a player changes position.
+        
+        Args:
+            player (Player): The player changing position.
+            old_position (str): The old position of the player.
+            new_position (str): The new position of the player.
+        """
+        
         if old_position in self.selectedLineup:
             del self.selectedLineup[old_position]
 
@@ -494,11 +610,26 @@ class Lineup(ctk.CTkFrame):
         self.dropDown.configure(values = list(self.positionsCopy.keys()))
 
     def swapLineupPositions(self, position_1, position_2):
+        """
+        Swap two players' positions in the lineup.
+        
+        Args:
+            position_1 (str): The first position to swap.
+            position_2 (str): The second position to swap.
+        """
+        
         temp = self.selectedLineup[position_1]
         self.selectedLineup[position_1] = self.selectedLineup[position_2]
         self.selectedLineup[position_2] = temp
 
     def reset(self, addSubs = True):
+        """
+        Reset the lineup to an empty state.
+        
+        Args:
+            addSubs (bool, optional): Whether to add substitute players after reset. Defaults to True.
+        """
+        
         self.lineupPitch.destroy()
         self.lineupPitch = FootballPitchLineup(self, 500, 675, 0, -0.02, "nw", TKINTER_BACKGROUND, "green")
 
@@ -520,6 +651,14 @@ class Lineup(ctk.CTkFrame):
         self.createChoosePlayerFrame()
 
     def checkSubstitute(self, checkBox, player):
+        """
+        Handle the selection or deselection of a substitute player.
+        
+        Args:
+            checkBox (ctk.CheckBox): The checkbox variable indicating selection.
+            player (Player): The player being checked or unchecked.
+        """
+        
         if checkBox.get() == 0:
             del self.substitutePlayers[self.substitutePlayers.index(player.id)]
             self.subCounter -= 1
@@ -545,10 +684,18 @@ class Lineup(ctk.CTkFrame):
                                 widget.disableCheckBox()
 
     def finishLineup(self):
+        """
+        Finalize the lineup and proceed to the matchday.
+        """
+        
         players = [Players.get_player_by_id(playerID) for playerID in self.players]
         MatchDay(self.mainMenu, self.selectedLineup, self.substitutePlayers, self.team, players)
 
     def lineupSettings(self):
+        """
+        Display the lineup settings frame for saving, loading, and managing lineups.
+        """
+        
         self.settingsFrame.place(relx = 0.5, rely = 0.4, anchor = "center")
         self.settingsFrame.lift()
 
@@ -567,6 +714,12 @@ class Lineup(ctk.CTkFrame):
         self.autoBox.set("Choose Lineup")
 
     def saveLineup(self, current = False):
+        """
+        Save the current lineup either as the current lineup or with a specified name.
+        
+        Args:
+            current (bool, optional): Whether to save as the current lineup. Defaults to False.
+        """
 
         if current:
             SavedLineups.add_current_lineup(self.selectedLineup)
@@ -589,6 +742,10 @@ class Lineup(ctk.CTkFrame):
             self.settingsFrame.place_forget()
 
     def loadLineup(self):
+        """
+        Load a saved lineup by name.
+        """
+        
         lineupName = self.loadBox.get()
         if lineupName and lineupName != "Choose Lineup":
             self.settingsFrame.place_forget()
@@ -598,6 +755,10 @@ class Lineup(ctk.CTkFrame):
             self.importLineup(loaded = chosenLineup)
 
     def autoLineup(self):
+        """
+        Automatically generate a lineup based on the selected formation.
+        """
+        
         lineupName = self.autoBox.get()
         if lineupName and lineupName != "Choose Lineup":
             self.settingsFrame.place_forget()
@@ -614,6 +775,13 @@ class Lineup(ctk.CTkFrame):
             self.importLineup(auto = lineup)
 
     def proposedLineup(self, lineup = None):
+        """
+        Activate the proposed lineup for the upcoming match.
+        
+        Args:
+            lineup (dict, optional): The proposed lineup to be set. Defaults to None.
+        """
+        
         if lineup is None:
             lineup = getProposedLineup(self.team.id, self.opponent.id, self.league.id, Game.get_game_date(self.manager_id))
             
@@ -624,6 +792,14 @@ class Lineup(ctk.CTkFrame):
 
 class Analysis(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
+        """
+        Initialize the Analysis frame to display opponent team analysis.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            manager_id (int): The manager ID for the current user.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -680,6 +856,10 @@ class Analysis(ctk.CTkFrame):
         self.lastMeetings()
 
     def best5Players(self):
+        """
+        Display the best 5 players of the opponent team over the last 5 games.
+        """
+
         ctk.CTkLabel(self.best5PlayersFrame, text = "Best players over the last 5 games", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
 
         last5lineups = [TeamLineup.get_lineup_by_match_and_team(match.id, self.opponent.id) for match in self.oppLast5Matches if match]
@@ -715,6 +895,13 @@ class Analysis(ctk.CTkFrame):
             ctk.CTkLabel(frame, text = f"{goals} / {assists}", font = (APP_FONT, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.85, rely = 0.5, anchor = "center")
 
     def getBest5Players(self, lineups):
+        """
+        Get the best 5 players based on average rating over the provided lineups.
+        
+        Args:
+            lineups (list): A list of TeamLineup objects.
+        """
+        
         players = {}
         for lineup in lineups:
             for player in lineup:
@@ -738,6 +925,11 @@ class Analysis(ctk.CTkFrame):
         return sorted_players[:5]
 
     def last5Form(self):
+        """
+        Display the last 5 matches form of the opponent team.
+        """
+        
+        
         ctk.CTkLabel(self.last5FormFrame, text = "Last games", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
 
         for i, match in enumerate(self.oppLast5Matches):
@@ -775,6 +967,10 @@ class Analysis(ctk.CTkFrame):
             ctk.CTkCanvas(frame, bg = colour, height = 10, width = 120, bd = 0, highlightthickness = 0).place(relx = 0.5, rely = 0.99, anchor = "s")
 
     def topStatPlayers(self):
+        """
+        Display the leading players in key statistics for the opponent team.
+        """
+        
         ctk.CTkLabel(self.topStatPlayersFrame, text = "Leading players", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
 
         stats = StatsManager.get_team_top_stats(self.opponent.id, 1)
@@ -798,6 +994,10 @@ class Analysis(ctk.CTkFrame):
             ctk.CTkLabel(frame, image = img, text = "", width = 50, height = 50, fg_color = DARK_GREY).place(relx = 0.5, rely = 0.3, anchor = "center")
 
     def predictedLineup(self):
+        """
+        Display the predicted lineup of the opponent team for the upcoming match.
+        """
+        
         ctk.CTkLabel(self.predictedLineupFrame, text = "Predicted lineup", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
 
         playersFrame = ctk.CTkFrame(self.predictedLineupFrame, fg_color = GREY_BACKGROUND, width = 160, height = 400)
@@ -820,6 +1020,10 @@ class Analysis(ctk.CTkFrame):
             PlayerProfileLink(frame, player, f"{player.first_name} {player.last_name}", "white", 0.24, 0.5, "w", GREY_BACKGROUND, self.parent, 12)
 
     def lastMeetings(self):
+        """
+        Display the last meetings between the opponent team and the user's team.
+        """
+        
         ctk.CTkLabel(self.lastMeetingsFrame, text = "Last meetings", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).pack(expand = True, fill = "x", pady = 5, anchor = "nw")
 
         lastMeetings = Matches.get_last_encounter(self.opponent.id, self.team.id)

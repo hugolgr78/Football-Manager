@@ -17,6 +17,18 @@ from CTkMessagebox import CTkMessagebox
 
 class MatchFrame(ctk.CTkFrame):
     def __init__(self, parent, manager_id, match, parentFrame, matchInfoFrame, parentTab):
+        """
+        Frame representing a single match, found in the schedule tab list form.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            manager_id (str): The ID of the manager.
+            match (Match): The match object.
+            parentFrame (ctk.CTkFrame): The frame where this match frame will be placed.
+            matchInfoFrame (ctk.CTkFrame): The frame to display match information.
+            parentTab (ctk.CTkFrame): The parent tab containing this frame.
+        """
+
         super().__init__(parentFrame, fg_color = TKINTER_BACKGROUND, width = 640, height = 50, corner_radius = 5)
         self.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
 
@@ -32,7 +44,6 @@ class MatchFrame(ctk.CTkFrame):
         self.parentTab = parentTab
 
         self.open = False
-        
         self.played = False
 
         self.homeTeam = Teams.get_team_by_id(self.match.home_id)
@@ -77,7 +88,7 @@ class MatchFrame(ctk.CTkFrame):
 
         self.played = Matches.check_game_played(self.match, Game.get_game_date(Managers.get_all_user_managers()[0].id))
         if self.played:
-
+            # If played, add the score and the result icon
             text = f"{self.match.score_home} - {self.match.score_away}" if self.home else f"{self.match.score_away} - {self.match.score_home}"
             self.score = ctk.CTkLabel(self, text = text, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
             self.score.place(relx = 0.73, rely = 0.5, anchor = "center")
@@ -104,6 +115,10 @@ class MatchFrame(ctk.CTkFrame):
             self.resultLabel.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
     def onFrameHover(self):
+        """
+        Changes the frame and text color on hover.
+        """
+        
         self.configure(fg_color = DARK_GREY)
         self.logo.getImageLabel().configure(fg_color = DARK_GREY)
         self.oponent.configure(fg_color = DARK_GREY)
@@ -117,6 +132,10 @@ class MatchFrame(ctk.CTkFrame):
             self.resultLabel.configure(fg_color = DARK_GREY)
 
     def onFrameLeave(self):
+        """
+        Changes the frame and text color back to normal when not hovering.
+        """
+
         self.configure(fg_color = TKINTER_BACKGROUND)
         self.logo.getImageLabel().configure(fg_color = TKINTER_BACKGROUND)
         self.oponent.configure(fg_color = TKINTER_BACKGROUND)
@@ -130,6 +149,9 @@ class MatchFrame(ctk.CTkFrame):
             self.resultLabel.configure(fg_color = TKINTER_BACKGROUND)
 
     def displayMatchInfo(self):
+        """
+        Displays detailed match information in the match info frame.
+        """
 
         if self.open:
             return
@@ -137,6 +159,7 @@ class MatchFrame(ctk.CTkFrame):
         self.open = True
 
         if hasattr(self.parent, "frames"):
+            # Checking if in list form or calendar form, as the calendar frame does not have frames attribute
             parentFrames = self.parent.frames
         else:
             parentFrames = self.parentTab.frames
@@ -150,15 +173,17 @@ class MatchFrame(ctk.CTkFrame):
 
         srcHome = Image.open(io.BytesIO(self.homeTeam.logo))
         srcHome.thumbnail((50, 50))
-        homeLogo = TeamLogo(self.scoreFrame, srcHome, self.homeTeam, DARK_GREY, 0.2, 0.5, "center", self.parentTab)
+        TeamLogo(self.scoreFrame, srcHome, self.homeTeam, DARK_GREY, 0.2, 0.5, "center", self.parentTab)
 
         srcAway = Image.open(io.BytesIO(self.awayTeam.logo))
         srcAway.thumbnail((50, 50))
-        awayLogo = TeamLogo(self.scoreFrame, srcAway, self.awayTeam, DARK_GREY, 0.8, 0.5, "center", self.parentTab)
+        TeamLogo(self.scoreFrame, srcAway, self.awayTeam, DARK_GREY, 0.8, 0.5, "center", self.parentTab)
 
         if self.played:
+            # Add the final score
             scoreLabel = MatchProfileLink(self.scoreFrame, self.match, f"{self.match.score_home} - {self.match.score_away}", "white", 0.5, 0.5, "center", DARK_GREY, self.parentTab, 30, APP_FONT_BOLD)
         else:
+            # Otherwise, show the match time
             _, _, time = format_datetime_split(self.match.date)
             scoreLabel = ctk.CTkLabel(self.scoreFrame, text = time, fg_color = DARK_GREY, font = (APP_FONT, 30))
             scoreLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
@@ -188,6 +213,7 @@ class MatchFrame(ctk.CTkFrame):
             self.awayLineup = TeamLineup.get_lineup_by_match_and_team(self.match.id, self.awayTeam.id)
 
             if (max(len(self.homeLineup), len(self.awayLineup)) * 15) + (max(len(self.homeEvents), len(self.awayEvents)) * 30) > 410:
+                # Create a scrollable frame if the content is too large
                 self.eventsAndLineupsFrame = ctk.CTkScrollableFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 235, height = 420, corner_radius = 10)
                 self.eventsAndLineupsFrame.place(relx = 0.5, rely = 0.203, anchor = "n")
             else:
@@ -204,6 +230,9 @@ class MatchFrame(ctk.CTkFrame):
             self.lineups()
 
     def matchEvents(self):
+        """
+        Displays match events in the match info frame.
+        """
 
         self.matchEventsFrame = ctk.CTkFrame(self.eventsAndLineupsFrame, fg_color = DARK_GREY, width = 235, height = max(len(self.homeEvents), len(self.awayEvents)) * 30)
         self.matchEventsFrame.pack(fill = "both", pady = 5)
@@ -223,6 +252,10 @@ class MatchFrame(ctk.CTkFrame):
             self.addEvent(event, False, self.awayEventsFrame)
 
     def addEvent(self, event, home, parent):
+        """
+        Adds a single event to the match events frame.
+        """
+
         frame = ctk.CTkFrame(parent, fg_color = DARK_GREY, height = 30)
         frame.pack(fill = "x", expand = True)
 
@@ -264,6 +297,10 @@ class MatchFrame(ctk.CTkFrame):
             ctk.CTkLabel(frame, image = ctk_image, text = "", fg_color = DARK_GREY).place(relx = 0.05, rely = 0.5, anchor = "w")
 
     def lineups(self):
+        """
+        Adds the lineups to the match info frame.
+        """
+
         self.lineupFrame = ctk.CTkFrame(self.eventsAndLineupsFrame, fg_color = DARK_GREY, width = 235, height = max(len(self.homeLineup), len(self.awayLineup)) * 15)
         self.lineupFrame.grid_columnconfigure((1, 2), weight = 1)
         self.lineupFrame.grid_columnconfigure((0, 3), weight = 4)
@@ -296,6 +333,19 @@ class MatchFrame(ctk.CTkFrame):
 
 class CalendarFrame(ctk.CTkFrame):
     def __init__(self, parent, matches, parentFrame, parentTab, matchInfoFrame, teamID, managingTeam = False):
+        """
+        Calendar frame to display matches in a calendar format, found in the schedule tab calendar form.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            matches (list): List of Match objects.
+            parentFrame (ctk.CTkFrame): The frame where this calendar frame will be placed.
+            parentTab (ctk.CTkFrame): The parent tab containing this frame.
+            matchInfoFrame (ctk.CTkFrame): The frame to display match information.
+            teamID (str): The ID of the team.
+            managingTeam (bool): Whether the user is managing the team.
+        """
+
         super().__init__(parentFrame, fg_color = TKINTER_BACKGROUND, width = 670, height = 590)
 
         self.matches = matches
@@ -318,7 +368,6 @@ class CalendarFrame(ctk.CTkFrame):
             self.startYear = self.currDate.year
         else:
             self.startYear = self.currDate.year - 1
-
         self.currIndex = self.months.index(calendar.month_name[self.startMonth])
 
         self.switchFrameLeft = ctk.CTkButton(self, fg_color = GREY_BACKGROUND, width = 30, height = 30, text = "<", command = lambda: self.changeMonth(-1))
@@ -336,6 +385,7 @@ class CalendarFrame(ctk.CTkFrame):
 
         self.daysLabelFrame.grid_columnconfigure((0, 1, 2, 3, 4, 5, 6), weight = 1)
 
+        # Create day labels 
         days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         for day in days:
             ctk.CTkLabel(self.daysLabelFrame, text = day, fg_color = TKINTER_BACKGROUND, font = (APP_FONT_BOLD, 12), width = 50).grid(row = 0, column = days.index(day), padx = 5, pady = 5)
@@ -343,9 +393,17 @@ class CalendarFrame(ctk.CTkFrame):
         self.createCalendarMonth()
 
     def changeMonth(self, delta):
+        """
+        Changes the displayed month in the calendar.
+
+        Args:
+            delta (int): The change in month index (-1 for previous month, +1 for next month).
+        """
+
         self.calendarFrames[self.currIndex].place_forget()
         self.currIndex = (self.currIndex + delta) % len(self.months)
 
+        # If the frame for the new month does not exist, create it
         if not self.calendarFrames[self.currIndex]:
             self.createCalendarMonth()
         else:
@@ -356,6 +414,10 @@ class CalendarFrame(ctk.CTkFrame):
             self.monthLabel.configure(text = f"{month} {year}")   
 
     def createCalendarMonth(self):
+        """
+        Creates the calendar view for the current month.
+        """
+        
         frame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 670, height = 500, corner_radius = 0)
 
         month = self.months[self.currIndex]
@@ -401,10 +463,13 @@ class CalendarFrame(ctk.CTkFrame):
                         break
                 
                 if matchObj:
+                    # If matchDay, create a match frame
                     CalendarMatchFrame(self, self.parentTab, frame, matchObj, day_num, self.teamID, 150, 150, TKINTER_BACKGROUND, 0, border_color, 1, row, col, 5, 5, "nsew", len(numRows), matchInfoFrame = self.matchInfoFrame)
                 elif self.managingTeam:
+                    # Otherwise, create a normal calendar event frame
                     CalendarEventFrame(self, frame, day_num, date, self.teamID, 150, 150, TKINTER_BACKGROUND, 0, border_color, 1, row, col, 5, 5, "nsew", matchInfoFrame = self.matchInfoFrame, today = today)
                 else:
+                    # Empty day cell for other teams
                     cell = ctk.CTkFrame(frame, fg_color = TKINTER_BACKGROUND, width = 150, height = 150, corner_radius = 0, border_width = 1, border_color = border_color)
                     cell.grid(row = row, column = col, padx = 5, pady = 5, sticky = "nsew")
                     ctk.CTkLabel(cell, text = str(day_num), font = (APP_FONT_BOLD, 12), height = 0).place(relx = 0.05, rely = 0.05, anchor = "nw")
@@ -416,6 +481,31 @@ class CalendarFrame(ctk.CTkFrame):
 
 class CalendarMatchFrame(ctk.CTkFrame):
     def __init__(self, parent, parentTab, parentFrame, match, day, teamID, width, heigth, fgColor, corner_radius, border_color, border_width, row, col, padx, pady, sticky, numRows, matchInfoFrame = None):
+        """
+        Match frame in the calendar view, found in the calendar tab (match days).
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            parentTab (ctk.CTkFrame): The parent tab containing this frame.
+            parentFrame (ctk.CTkFrame): The frame where this match frame will be placed.
+            match (Match): The match object.
+            day (int): The day of the month.
+            teamID (str): The ID of the team.
+            width (int): The width of the frame.
+            heigth (int): The height of the frame.
+            fgColor (str): The foreground color of the frame.
+            corner_radius (int): The corner radius of the frame.
+            border_color (str): The border color of the frame.
+            border_width (int): The border width of the frame.
+            row (int): The row position in the grid.
+            col (int): The column position in the grid.
+            padx (int): The padding in x direction.
+            pady (int): The padding in y direction.
+            sticky (str): The sticky option for grid placement.
+            numRows (int): The number of rows in the calendar month.
+            matchInfoFrame (ctk.CTkFrame): The frame to display match information.
+        """
+
         super().__init__(parentFrame, fg_color = fgColor, width = width, height = heigth, corner_radius = corner_radius, border_width = border_width, border_color = border_color)
         self.grid(row = row, column = col, padx = padx, pady = pady, sticky = sticky)
         
@@ -464,6 +554,10 @@ class CalendarMatchFrame(ctk.CTkFrame):
             self.bind("<Leave>", lambda event: self.onLeaveCell())
 
     def onHoverCell(self):
+        """
+        Changes the cell and text color on hover.
+        """
+        
         self.configure(cursor = "hand2")
         self.configure(fg_color = DARK_GREY)
 
@@ -474,6 +568,10 @@ class CalendarMatchFrame(ctk.CTkFrame):
                 child.configure(fg_color = DARK_GREY)
 
     def onLeaveCell(self):
+        """
+        Changes the cell and text color back to normal when not hovering.
+        """
+        
         self.configure(cursor = "")
         self.configure(fg_color = TKINTER_BACKGROUND)
 
@@ -484,6 +582,9 @@ class CalendarMatchFrame(ctk.CTkFrame):
                 child.configure(fg_color = TKINTER_BACKGROUND)
 
     def displayMatchInfo(self):
+        """
+        Displays detailed match information in the match info frame.
+        """
 
         if self.parent.choosingEvent or self.parent.activeMatch == self.match.id:
             return
@@ -503,11 +604,11 @@ class CalendarMatchFrame(ctk.CTkFrame):
 
         srcHome = Image.open(io.BytesIO(self.homeTeam.logo))
         srcHome.thumbnail((50, 50))
-        homeLogo = TeamLogo(self.scoreFrame, srcHome, self.homeTeam, DARK_GREY, 0.2, 0.5, "center", self.parentTab)
+        TeamLogo(self.scoreFrame, srcHome, self.homeTeam, DARK_GREY, 0.2, 0.5, "center", self.parentTab)
 
         srcAway = Image.open(io.BytesIO(self.awayTeam.logo))
         srcAway.thumbnail((50, 50))
-        awayLogo = TeamLogo(self.scoreFrame, srcAway, self.awayTeam, DARK_GREY, 0.8, 0.5, "center", self.parentTab)
+        TeamLogo(self.scoreFrame, srcAway, self.awayTeam, DARK_GREY, 0.8, 0.5, "center", self.parentTab)
 
         if self.played:
             scoreLabel = MatchProfileLink(self.scoreFrame, self.match, f"{self.match.score_home} - {self.match.score_away}", "white", 0.5, 0.5, "center", DARK_GREY, self.parentTab, 30, APP_FONT_BOLD)
@@ -557,6 +658,9 @@ class CalendarMatchFrame(ctk.CTkFrame):
             self.lineups()
 
     def matchEvents(self):
+        """
+        Displays match events in the match info frame.
+        """
 
         self.matchEventsFrame = ctk.CTkFrame(self.eventsAndLineupsFrame, fg_color = DARK_GREY, width = 235, height = max(len(self.homeEvents), len(self.awayEvents)) * 30)
         self.matchEventsFrame.pack(fill = "both", pady = 5)
@@ -576,6 +680,10 @@ class CalendarMatchFrame(ctk.CTkFrame):
             self.addEvent(event, False, self.awayEventsFrame)
 
     def addEvent(self, event, home, parent):
+        """
+        Adds a single event to the match events frame.
+        """
+        
         frame = ctk.CTkFrame(parent, fg_color = DARK_GREY, height = 30)
         frame.pack(fill = "x", expand = True)
 
@@ -617,6 +725,10 @@ class CalendarMatchFrame(ctk.CTkFrame):
             ctk.CTkLabel(frame, image = ctk_image, text = "", fg_color = DARK_GREY).place(relx = 0.05, rely = 0.5, anchor = "w")
 
     def lineups(self):
+        """
+        Adds the lineups to the match info frame.
+        """
+        
         self.lineupFrame = ctk.CTkFrame(self.eventsAndLineupsFrame, fg_color = DARK_GREY, width = 235, height = max(len(self.homeLineup), len(self.awayLineup)) * 15)
         self.lineupFrame.grid_columnconfigure((1, 2), weight = 1)
         self.lineupFrame.grid_columnconfigure((0, 3), weight = 4)
@@ -649,6 +761,31 @@ class CalendarMatchFrame(ctk.CTkFrame):
 
 class CalendarEventFrame(ctk.CTkFrame):
     def __init__(self, parent, parentFrame, day, date, teamID, width, height, fgColor, corner_radius, border_color, border_width, row, col, padx, pady, sticky, matchInfoFrame = None, today = None, interactive = True):
+        """
+        Event frame in the calendar view, found in the calendar view of the schedule tab (non-match days).
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            parentFrame (ctk.CTkFrame): The frame where this event frame will be placed.
+            day (int): The day of the month.
+            date (datetime): The date of the event.
+            teamID (str): The ID of the team.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            fgColor (str): The foreground color of the frame.
+            corner_radius (int): The corner radius of the frame.
+            border_color (str): The border color of the frame.
+            border_width (int): The border width of the frame.
+            row (int): The row position in the grid.
+            col (int): The column position in the grid.
+            padx (int): The padding in x direction.
+            pady (int): The padding in y direction.
+            sticky (str): The sticky option for grid placement.
+            matchInfoFrame (ctk.CTkFrame): The frame to display match information.
+            today (date): The current date.
+            interactive (bool): Whether the cell is interactive.
+        """
+
         super().__init__(parentFrame, fg_color = fgColor, corner_radius = corner_radius, border_color = border_color, border_width = border_width, width = width, height = height)
         self.grid(row = row, column = col, padx = padx, pady = pady, sticky = sticky)
         
@@ -669,8 +806,8 @@ class CalendarEventFrame(ctk.CTkFrame):
 
         savedEvents = CalendarEvents.get_events_dates(self.teamID, self.date, self.date.replace(hour = 23), get_finished = True)
 
+        # Check if the cell should be interactive
         add = (not today or today <= self.date.date() < today + timedelta(weeks = 2)) and interactive
-
         if add:
             bindings = [
                 ("<Enter>", lambda e: self.onHoverCell()),
@@ -691,6 +828,10 @@ class CalendarEventFrame(ctk.CTkFrame):
                 self.addSmallEventFrame(event.event_type, i, bind = False)
 
     def onHoverCell(self):
+        """
+        Changes the cell and text color on hover.
+        """
+        
         self.configure(cursor = "hand2")
         self.configure(fg_color = DARK_GREY)
 
@@ -701,6 +842,10 @@ class CalendarEventFrame(ctk.CTkFrame):
                 child.configure(fg_color = DARK_GREY)
 
     def onLeaveCell(self):
+        """
+        Changes the cell and text color back to normal when not hovering.
+        """
+        
         self.configure(cursor = "")
         self.configure(fg_color = TKINTER_BACKGROUND)
 
@@ -711,6 +856,9 @@ class CalendarEventFrame(ctk.CTkFrame):
                 child.configure(fg_color = TKINTER_BACKGROUND)
 
     def setCalendarEvents(self):
+        """
+        Displays the calendar events for the selected day.
+        """
 
         if self.parent.choosingEvent or self.parent.activeEventDate == self.date:
             return
@@ -732,6 +880,7 @@ class CalendarEventFrame(ctk.CTkFrame):
                 if isinstance(cell, CalendarEventFrame) and cell != self:
                     cell.configure(border_color = "white")
 
+        # Differentiate between interaction in schedule or interaction from the email
         if self.matchInfoFrame:
             self.dayEventsFrame = ctk.CTkFrame(self.matchInfoFrame, fg_color = DARK_GREY, width = 260, height = 545, corner_radius = 10)
             self.dayEventsFrame.place(relx = 0.5, rely = 0.02, anchor = "n")
@@ -806,6 +955,7 @@ class CalendarEventFrame(ctk.CTkFrame):
         okButton = ctk.CTkButton(self.dayEventsFrame, text = "OK", command = self.confirmEvents, anchor = "center", height = okButtonHeight, width = okButtonWidth, fg_color = APP_BLUE, hover_color = APP_BLUE, font = (APP_FONT, 15))
         okButton.place(relx = okButtonX, rely = okButtonY, anchor = "s")
 
+        # Add the saved events to the buttons if they exist
         savedEvents = CalendarEvents.get_events_dates(self.teamID, self.date, self.date.replace(hour = 23), get_finished = True)
         times = [10, 14, 17]
         if len(savedEvents) > 0:
@@ -822,6 +972,9 @@ class CalendarEventFrame(ctk.CTkFrame):
                 self.eventButtons[i].configure(text = eventText, fg_color = EVENT_COLOURS[eventText], hover_color = EVENT_COLOURS[eventText], border_width = 0, font = self.buttonFont)
 
     def addCalendarEvent(self, timeOfDay):
+        """
+        Opens the event selection frame for the specified time of day.
+        """
 
         if self.parent.choosingEvent or self.chosenEvents[timeOfDay] == "Travel":
             return
@@ -846,6 +999,7 @@ class CalendarEventFrame(ctk.CTkFrame):
             button.place(relx = 0.02, rely = 0.2 + (i * gap), anchor = "w")
 
             if eventType in self.currEvents.keys():
+                # Calculate remaining available events
                 text = MAX_EVENTS[eventType] - self.currEvents[eventType]
 
                 if text == 0:
@@ -856,6 +1010,7 @@ class CalendarEventFrame(ctk.CTkFrame):
             
             ctk.CTkLabel(self.eventsChooseFrame, text = text, fg_color = DARK_GREY, font = (APP_FONT, 12)).place(relx = 0.8, rely = 0.2 + (i * gap), anchor = "center")
 
+        # Add Match Preparation/Review buttons if applicable
         if self.gameTommorrow or self.gameYesterday:
             if self.gameTommorrow:
                 button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS["Match Preparation"], hover_color = EVENT_COLOURS["Match Preparation"], width = 250, height = buttonHeight, corner_radius = 5, text = "Match Preparation", font = (APP_FONT, 15), anchor = "w", command = lambda: self.closeEventsChooseFrame("Match Preparation", timeOfDay))
@@ -886,10 +1041,18 @@ class CalendarEventFrame(ctk.CTkFrame):
             self.addRestButton(len(MAX_EVENTS), gap, buttonHeight, timeOfDay)
 
     def addRestButton(self, lenEvents, gap, buttonHeight, timeOfDay):
+        """
+        Adds the rest button to the event selection frame.
+        """
+
         button = ctk.CTkButton(self.eventsChooseFrame, fg_color = EVENT_COLOURS["Rest"], hover_color = EVENT_COLOURS["Rest"], width = 250, height = buttonHeight, corner_radius = 5, text = "Rest", font = (APP_FONT, 15), anchor = "w", command = lambda: self.closeEventsChooseFrame("Rest", timeOfDay))
         button.place(relx = 0.02, rely = 0.2 + (lenEvents * gap), anchor = "w")
 
     def closeEventsChooseFrame(self, event = None, timeOfDay = None):
+        """
+        Closes the event selection frame and updates the chosen event.
+        """
+        
         self.eventsChooseFrame.place_forget()
         self.parent.choosingEvent = False
 
@@ -913,6 +1076,10 @@ class CalendarEventFrame(ctk.CTkFrame):
             button.configure(text = event, fg_color = EVENT_COLOURS[event], hover_color = EVENT_COLOURS[event], border_width = 0, font = self.buttonFont)
 
     def confirmEvents(self):
+        """
+        Confirms the chosen events and saves them to the database.
+        """
+        
         for widget in self.winfo_children():
             if isinstance(widget, ctk.CTkFrame):
                 widget.destroy()
@@ -941,6 +1108,10 @@ class CalendarEventFrame(ctk.CTkFrame):
             count += 1
 
     def addSmallEventFrame(self, event, count, bind = True):
+        """
+        Adds a small colored frame to the calendar cell.
+        """
+        
         frame = ctk.CTkFrame(self, fg_color = EVENT_COLOURS[event], width = 75, height = 15, corner_radius = 5)
         frame.place(relx = 0.5, rely = 0.3 + (count * 0.2), anchor = "n")
 
@@ -950,6 +1121,24 @@ class CalendarEventFrame(ctk.CTkFrame):
 
 class MatchdayFrame(ctk.CTkFrame):
     def __init__(self, parent, matchday, matchdayNum, currentMatchday, parentFrame, parentTab, width, heigth, fgColor, relx, rely, anchor):
+        """
+        Matchday frame displaying all matches for a specific matchday for a league, found in league profiles
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            matchday (list): List of Match objects for the matchday.
+            matchdayNum (int): The matchday number.
+            currentMatchday (int): The current matchday number.
+            parentFrame (ctk.CTkFrame): The frame where this matchday frame will be placed.
+            parentTab (ctk.CTkFrame): The tab where this matchday frame is located.
+            width (int): The width of the frame.
+            heigth (int): The height of the frame.
+            fgColor (str): The foreground color of the frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+        """
+
         super().__init__(parent, fg_color = fgColor, width = width, height = heigth, corner_radius = 15)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -964,6 +1153,7 @@ class MatchdayFrame(ctk.CTkFrame):
         self.rely = rely
         self.anchor = anchor
         
+        # Display matchday information (playoffs if matchdayNum is 39)
         if self.matchdayNum != 39:
             ctk.CTkLabel(self, text = f"Matchday {self.matchdayNum}", fg_color = fgColor, font = (APP_FONT_BOLD, 30)).place(relx = 0.5, rely = 0.05, anchor = "center")
         else:
@@ -1014,6 +1204,7 @@ class MatchdayFrame(ctk.CTkFrame):
                 TeamLogo(self, awaySrc, awayTeam, fgColor, 0.6, startY + gap * index, "center", self.parentTab)
                 ctk.CTkLabel(self, text = awayTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
             else:
+                # PlayOffs
                 if i == 0:
                     ctk.CTkLabel(self, text = "6th Place", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
                 elif i == 1:
@@ -1028,10 +1219,28 @@ class MatchdayFrame(ctk.CTkFrame):
                 ctk.CTkLabel(self, text = time, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.5, rely = startY + gap * index, anchor = "center")
 
     def placeFrame(self):
+        """
+        Places the matchday frame at its specified position.
+        """
+        
         self.place(relx = self.relx, rely = self.rely, anchor = self.anchor)
 
 class PlayerFrame(ctk.CTkFrame):
     def __init__(self, parent, manager_id, player, parentFrame, caStars, paStars, teamSquad = True, talkFunction = None):
+        """
+        Frame representing a player with their details, found in the squad.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            manager_id (str): The ID of the manager.
+            player (Player): The player object.
+            parentFrame (ctk.CTkFrame): The frame where this player frame will be placed.
+            caStars (int): Current ability stars.
+            paStars (int): Potential ability stars.
+            teamSquad (bool): Whether the player is in the team squad.
+            talkFunction (function): Function to call when the talk button is pressed.
+        """
+
         super().__init__(parentFrame, fg_color = TKINTER_BACKGROUND, width = 982, height = 50, corner_radius = 5)
         self.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
 
@@ -1122,6 +1331,10 @@ class PlayerFrame(ctk.CTkFrame):
                 self.talkButton.configure(state = "disabled")
 
     def onFrameHover(self):
+        """
+        Changes the frame color on hover.
+        """
+        
         self.configure(fg_color = DARK_GREY)
         self.playerNumber.configure(fg_color = DARK_GREY)
         self.playerName.configure(fg_color = DARK_GREY)
@@ -1137,16 +1350,28 @@ class PlayerFrame(ctk.CTkFrame):
             self.talkButton.configure(fg_color = DARK_GREY)
 
     def onSliderHover(self):
+        """
+        Adds a label showing the morale percentage when hovering over the slider.
+        """
+
         self.onFrameHover()
 
         self.moraleLabel = ctk.CTkLabel(self, text = f"{self.moraleSlider.get()}%", fg_color = DARK_GREY, width = 5, height = 5)
         self.moraleLabel.place(relx = 0.75, rely = 0.5, anchor = "center")
 
     def onSliderLeave(self):
+        """
+        Removes the morale percentage label when not hovering over the slider.
+        """
+        
         self.onFrameHover()
         self.moraleLabel.place_forget()
 
     def onFrameLeave(self):
+        """
+        Resets the frame color when not hovering.
+        """
+        
         self.configure(fg_color = TKINTER_BACKGROUND)
         self.playerNumber.configure(fg_color = TKINTER_BACKGROUND)
         self.playerName.configure(fg_color = TKINTER_BACKGROUND)
@@ -1162,12 +1387,27 @@ class PlayerFrame(ctk.CTkFrame):
             self.talkButton.configure(fg_color = TKINTER_BACKGROUND)
 
     def disableTalkButton(self):
+        """
+        Disables the talk button.
+        """
+        
         self.talkButton.configure(state = "disabled")
 
     def enableTalkButton(self):
+        """
+        Enables the talk button.
+        """
+        
         self.talkButton.configure(state = "normal")
 
     def updateMorale(self, moraleChange):
+        """
+        Updates the player's morale slider by the specified change amount.
+
+        Args:
+            moraleChange (int): The amount to change the morale by.
+        """
+        
         currMorale = self.moraleSlider.get()
         newMorale = currMorale + moraleChange
 
@@ -1182,6 +1422,9 @@ class PlayerFrame(ctk.CTkFrame):
         self.moraleSlider.configure(progress_color = PROGRESS_COLOR, button_color = PROGRESS_COLOR)
 
     def addStat(self):
+        """
+        Adds the selected statistic to the stat frame.
+        """
 
         for widget in self.statFrame.winfo_children():
             widget.destroy()
@@ -1284,6 +1527,24 @@ class PlayerFrame(ctk.CTkFrame):
 
 class LeagueTableScrollable(ctk.CTkScrollableFrame):
     def __init__(self, parent, height, width, x, y, fg_color, scrollbar_button_color, scrollbar_button_hover_color, anchor, textColor = "white", small = False, highlightManaged = False):
+        """
+        Scrollable frame representing a league table with team statistics, found in the hub.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            height (int): The height of the frame.
+            width (int): The width of the frame.
+            x (float): The relative x position for placing the frame.
+            y (float): The relative y position for placing the frame.
+            fg_color (str): The foreground color of the frame.
+            scrollbar_button_color (str): The color of the scrollbar button.
+            scrollbar_button_hover_color (str): The hover color of the scrollbar button.
+            anchor (str): The anchor position for placing the frame.
+            textColor (str): The text color for labels.
+            small (bool): Whether to use a compact layout.
+            highlightManaged (bool): Whether to highlight the managed team.
+        """
+
         super().__init__(parent, fg_color = fg_color, width = width, height = height, corner_radius = 0, scrollbar_button_color = scrollbar_button_color, scrollbar_button_hover_color = scrollbar_button_hover_color)
         self.place(relx = x, rely = y, anchor = anchor)
 
@@ -1297,12 +1558,14 @@ class LeagueTableScrollable(ctk.CTkScrollableFrame):
         self.grid_columnconfigure(1, weight = 4)
         self.grid_rowconfigure((0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23), weight = 1)
         if self.small:
+            # Small only has goal difference and points as extra data
             self.grid_columnconfigure(2, weight = 10)
             self.grid_columnconfigure((3, 4, 5), weight = 1)
 
             ctk.CTkLabel(self, text = "GD", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 4, pady = (5, 0))
             ctk.CTkLabel(self, text = "P", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5, width = 5).grid(row = 0, column = 5, pady = (5, 0))
         else:
+            # Otherwise all extra data
             self.grid_columnconfigure((2, 3, 4, 5, 6, 7, 8, 9, 10), weight = 1)
             self.grid_propagate(False)
 
@@ -1319,11 +1582,21 @@ class LeagueTableScrollable(ctk.CTkScrollableFrame):
         ctk.CTkLabel(self, text = "GP", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 3, pady = (5, 0))
 
     def defineManager(self, manager_id):
+        """
+        Defines the manager for whom the league table is being displayed.
+
+        Args:
+            manager_id (str): The ID of the manager.
+        """
+        
         self.manager_id = manager_id
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.league = LeagueTeams.get_league_by_team(self.team.id)
 
     def addLeagueTable(self):
+        """
+        Populates the league table with team statistics.
+        """
 
         teamsData = LeagueTeams.get_teams_by_position(self.league.league_id)
 
@@ -1357,6 +1630,23 @@ class LeagueTableScrollable(ctk.CTkScrollableFrame):
 
 class LeagueTable(ctk.CTkFrame):
     def __init__(self, parent, height, width, x, y, fg_color, anchor, textColor = "white", small = False, highlightManaged = False, corner_radius = 0):
+        """
+        Frame representing a league table with team statistics, found in the league tab and start menu.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            height (int): The height of the frame.
+            width (int): The width of the frame.
+            x (float): The relative x position for placing the frame.
+            y (float): The relative y position for placing the frame.
+            fg_color (str): The foreground color of the frame.
+            anchor (str): The anchor position for placing the frame.
+            textColor (str): The text color for labels.
+            small (bool): Whether to use a compact layout.
+            highlightManaged (bool): Whether to highlight the managed team.
+            corner_radius (int): The corner radius of the frame.
+        """
+
         super().__init__(parent, fg_color = fg_color, width = width, height = height, corner_radius = corner_radius)
         self.place(relx = x, rely = y, anchor = anchor)
 
@@ -1402,6 +1692,14 @@ class LeagueTable(ctk.CTkFrame):
         self.grid_propagate(False)
 
     def defineManager(self, manager_id, managingLeague = True):
+        """
+        Defines the manager for whom the league table is being displayed.
+
+        Args:
+            manager_id (str): The ID of the manager.    
+            managingLeague (bool): Whether the manager is managing the league being displayed.
+        """
+        
         self.manager_id = manager_id
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.league = LeagueTeams.get_league_by_team(self.team.id)
@@ -1411,6 +1709,9 @@ class LeagueTable(ctk.CTkFrame):
         self.div1 = self.leagueData.league_above is None
 
     def addLeagueTable(self):
+        """
+        Populates the league table with team statistics.
+        """
 
         teamsData = LeagueTeams.get_teams_by_position(self.league.league_id)
 
@@ -1458,12 +1759,34 @@ class LeagueTable(ctk.CTkFrame):
                 ctk.CTkLabel(self, text = team.points, fg_color = self.fgColor, text_color = self.textColor, height = 5, font = font).grid(row = i + 1, column = 11)
 
     def clearTable(self):
+        """
+        Clears the league table of all team statistics.
+        """
+        
         for widget in self.winfo_children():
             if widget.grid_info()["row"] > 0:
                 widget.destroy()
 
 class next5Matches(ctk.CTkFrame):
     def __init__(self, parent, manager_id, fg_color, width, height, frameHeight, relx, rely, anchor, textY, parentTab, corner_radius = 0):
+        """
+        Frame displaying the next 5 matches for a team managed by the specified manager, found in the hub and team profiles.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            manager_id (str): The ID of the manager.
+            fg_color (str): The foreground color of the frame.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            frameHeight (int): The height of each match frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+            textY (float): The relative y position for team name labels within match frames.
+            parentTab (ctk.CTkFrame): The parent tab frame for team logos.
+            corner_radius (int): The corner radius of the frame.
+        """
+        
         super().__init__(parent, fg_color = fg_color, width = width, height = height, corner_radius = corner_radius)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -1482,6 +1805,9 @@ class next5Matches(ctk.CTkFrame):
         self.league = LeagueTeams.get_league_by_team(self.team.id)
 
     def showNext5Matches(self):
+        """
+        Displays the next 5 matches for the team.
+        """
 
         next5 = Matches.get_team_next_5_matches(self.team.id, Game.get_game_date(Managers.get_all_user_managers()[0].id))
 
@@ -1511,6 +1837,21 @@ class next5Matches(ctk.CTkFrame):
 
 class WinRatePieChart(ctk.CTkCanvas):
     def __init__(self, parent, gamesPlayed, gamesWon, gamesLost, figSize, fgColor, relx, rely, anchor):
+        """
+        Frame displaying a pie chart representing win, loss, and draw rates, found in the start menu and manager profile.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            gamesPlayed (int): The total number of games played.
+            gamesWon (int): The number of games won.
+            gamesLost (int): The number of games lost.
+            figSize (tuple): The size of the figure.
+            fgColor (str): The foreground color of the frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+        """
+
         super().__init__(parent) 
 
         if gamesPlayed == 0:
@@ -1548,6 +1889,22 @@ class WinRatePieChart(ctk.CTkCanvas):
 
 class TrophiesFrame(ctk.CTkFrame):
     def __init__(self, parent, id_, fg_color, width, height, corner_radius, relx, rely, anchor, team = True):
+        """
+        Frame displaying the trophies won by a team, found in team profiles.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            id_ (str): The ID of the team.
+            fg_color (str): The foreground color of the frame.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            corner_radius (int): The corner radius of the frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+            team (bool): Whether the ID is for a team (True) or a manager (False).
+        """
+
         super().__init__(parent, fg_color = fg_color, width = width, height = height, corner_radius = corner_radius)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -1581,23 +1938,44 @@ class TrophiesFrame(ctk.CTkFrame):
                 ctk.CTkLabel(self, text = f"{self.formatYears(self.comps[competition]['years'])}", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND).place(relx = 0.1, rely = 0.45, anchor = "w")
 
     def formatYears(self, years):
+        """
+        Formats a string of years into a more readable format.
+        """
+        
         years = years.split(",")
         return " - ".join(years) 
     
 class FootballPitchHorizontal(ctk.CTkFrame):
-    def __init__(self, parent, width, heigth, relx, rely, anchor, fgColor):
-        super().__init__(parent, width = width, height = heigth, fg_color = fgColor)
+    def __init__(self, parent, width, height, relx, rely, anchor, fgColor):
+        """
+        Frame representing a horizontal football pitch, found in player profiles
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+            fgColor (str): The foreground color of the frame.
+        """
+
+        super().__init__(parent, width = width, height = height, fg_color = fgColor)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
         # Adjustable pitch dimensions (Horizontal)
         self.pitch_width = width  # Width of the pitch in pixels (horizontal)
-        self.pitch_height = heigth  # Height of the pitch in pixels (vertical)
+        self.pitch_height = height  # Height of the pitch in pixels (vertical)
 
         # Canvas to draw the pitch
         self.canvas = ctk.CTkCanvas(self, width = self.pitch_width, height = self.pitch_height, bg = fgColor)
         self.canvas.pack()
 
     def draw_pitch(self):
+        """
+        Draws the football pitch on the canvas.
+        """
+        
         # Draw center circle
         center_x = self.pitch_width / 2
         center_y = self.pitch_height / 2
@@ -1614,6 +1992,20 @@ class FootballPitchHorizontal(ctk.CTkFrame):
 
 class FootballPitchVertical(ctk.CTkFrame):
     def __init__(self, parent, width, height, relx, rely, anchor, fgColor, pitchColor):
+        """
+        Frame representing a vertical football pitch, found in the tactics tab, emails, match profiles and in-game.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+            fgColor (str): The foreground color of the frame.
+            pitchColor (str): The color of the pitch.
+        """
+
         super().__init__(parent, width = width - 50, height = height - 100, fg_color = fgColor)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -1627,8 +2019,11 @@ class FootballPitchVertical(ctk.CTkFrame):
         self.draw_pitch()
 
     def draw_pitch(self):
+        """
+        Draws the football pitch on the canvas.
+        """
 
-         # Draw center circle
+        # Draw center circle
         center_x = self.pitch_width / 2
         center_y = self.pitch_height / 2
         self.canvas.create_oval(center_x - 50, center_y - 50, center_x + 50, center_y + 50, outline = "white", width = 2)
@@ -1643,11 +2038,28 @@ class FootballPitchVertical(ctk.CTkFrame):
         self.canvas.create_rectangle(self.pitch_width * (7/18), self.pitch_height - self.pitch_height * (7/135), self.pitch_width * (11/18), self.pitch_height + 5, outline = "white", width = 2)
 
 class FootballPitchPlayerPos(FootballPitchHorizontal):
-    def __init__(self, parent, width, heigth, relx, rely, anchor, fgColor):
-        super().__init__(parent, width, heigth, relx, rely, anchor, fgColor)
+    def __init__(self, parent, width, height, relx, rely, anchor, fgColor):
+        """
+        Frame representing a horizontal football pitch with player positions, found in player profiles.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+            fgColor (str): The foreground color of the frame.
+        """
+        
+        super().__init__(parent, width, height, relx, rely, anchor, fgColor)
         super().draw_pitch()
 
     def add_player_positions(self, highlighted_positions):
+        """
+        Adds player position circles to the pitch, highlighting specified positions.
+        """
+        
         # Define player positions in the form (x, y) with labels for each position
         player_positions = {
             "GK": (25, self.pitch_height / 2),  # Goalkeeper at the far left
@@ -1680,6 +2092,20 @@ class FootballPitchPlayerPos(FootballPitchHorizontal):
 
 class FootballPitchLineup(FootballPitchVertical):
     def __init__(self, parent, width, height, relx, rely, anchor, fgColor, pitchColor):
+        """
+        Football pitch frame for displaying player lineups with drop zones, found in the tactics tab and in-game for substitutions
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+            fgColor (str): The foreground color of the frame.
+            pitchColor (str): The color of the pitch.
+        """
+       
         super().__init__(parent, width, height, relx, rely, anchor, fgColor, pitchColor)
         super().draw_pitch()
 
@@ -1692,6 +2118,10 @@ class FootballPitchLineup(FootballPitchVertical):
         self.create_drop_zones()
 
     def create_drop_zones(self):
+        """
+        Creates drop zones on the pitch for player positions.
+        """
+        
         for pos, pitch_pos in POSITIONS_PITCH_POSITIONS.items():
             zone = ctk.CTkFrame(self, width = 65, height = 65, fg_color = self.pitchColor, bg_color = self.pitchColor, border_color = "red", border_width = 2, background_corner_colors = [self.pitchColor, self.pitchColor, self.pitchColor, self.pitchColor], corner_radius = 10)
             zone.pos = pos
@@ -1701,22 +2131,59 @@ class FootballPitchLineup(FootballPitchVertical):
             self.zone_occupancies[pos] = 0  # Initialize occupancy status
 
     def increment_counter(self):
+        """
+        Increments the internal counter by 1.
+        """
+
         self.counter += 1
     
     def decrement_counter(self):
+        """
+        Decrements the internal counter by 1.
+        """
+        
         self.counter -= 1
 
     def get_counter(self):
+        """
+        Returns the current value of the internal counter.
+        """
+        
         return self.counter
 
     def reset_counter(self):
+        """
+        Resets the internal counter to 0.
+        """
+        
         self.counter = 0
 
     def set_counter(self, num):
+        """
+        Sets the internal counter to a specific value.
+
+        Args:
+            num (int): The value to set the counter to.
+        """
+        
         self.counter = num
         
 class FootballPitchMatchDay(FootballPitchVertical):
     def __init__(self, parent, width, height, relx, rely, anchor, fgColor, pitchColor):
+        """
+        Football pitch frame for displaying player positions during match day, found in match profiles, emails, and in-game for lineups.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+            fgColor (str): The foreground color of the frame.
+            pitchColor (str): The color of the pitch.
+        """
+
         super().__init__(parent, width, height, relx, rely, anchor, fgColor, pitchColor)
         super().draw_pitch()
         
@@ -1758,8 +2225,18 @@ class FootballPitchMatchDay(FootballPitchVertical):
         }
 
     def addIcon(self, icon_type, image, position, playerName, num):
-        # Add the icon relative the the position oval (so 0.1, 0.1 is the top left of the oval)
+        """
+        Adds an icon to the player's oval on the pitch.
 
+        Args:
+            icon_type (str): The type of icon (e.g., "Sub", "Goals", "Cards", etc.).
+            image (tk.PhotoImage): The image to use for the icon.
+            position (str): The position of the player.
+            playerName (str): The name of the player.
+            num (int): The number of icons to display (for offsetting).
+        """
+        
+        # Add the icon relative the the position oval (so 0.1, 0.1 is the top left of the oval)
         positions, offsetDirection = self.iconPositions[icon_type]
         key = f"{icon_type}_{position}_{num}"
         self.icon_images[key] = image  # Store the image in the dictionary
@@ -1793,6 +2270,16 @@ class FootballPitchMatchDay(FootballPitchVertical):
         self.canvas.create_image(icon_x, icon_y, image = image, tags = (position_tag, "icon"))
 
     def addRating(self, position, playerName, text, potm):
+        """
+        Adds a rating oval with text to the player's oval on the pitch.
+
+        Args:
+            position (str): The position of the player.
+            playerName (str): The name of the player.
+            text (float): The rating text to display.
+            potm (bool): Whether the rating is for Player of the Month.
+        """
+        
         # Use positions from self.positions dictionary (these are relative coordinates)
 
         player_relx, player_rely = self.positions[position]
@@ -1866,12 +2353,24 @@ class FootballPitchMatchDay(FootballPitchVertical):
         )
 
     def updateRating(self, position, playerName, newRating):
+        """
+        Updates the rating oval and text for a player on the pitch.
+        """
+        
         position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
         self.canvas.delete(f"{position_tag}_rating_oval")
         self.canvas.delete(f"{position_tag}_rating_text")
         self.addRating(position, playerName, newRating, False)
 
     def addInjuryIcon(self, position, playerName, image):
+        """
+        Adds an injury icon to the player's oval on the pitch.
+
+        Args:
+            position (str): The position of the player.
+            playerName (str): The name of the player.
+            image (ctk.CTkImage): The injury icon image.
+        """
 
         # Store the image to prevent garbage collection
         key = f"injury_{position}"
@@ -1899,6 +2398,14 @@ class FootballPitchMatchDay(FootballPitchVertical):
         self.canvas.create_image(text_x - 30, text_y, image = image, tags = (position_tag, "injury_icon"))
 
     def addPlayer(self, position, playerName, matchday = False):
+        """
+        Adds a player oval and name to the pitch at the specified position.
+
+        Args:
+            position (str): The position of the player.
+            playerName (str): The name of the player.
+            matchday (bool): Whether to add a default rating for matchday display.
+        """
 
         relx, rely = self.positions[position]
         position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
@@ -1929,6 +2436,14 @@ class FootballPitchMatchDay(FootballPitchVertical):
             self.addRating(position, playerName, 6.0, False)
 
     def removePlayer(self, position, playerName):
+        """
+        Removes a player oval, name, and any associated icons from the pitch.
+
+        Args:
+            position (str): The position of the player to remove.
+            playerName (str): The name of the player to remove.
+        """
+        
         position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
         oval_tag = f"player_{position_tag}_oval"
         text_tag = f"player_{position_tag}_text"
@@ -2082,13 +2597,43 @@ class FootballPitchMatchDay(FootballPitchVertical):
         self.icon_images = new_icon_images
 
     def placePitch(self):
+        """
+        Places the pitch frame at its designated relative position.
+        """
+        
         super().place(relx = self.relx, rely = self.rely, anchor = self.anchor)
 
     def removePitch(self):
+        """
+        Removes the pitch frame from view.
+        """
+        
         super().place_forget()
 
 class LineupPlayerFrame(ctk.CTkFrame):
     def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions, caStars, xDisabled = False):
+        """
+        Frame representing a player in the lineup on the football pitch, with drag-and-drop functionality, found in FootballPitchLineup.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+            fgColor (str): The foreground color of the frame.
+            height (int): The height of the frame.
+            width (int): The width of the frame.
+            playerID (str): The ID of the player.
+            positionCode (str): The code representing the player's position.
+            position (str): The name of the player's position.
+            removePlayer (function): Function to remove the player from the lineup.
+            updateLineup (function): Function to update the lineup after changes.
+            substitutesFrame (ctk.CTkFrame): Frame containing substitute players.
+            swapLineupPositions (function): Function to swap player positions in the lineup.
+            caStars (float): Current ability stars of the player.
+            xDisabled (bool): Whether the remove button is disabled.
+        """
+
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -2180,9 +2725,17 @@ class LineupPlayerFrame(ctk.CTkFrame):
             child.bind("<ButtonRelease-1>", self.stop_drag)
 
     def showBorder(self):
+        """
+        Shows a green border around the player frame.
+        """
+        
         self.configure(border_color = PIE_GREEN, border_width = 2)
 
     def updateFrame(self):
+        """
+        Updates the player frame with the latest player information.
+        """
+        
         self.firstName.configure(text = self.player.first_name)
         self.lastName.configure(text = self.player.last_name)
         self.positionLabel.configure(text = POSITION_CODES[self.position])
@@ -2194,6 +2747,13 @@ class LineupPlayerFrame(ctk.CTkFrame):
             self.positionsTitles.extend(matching_titles)
 
     def start_drag(self, event):
+        """
+        Initiates the drag operation for the player frame.
+
+        Args:
+            event (tk.Event): The mouse button press event.
+        """
+        
         self.drag_start_x = event.x_root - self.winfo_rootx()
         self.drag_start_y = event.y_root - self.winfo_rooty()
         self.lift()
@@ -2218,6 +2778,12 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.parent.update_idletasks()
 
     def do_drag(self, event):
+        """
+        Handles the dragging motion of the player frame.
+        
+        Args:
+            event (tk.Event): The mouse motion event.
+        """
 
         # Calculate new position relative to the parent
         parent_x = self.parent.winfo_rootx()
@@ -2252,6 +2818,13 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.place(relx = relx, rely = rely, anchor = "center")
 
     def check_overlap(self, target_widget):
+        """
+        Checks if the dragged frame overlaps with the target widget's drop zone.
+
+        Args:
+            target_widget (ctk.CTkFrame): The target drop zone widget.
+        """
+
         # Get absolute positions of the dragged frame
         drag_x = self.winfo_rootx()
         drag_y = self.winfo_rooty()
@@ -2279,6 +2852,12 @@ class LineupPlayerFrame(ctk.CTkFrame):
         return overlap_x and overlap_y
 
     def stop_drag(self, event):
+        """
+        Stores the final position of the player frame after dragging.
+
+        Args:
+            event (tk.Event): The mouse button release event.
+        """
 
         # Get absolute mouse position
         mouse_x = event.x_root
@@ -2297,10 +2876,12 @@ class LineupPlayerFrame(ctk.CTkFrame):
         
         dropped = False
 
+        # Check for overlap with drop zones
         for drop_zone in self.parent.drop_zones:
             if drop_zone.winfo_manager() == "place":
                 if self.parent.zone_occupancies[drop_zone.pos] == 0:
                     if self.check_overlap(drop_zone):
+                        # Place the frame at the drop zone position
                         self.place(relx = drop_zone.pitch_pos[0], rely = drop_zone.pitch_pos[1], anchor = "center")
                         self.origin = [drop_zone.pitch_pos[0], drop_zone.pitch_pos[1]]
 
@@ -2339,6 +2920,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
                         if dropped:
                             break
 
+        # Hide all drop zones
         for drop_zone in self.parent.drop_zones:
             if drop_zone.winfo_manager() == "place":
                 drop_zone.place_forget()
@@ -2347,6 +2929,9 @@ class LineupPlayerFrame(ctk.CTkFrame):
             self.place(relx = self.origin[0], rely = self.origin[1], anchor = "center")
 
     def remove(self):
+        """
+        Removes the player from the lineup and updates the parent frame.
+        """
 
         player_name = f"{self.player.first_name} {self.player.last_name}"
         self.parent.zone_occupancies[self.current_zone] = 0  # Clear the occupancy status for the current zone
@@ -2359,6 +2944,26 @@ class LineupPlayerFrame(ctk.CTkFrame):
 
 class SubstitutePlayer(ctk.CTkFrame):
     def __init__(self, parent, fgColor, height, width, player, parentTab, comp_id, row, column, caStars, checkBoxFunction = None, unavailable = False, ingame = False, ingameFunction = None):
+        """
+        Frame representing a substitute player with various attributes and functionalities, found in the tactics tab and for in-game substitutions.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            fgColor (str): The foreground color of the frame.
+            height (int): The height of the frame.
+            width (int): The width of the frame.
+            player (Player): The player object.
+            parentTab (ctk.CTkFrame): The parent tab frame.
+            comp_id (str): The competition ID.
+            row (int): The grid row position.
+            column (int): The grid column position.
+            caStars (float): Current ability stars of the player.
+            checkBoxFunction (function, optional): Function to call when checkbox is toggled. Defaults to None.
+            unavailable (bool, optional): Whether the player is unavailable. Defaults to False.
+            ingame (bool, optional): Whether the player is being used for in-game substitutions. Defaults to False.
+            ingameFunction (function, optional): Function to call for in-game substitutions. Defaults to None.
+        """
+
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 0)
         self.grid(row = row, column = column, padx = 5, pady = 5)
         self.fgColor = fgColor
@@ -2424,6 +3029,9 @@ class SubstitutePlayer(ctk.CTkFrame):
             self.checkBox.configure(command = lambda: checkBoxFunction(self.checkBox, player))
 
     def showCheckBox(self):
+        """
+        Shows the checkbox for selecting the player, unless the player is banned.
+        """
 
         if self.playerBanned:
             return
@@ -2432,22 +3040,60 @@ class SubstitutePlayer(ctk.CTkFrame):
         self.checkBox.configure(state = "normal")
 
     def hideCheckBox(self):
+        """
+        Hides the checkbox for selecting the player.
+        """
+        
         self.checkBox.place_forget()
     
     def disableCheckBox(self):
+        """
+        Disables the checkbox for selecting the player.
+        """
+        
         self.checkBox.configure(state = "disabled")
 
     def enableCheckBox(self):
+        """
+        Enables the checkbox for selecting the player.
+        """
+        
         self.checkBox.configure(state = "normal")
 
     def uncheckCheckBox(self):
+        """
+        Unchecks the checkbox for selecting the player.
+        """
+        
         self.checkBox.deselect()
 
     def showBorder(self):
+        """
+        Shows a red border around the player frame.
+        """
+        
         self.configure(border_color = PIE_RED, border_width = 2)
 
 class MatchDayMatchFrame(ctk.CTkFrame):
     def __init__(self, parent, match, fgColor, height, width, imageSize = 40, relx = 0, rely = 0, anchor = "nw", border_width = None, border_color = None, pack = True):
+        """
+        Frame representing a match in-game (frames on the right when playing a game), found in-game.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            match (Match): The match object.
+            fgColor (str): The foreground color of the frame.
+            height (int): The height of the frame.
+            width (int): The width of the frame.
+            imageSize (int, optional): The size of the team logos. Defaults to 40.
+            relx (float, optional): The relative x position for placing the frame. Defaults to 0.
+            rely (float, optional): The relative y position for placing the frame. Defaults to 0.
+            anchor (str, optional): The anchor position for placing the frame. Defaults to "nw".
+            border_width (int, optional): The border width of the frame. Defaults to None.
+            border_color (str, optional): The border color of the frame. Defaults to None.
+            pack (bool, optional): Whether to pack the frame or place it. Defaults to True.
+        """
+
         super().__init__(parent, fg_color = fgColor, width = width, height = height, border_width = border_width, border_color = border_color)
         
         self.match = match
@@ -2468,6 +3114,7 @@ class MatchDayMatchFrame(ctk.CTkFrame):
         else:
             self.laterGame = False
 
+        # Create match instance only if the match is not played and not a later game
         if not self.played and not self.laterGame:
             self.matchInstance = Match(self.match, teamMatch = not self.packFrame)
         else:
@@ -2476,6 +3123,9 @@ class MatchDayMatchFrame(ctk.CTkFrame):
         self.addFrame()
 
     def addFrame(self):
+        """
+        Adds the match frame with team logos, names, and score or time.
+        """
         
         if self.packFrame: 
             # smaller frames on the side
@@ -2542,6 +3192,13 @@ class MatchDayMatchFrame(ctk.CTkFrame):
             self.FTLabel(place = True)
 
     def HTLabel(self, place = True):
+        """
+        Places or removes the half-time label on the match frame.
+
+        Args:
+            place (bool): Whether to place or remove the label.
+        """
+        
         if place:
             self.halfTimeLabel.place(relx = 0.5, rely = self.labelY, anchor = "center")
 
@@ -2554,6 +3211,13 @@ class MatchDayMatchFrame(ctk.CTkFrame):
                 self.liveLabel.place(relx = 0.5, rely = self.labelY, anchor = "center")
     
     def FTLabel(self, place = True):
+        """
+        Places or removes the full-time label on the match frame.
+
+        Args:
+            place (bool): Whether to place or remove the label.
+        """
+        
         if place:
             self.fullTimeLabel.place(relx = 0.5, rely = self.labelY, anchor = "center")
 
@@ -2566,6 +3230,14 @@ class MatchDayMatchFrame(ctk.CTkFrame):
                 self.liveLabel.place(relx = 0.5, rely = self.labelY, anchor = "center")
 
     def updateScoreLabel(self, home = True, textAdd = None):
+        """
+        Updates the score label on the match frame.
+
+        Args:
+            home (bool): Whether to update the home team's score. Defaults to True.
+            textAdd (str, optional): Custom score text to set. Defaults to None.
+        """
+        
         if home:
             if textAdd:
                 text = textAdd
@@ -2587,19 +3259,29 @@ class MatchDayMatchFrame(ctk.CTkFrame):
 
         self.scoreLabel.configure(text = text)
 
-    def getScoreLabel(self):
-        return self.scoreLabel.cget("text")
-
     def getCurrentScore(self):
+        """
+        Returns the current score as a list of [homeGoals, awayGoals].
+        """
+        
         return self.scoreLabel.cget("text").split(" - ")
-
-class MatchEventFrame(ctk.CTkFrame):
-    def __init__(self, parent, width, height, corner_radius, fgColor, event, time):
-        super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = corner_radius)
-        self.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
 
 class FormGraph(ctk.CTkCanvas):
     def __init__(self, frame, player, width, height, relx, rely, anchor, fgColor):
+        """
+        Form graph canvas showing the last 5 match ratings of a player, found in player profiles and in-game substitute data
+
+        Args:
+            frame (ctk.CTkFrame): The parent frame.
+            player (Player): The player object.
+            width (int): The width of the canvas.
+            height (int): The height of the canvas.
+            relx (float): The relative x position for placing the canvas.
+            rely (float): The relative y position for placing the canvas.
+            anchor (str): The anchor position for placing the canvas.
+            fgColor (str): The foreground color of the canvas.
+        """
+
         super().__init__(frame, width = width, height = height, bg = fgColor, bd = 0, highlightthickness = 0)
         self.place(relx = relx, rely = rely, anchor = anchor)
 
@@ -2620,6 +3302,10 @@ class FormGraph(ctk.CTkCanvas):
         self.draw_bars()
 
     def draw_axes(self):
+        """
+        Draws the axes for the form graph.
+        """
+        
         # Vertical axis line (left border of canvas)
         self.create_line(0, 0, 0, self.height - 30, fill = "black", width = 8)
         
@@ -2627,6 +3313,10 @@ class FormGraph(ctk.CTkCanvas):
         self.create_line(0, self.height - 30, self.width, self.height - 30, fill = "black", width = 4)
 
     def draw_bars(self):
+        """
+        Draws the bars representing the player's ratings in the last 5 matches.
+        """
+        
         bar_width = self.width / 5  # Canvas width divided by 5 bars
         max_bar_height = self.height - 50  # Leave space for axes and text
         
@@ -2700,6 +3390,19 @@ class FormGraph(ctk.CTkCanvas):
 
 class PlayerMatchFrame(ctk.CTkFrame):
     def __init__(self, parent, game, player, width, height, fgColor, parentTab):
+        """
+        Frame representing a match played, found in player profiles.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            game (Match): The match object.
+            player (Player): The player object.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            fgColor (str): The foreground color of the frame.
+            parentTab (ctk.CTkFrame): The parent tab frame.
+        """
+
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 10)
         self.pack(expand = True, fill = "both", pady = 10)
 
@@ -2813,6 +3516,10 @@ class PlayerMatchFrame(ctk.CTkFrame):
             widget.bind("<Button-1>", lambda e: self.onClick())
 
     def onHover(self):
+        """
+        Changes the frame and its child widgets' colors on hover.
+        """
+        
         self.configure(fg_color = GREY_BACKGROUND)
 
         for widget in self.winfo_children():
@@ -2820,6 +3527,10 @@ class PlayerMatchFrame(ctk.CTkFrame):
                 widget.configure(fg_color = GREY_BACKGROUND)
 
     def onLeave(self):
+        """
+        Resets the frame and its child widgets' colors when not hovered.
+        """
+        
         self.configure(fg_color = self.fgColor)
 
         for widget in self.winfo_children():
@@ -2827,6 +3538,10 @@ class PlayerMatchFrame(ctk.CTkFrame):
                 widget.configure(fg_color = self.fgColor)
 
     def onClick(self):
+        """
+        Opens the player's profile when the frame is clicked.
+        """
+        
         from tabs.matchProfile import MatchProfile
 
         self.profile = MatchProfile(self.parentTab, self.game, self.parentTab, changeBackFunction = self.changeBack)
@@ -2835,10 +3550,25 @@ class PlayerMatchFrame(ctk.CTkFrame):
         append_overlapping_profile(self.parentTab, self.profile)
 
     def changeBack(self):
+        """
+        Closes the player's profile.
+        """
+        
         self.profile.place_forget()
 
 class InGamePlayerFrame(ctk.CTkFrame):
     def __init__(self, parent, playerID, width, height, fgColor):
+        """
+        Frame representing a player in-game with their fitness, found in-game, with the players data option.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            playerID (str): The ID of the player.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            fgColor (str): The foreground color of the frame.
+        """
+
         super().__init__(parent, fg_color = fgColor, width = width, height = height)
         self.pack(pady = 5, padx = 2)
 
@@ -2868,6 +3598,13 @@ class InGamePlayerFrame(ctk.CTkFrame):
         self.fitnessLabel.place(relx = 0.8, rely = 0.5, anchor = "e")
 
     def updateFitness(self, fitness):
+        """
+        Updates the player's fitness display.
+
+        Args:
+            fitness (int): The new fitness value.     
+        """
+
         self.fitnessLabel.configure(text = f"{round(fitness)}%")
 
         if fitness > 75:
@@ -2883,13 +3620,32 @@ class InGamePlayerFrame(ctk.CTkFrame):
         self.fitnessImage.configure(image = ctk_image)
 
     def removeFitness(self):
-        self.fitnessImage.destroy()
-        self.fitnessLabel.destroy()
+        """
+        Removes the fitness display, used when the player is injured or suspended.
+        """
+        
+        try:
+            self.fitnessImage.destroy()
+            self.fitnessLabel.destroy()
+        except:
+            # Silence any exceptions (Tkinter sometimes will throw errors when removing the images)
+            pass
 
         self.nameLabel.configure(text_color = GREY)
 
 class InGameStatFrame(ctk.CTkFrame):
     def __init__(self, parent, statName, width, height, fgColor):
+        """
+        Frame representing a statistic in-game, found in-game, with the stats data option.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            statName (str): The name of the statistic.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            fgColor (str): The foreground color of the frame.
+        """
+        
         super().__init__(parent, fg_color = fgColor, width = width, height = height)
         self.pack(pady = 5, padx = 2)
 
@@ -2913,6 +3669,14 @@ class InGameStatFrame(ctk.CTkFrame):
         self.valueLabel.place(relx = 0.8, rely = 0.5, anchor = "center")
 
     def updateValue(self, value, color):
+        """
+        Updates the statistic value display.
+        
+        Args:
+            value (int): The new statistic value.
+            color (bool): Whether to change the color of the value display.
+        """
+        
         self.statValue = value
         self.valueLabel.configure(text = f"{self.statValue}")
 
@@ -2922,6 +3686,21 @@ class InGameStatFrame(ctk.CTkFrame):
             self.valueLabel.configure(fg_color = self.fgColor, text_color = "white")
 class ChoosingLeagueFrame(ctk.CTkFrame):
     def __init__(self, parent, fgColor, width, height, corner_radius, border_width, border_color, endFunction, settings = False):
+        """
+        Frame for choosing leagues to load, found in new game setup and the settings tab.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            fgColor (str): The foreground color of the frame.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            corner_radius (int): The corner radius of the frame.
+            border_width (int): The border width of the frame.
+            border_color (str): The border color of the frame.
+            endFunction (function): The function to call when finishing league selection.
+            settings (bool, optional): Whether this is in settings mode. Defaults to False.
+        """
+
         super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = corner_radius, border_width = border_width, border_color = border_color)
 
         self.parent = parent
@@ -2945,6 +3724,9 @@ class ChoosingLeagueFrame(ctk.CTkFrame):
         self.selectLeagues()
 
     def selectLeagues(self):
+        """
+        Sets up the league selection interface with checkboxes for each league.
+        """
 
         if not self.settings:
             try:
@@ -2988,6 +3770,7 @@ class ChoosingLeagueFrame(ctk.CTkFrame):
         leagueFrameHeight = 400
         gap = leagueFrameWidth / 1150 + 0.005
 
+        # Create the league selection frame for each planet
         for i, planetName in enumerate(PLANETS):
             frame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, height = leagueFrameHeight, width = leagueFrameWidth, corner_radius = 10)
             frame.place(relx = 0.012 + gap * i, rely = 0.2, anchor = "nw")
@@ -3016,6 +3799,14 @@ class ChoosingLeagueFrame(ctk.CTkFrame):
 
 
     def checkLeague(self, frame, checkbox, leagueName):
+        """
+        Handles the logic for checking and unchecking leagues, ensuring hierarchical selection.
+
+        Args:
+            frame (ctk.CTkFrame): The frame containing the league checkboxes.
+            checkbox (ctk.CTkCheckBox): The checkbox that was checked or unchecked.
+            leagueName (str): The name of the league associated with the checkbox.
+        """
 
         if checkbox.get() == 0:
             # unchecking
@@ -3046,10 +3837,12 @@ class ChoosingLeagueFrame(ctk.CTkFrame):
                     above = False
 
     def finishLeagues(self):
+        """
+        Finalizes the league selection and calls the end function.
+        """
     
         if 1 not in self.loadedLeagues.values():
             CTkMessagebox(title = "Error", message = "Please select at least one league to load", icon = "cancel")
             return
-    
         else:
             self.endFunction()

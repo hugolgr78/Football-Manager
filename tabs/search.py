@@ -5,6 +5,13 @@ from utils.util_functions import getSuffix, append_overlapping_profile
 
 class Search(ctk.CTkFrame):
     def __init__(self, parent):
+        """
+        Initialize the Search frame for searching teams, players, managers, leagues, referees, and matches.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (main menu).
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
@@ -37,6 +44,12 @@ class Search(ctk.CTkFrame):
         self.resultsFrame.place(relx = 0, rely = 0.105, anchor = "nw")
 
     def search(self, *args):
+        """
+        Handle search input changes with a delay to optimize performance.
+        
+        Args:
+            *args: Additional arguments (not used).
+        """
 
         currSearch = self.searchVar.get().strip()
 
@@ -55,6 +68,12 @@ class Search(ctk.CTkFrame):
         self.search_timer = self.after(200, lambda: self.performSearch(currSearch))
 
     def performSearch(self, search_text):
+        """
+        Perform the search and update the results display.
+        
+        Args:
+            search_text (str): The text to search for.
+        """
         
         # Clear previous results
         for widget in self.resultsFrame.winfo_children():
@@ -131,19 +150,36 @@ class Search(ctk.CTkFrame):
                 child.bind("<Button-1>", lambda e, cmd = onClickCommand, r = result: cmd(r["data"].id))
             
     def onFrameHover(self, frame):
+        """
+        Handle hover effect on result frames.
+        
+        Args:
+            frame (ctk.CTkFrame): The frame being hovered over.
+        """
+        
         frame.configure(fg_color = GREY_BACKGROUND)
 
         for widget in frame.winfo_children():
             widget.configure(fg_color = GREY_BACKGROUND)
 
     def onFrameLeave(self, frame):
+        """
+        Handle hover leave effect on result frames.
+        
+        Args:
+            frame (ctk.CTkFrame): The frame being left.
+        """
+        
         frame.configure(fg_color = TKINTER_BACKGROUND)
 
         for widget in frame.winfo_children():
             widget.configure(fg_color = TKINTER_BACKGROUND)
 
     def reset(self):
-        # Cancel any pending search
+        """
+        Reset the search input and clear results.
+        """
+        
         if self.search_timer:
             self.after_cancel(self.search_timer)
             self.search_timer = None
@@ -154,6 +190,13 @@ class Search(ctk.CTkFrame):
             widget.destroy()
 
     def openTeamProfile(self, team_id):
+        """
+        Open the team profile for the specified team ID.
+        
+        Args:
+            team_id (str): The ID of the team to open the profile for.
+        """
+        
         team = Teams.get_team_by_id(team_id)
         if team.id == self.manager_Team.id:
             self.parent.changeTab(5)
@@ -165,6 +208,13 @@ class Search(ctk.CTkFrame):
             append_overlapping_profile(self, self.profile)
 
     def openPlayerProfile(self, player_id):
+        """
+        Open the player profile for the specified player ID.
+        
+        Args:
+            player_id (str): The ID of the player to open the profile for.
+        """
+        
         from tabs.playerProfile import PlayerProfile
 
         player = Players.get_player_by_id(player_id)
@@ -173,6 +223,13 @@ class Search(ctk.CTkFrame):
         append_overlapping_profile(self, self.profile)
 
     def openManagerProfile(self, manager_id):
+        """
+        Open the manager profile for the specified manager ID.
+
+        Args:
+            manager_id (str): The ID of the manager to open the profile for.
+        """
+        
         from tabs.managerProfile import ManagerProfile
 
         manager = Managers.get_manager_by_id(manager_id)
@@ -184,6 +241,13 @@ class Search(ctk.CTkFrame):
             self.parent.changeTab(7)
 
     def openLeagueProfile(self, league_id):
+        """
+        Open the league profile for the specified league ID.
+        
+        Args:
+            league_id (str): The ID of the league to open the profile for.
+        """
+        
         from tabs.leagueProfile import LeagueProfile
 
         if league_id != self.team_league_id:
@@ -194,6 +258,13 @@ class Search(ctk.CTkFrame):
             self.parent.changeTab(6)
 
     def openRefereeProfile(self, referee_id):
+        """
+        Open the referee profile for the specified referee ID.
+        
+        Args:
+            referee_id (str): The ID of the referee to open the profile for.
+        """
+        
         from tabs.refereeProfile import RefereeProfile
 
         referee = Referees.get_referee_by_id(referee_id)
@@ -202,6 +273,13 @@ class Search(ctk.CTkFrame):
         append_overlapping_profile(self, self.profile)
 
     def openMatchProfile(self, match_id):
+        """
+        Open the match profile for the specified match ID.
+        
+        Args:
+            match_id (str): The ID of the match to open the profile for.
+        """
+        
         from tabs.matchProfile import MatchProfile
 
         match = Matches.get_match_by_id(match_id)
@@ -210,4 +288,8 @@ class Search(ctk.CTkFrame):
         append_overlapping_profile(self, self.profile)
 
     def changeBack(self):
+        """
+        Handle the back action to return to the search results.
+        """
+        
         self.profile.place_forget()

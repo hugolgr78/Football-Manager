@@ -12,6 +12,16 @@ from utils.util_functions import *
 
 class TeamProfile(ctk.CTkFrame):
     def __init__(self, parent, manager_id = None, parentTab = None, changeBackFunction = None):
+        """
+        A tabbed interface for viewing a team's profile, squad, schedule, and history.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (main menu or other).
+            manager_id (str, optional): The ID of the manager whose team profile is to be displayed. Defaults to None.
+            parentTab (ctk.CTkFrame, optional): The parent tab frame. Defaults to None.
+            changeBackFunction (function, optional): A function to call when the back button is pressed. Defaults to None.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
@@ -36,6 +46,7 @@ class TeamProfile(ctk.CTkFrame):
 
         self.history = None
         if self.manager.user == 1:
+            # Dont show squad and schedule for user managers
             self.titles = ["Profile", "History"]
             self.tabs = [self.profile, self.history]
             self.classNames = [Profile, History]
@@ -59,6 +70,9 @@ class TeamProfile(ctk.CTkFrame):
         self.profile.pack(expand = True, fill = "both")
 
     def createTabs(self):
+        """
+        Create the tab buttons for the team profile interface.
+        """
 
         self.buttonHeight = 40
         self.buttonWidth = 200
@@ -85,10 +99,26 @@ class TeamProfile(ctk.CTkFrame):
             backButton.place(relx = 0.975, rely = 0, anchor = "ne")
 
     def canvas(self, width, height, relx):
+        """
+        Create a canvas for visual separation between tab buttons.
+        
+        Args:
+            width (int): The width of the canvas.
+            height (int): The height of the canvas.
+            relx (float): The relative x position of the canvas.
+        """
+        
         canvas = ctk.CTkCanvas(self.tabsFrame, width = width, height = height, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = relx, rely = 0, anchor = "nw")
 
     def changeTab(self, index):
+        """
+        Change the active tab to the specified index.
+        
+        Args:
+            index (int): The index of the tab to switch to.
+        """
+        
         self.buttons[self.activeButton].configure(state = "normal")
         self.tabs[self.activeButton].pack_forget()
         
@@ -102,6 +132,14 @@ class TeamProfile(ctk.CTkFrame):
 
 class Profile(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
+        """
+        A frame displaying the profile of a team, including logo, name, league position, and other details.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (TeamProfile).
+            manager_id (str): The ID of the manager whose team profile is to be displayed.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -145,6 +183,14 @@ class Profile(ctk.CTkFrame):
 
 class Squad(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
+        """
+        A frame displaying the squad of a team, including player details and statistics.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (TeamProfile).
+            manager_id (str): The ID of the manager whose team squad is to be displayed.
+        """
+
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -196,6 +242,12 @@ class Squad(ctk.CTkFrame):
             self.playerFrames.append(frame)
 
     def changeStat(self, value):
+        """
+        Change the statistic displayed for each player in the squad.
+        
+        Args:
+            value (str): The statistic to display (e.g., "Current ability", "Potential ability").
+        """
 
         if value == self.currentStat:
             return
@@ -208,6 +260,14 @@ class Squad(ctk.CTkFrame):
 
 class Schedule(ctk.CTkFrame):
     def __init__(self, parent, manager_id):
+        """
+        A frame displaying the schedule of a team, including upcoming matches and a calendar view.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (TeamProfile).
+            manager_id (str): The ID of the manager whose team schedule is to be displayed.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
 
         self.parent = parent
@@ -247,6 +307,10 @@ class Schedule(ctk.CTkFrame):
             self.frames.append(frame)
             
     def switchFrames(self):
+        """
+        Switch between the matches list view and the calendar view.
+        """
+        
         if self.matchesFrame.winfo_ismapped():
             self.matchesFrame.place_forget()
             self.calendarFrame.place(relx = 0.01, rely = 0.05, anchor = "nw")
@@ -258,6 +322,14 @@ class Schedule(ctk.CTkFrame):
 
 class History(ctk.CTkScrollableFrame):
     def __init__(self, parent, manager_id):
+        """
+        A frame displaying the history of a team, including past achievements and records.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (TeamProfile).
+            manager_id (str): The ID of the manager whose team history is to be displayed.
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 965, height = 630, corner_radius = 0) 
 
         self.parent = parent

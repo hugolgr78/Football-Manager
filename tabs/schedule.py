@@ -7,6 +7,13 @@ from utils.util_functions import *
 
 class Schedule(ctk.CTkFrame):
     def __init__(self, parent):
+        """
+        Initialize the Schedule frame for displaying team matches and calendar.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (main menu or team profile).
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.manager_id = Managers.get_all_user_managers()[0].id
@@ -41,6 +48,10 @@ class Schedule(ctk.CTkFrame):
         self.addMatches()
 
     def updateCalendar(self):
+        """
+        Update the calendar view based on the current switch button state.
+        """
+        
         if self.calendarFrame is not None:
             self.calendarFrame.destroy()
 
@@ -51,6 +62,10 @@ class Schedule(ctk.CTkFrame):
             self.calendarFrame.place(relx = 0.02, rely = 0.15, anchor = "nw")
 
     def showCalendar(self):
+        """
+        Display the calendar view for the team's schedule.
+        """
+        
         if self.calendarFrame is None:
             self.calendarFrame = CalendarFrame(self, self.matches, self, self, self.matchInfoFrame, self.team.id, managingTeam = True)
 
@@ -60,6 +75,12 @@ class Schedule(ctk.CTkFrame):
             self.switchButton.configure(text = "List")
 
     def addMatches(self, replace = False):
+        """
+        Add match frames to the schedule view, optionally replacing existing frames.
+        
+        Args:
+            replace (bool): Whether to replace existing match frames. Defaults to False.
+        """
 
         if replace:
             for widget in self.winfo_children():
@@ -82,6 +103,10 @@ class Schedule(ctk.CTkFrame):
             self.frames.append(frame)
 
     def switchFrames(self):
+        """
+        Switch between the schedule list view and the calendar view.
+        """
+        
         if self.switchButton.cget("text") == "Calendar":
 
             if self.calendarFrame is None:

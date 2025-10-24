@@ -8,6 +8,13 @@ from utils.util_functions import *
 
 class Squad(ctk.CTkFrame):
     def __init__(self, parent):
+        """
+        Initialize the Squad tab for managing and interacting with the team's squad.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent tkinter widget (main menu or team profiles).
+        """
+        
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 700, corner_radius = 0)
 
         self.parent = parent
@@ -73,6 +80,9 @@ class Squad(ctk.CTkFrame):
         self.addPlayers()
 
     def addPlayers(self):
+        """
+        Add player frames for each player in the squad.
+        """
 
         caStarRatings = Players.get_players_star_ratings(self.players, self.leagueId)
         paStarRatings = Players.get_players_star_ratings(self.players, self.leagueId, CA = False)
@@ -82,6 +92,9 @@ class Squad(ctk.CTkFrame):
             self.playerFrames.append(frame)
 
     def changeTeam(self):
+        """
+        Toggle between displaying the first team and youth team players.
+        """
 
         if self.youthsButton.cget("text") == "Youth Team":
             self.youthsButton.configure(text = "First Team")
@@ -113,6 +126,12 @@ class Squad(ctk.CTkFrame):
                 frame.pack(expand = True, fill = "both", padx = 10, pady = (0, 10))
 
     def talkToPlayer(self, player):
+        """
+        Initiate a conversation with a player.
+
+        Args:
+            player (Player): The player object to talk to.
+        """
 
         self.talkFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 650, height = 500, corner_radius = 15, border_width = 3, border_color = GREY_BACKGROUND)
         self.talkFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
@@ -123,6 +142,13 @@ class Squad(ctk.CTkFrame):
         self.addTalkingFrames(player)
 
     def addTalkingFrames(self, player):
+        """
+        Set up the frames for the conversation with the player.
+        
+        Args:
+            player (Player): The player object to talk to.
+        """
+        
         managerFrame = ctk.CTkFrame(self.talkFrame, fg_color = TKINTER_BACKGROUND, width = 145, height = 490, corner_radius = 0)
         managerFrame.place(x = 150, y = 5, anchor = "ne")
 
@@ -246,7 +272,13 @@ class Squad(ctk.CTkFrame):
                     ctk.CTkLabel(lastMatchData, text = f"{event}: {events[event]}", font = (APP_FONT, 13), fg_color = TKINTER_BACKGROUND).place(relx = 0.1, rely = 0.3 + (list(events.keys()).index(event) + 1) * 0.1, anchor = "w")
 
     def addPrompts(self, player):
+        """
+        Set up the prompt buttons for the conversation with the player.
         
+        Args:
+            player (Player): The player object to talk to.
+        """
+
         self.promptsFrame = ctk.CTkFrame(self.talkFrame, fg_color = TKINTER_BACKGROUND, width = 350, height = 95, corner_radius = 0)
         self.promptsFrame.place(x = 150, y = 400, anchor = "nw")
 
@@ -268,6 +300,14 @@ class Squad(ctk.CTkFrame):
                 y = y + 0.35
 
     def carryOutPrompt(self, player, prompt):
+        """
+        Execute the selected prompt and handle the conversation flow.
+        
+        Args:
+            player (Player): The player object to talk to.
+            prompt (str): The selected prompt type.
+        """
+
         self.talkedTo.append(player.id)
         
         for button in self.promptsFrame.winfo_children():
@@ -296,6 +336,10 @@ class Squad(ctk.CTkFrame):
         self.parent.hub.resetMorale()
 
     def backToSquad(self):
+        """
+        Return to the main squad view after talking to a player.
+        """
+        
         self.talkFrame.destroy()
 
         for frame in self.playersFrame.winfo_children():
@@ -303,6 +347,12 @@ class Squad(ctk.CTkFrame):
                 frame.enableTalkButton()
 
     def changeStat(self, value):
+        """
+        Change the displayed statistic for all player frames.
+        
+        Args:
+            value (str): The selected statistic to display.
+        """
 
         if value == self.currentStat:
             return

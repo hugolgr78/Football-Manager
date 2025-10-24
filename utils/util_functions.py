@@ -1591,11 +1591,11 @@ def get_planet_percentage(depth):
         depth (int): The depth level of the league.
     """
 
-    if depth == 1:
-        return random.uniform(0.35, 0.60)
-    elif depth == 2:
+    if depth == 0:
+        return random.uniform(0.35, 0.45)
+    elif depth == 1:
         return random.uniform(0.50, 0.70)
-    elif depth == 3:
+    elif depth == 2:
         return random.uniform(0.65, 0.85)
     else:
         return random.uniform(0.80, 0.95)

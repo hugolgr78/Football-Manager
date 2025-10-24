@@ -1629,7 +1629,7 @@ class LeagueTableScrollable(ctk.CTkScrollableFrame):
                 ctk.CTkLabel(self, text = team.points, fg_color = self.fgColor, text_color = self.textColor, height = 5, font = font).grid(row = i + 1, column = 10)
 
 class LeagueTable(ctk.CTkFrame):
-    def __init__(self, parent, height, width, x, y, fg_color, anchor, textColor = "white", small = False, highlightManaged = False, corner_radius = 0):
+    def __init__(self, parent, height, width, relx, rely, fg_color, anchor, textColor = "white", small = False, highlightManaged = False, corner_radius = 0):
         """
         Frame representing a league table with team statistics, found in the league tab and start menu.
         
@@ -1648,7 +1648,7 @@ class LeagueTable(ctk.CTkFrame):
         """
 
         super().__init__(parent, fg_color = fg_color, width = width, height = height, corner_radius = corner_radius)
-        self.place(relx = x, rely = y, anchor = anchor)
+        self.place(relx = relx, rely = rely, anchor = anchor)
 
         self.height = height
         self.parent = parent

@@ -52,7 +52,7 @@ class StartMenu(ctk.CTkFrame):
 
         ctk.CTkLabel(self.chooseFrame, text = "Choose a Manager", font = (APP_FONT, 20), bg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.1, anchor = "nw")
 
-        managers = Game.get_all_games()
+        saves = Game.get_all_games()
         self.dropDown = ctk.CTkComboBox(
             self.chooseFrame,
             font = (APP_FONT, 15),
@@ -70,23 +70,23 @@ class StartMenu(ctk.CTkFrame):
         )
         self.dropDown.place(relx = 0.05, rely = 0.5, anchor = "nw")
 
-        if not managers:
+        if not saves:
             values = [""]
             self.dropDown.set("")
             self.dropDown.configure(state = "disabled")
         else:
-            values = [f"{manager.first_name} {manager.last_name}" for manager in managers]
+            values = [save.save_name for save in saves]
             self.dropDown.set("Choose Manager")
             self.dropDown.configure(values = values)
 
         ## ----------------------------- Format ----------------------------- ##
         canvas = ctk.CTkCanvas(self.menuFrame, width = 160, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
-        canvas.place(relx = 0.45, rely = 0.365, anchor = "ne")
+        canvas.place(relx = 0.45, rely = 0.368, anchor = "ne")
 
         ctk.CTkLabel(self.menuFrame, text = "OR", font = (APP_FONT, 15), bg_color = DARK_GREY).place(relx = 0.5, rely = 0.37, anchor = "center")
 
         canvas = ctk.CTkCanvas(self.menuFrame, width = 160, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
-        canvas.place(relx = 0.55, rely = 0.365, anchor = "nw")
+        canvas.place(relx = 0.55, rely = 0.368, anchor = "nw")
 
         ## ----------------------------- Create a Manager ----------------------------- ##
         self.createButton = ctk.CTkButton(self.menuFrame, text = "Create a Manager", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 200, height = 40, command = self.createManager)
@@ -107,6 +107,7 @@ class StartMenu(ctk.CTkFrame):
         self.teamImage.place(relx = 0.81, rely = 0.18, anchor = "center")
 
         self.tableFrame = LeagueTable(self.showFrame, 480, 420, 0.01, 0.15, DARK_GREY, "nw", highlightManaged = True)
+        self.settingsFrame = ctk.CTkFrame(self.showFrame, fg_color = DARK_GREY, height = 480, width = 420, corner_radius = 15)
 
         self.statsFrame = ctk.CTkFrame(self.showFrame, fg_color = GREY_BACKGROUND, height = 300, width = 200, corner_radius = 15)
         self.statsFrame.place(relx = 0.95, rely = 0.35, anchor = "ne")
@@ -122,22 +123,20 @@ class StartMenu(ctk.CTkFrame):
         self.statsTrophies = ctk.CTkLabel(self.statsFrame, text = "Trophies:", font = (APP_FONT, 15), bg_color = GREY_BACKGROUND)
         self.statsTrophies.place(relx = 0.05, rely = 0.4, anchor = "nw")
 
-        self.playButton = ctk.CTkButton(self.showFrame, text = "Play", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 200, height = 40, command = lambda: self.startGame())
-        self.playButton.place(relx = 0.95, rely = 0.95, anchor = "se")
+        self.playButton = ctk.CTkButton(self.showFrame, text = "Play", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 145, height = 40, command = lambda: self.startGame())
+        self.playButton.place(relx = 0.872, rely = 0.95, anchor = "se")
+
+        src = Image.open("Images/settings.png")
+        logo = ctk.CTkImage(src, None, (25, 25))
+        self.settingsButton = ctk.CTkButton(self.showFrame, text = "", image = logo, fg_color = GREY_BACKGROUND, hover_color = GREY_BACKGROUND, width = 40, height = 40, corner_radius = 8, command = lambda: self.settings())
+        self.settingsButton.place(relx = 0.95, rely = 0.95, anchor = "se")
+
+        self.setupSettings()
 
         ## ----------------------------- Quit button ----------------------------- ##
         src = Image.open("Images/cross.png")
         logo = ctk.CTkImage(src, None, (20, 20))
-        ctk.CTkButton(self.menuFrame, text = "", image = logo, fg_color = DARK_GREY, hover_color = CLOSE_RED, width = 10, height = 10, corner_radius = 15, command = lambda: self.closeApp()).place(relx = 0.98, rely = 0.01, anchor = "ne")
-
-    def closeApp(self):
-        """
-        Handles the application close event with confirmation.
-        """
-        
-        response = CTkMessagebox(title = "Exit", message = "Are you sure you want to exit?", icon = "question", option_1 = "Yes", option_2 = "No")
-        if response.get() == "Yes":
-            self.parent.destroy()
+        ctk.CTkButton(self.menuFrame, text = "", image = logo, fg_color = DARK_GREY, hover_color = CLOSE_RED, width = 10, height = 10, corner_radius = 15, command = lambda: self.parent.on_close()).place(relx = 0.02, rely = 0.01, anchor = "nw")
 
     def chooseManager(self, value):
         """
@@ -153,15 +152,13 @@ class StartMenu(ctk.CTkFrame):
             ## show the data
             self.showFrame.place(relx = 0.67, rely = 0.5, anchor = "center")
             self.managerNameLabel.configure(text = value)
-
-            first_name = value.split()[0]
-            last_name = value.split()[1]
+            managerID = Game.get_manager_id_by_save_name(value)
 
             self.db_manager = DatabaseManager()
-            self.db_manager.set_database(f"{first_name}{last_name}")
+            self.db_manager.set_database(value)
 
-            manager = Managers.get_manager_by_name(first_name, last_name)
-            managedTeam = Teams.get_teams_by_manager(manager.id)
+            manager = Managers.get_manager_by_id(managerID)
+            managedTeam = Teams.get_teams_by_manager(managerID)
 
             self.chosenManagerID = manager.id
             self.tableFrame.defineManager(self.chosenManagerID)
@@ -187,6 +184,64 @@ class StartMenu(ctk.CTkFrame):
             self.statsTrophies.configure(text = f"Trophies: {manager.trophies}")
 
             self.gamesPieChart(int(manager.games_played), int(manager.games_won), int(manager.games_lost))
+
+    def setupSettings(self):
+        """
+        Shows the settings frame for a save
+        """
+
+        deleteSaveButton = ctk.CTkButton(self.settingsFrame, text = "Delete Save", font = (APP_FONT, 15), fg_color = CLOSE_RED, corner_radius = 10, width = 150, height = 40, command = self.deleteSave)
+        deleteSaveButton.place(relx = 0.5, rely = 0.2, anchor = "center")
+
+    def deleteSave(self):
+
+        """
+        Deletes the current save after confirmation.
+        """
+
+        response = CTkMessagebox(
+            title="Delete Save",
+            message="Are you sure you want to delete this save? This action cannot be undone.",
+            icon="warning",
+            option_1="Delete",
+            option_2="Cancel",
+            button_color=(CLOSE_RED, APP_BLUE),
+            button_hover_color=(CLOSE_RED, APP_BLUE)
+        )
+        try:
+            if hasattr(response, "button_1"):
+                response.button_1.configure(hover_color=CLOSE_RED)
+            if hasattr(response, "button_2"):
+                response.button_2.configure(hover_color=APP_BLUE)
+        except Exception:
+            pass
+
+        if response.get() == "Delete":
+            Game.delete_game_by_save_name(self.chosenManager)
+            self.showFrame.place_forget()
+            self.chosenManager = None
+            self.dropDown.set("Choose Manager")
+            saves = Game.get_all_games()
+            if not saves:
+                values = [""]
+                self.dropDown.set("")
+                self.dropDown.configure(state = "disabled")
+            else:
+                values = [save.save_name for save in saves]
+                self.dropDown.set("Choose Manager")
+                self.dropDown.configure(values = values)
+
+    def settings(self):
+        """
+        Toggles between the league table and settings frame.
+        """
+
+        if self.settingsFrame.winfo_ismapped():
+            self.settingsFrame.place_forget()
+            self.tableFrame.place(relx = 0.01, rely = 0.15, anchor = "nw")
+        else:
+            self.tableFrame.place_forget()
+            self.settingsFrame.place(relx = 0.01, rely = 0.15, anchor = "nw")
 
     def gamesPieChart(self, gamesPlayed, gamesWon, gamesLost):
         """
@@ -220,24 +275,28 @@ class StartMenu(ctk.CTkFrame):
         backButton = ctk.CTkButton(self.createFrame, text = "Quit", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 40, hover_color = CLOSE_RED, command = lambda: self.createFrame.place_forget())
         backButton.place(relx = 0.86, rely = 0.05, anchor = "ne")
 
-        ctk.CTkLabel(self.createFrame, text = "First Name", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.2, anchor = "nw")
+        ctk.CTkLabel(self.createFrame, text = "Save Name", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.2, anchor = "nw")
+        self.saveNameEntry = ctk.CTkEntry(self.createFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 300, height = 45)
+        self.saveNameEntry.place(relx = 0.03, rely = 0.25, anchor = "nw")
+
+        ctk.CTkLabel(self.createFrame, text = "First Name", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.37, anchor = "nw")
         self.first_name_entry = ctk.CTkEntry(self.createFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 300, height = 45)
-        self.first_name_entry.place(relx = 0.03, rely = 0.25, anchor = "nw")
+        self.first_name_entry.place(relx = 0.03, rely = 0.42, anchor = "nw")
 
-        ctk.CTkLabel(self.createFrame, text = "Last Name", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).place(relx = 0.35, rely = 0.2, anchor = "nw")
+        ctk.CTkLabel(self.createFrame, text = "Last Name", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.54, anchor = "nw")
         self.last_name_entry = ctk.CTkEntry(self.createFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 300, height = 45)
-        self.last_name_entry.place(relx = 0.35, rely = 0.25, anchor = "nw")
+        self.last_name_entry.place(relx = 0.03, rely = 0.59, anchor = "nw")
 
-        ctk.CTkLabel(self.createFrame, text = "Date of birth (YYYY/MM/DD)", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).place(relx = 0.67, rely = 0.2, anchor = "nw")
+        ctk.CTkLabel(self.createFrame, text = "Date of birth (YYYY/MM/DD)", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.71, anchor = "nw")
         self.dob_entry = ctk.CTkEntry(self.createFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 300, height = 45)
-        self.dob_entry.place(relx = 0.67, rely = 0.25, anchor = "nw")
+        self.dob_entry.place(relx = 0.03, rely = 0.76, anchor = "nw")
         self.dob_entry.bind("<KeyRelease>", self.format_dob)
 
         self.natLabel = ctk.CTkLabel(self.createFrame, text = "Nationality", font = (APP_FONT, 30), bg_color = TKINTER_BACKGROUND)
-        self.natLabel.place(relx = 0.03, rely = 0.37, anchor = "nw")
+        self.natLabel.place(relx = 0.65, rely = 0.22, anchor = "center")
 
         self.countriesFrame = ctk.CTkFrame(self.createFrame, fg_color = TKINTER_BACKGROUND, height = 250, width = 800, corner_radius = 15)
-        self.countriesFrame.place(relx = 0.03, rely = 0.45, anchor = "nw")
+        self.countriesFrame.place(relx = 0.3, rely = 0.25, anchor = "nw")
 
         self.countriesFrame.grid_columnconfigure((0, 1, 2 ,3, 4, 5, 6, 7), weight = 1)
         self.countriesFrame.grid_rowconfigure((0, 1, 2), weight = 1)
@@ -295,7 +354,10 @@ class StartMenu(ctk.CTkFrame):
         planet = planet.split(".")[0]
         button.configure(border_color = APP_BLUE)
         self.selectedPlanet = planet
+
+        self.natLabel.place_forget()
         self.natLabel.configure(text = f"Nationality: {planet}")
+        self.natLabel.place(relx = 0.65, rely = 0.22, anchor = "center")
 
         if self.last_selected_team and self.last_selected_team != button:
             self.last_selected_team.configure(border_color = TKINTER_BACKGROUND)
@@ -310,6 +372,7 @@ class StartMenu(ctk.CTkFrame):
         self.first_name = self.first_name_entry.get().strip()
         self.last_name = self.last_name_entry.get().strip()
         self.dob = self.dob_entry.get().strip()
+        self.saveName = self.saveNameEntry.get().strip()
 
         if not self.first_name or not self.last_name or not self.dob or not self.selectedPlanet:
             self.nextButton.configure(state = "disabled")
@@ -324,6 +387,22 @@ class StartMenu(ctk.CTkFrame):
             CTkMessagebox(title = "Error", message = "Date of birth must be in the format YYYY-MM-DD", icon = "cancel")
             self.nextButton.configure(state = "normal")
             return
+        
+        if not self.saveName:
+            self.nextButton.configure(state = "disabled")
+            CTkMessagebox(title = "Error", message = "Please enter a save name", icon = "cancel")
+            self.nextButton.configure(state = "normal")
+            return
+        else:
+            existing_games = Game.get_all_games()   
+
+            if existing_games:
+                for game in existing_games:
+                    if game.save_name.lower() == self.saveName.lower():
+                        self.nextButton.configure(state = "disabled")
+                        CTkMessagebox(title = "Error", message = "Save name already exists. Please choose a different one.", icon = "cancel")
+                        self.nextButton.configure(state = "normal")
+                        return
         
         self.selectLeagues()
         
@@ -543,14 +622,14 @@ class StartMenu(ctk.CTkFrame):
         # Create the database and copy it to add the data
         self.parent.creatingManager = True
         self.db_manager = DatabaseManager()
-        self.db_manager.set_database(f"{self.first_name}{self.last_name}", create_tables = True)
+        self.db_manager.set_database(self.saveName, create_tables = True)
         self.db_manager.start_copy()
 
         # Add the data to the database
         self.chosenManagerID = Managers.add_managers(self.first_name, self.last_name, self.selectedPlanet, self.dob, self.selectedTeam, self.choosingLeaguesFrame.loadedLeagues)
 
         # Add the game to the games database
-        Game.add_game(self.chosenManagerID, self.first_name,self.last_name)
+        Game.add_game(self.chosenManagerID, self.saveName)
         self.parent.creatingManager = False
 
         self.startGame(created = True)

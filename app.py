@@ -98,8 +98,9 @@ class FootballManager(ctk.CTk):
 
         if self.creatingManager:
             return
-        
-        if hasattr(self.loginMenu, "main") and self.loginMenu.main and self.loginMenu.main.movingDate:
+        elif hasattr(self.loginMenu, "main") and self.loginMenu.main and self.loginMenu.main.movingDate:
+            return
+        elif self.loginMenu.exporting:
             return
 
         # List all files in the data folder ending with _copy.db

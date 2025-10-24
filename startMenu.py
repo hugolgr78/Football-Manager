@@ -3,7 +3,7 @@ from settings import *
 from data.database import *
 from data.gamesDatabase import *
 from PIL import Image
-import os, datetime, io
+import os, datetime, io, json, zipfile, threading
 from CTkMessagebox import CTkMessagebox
 from tabs.mainMenu import MainMenu
 from utils.frames import LeagueTable, WinRatePieChart, ChoosingLeagueFrame
@@ -37,6 +37,7 @@ class StartMenu(ctk.CTkFrame):
         self.createFrame = None
         self.chooseTeamFrame = None
         self.piechart = None
+        self.exporting = False
 
         ## ----------------------------- Menu Frame ----------------------------- ##
         self.menuFrame = ctk.CTkFrame(self, fg_color = DARK_GREY, height = 600, width = 350, corner_radius = 15, border_width = 2, border_color = APP_BLUE)
@@ -190,11 +191,33 @@ class StartMenu(ctk.CTkFrame):
         Shows the settings frame for a save
         """
 
-        deleteSaveButton = ctk.CTkButton(self.settingsFrame, text = "Delete Save", font = (APP_FONT, 15), fg_color = CLOSE_RED, corner_radius = 10, width = 150, height = 40, command = self.deleteSave)
-        deleteSaveButton.place(relx = 0.5, rely = 0.2, anchor = "center")
+        deleteSaveButton = ctk.CTkButton(self.settingsFrame, text = "Delete Save", font = (APP_FONT, 15), fg_color = APP_BLUE, hover_color = CLOSE_RED, corner_radius = 10, width = 150, height = 40, command = self.deleteSave)
+        deleteSaveButton.place(relx = 0.5, rely = 0.4, anchor = "center")
+
+        exportSaveButton = ctk.CTkButton(self.settingsFrame, text = "Export Save", font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, width = 150, height = 40, command = self.exportSave)
+        exportSaveButton.place(relx = 0.5, rely = 0.5, anchor = "center")
+        
+        self.exportProgressBar = ctk.CTkSlider(
+            self.settingsFrame, 
+            fg_color = DARK_GREY, 
+            bg_color = DARK_GREY, 
+            corner_radius = 10, 
+            width = 340, 
+            height = 50, 
+            orientation = "horizontal", 
+            from_ = 0, 
+            to = 100, 
+            state = "disabled", 
+            button_length = 0,
+            button_color = APP_BLUE,
+            progress_color = APP_BLUE,
+            border_width = 0,
+            border_color = GREY_BACKGROUND
+        )        
+
+        self.exportProgressLabel = ctk.CTkLabel(self.settingsFrame, text = "0.0%", font = (APP_FONT, 15), bg_color = DARK_GREY)
 
     def deleteSave(self):
-
         """
         Deletes the current save after confirmation.
         """
@@ -230,6 +253,107 @@ class StartMenu(ctk.CTkFrame):
                 values = [save.save_name for save in saves]
                 self.dropDown.set("Choose Manager")
                 self.dropDown.configure(values = values)
+
+    def showProgress(self, done, total):
+        """
+        Updates the export progress bar.
+       
+        Args:
+            done (int): The number of bytes processed.
+            total (int): The total number of bytes to process.
+        """
+        
+        progress = done / total
+        self.parent.after(0, lambda: [
+            self.exportProgressBar.set(progress * 100),
+            self.exportProgressLabel.configure(text = f"{progress * 100:.1f}%")
+        ])
+
+    def exportSave(self):
+        """
+        Exports the current save (manager database + shared game data)
+        into a single .fmsave file with live progress.
+        """
+
+        # --- Step 1: Disable GUI + show export frame ---
+        self.exporting = True
+        self.disableWidgets()
+        self.exportProgressBar.place(relx = 0.05, rely = 0.9, anchor = "w")
+        self.exportProgressLabel.place(relx = 0.89, rely = 0.9, anchor = "w")
+        
+        os.makedirs("exports", exist_ok = True)
+
+        safeName = "".join(c for c in self.chosenManager if c.isalnum() or c in ("_", "-")).rstrip()
+        database = os.path.join("data", f"{self.chosenManager}.db")
+        gamesDatabase = os.path.join("data", "games.db")
+        exportPath = f"exports/{safeName}.fmsave"
+
+        total_size = os.path.getsize(database) + os.path.getsize(gamesDatabase)
+        self.exportProgressBar.configure(number_of_steps=total_size)
+        self.progress_done = 0
+
+        gameDate = Game.get_game_date(self.chosenManagerID)
+        metadata = {
+            "save_name": self.chosenManager,
+            "current_date": str(gameDate),
+            "exported_at": datetime.datetime.now().isoformat()[:19],
+            "version": 1
+        }
+        metadata_bytes = json.dumps(metadata, indent=4).encode("utf-8")
+
+        # --- Step 2: Run the export in a thread ---
+        def run_export():
+            try:
+                with zipfile.ZipFile(exportPath, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
+                    add_file_with_progress(zipf, database, os.path.basename(database), self.showProgress)
+                    add_file_with_progress(zipf, gamesDatabase, os.path.basename(gamesDatabase), self.showProgress)
+                    zipf.writestr(f"{self.chosenManager}_metadata.json", metadata_bytes)
+            except Exception as e:
+                print(f"Error exporting save: {e}")
+            finally:
+                self.parent.after(0, self.exportComplete)
+
+        threading.Thread(target = run_export, daemon = True).start()
+
+    def exportComplete(self):
+        """
+        Hides the progress UI and re-enables widgets.
+        """
+
+        self.exportProgressBar.place_forget()
+        self.exportProgressLabel.place_forget()
+        self.enableWidgets()  # Re-enable after export
+        self.exporting = False
+
+    def disableWidgets(self):
+        """
+        Disables all interactive widgets in the start menu.
+        """
+
+        def recurse_disable(widget):
+            if isinstance(widget, (ctk.CTkButton, ctk.CTkComboBox)):
+                widget.configure(state = "disabled")
+            elif isinstance(widget, ctk.CTkFrame):
+                for child in widget.winfo_children():
+                    recurse_disable(child)
+
+        for child in self.winfo_children():
+            recurse_disable(child)
+    
+    def enableWidgets(self):
+        """
+        Enables all interactive widgets in the start menu.
+        """
+
+        def recurse_enable(widget):
+            if isinstance(widget, (ctk.CTkButton, ctk.CTkComboBox)):
+                widget.configure(state = "normal")
+            elif isinstance(widget, ctk.CTkFrame):
+                for child in widget.winfo_children():
+                    recurse_enable(child)
+
+        for child in self.winfo_children():
+            recurse_enable(child)
 
     def settings(self):
         """
@@ -373,6 +497,13 @@ class StartMenu(ctk.CTkFrame):
         self.last_name = self.last_name_entry.get().strip()
         self.dob = self.dob_entry.get().strip()
         self.saveName = self.saveNameEntry.get().strip()
+
+        # If any of the three text fields exceed 20 characters, show an error
+        if len(self.first_name) > 20 or len(self.last_name) > 20 or len(self.saveName) > 20:
+            self.nextButton.configure(state = "disabled")
+            CTkMessagebox(title = "Error", message = "Save name, first name and last name must not exceed 20 characters", icon = "cancel")
+            self.nextButton.configure(state = "normal")
+            return
 
         if not self.first_name or not self.last_name or not self.dob or not self.selectedPlanet:
             self.nextButton.configure(state = "disabled")

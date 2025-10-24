@@ -2,7 +2,7 @@ __pycache__/
 data/__pycache__/
 data/*.db
 data/backups/
-data/Image Helpers/
+data/Image_Helpers/
 utils/__pycache__/
 tabs/__pycache__/
 logs/

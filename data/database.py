@@ -176,10 +176,9 @@ class Managers(Base):
 
             faker = Faker()
             flags = {}
-            for continent in COUNTRIES:
-                for country in COUNTRIES[continent][1].keys():
-                    with open(f"Images/Countries/{country.lower()}.png", "rb") as file:
-                        flags[country] = file.read()
+            for planet in ALL_PLANETS:
+                with open(f"Images/Planets/{planet}.png", "rb") as file:
+                    flags[planet] = file.read()
 
             userManagerID = str(uuid.uuid4())
             managers_dicts = [
@@ -196,8 +195,7 @@ class Managers(Base):
             ]
             updateProgress(None)
             for _ in range(699):
-                selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
-                country = random.choices(list(COUNTRIES[selectedContinent][1].keys()), weights = list(COUNTRIES[selectedContinent][1].values()), k = 1)[0]
+                planet = random.choice(ALL_PLANETS)
                 date_of_birth = faker.date_of_birth(minimum_age = 32, maximum_age = 65)
 
                 managers_dicts.append(
@@ -205,8 +203,8 @@ class Managers(Base):
                         "id": str(uuid.uuid4()),
                         "first_name": Faker().first_name_male(),
                         "last_name": Faker().first_name(),
-                        "nationality": country,
-                        "flag": flags[country],
+                        "nationality": planet,
+                        "flag": flags[planet],
                         "date_of_birth": date_of_birth,
                         "user": False,
                         "age": 2024 - date_of_birth.year,
@@ -556,10 +554,13 @@ class Players(Base):
     talked_to = Column(Boolean, default = False)
 
     @classmethod
-    def create_youth_player(cls, team_id, position, required_code, flags, numbers):
-        selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
-        _, countryWeights = COUNTRIES[selectedContinent]
-        country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
+    def create_youth_player(cls, team_id, position, required_code, flags, numbers, league_planet):
+        if random.random() < 0.8:
+            planet = league_planet
+        else:
+            planet = random.choice(ALL_PLANETS)
+            while planet == league_planet:
+                planet = random.choice(ALL_PLANETS)
 
         faker = Faker()
         date_of_birth = faker.date_of_birth(minimum_age = 15, maximum_age = 17)
@@ -575,8 +576,8 @@ class Players(Base):
             "position": position,
             "date_of_birth": date_of_birth,
             "age": SEASON_START_DATE.year - date_of_birth.year,
-            "nationality": country,
-            "flag": flags[country],
+            "nationality": planet,
+            "flag": flags[planet],
             "current_ability": playerCA,
             "potential_ability": playerPA,
             "player_role": "Youth Team"
@@ -617,8 +618,15 @@ class Players(Base):
         try:
             for team in teams:
                 league_ID = LeagueTeams.get_league_by_team(team.id).league_id
+                league_name = League.get_league_by_id(league_ID).name
                 league_depth = League.calculate_league_depth(league_ID)
                 min_CA_level = 150 - (league_depth * 50) 
+                player_nationality_percentage = get_planet_percentage(league_depth)
+
+                for planet, leagues in PLANET_LEAGUES.items():
+                    if league_name in leagues:
+                        league_planet = planet
+                        break
 
                 team_players = []
                 team_id = team.id
@@ -650,9 +658,12 @@ class Players(Base):
                 for overall_position, specific_pos_list in specific_positions.items():
                     # Minimum players for each specific position
                     for specific_pos in specific_pos_list:
-                        selectedContinent = random.choices(list(continentWeights.keys()), weights=list(continentWeights.values()), k=1)[0]
-                        _, countryWeights = COUNTRIES[selectedContinent]
-                        country = random.choices(list(countryWeights.keys()), weights=list(countryWeights.values()), k=1)[0]
+                        if random.random() < player_nationality_percentage:
+                            planet = league_planet
+                        else:
+                            planet = random.choice(ALL_PLANETS)
+                            while planet == league_planet:
+                                planet = random.choice(ALL_PLANETS)
 
                         date_of_birth = faker.date_of_birth(minimum_age = 18, maximum_age = 35)
                         player_number = random.randint(1, 99)
@@ -660,9 +671,8 @@ class Players(Base):
                             player_number = random.randint(1, 99)
                         numbers.append(player_number)
 
-                        num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1),
-                                                    weights=position_weights[:min(len(specific_pos_list), 4)])[0]
-                        new_player_positions = random.sample(specific_pos_list, k=num_positions)
+                        num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1), weights = position_weights[:min(len(specific_pos_list), 4)])[0]
+                        new_player_positions = random.sample(specific_pos_list, k = num_positions)
                         if specific_pos not in new_player_positions:
                             new_player_positions[0] = specific_pos
 
@@ -678,8 +688,8 @@ class Players(Base):
                             "position": overall_position,
                             "date_of_birth": date_of_birth,
                             "age": SEASON_START_DATE.year - date_of_birth.year,
-                            "nationality": country,
-                            "flag": flags[country],
+                            "nationality": planet,
+                            "flag": flags[planet],
                             "specific_positions": ','.join(new_player_positions),
                             "current_ability": playerCA,
                             "potential_ability": playerPA
@@ -687,9 +697,12 @@ class Players(Base):
 
                     # Add extra players to reach desired count
                     for _ in range(positions[overall_position] - len(specific_pos_list)):
-                        selectedContinent = random.choices(list(continentWeights.keys()), weights=list(continentWeights.values()), k=1)[0]
-                        _, countryWeights = COUNTRIES[selectedContinent]
-                        country = random.choices(list(countryWeights.keys()), weights=list(countryWeights.values()), k=1)[0]
+                        if random.random() < player_nationality_percentage:
+                            planet = league_planet
+                        else:
+                            planet = random.choice(ALL_PLANETS)
+                            while planet == league_planet:
+                                planet = random.choice(ALL_PLANETS)
 
                         date_of_birth = faker.date_of_birth(minimum_age=18, maximum_age=35)
                         player_number = random.randint(1, 99)
@@ -713,8 +726,8 @@ class Players(Base):
                             "position": overall_position,
                             "date_of_birth": date_of_birth,
                             "age": SEASON_START_DATE.year - date_of_birth.year,
-                            "nationality": country,
-                            "flag": flags[country],
+                            "nationality": planet,
+                            "flag": flags[planet],
                             "specific_positions": ','.join(new_player_positions),
                             "current_ability": playerCA,
                             "potential_ability": playerPA
@@ -780,7 +793,7 @@ class Players(Base):
                 # 1) Ensure at least one youth for each specific position
                 for overall_position, specific_pos_list in specific_positions.items():
                     for specific_pos in specific_pos_list:
-                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers))
+                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers, league_planet))
 
                 # 2) Ensure at least base_positions youths for each overall position
                 for overall_position, minimum in base_positions.items():
@@ -788,7 +801,7 @@ class Players(Base):
 
                     while curr_count < minimum:
                         specific_pos = random.choice(specific_positions[overall_position])
-                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers))
+                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers, league_planet))
                         curr_count += 1
 
                 players_dict.extend(team_players)
@@ -3350,11 +3363,13 @@ class Referees(Base):
 
             faker = Faker()
             for league in leagues:
-                for _ in range(random.randint(35, 45)):
-                    selectedContinent = random.choices(list(continentWeights.keys()), weights = list(continentWeights.values()), k = 1)[0]
-                    _, countryWeights = COUNTRIES[selectedContinent]
-                    country = random.choices(list(countryWeights.keys()), weights = list(countryWeights.values()), k = 1)[0]
 
+                for planet, leagues in PLANET_LEAGUES.items():
+                    if league.name in leagues:
+                        league_planet = planet
+                        break
+
+                for _ in range(random.randint(35, 45)):
                     date_of_birth = faker.date_of_birth(minimum_age = 30, maximum_age = 65)
 
                     referees_dict.append({
@@ -3363,8 +3378,8 @@ class Referees(Base):
                         "last_name": faker.last_name_male(),
                         "league_id": league.id,
                         "severity": random.choices(["low", "medium", "high"], k = 1)[0],
-                        "flag": flags[country],
-                        "nationality": country,
+                        "flag": flags[league_planet],
+                        "nationality": league_planet,
                         "age": 2024 - date_of_birth.year,
                         "date_of_birth": date_of_birth
                     })

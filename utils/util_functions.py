@@ -1582,3 +1582,20 @@ def _simulate_match(gameID):
     }
 
     return result
+
+def get_planet_percentage(depth):
+    """
+    Gets the percentage of players to be from a certain planet based on league depth.
+    
+    Args:
+        depth (int): The depth level of the league.
+    """
+
+    if depth == 1:
+        return random.uniform(0.35, 0.60)
+    elif depth == 2:
+        return random.uniform(0.50, 0.70)
+    elif depth == 3:
+        return random.uniform(0.65, 0.85)
+    else:
+        return random.uniform(0.80, 0.95)

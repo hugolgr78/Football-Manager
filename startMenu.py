@@ -39,6 +39,7 @@ class StartMenu(ctk.CTkFrame):
         self.chooseTeamFrame = None
         self.piechart = None
         self.exporting = False
+        self.exportingEntryActive = False
         self.renaming = False
 
         ## ----------------------------- Menu Frame ----------------------------- ##
@@ -228,6 +229,9 @@ class StartMenu(ctk.CTkFrame):
         )        
 
         self.exportProgressLabel = ctk.CTkLabel(self.settingsFrame, text = "0.0%", font = (APP_FONT, 15), bg_color = DARK_GREY)
+        
+        self.exportNameEntry = ctk.CTkEntry(self.settingsFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 200, height = 40)
+        self.exportNameButton = ctk.CTkButton(self.settingsFrame, text = "OK", font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, width = 40, height = 40, command = self.runExportSave)
 
     def runImport(self, file_path):
         """
@@ -258,14 +262,16 @@ class StartMenu(ctk.CTkFrame):
                             return
 
                 # Extract manager’s DB into /data/
-                manager_db_file = f"{save_name}.db"
-                if manager_db_file not in zipf.namelist():
-                    raise ValueError("Manager database not found in save file.")
+                db_files = [f for f in zipf.namelist() if f.endswith(".db") and f != "games.db"]
+                if not db_files:
+                    raise ValueError("No manager database found in save file.")
 
-                os.makedirs("data", exist_ok = True)
-                dest_path = os.path.join("data", manager_db_file)
+                original_db_name = db_files[0]
+                os.makedirs("data", exist_ok=True)
+                dest_path = os.path.join("data", f"{save_name}.db")
+
                 with open(dest_path, "wb") as f:
-                    f.write(zipf.read(manager_db_file))
+                    f.write(zipf.read(original_db_name))
 
                 Game.add_game_back(manager_id, save_name, game_date)
                 self.parent.after(0, lambda: self.importComplete(save_name))
@@ -303,6 +309,7 @@ class StartMenu(ctk.CTkFrame):
         self.enableWidgets()
         self.dropDown.configure(values = values, state = "normal")
         self.dropDown.set(save_name)
+
         self.chooseManager(save_name)
         self.settings(forceTable = True)
 
@@ -399,19 +406,38 @@ class StartMenu(ctk.CTkFrame):
 
     def exportSave(self):
         """
+        Prompts the user to enter a save name for the export
+        """
+
+        if self.exportingEntryActive:
+            return
+
+        self.exportingEntryActive = True
+        self.exportNameEntry.place(relx = 0.05, rely = 0.9, anchor = "w")
+        self.exportNameEntry.delete(0, "end")
+        self.exportNameEntry.insert(0, self.chosenManager)
+        self.exportNameEntry.focus()
+
+        self.exportNameButton.place(relx = 0.55, rely = 0.9, anchor = "w")
+
+    def runExportSave(self):
+        """
         Exports the current save (manager database + shared game data)
         into a single .fmsave file with live progress.
         """
 
         # --- Step 1: Disable GUI + show export frame ---
-        self.exporting = True
+        self.exportingEntryActive = False
         self.disableWidgets()
+        self.exportNameEntry.place_forget()
+        self.exportNameButton.place_forget()
         self.exportProgressBar.place(relx = 0.05, rely = 0.9, anchor = "w")
         self.exportProgressLabel.place(relx = 0.89, rely = 0.9, anchor = "w")
         
         os.makedirs("exports", exist_ok = True)
 
-        safeName = "".join(c for c in self.chosenManager if c.isalnum() or c in ("_", "-")).rstrip()
+        saveName = self.exportNameEntry.get().strip()
+        safeName = "".join(c for c in saveName if c.isalnum() or c in ("_", "-")).rstrip()
         database = os.path.join("data", f"{self.chosenManager}.db")
         gamesDatabase = os.path.join("data", "games.db")
         exportPath = f"exports/{safeName}.fmsave"
@@ -422,27 +448,27 @@ class StartMenu(ctk.CTkFrame):
 
         gameDate = Game.get_game_date(self.chosenManagerID)
         metadata = {
-            "save_name": self.chosenManager,
+            "save_name": saveName,
             "manager_id": self.chosenManagerID,
             "current_date": str(gameDate),
             "exported_at": datetime.datetime.now().isoformat()[:19],
             "version": 1
         }
-        metadata_bytes = json.dumps(metadata, indent=4).encode("utf-8")
+        metadata_bytes = json.dumps(metadata, indent = 4).encode("utf-8")
 
         # --- Step 2: Run the export in a thread ---
-        def run_export():
+        def runExport():
             try:
                 with zipfile.ZipFile(exportPath, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
                     add_file_with_progress(zipf, database, os.path.basename(database), self.showProgress)
                     add_file_with_progress(zipf, gamesDatabase, os.path.basename(gamesDatabase), self.showProgress)
-                    zipf.writestr(f"{self.chosenManager}_metadata.json", metadata_bytes)
+                    zipf.writestr(f"{saveName}_metadata.json", metadata_bytes)
             except Exception as e:
                 print(f"Error exporting save: {e}")
             finally:
                 self.parent.after(0, self.exportComplete)
 
-        threading.Thread(target = run_export, daemon = True).start()
+        threading.Thread(target = runExport, daemon = True).start()
 
     def exportComplete(self):
         """
@@ -499,6 +525,11 @@ class StartMenu(ctk.CTkFrame):
                 self.saveRenameEntry.place_forget()
                 self.saveRenameButton.place_forget()
                 self.renaming = False
+
+            if self.exportingEntryActive:
+                self.exportNameEntry.place_forget()
+                self.exportNameButton.place_forget()
+                self.exportingEntryActive = False
 
             self.settingsFrame.place_forget()
             self.tableFrame.place(relx = 0.01, rely = 0.15, anchor = "nw")

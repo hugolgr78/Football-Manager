@@ -1368,7 +1368,8 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
         progress_callback (function, optional): A callback function to report progress. Defaults to None.
     """
     
-    from data.database import Matches, Managers, League, LeagueTeams, PlayerBans, TeamHistory, process_payload, check_player_games_happy
+    from data.database import Matches, Managers, Teams, League, Emails, LeagueTeams, PlayerBans, TeamHistory, process_payload, check_player_games_happy
+    from data.gamesDatabase import Game
     from concurrent.futures import ProcessPoolExecutor, as_completed
     import os, time, logging, glob, traceback
 
@@ -1392,7 +1393,9 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
         matches = []
         teams = {}
         mgr = Managers.get_all_user_managers()[0]
-        base_name = f"{mgr.first_name}{mgr.last_name}"
+        managerTeam = Teams.get_teams_by_manager(mgr.id)[0]
+        managerLeague = LeagueTeams.get_league_by_team(managerTeam.id)
+        base_name = Game.get_games_by_manager_id(mgr.id)[0].save_name
 
         # Create the pool once, outside the batch loop
         with ProcessPoolExecutor(max_workers=CHUNK_SIZE, initializer=_init_worker, initargs=(base_name,)) as ex:
@@ -1497,6 +1500,13 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
         for id_ in leagueIDs:
             LeagueTeams.update_team_positions(id_)
             if League.check_all_matches_complete(id_, currDate):
+
+                if id_ == managerLeague.league_id:
+                    _, email = League.team_of_the_week(id_, matchday, team = managerTeam.id)
+
+                    if email:
+                        Emails.add_email("team_of_the_week", matchday, None, None, managerLeague.league_id, (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+
                 for team in LeagueTeams.get_teams_by_league(id_):
                     matchday = League.get_current_matchday(id_)
                     TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
@@ -1620,3 +1630,24 @@ def add_file_with_progress(zipf, file_path, arcname, progress_callback=None):
                 read_bytes += len(chunk)
                 if progress_callback:
                     progress_callback(read_bytes, file_size)
+
+def get_best_player_for_position(matches, position):
+    """
+    Finds the best player for a given position from a list of matches.
+    """
+
+    from data.database import TeamLineup
+
+    bestRating = -1
+    bestPlayerID = None
+
+    for match in matches:
+        lineup = TeamLineup.get_lineup_by_match(match.id)
+
+        for entry in lineup:
+            if entry.start_position == position:
+                if entry.rating and entry.rating > bestRating:
+                    bestRating = entry.rating
+                    bestPlayerID = entry.player_id
+
+    return bestPlayerID, bestRating 

@@ -23,6 +23,7 @@ class Match():
         self.awayTeam = Teams.get_team_by_id(self.match.away_id)
         self.league = LeagueTeams.get_league_by_team(self.homeTeam.id)
         self.referee = Referees.get_referee_by_id(self.match.referee_id)
+        self.matchday = self.match.matchday
 
         self.homePlayersOBJ = {p.id: p for p in Players.get_all_players_by_team(self.homeTeam.id)}
         self.awayPlayersOBJ = {p.id: p for p in Players.get_all_players_by_team(self.awayTeam.id)}

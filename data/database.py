@@ -3079,6 +3079,34 @@ class League(Base):
             raise e
         finally:
             session.close()
+
+    @classmethod
+    def team_of_the_week(cls, league_id, matchday, team = None):
+        session = DatabaseManager().get_session()
+        try:
+            matches = session.query(Matches).filter(
+                Matches.league_id == league_id,
+                Matches.matchday == matchday
+            ).all()
+
+            positions = FORMATIONS_POSITIONS["4-3-3 DM"]
+            teamOTW = {}
+
+            for position in positions:
+                player, rating = get_best_player_for_position(matches, position)
+                teamOTW[position] = [player, rating]
+
+            if team:
+                player_in_team = any(Players.get_player_by_id(player).team_id == team for player, _ in teamOTW.values())
+            else:
+                player_in_team = False
+
+            return teamOTW, player_in_team
+        except Exception as e:
+            logger.exception("Error in team_of_the_week: %s", e)
+            raise e
+        finally:
+            session.close()
             
 class LeagueTeams(Base):
     __tablename__ = 'league_teams'
@@ -3451,7 +3479,7 @@ class Emails(Base):
     __tablename__ = 'emails'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday", "calendar_events"), nullable = False)
+    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday", "calendar_events", "team_of_the_week"), nullable = False)
     matchday = Column(Integer)
     date = Column(DateTime, nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))

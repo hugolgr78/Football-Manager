@@ -63,9 +63,13 @@ class Inbox(ctk.CTkFrame):
         """
         
         emails = Emails.get_all_emails(Game.get_game_date(self.manager_id))
+        unread = False
 
         currentDate = ""
         for email in emails:
+
+            if not email.read:
+                unread = True
 
             _, date, _ = format_datetime_split(email.date)
             if date != currentDate:
@@ -78,9 +82,24 @@ class Inbox(ctk.CTkFrame):
 
             self.addEmail(email)
 
+        if unread:
+            self.parent.addInboxNotification()
+
     def addEmail(self, email):
         """
         Adds a single email to the emails frame.
         """
         
         EmailFrame(self.emailsFrame, self.manager_id, email, self.emailDataFrame, self)
+
+    def removeNotificationDot(self):
+        """
+        Removes the notification dot from the Inbox tab in the main menu.
+        """
+
+        emails = Emails.get_all_emails(Game.get_game_date(self.manager_id))
+        for email in emails:
+            if not email.read:
+                return
+        
+        self.parent.removeInboxNotification()   

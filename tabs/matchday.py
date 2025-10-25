@@ -2448,9 +2448,15 @@ class MatchDay(ctk.CTkFrame):
 
         logger.debug("Checking if all matches are complete for the matchday.")
         if League.check_all_matches_complete(self.league.id, currDate):
+            logger.debug("All matches complete, creating team of the week and team history.")
+            _, email = League.team_of_the_week(self.league.id, self.matchFrame.matchInstance.matchday, team = self.homeTeam.id if self.home else self.awayTeam.id)
+            logger.debug("Team of the week created.")
             for team in LeagueTeams.get_teams_by_league(self.league.id):
                 matchday = League.get_current_matchday(self.league.id)
                 TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
+            
+            if email:
+                Emails.add_email("team_of_the_week", self.matchFrame.matchInstance.matchday, None, None, self.league.id, (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0))
 
             League.update_current_matchday(self.league.id)
 

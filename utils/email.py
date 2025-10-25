@@ -1284,6 +1284,47 @@ class CalendarEventsEmail():
             self.delegateButton.configure(state = "disabled")
             Settings.set_setting("events_delegated", True)
 
+class TeamOfTheWeek():
+    def __init__(self, parent):
+
+        self.parent = parent
+        self.frame = self.parent.emailFrame
+        self.matchday = self.parent.matchday
+
+        self.subject = "Players in the Team of the Week"
+        self.sender = "Name, Assistant Manager"
+        self.subjectFontSize = 15
+
+    def openEmail(self):
+        for widget in self.frame.winfo_children():
+            widget.place_forget()
+
+        self.setUpEmail()
+
+        self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
+        self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.12, anchor = "w")
+
+        self.newsButton = ctk.CTkButton(self.frame, text = "Go to League News", font = (APP_FONT_BOLD, 15), command = lambda: self.goToNews(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
+        self.newsButton.place(relx = 0.95, rely = 0.95, anchor = "se")
+
+    def setUpEmail(self):
+        team, _ = League.team_of_the_week(self.parent.league.id, self.matchday)
+
+        playersIDs = [p for p, _ in team.values() if Players.get_player_by_id(p).team_id == self.parent.team.id]
+
+        self.emailText_1 = "Hey Boss, I am pleased to inform you that the following players from our team have been\nselected in the Team of the Week:\n"
+
+        gap = 0.035
+        for i, playerID in enumerate(playersIDs):
+            player = Players.get_player_by_id(playerID)
+            frame = PlayerProfileLabel(self.frame, player, f"{player.first_name} {player.last_name}", "-   ", "", 240, 30, self.parent.parentTab, fontSize = 15)
+            frame.place(relx = 0.05, rely = 0.17 + i * gap, anchor = "w")
+
+    def goToNews(self):
+        self.parent.mainMenu.changeTab(6)
+
 EMAIL_CLASSES = {
     "welcome": Welcome,
     "matchday_review": MatchdayReview,
@@ -1294,5 +1335,6 @@ EMAIL_CLASSES = {
     "player_injury": PlayerInjury,
     "player_ban": PlayerBan,
     "player_birthday": PlayerBirthday,
-    "calendar_events": CalendarEventsEmail
+    "calendar_events": CalendarEventsEmail,
+    "team_of_the_week": TeamOfTheWeek,
 }

@@ -116,9 +116,7 @@ class Inbox(ctk.CTkFrame):
 
     def markAllAsRead(self):
 
-
         Emails.batch_mark_all_as_read(Game.get_game_date(self.manager_id))
-
         for frame in self.frames:
             frame.updateReadStatus()
 

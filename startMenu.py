@@ -572,6 +572,7 @@ class StartMenu(ctk.CTkFrame):
         ctk.CTkLabel(self.createFrame, text = "Save Name", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.2, anchor = "nw")
         self.saveNameEntry = ctk.CTkEntry(self.createFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 300, height = 45)
         self.saveNameEntry.place(relx = 0.03, rely = 0.25, anchor = "nw")
+        self.saveNameEntry.focus()
 
         ctk.CTkLabel(self.createFrame, text = "First Name", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.37, anchor = "nw")
         self.first_name_entry = ctk.CTkEntry(self.createFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 300, height = 45)

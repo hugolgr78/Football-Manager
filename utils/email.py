@@ -87,6 +87,9 @@ class EmailFrame(ctk.CTkFrame):
 
         if self.emailOpen:
             return
+        
+        Emails.mark_email_as_read(self.email_id)
+        self.parentTab.removeNotificationDot()
 
         self.parentTab.currentEmail = self
         self.canvas.place_forget()

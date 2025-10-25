@@ -3460,6 +3460,7 @@ class Emails(Base):
     comp_id = Column(String(128))
     action_complete = Column(Boolean, default = False)
     send = Column(Boolean, default = True)
+    read = Column(Boolean, default = False)
 
     @classmethod
     def add_emails(cls, manager_id):
@@ -3707,6 +3708,17 @@ class Emails(Base):
         except Exception as e:
             session.rollback()
             raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def mark_email_as_read(cls, email_id):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.id == email_id).first()
+            if email:
+                email.read = True
+                session.commit()
         finally:
             session.close()
 

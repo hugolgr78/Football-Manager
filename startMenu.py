@@ -49,12 +49,12 @@ class StartMenu(ctk.CTkFrame):
 
         ctk.CTkLabel(self.menuFrame, text = "Welcome", font = (APP_FONT_BOLD, 35), bg_color = DARK_GREY).place(relx = 0.5, rely = 0.08, anchor = "center")
 
-        ## ----------------------------- Choose a Manager ----------------------------- ##
+        ## ----------------------------- Choose a Save ----------------------------- ##
         self.chooseFrame = ctk.CTkFrame(self.menuFrame, fg_color = GREY_BACKGROUND, height = 100, width = 300, corner_radius = 15)
         self.chooseFrame.place(relx = 0.5, rely = 0.25, anchor = "center")
         self.chooseFrame.pack_propagate(False)
 
-        ctk.CTkLabel(self.chooseFrame, text = "Choose a Manager", font = (APP_FONT, 20), bg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.1, anchor = "nw")
+        ctk.CTkLabel(self.chooseFrame, text = "Choose a Save", font = (APP_FONT, 20), bg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.1, anchor = "nw")
 
         saves = Game.get_all_games()
         self.dropDown = ctk.CTkComboBox(
@@ -80,7 +80,7 @@ class StartMenu(ctk.CTkFrame):
             self.dropDown.configure(state = "disabled")
         else:
             values = [save.save_name for save in saves]
-            self.dropDown.set("Choose Manager")
+            self.dropDown.set("")
             self.dropDown.configure(values = values)
 
         ## ----------------------------- Format ----------------------------- ##
@@ -92,11 +92,11 @@ class StartMenu(ctk.CTkFrame):
         canvas = ctk.CTkCanvas(self.menuFrame, width = 160, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
         canvas.place(relx = 0.55, rely = 0.368, anchor = "nw")
 
-        ## ----------------------------- Create a Manager ----------------------------- ##
-        self.createButton = ctk.CTkButton(self.menuFrame, text = "Create a Manager", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 150, height = 40, command = self.createManager)
+        ## ----------------------------- Create a Save ----------------------------- ##
+        self.createButton = ctk.CTkButton(self.menuFrame, text = "Create Save", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 150, height = 40, command = self.createManager)
         self.createButton.place(relx = 0.48, rely = 0.45, anchor = "e")
 
-        self.importButton = ctk.CTkButton(self.menuFrame, text = "Import a Save", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 150, height = 40, command = self.importSave)
+        self.importButton = ctk.CTkButton(self.menuFrame, text = "Import Save", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 150, height = 40, command = self.importSave)
         self.importButton.place(relx = 0.52, rely = 0.45, anchor = "w")
 
         ## ----------------------------- Logo ----------------------------- ##
@@ -133,7 +133,7 @@ class StartMenu(ctk.CTkFrame):
         self.statsTrophies = ctk.CTkLabel(self.statsFrame, text = "Trophies:", font = (APP_FONT, 15), bg_color = GREY_BACKGROUND)
         self.statsTrophies.place(relx = 0.05, rely = 0.4, anchor = "nw")
 
-        self.playButton = ctk.CTkButton(self.showFrame, text = "Play", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 145, height = 40, command = lambda: self.startGame())
+        self.playButton = ctk.CTkButton(self.showFrame, text = "Play", font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, width = 145, height = 40, command = lambda: self.startGame())
         self.playButton.place(relx = 0.872, rely = 0.95, anchor = "se")
 
         src = Image.open("Images/settings.png")
@@ -378,7 +378,7 @@ class StartMenu(ctk.CTkFrame):
             Game.delete_game_by_save_name(self.chosenManager)
             self.showFrame.place_forget()
             self.chosenManager = None
-            self.dropDown.set("Choose Manager")
+            self.dropDown.set("")
             saves = Game.get_all_games()
             if not saves:
                 values = [""]
@@ -386,7 +386,7 @@ class StartMenu(ctk.CTkFrame):
                 self.dropDown.configure(state = "disabled")
             else:
                 values = [save.save_name for save in saves]
-                self.dropDown.set("Choose Manager")
+                self.dropDown.set("")
                 self.dropDown.configure(values = values)
 
     def showProgress(self, done, total):
@@ -443,7 +443,7 @@ class StartMenu(ctk.CTkFrame):
         exportPath = f"exports/{safeName}.fmsave"
 
         total_size = os.path.getsize(database) + os.path.getsize(gamesDatabase)
-        self.exportProgressBar.configure(number_of_steps=total_size)
+        self.exportProgressBar.configure(number_of_steps = total_size)
         self.progress_done = 0
 
         gameDate = Game.get_game_date(self.chosenManagerID)
@@ -561,7 +561,7 @@ class StartMenu(ctk.CTkFrame):
         self.createFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, height = 600, width = 1150, corner_radius = 15, border_width = 2, border_color = APP_BLUE)
         self.createFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
 
-        ctk.CTkLabel(self.createFrame, text = "Create a Manager", font = (APP_FONT_BOLD, 35), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.08, anchor = "nw")
+        ctk.CTkLabel(self.createFrame, text = "Manager profile", font = (APP_FONT_BOLD, 35), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.08, anchor = "nw")
 
         self.nextButton = ctk.CTkButton(self.createFrame, text = "Leagues >", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 40, command = self.checkData)
         self.nextButton.place(relx = 0.97, rely = 0.05, anchor = "ne")

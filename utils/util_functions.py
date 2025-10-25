@@ -1,4 +1,4 @@
-import calendar, math, random, json
+import calendar, math, random, os, zipfile
 from datetime import timedelta
 from settings import *
 
@@ -1582,3 +1582,41 @@ def _simulate_match(gameID):
     }
 
     return result
+
+def get_planet_percentage(depth):
+    """
+    Gets the percentage of players to be from a certain planet based on league depth.
+    
+    Args:
+        depth (int): The depth level of the league.
+    """
+
+    if depth == 0:
+        return random.uniform(0.35, 0.45)
+    elif depth == 1:
+        return random.uniform(0.50, 0.70)
+    elif depth == 2:
+        return random.uniform(0.65, 0.85)
+    else:
+        return random.uniform(0.80, 0.95)
+    
+def add_file_with_progress(zipf, file_path, arcname, progress_callback=None):
+    """
+    Add a file to zip with progress reporting.
+    """
+
+    file_size = os.path.getsize(file_path)
+    with open(file_path, "rb") as f:
+        # Start a new file entry in the zip
+        zipinfo = zipfile.ZipInfo(arcname)
+        zipinfo.compress_type = zipfile.ZIP_DEFLATED
+        with zipf.open(zipinfo, "w") as dest:
+            read_bytes = 0
+            while True:
+                chunk = f.read(1024 * 1024)  # 1 MB chunks
+                if not chunk:
+                    break
+                dest.write(chunk)
+                read_bytes += len(chunk)
+                if progress_callback:
+                    progress_callback(read_bytes, file_size)

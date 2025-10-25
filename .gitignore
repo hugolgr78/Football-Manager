@@ -2,11 +2,12 @@ __pycache__/
 data/__pycache__/
 data/*.db
 data/backups/
-data/Image Helpers/
+data/Image_Helpers/
 utils/__pycache__/
 tabs/__pycache__/
 logs/
-venv/
+venv/   
+exports/
 Images/Teams/
 clear_logs.py
 clear_db_copies.py

@@ -34,6 +34,8 @@ class EmailFrame(ctk.CTkFrame):
         self.comp_id = email.comp_id if hasattr(email, 'comp_id') else None
         self.actioned = email.action_complete
         self.fullDate = email.date
+        self.read = email.read
+        self.important = email.important
         self.day, self.date, self.time = format_datetime_split(self.fullDate)
         self.emailFrame = emailFrame
         self.parentTab = parentTab
@@ -70,6 +72,9 @@ class EmailFrame(ctk.CTkFrame):
         self.senderLabel.configure(fg_color = DARK_GREY)
         self.timeLabel.configure(fg_color = DARK_GREY)
 
+        if not self.read:
+            self.unreadLabel.configure(fg_color = DARK_GREY)
+
     def onFrameLeave(self):
         """
         This method is called when the mouse leaves the email frame.
@@ -80,6 +85,9 @@ class EmailFrame(ctk.CTkFrame):
         self.senderLabel.configure(fg_color = TKINTER_BACKGROUND)
         self.timeLabel.configure(fg_color = TKINTER_BACKGROUND)
 
+        if not self.read:
+            self.unreadLabel.configure(fg_color = TKINTER_BACKGROUND)
+
     def displayEmailInfo(self):
         """
         Displays the full email content in the email frame area.
@@ -88,8 +96,12 @@ class EmailFrame(ctk.CTkFrame):
         if self.emailOpen:
             return
         
+        self.read = True
         Emails.mark_email_as_read(self.email_id)
         self.parentTab.removeNotificationDot()
+
+        if self.unreadLabel.winfo_ismapped():
+            self.unreadLabel.place_forget()
 
         self.parentTab.currentEmail = self
         self.canvas.place_forget()
@@ -122,12 +134,29 @@ class EmailFrame(ctk.CTkFrame):
         self.timeLabel = ctk.CTkLabel(self, text = self.time, font = (APP_FONT, 10), height = 8, fg_color = TKINTER_BACKGROUND)
         self.timeLabel.place(relx = 0.95, rely = 0.7, anchor = "e")
 
+        if not self.read:
+
+            if self.important:
+                src = Image.open("Images/unread_important.png")
+            else:
+                src = Image.open("Images/unread.png")
+
+            src.thumbnail((13,  13))
+            unreadImage = ctk.CTkImage(src, None, (src.width, src.height))
+            self.unreadLabel = ctk.CTkLabel(self, image = unreadImage, text = "", fg_color = TKINTER_BACKGROUND, width = 0, height = 0)
+            self.unreadLabel.place(relx = 0.82, rely = 0.7, anchor = "e")
+
         self.subjectLabel.bind("<Enter>", lambda event: self.onFrameHover())
         self.subjectLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
         self.senderLabel.bind("<Enter>", lambda event: self.onFrameHover())
         self.senderLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
         self.timeLabel.bind("<Enter>", lambda event: self.onFrameHover())
         self.timeLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
+
+        if not self.read:
+            self.unreadLabel.bind("<Enter>", lambda event: self.onFrameHover())
+            self.unreadLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
+
 class Welcome():
     def __init__(self, parent):
 

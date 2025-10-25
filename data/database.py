@@ -3461,6 +3461,7 @@ class Emails(Base):
     action_complete = Column(Boolean, default = False)
     send = Column(Boolean, default = True)
     read = Column(Boolean, default = False)
+    important = Column(Boolean, default = False)
 
     @classmethod
     def add_emails(cls, manager_id):
@@ -3529,7 +3530,7 @@ class Emails(Base):
             session.close()
 
     @classmethod
-    def add_email(cls, email_type, matchday, player_id, ban_length, comp_id, date):
+    def add_email(cls, email_type, matchday, player_id, ban_length, comp_id, date, important = False):
         session = DatabaseManager().get_session()
         try:
             new_email = Emails(
@@ -3538,6 +3539,7 @@ class Emails(Base):
                 player_id = player_id,
                 comp_id = comp_id,
                 date = date,
+                important = important
             )
 
             if email_type == "player_ban":

@@ -3724,6 +3724,22 @@ class Emails(Base):
         finally:
             session.close()
 
+    @classmethod
+    def batch_mark_all_as_read(cls, date):
+        session = DatabaseManager().get_session()
+        try:
+            emails = session.query(Emails).filter(Emails.date <= date, Emails.read == False)
+
+            for email in emails:
+                email.read = True
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
 class PlayerBans(Base):
     __tablename__ = 'player_bans'
 
@@ -6395,7 +6411,7 @@ def process_payload(payload):
             if player.team_id == userTeam.id and sendEmail:
                 emailDate = date + timedelta(days = 1)
                 if ban_type == "injury":
-                    Emails.add_email("player_injury", None, player_id, ban_length, None, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                    Emails.add_email("player_injury", None, player_id, ban_length, None, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0), important = True)
                 else:
                     Emails.add_email("player_ban", None, player_id, ban_length, competition_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
 

@@ -21,6 +21,7 @@ class Inbox(ctk.CTkFrame):
 
         self.emailsToAdd = {}
         self.currentEmail = None
+        self.frames = []
 
         self.team = Teams.get_teams_by_manager(self.manager_id)[0]
         self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
@@ -33,6 +34,12 @@ class Inbox(ctk.CTkFrame):
         self.titleFrame.place(x = 0, y = 0, anchor = "nw")
 
         ctk.CTkLabel(self.titleFrame, text = "Emails", font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        src = Image.open("Images/read.png")
+        src.thumbnail((20, 20))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        self.readAllButton = ctk.CTkButton(self.titleFrame, text = "", image = img, fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, command = self.markAllAsRead, state = "disabled", height = 0, width = 0)
+        self.readAllButton.place(relx = 0.98, rely = 0.95, anchor = "se")
 
         self.emailDataFrame = ctk.CTkFrame(self, width = 700, height = 700, fg_color = TKINTER_BACKGROUND, corner_radius = 0)
         self.emailDataFrame.place(x = 300, y = 0, anchor = "nw")
@@ -62,11 +69,11 @@ class Inbox(ctk.CTkFrame):
         Adds all emails to the emails frame, grouped by date.
         """
         
-        emails = Emails.get_all_emails(Game.get_game_date(self.manager_id))
+        self.emails = Emails.get_all_emails(Game.get_game_date(self.manager_id))
         unread = False
 
         currentDate = ""
-        for email in emails:
+        for email in self.emails:
 
             if not email.read:
                 unread = True
@@ -84,13 +91,15 @@ class Inbox(ctk.CTkFrame):
 
         if unread:
             self.parent.addInboxNotification()
+            self.readAllButton.configure(state = "normal")
 
     def addEmail(self, email):
         """
         Adds a single email to the emails frame.
         """
         
-        EmailFrame(self.emailsFrame, self.manager_id, email, self.emailDataFrame, self)
+        frame = EmailFrame(self.emailsFrame, self.manager_id, email, self.emailDataFrame, self)
+        self.frames.append(frame)
 
     def removeNotificationDot(self):
         """
@@ -101,5 +110,17 @@ class Inbox(ctk.CTkFrame):
         for email in emails:
             if not email.read:
                 return
-        
+            
+        self.readAllButton.configure(state = "disabled")
         self.parent.removeInboxNotification()   
+
+    def markAllAsRead(self):
+
+
+        Emails.batch_mark_all_as_read(Game.get_game_date(self.manager_id))
+
+        for frame in self.frames:
+            frame.updateReadStatus()
+
+        self.readAllButton.configure(state = "disabled")
+        self.parent.removeInboxNotification()

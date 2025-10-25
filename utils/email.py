@@ -1304,7 +1304,7 @@ class TeamOfTheWeek():
         self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
         self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
 
-        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.12, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.15, anchor = "w")
 
         self.newsButton = ctk.CTkButton(self.frame, text = "Go to League News", font = (APP_FONT_BOLD, 15), command = lambda: self.goToNews(), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
         self.newsButton.place(relx = 0.95, rely = 0.95, anchor = "se")
@@ -1320,7 +1320,7 @@ class TeamOfTheWeek():
         for i, playerID in enumerate(playersIDs):
             player = Players.get_player_by_id(playerID)
             frame = PlayerProfileLabel(self.frame, player, f"{player.first_name} {player.last_name}", "-   ", "", 240, 30, self.parent.parentTab, fontSize = 15)
-            frame.place(relx = 0.05, rely = 0.17 + i * gap, anchor = "w")
+            frame.place(relx = 0.05, rely = 0.2 + i * gap, anchor = "w")
 
     def goToNews(self):
         self.parent.mainMenu.changeTab(6)

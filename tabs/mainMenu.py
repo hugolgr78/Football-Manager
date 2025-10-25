@@ -181,11 +181,35 @@ class MainMenu(ctk.CTkFrame):
         self.buttons.append(settingsButton)
 
         inboxButton = self.buttons[1]
+        inboxButton.bind("<Enter>", lambda e: self.onHoverInbox())
+        inboxButton.bind("<Leave>", lambda e: self.onLeaveInbox())
+
         src = Image.open("Images/player_bad.png")
         src.thumbnail((10, 10))
         img = ctk.CTkImage(src, None, (src.width, src.height))
         self.inboxNotification = ctk.CTkLabel(inboxButton, image = img, text = "", fg_color = TKINTER_BACKGROUND)
         self.inboxNotification.bind("<Button-1>", lambda e: self.changeTab(1))
+        self.inboxNotification.bind("<Enter>", lambda e: self.onHoverInbox())
+
+    def onHoverInbox(self):
+        """
+        Event handler for when the mouse hovers over the Inbox button.
+        """
+
+        self.buttons[1].configure(fg_color = GREY_BACKGROUND)
+
+        if self.inboxNotification.winfo_ismapped():
+            self.inboxNotification.configure(fg_color = GREY_BACKGROUND)
+
+    def onLeaveInbox(self):
+        """
+        Event handler for when the mouse leaves the Inbox button.
+        """
+
+        self.buttons[1].configure(fg_color = TKINTER_BACKGROUND)
+
+        if self.inboxNotification.winfo_ismapped():
+            self.inboxNotification.configure(fg_color = TKINTER_BACKGROUND)
 
     def canvas(self, width, height, rely):
         """

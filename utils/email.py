@@ -135,7 +135,6 @@ class EmailFrame(ctk.CTkFrame):
         self.timeLabel.place(relx = 0.95, rely = 0.7, anchor = "e")
 
         if not self.read:
-
             if self.important:
                 src = Image.open("Images/unread_important.png")
             else:
@@ -146,16 +145,26 @@ class EmailFrame(ctk.CTkFrame):
             self.unreadLabel = ctk.CTkLabel(self, image = unreadImage, text = "", fg_color = TKINTER_BACKGROUND, width = 0, height = 0)
             self.unreadLabel.place(relx = 0.82, rely = 0.7, anchor = "e")
 
-        self.subjectLabel.bind("<Enter>", lambda event: self.onFrameHover())
+        self.subjectLabel.bind("<Enter>", lambda e: self.onFrameHover())
         self.subjectLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
-        self.senderLabel.bind("<Enter>", lambda event: self.onFrameHover())
+        self.senderLabel.bind("<Enter>", lambda e: self.onFrameHover())
         self.senderLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
-        self.timeLabel.bind("<Enter>", lambda event: self.onFrameHover())
+        self.timeLabel.bind("<Enter>", lambda e: self.onFrameHover())
         self.timeLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
 
         if not self.read:
-            self.unreadLabel.bind("<Enter>", lambda event: self.onFrameHover())
+            self.unreadLabel.bind("<Enter>", lambda e: self.onFrameHover())
             self.unreadLabel.bind("<Button-1>", lambda e: self.displayEmailInfo())
+
+    def updateReadStatus(self):
+        """
+        Set the email read as True and removes the icon
+        """
+        
+        self.read = True
+
+        if hasattr(self, "unreadLabel") and self.unreadLabel.winfo_ismapped():
+            self.unreadLabel.place_forget()
 
 class Welcome():
     def __init__(self, parent):

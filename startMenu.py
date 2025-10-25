@@ -5,6 +5,7 @@ from data.gamesDatabase import *
 from PIL import Image
 import os, datetime, io, json, zipfile, threading
 from CTkMessagebox import CTkMessagebox
+from tkinter import filedialog
 from tabs.mainMenu import MainMenu
 from utils.frames import LeagueTable, WinRatePieChart, ChoosingLeagueFrame
 from utils.util_functions import getSuffix
@@ -38,6 +39,7 @@ class StartMenu(ctk.CTkFrame):
         self.chooseTeamFrame = None
         self.piechart = None
         self.exporting = False
+        self.renaming = False
 
         ## ----------------------------- Menu Frame ----------------------------- ##
         self.menuFrame = ctk.CTkFrame(self, fg_color = DARK_GREY, height = 600, width = 350, corner_radius = 15, border_width = 2, border_color = APP_BLUE)
@@ -107,6 +109,9 @@ class StartMenu(ctk.CTkFrame):
         self.managerNameLabel = ctk.CTkLabel(self.showFrame, text = "", font = (APP_FONT_BOLD, 35), bg_color = DARK_GREY)
         self.managerNameLabel.place(relx = 0.06, rely = 0.05, anchor = "nw")
 
+        self.saveRenameEntry = ctk.CTkEntry(self.showFrame, font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 200, height = 40)
+        self.saveRenameButton = ctk.CTkButton(self.showFrame, text = "OK", font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, width = 40, height = 40, command = self.finishRenameSave)
+
         self.teamImage = ctk.CTkLabel(self.showFrame, image = None, text = "", bg_color = DARK_GREY)
         self.teamImage.place(relx = 0.81, rely = 0.18, anchor = "center")
 
@@ -155,6 +160,7 @@ class StartMenu(ctk.CTkFrame):
 
             ## show the data
             self.showFrame.place(relx = 0.67, rely = 0.5, anchor = "center")
+            self.settings(forceTable = True)
             self.managerNameLabel.configure(text = value)
             managerID = Game.get_manager_id_by_save_name(value)
 
@@ -195,10 +201,13 @@ class StartMenu(ctk.CTkFrame):
         """
 
         deleteSaveButton = ctk.CTkButton(self.settingsFrame, text = "Delete Save", font = (APP_FONT, 15), fg_color = APP_BLUE, hover_color = CLOSE_RED, corner_radius = 10, width = 150, height = 40, command = self.deleteSave)
-        deleteSaveButton.place(relx = 0.5, rely = 0.4, anchor = "center")
+        deleteSaveButton.place(relx = 0.5, rely = 0.35, anchor = "center")
 
         exportSaveButton = ctk.CTkButton(self.settingsFrame, text = "Export Save", font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, width = 150, height = 40, command = self.exportSave)
         exportSaveButton.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        renameSaveButton = ctk.CTkButton(self.settingsFrame, text = "Rename Save", font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, width = 150, height = 40, command = self.renameSave)
+        renameSaveButton.place(relx = 0.5, rely = 0.65, anchor = "center")
         
         self.exportProgressBar = ctk.CTkSlider(
             self.settingsFrame, 
@@ -220,12 +229,121 @@ class StartMenu(ctk.CTkFrame):
 
         self.exportProgressLabel = ctk.CTkLabel(self.settingsFrame, text = "0.0%", font = (APP_FONT, 15), bg_color = DARK_GREY)
 
-    def importSave(self):
+    def runImport(self, file_path):
         """
         Imports a save from a .fmsave file.
+        
+        Args:
+            file_path (str): The path to the .fmsave file.
         """
         
-        pass
+        try:
+            # Open and extract
+            with zipfile.ZipFile(file_path, 'r') as zipf:
+                # Read metadata first (to get save name)
+                meta_file = [f for f in zipf.namelist() if f.endswith("_metadata.json")]
+                if not meta_file:
+                    raise ValueError("No metadata found in save file.")
+
+                metadata = json.loads(zipf.read(meta_file[0]).decode("utf-8"))
+                save_name = metadata["save_name"]
+                manager_id = metadata["manager_id"]
+                game_date = metadata["current_date"]
+
+                existing_games = Game.get_all_games()   
+                if existing_games:
+                    for game in existing_games:
+                        if game.save_name.lower() == save_name.lower():
+                            CTkMessagebox(title = "Error", message = "This save already exists. Please choose a different file or rename the existing save.", icon = "cancel")
+                            return
+
+                # Extract manager’s DB into /data/
+                manager_db_file = f"{save_name}.db"
+                if manager_db_file not in zipf.namelist():
+                    raise ValueError("Manager database not found in save file.")
+
+                os.makedirs("data", exist_ok = True)
+                dest_path = os.path.join("data", manager_db_file)
+                with open(dest_path, "wb") as f:
+                    f.write(zipf.read(manager_db_file))
+
+                Game.add_game_back(manager_id, save_name, game_date)
+                self.parent.after(0, lambda: self.importComplete(save_name))
+
+        except Exception as e:
+            print(f"Error importing save: {e}")
+
+    def importSave(self):
+        """
+        Imports a save from a .fmsave file using a thread.
+        """
+        
+        # Let user choose a file
+        file_path = filedialog.askopenfilename(
+            title = "Select Save File",
+            filetypes = [("Football Manager Save", "*.fmsave")]
+        )
+
+        if not file_path:
+            return
+
+        self.disableWidgets()
+        threading.Thread(target = self.runImport, args = (file_path,), daemon = True).start()
+            
+    def importComplete(self, save_name):
+        """
+        Re-enables widgets and updates the dropdown after import.
+        
+        Args:
+            save_name (str): The name of the imported save.
+        """
+        
+        saves = Game.get_all_games()
+        values = [save.save_name for save in saves]
+        self.enableWidgets()
+        self.dropDown.configure(values = values, state = "normal")
+        self.dropDown.set(save_name)
+        self.chooseManager(save_name)
+        self.settings(forceTable = True)
+
+
+    def renameSave(self):
+        """
+        Prompts the user to rename the current save.
+        """
+
+        if self.renaming:
+            return
+        
+        self.renaming = True
+        self.managerNameLabel.place_forget()
+        self.saveRenameEntry.place(relx = 0.06, rely = 0.05, anchor = "nw")
+        self.saveRenameEntry.delete(0, "end")
+        self.saveRenameEntry.insert(0, self.chosenManager)
+        self.saveRenameEntry.focus()
+
+        self.saveRenameButton.place(relx = 0.38, rely = 0.05, anchor = "nw")
+
+    def finishRenameSave(self):
+        """
+        Finishes the renaming process by updating the save name.
+        """
+
+        new_name = self.saveRenameEntry.get().strip()
+        if new_name:
+            Game.rename_game(self.chosenManager, new_name)
+            self.chosenManager = new_name
+            self.managerNameLabel.configure(text = new_name)
+
+            saves = Game.get_all_games()
+            values = [save.save_name for save in saves]
+            self.dropDown.configure(values = values)
+            self.dropDown.set(new_name)
+
+        self.managerNameLabel.place(relx = 0.06, rely = 0.05, anchor = "nw")
+        self.saveRenameEntry.place_forget()
+        self.saveRenameButton.place_forget()
+        self.renaming = False
 
     def deleteSave(self):
         """
@@ -305,6 +423,7 @@ class StartMenu(ctk.CTkFrame):
         gameDate = Game.get_game_date(self.chosenManagerID)
         metadata = {
             "save_name": self.chosenManager,
+            "manager_id": self.chosenManagerID,
             "current_date": str(gameDate),
             "exported_at": datetime.datetime.now().isoformat()[:19],
             "version": 1
@@ -365,12 +484,22 @@ class StartMenu(ctk.CTkFrame):
         for child in self.winfo_children():
             recurse_enable(child)
 
-    def settings(self):
+    def settings(self, forceTable = False):
         """
         Toggles between the league table and settings frame.
+
+        Args:
+            forceTable (bool): If True, forces the display of the table frame.
         """
 
-        if self.settingsFrame.winfo_ismapped():
+        if self.settingsFrame.winfo_ismapped() or forceTable:
+
+            if self.renaming:
+                self.managerNameLabel.place(relx = 0.06, rely = 0.05, anchor = "nw")
+                self.saveRenameEntry.place_forget()
+                self.saveRenameButton.place_forget()
+                self.renaming = False
+
             self.settingsFrame.place_forget()
             self.tableFrame.place(relx = 0.01, rely = 0.15, anchor = "nw")
         else:

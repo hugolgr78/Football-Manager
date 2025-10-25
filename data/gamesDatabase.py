@@ -77,6 +77,28 @@ class Game(Base):
             if session is not None:
                 session.close()
 
+    @classmethod   
+    def add_game_back(cls, manager_id, save_name, curr_date):
+        session = GamesDatabaseManager().get_session()
+        try:
+            new_game = Game(
+                manager_id = manager_id,
+                save_name = save_name,
+                curr_date = datetime.datetime.fromisoformat(curr_date)
+            )
+
+            session.add(new_game)
+            session.commit()
+
+            return new_game
+        except Exception:
+            if session is not None:
+                session.rollback()
+            raise
+        finally:
+            if session is not None:
+                session.close()
+
     @classmethod
     def get_games_by_manager_id(cls, manager_id):
         session = GamesDatabaseManager().get_session()
@@ -137,5 +159,22 @@ class Game(Base):
             db_path = os.path.join("data", f"{save_name}.db")
             if os.path.exists(db_path):
                 os.remove(db_path)
+        finally:
+            session.close()
+    
+    @classmethod
+    def rename_game(cls, old_save_name, new_save_name):
+        session = GamesDatabaseManager().get_session()
+        try:
+            game = session.query(Game).filter(Game.save_name == old_save_name).first()
+            if game:
+                game.save_name = new_save_name
+                session.commit()
+
+                # Rename the database file if it exists
+                old_db_path = os.path.join("data", f"{old_save_name}.db")
+                new_db_path = os.path.join("data", f"{new_save_name}.db")
+                if os.path.exists(old_db_path):
+                    os.rename(old_db_path, new_db_path)
         finally:
             session.close()

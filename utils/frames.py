@@ -2,7 +2,7 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
-from PIL import Image
+from PIL import Image, ImageDraw
 import io, calendar
 import tkinter.font as tkFont
 from utils.teamLogo import TeamLogo
@@ -3846,3 +3846,140 @@ class ChoosingLeagueFrame(ctk.CTkFrame):
             return
         else:
             self.endFunction()
+
+class News(ctk.CTkFrame):
+    def __init__(self, parent, league_id = None, team_id = None):
+        """
+        Class for displaying news in the league profile or the teams profile.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            league_id (str, optional): The ID of the league. Defaults to None.
+            team_id (str, optional): The ID of the team. Defaults to None.
+        """
+        
+        super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0)  
+
+        self.parent = parent
+        self.objectID = league_id if league_id else team_id
+        self.league_id = league_id
+        self.team_id = team_id
+
+        self.mainNewsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 620, height = 613)
+        self.mainNewsFrame.place(relx = 0, rely = 0, anchor = "nw")
+
+        self.injuriesFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
+        self.injuriesFrame.place(relx = 0.98, rely = 0, anchor = "ne")
+
+        self.suspensionsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
+        self.suspensionsFrame.place(relx = 0.98, rely = 0.25, anchor = "ne")
+
+        self.transfersFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
+        self.transfersFrame.place(relx = 0.98, rely = 0.5, anchor = "ne")  
+
+        self.teamOTWFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
+        self.teamOTWFrame.place(relx = 0.98, rely = 0.75, anchor = "ne")
+
+        self.mainNews()
+        self.injuries()
+        self.suspensions()
+        self.transfers()
+        self.team_of_the_week() 
+
+    def mainNews(self):
+        """
+        Populates the main news frame with league news.
+        """
+
+        src = Image.open("Images/news_backdrop.png")
+        src = src.resize((620, 613))
+
+        # Add transparency (alpha) directly to src
+        if src.mode != "RGBA":
+            src = src.convert("RGBA")
+        alpha = src.split()[-1]
+        alpha = alpha.point(lambda p: int(p * 0.6))
+        src.putalpha(alpha)
+
+        rounded = Image.new("RGBA", src.size, TKINTER_BACKGROUND)  # fill the new image with a background color
+        mask = Image.new("L", src.size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.rounded_rectangle((0, 0, src.width, src.height), 25, fill = 255)
+
+        # Paste transparent src where the mask allows it
+        rounded.paste(src, (0, 0), mask)
+
+        img = ctk.CTkImage(rounded, None, (src.width, src.height))
+        ctk.CTkLabel(self.mainNewsFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+    def injuries(self):
+        """
+        Populates the injuries frame with injury news.
+        """
+
+        src = Image.open("Images/injury.png")
+        src.thumbnail((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.injuriesFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
+        ctk.CTkLabel(self.injuriesFrame, text = "Injuries", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
+
+        ctk.CTkLabel(self.injuriesFrame, text = "Find out which players are currently injured in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        src = Image.open("Images/expand.png")
+        src = src.resize((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.injuriesFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.95, rely = 0.9, anchor = "se")
+
+    def suspensions(self):
+        """
+        Populates the suspensions frame with suspension news.
+        """
+
+        src = Image.open("Images/redCard.png")
+        src.thumbnail((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.suspensionsFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
+        ctk.CTkLabel(self.suspensionsFrame, text = "Suspensions", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
+
+        ctk.CTkLabel(self.suspensionsFrame, text = "Discover which players are currently suspended in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        src = Image.open("Images/expand.png")
+        src = src.resize((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.suspensionsFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.95, rely = 0.9, anchor = "se")
+
+    def transfers(self):
+        """
+        Populates the transfers frame with transfer news.
+        """
+
+        src = Image.open("Images/contract.png")
+        src.thumbnail((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.transfersFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
+        ctk.CTkLabel(self.transfersFrame, text = "Transfers", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
+
+        ctk.CTkLabel(self.transfersFrame, text = "Find out about the latest transfers in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        src = Image.open("Images/expand.png")
+        src = src.resize((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.transfersFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.95, rely = 0.9, anchor = "se")
+
+    def team_of_the_week(self):
+        """
+        Populates the team of the week frame with team news.
+        """
+
+        src = Image.open("Images/pitch.png")
+        src.thumbnail((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.teamOTWFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
+        ctk.CTkLabel(self.teamOTWFrame, text = "Team of the Week", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
+
+        ctk.CTkLabel(self.teamOTWFrame, text = "Discover all team of the weeks for the league up till the last matchday.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        src = Image.open("Images/expand.png")
+        src = src.resize((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.teamOTWFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.95, rely = 0.9, anchor = "se")

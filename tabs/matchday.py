@@ -2410,6 +2410,7 @@ class MatchDay(ctk.CTkFrame):
                 "morale_updates": [],
                 "lineup_updates": [],
                 "stats_updates": [],
+                "news_to_add": [],
             }
         
         payloads = []
@@ -2419,11 +2420,9 @@ class MatchDay(ctk.CTkFrame):
         logger.debug("Saving data for other matches in the league.")
         for frame in self.otherMatchesFrame.winfo_children():
             if frame.matchInstance:
-                # frame.matchInstance.saveData(auto = False)
                 payloads.append(frame.matchInstance.saveData())
 
         logger.debug("Saving data for the managed match.")
-        # self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away")
         payloads.append(self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away"))
 
         logger.debug("Combining payloads.")

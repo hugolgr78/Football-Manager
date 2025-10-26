@@ -2,7 +2,7 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageTk
 import io, calendar
 import tkinter.font as tkFont
 from utils.teamLogo import TeamLogo
@@ -3861,7 +3861,6 @@ class News(ctk.CTkFrame):
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0)  
 
         self.parent = parent
-        self.objectID = league_id if league_id else team_id
         self.league_id = league_id
         self.team_id = team_id
 
@@ -3888,11 +3887,12 @@ class News(ctk.CTkFrame):
 
     def mainNews(self):
         """
-        Populates the main news frame with league news.
+        Populates the main news frame with league news using a Canvas.
         """
 
+        canvasSize = 770
         src = Image.open("Images/news_backdrop.png")
-        src = src.resize((620, 613))
+        src = src.resize((canvasSize, canvasSize))
 
         # Add transparency (alpha) directly to src
         if src.mode != "RGBA":
@@ -3901,7 +3901,7 @@ class News(ctk.CTkFrame):
         alpha = alpha.point(lambda p: int(p * 0.6))
         src.putalpha(alpha)
 
-        rounded = Image.new("RGBA", src.size, TKINTER_BACKGROUND)  # fill the new image with a background color
+        rounded = Image.new("RGBA", src.size, TKINTER_BACKGROUND)  # fill the new image with background color
         mask = Image.new("L", src.size, 0)
         draw = ImageDraw.Draw(mask)
         draw.rounded_rectangle((0, 0, src.width, src.height), 25, fill = 255)
@@ -3909,8 +3909,93 @@ class News(ctk.CTkFrame):
         # Paste transparent src where the mask allows it
         rounded.paste(src, (0, 0), mask)
 
-        img = ctk.CTkImage(rounded, None, (src.width, src.height))
-        ctk.CTkLabel(self.mainNewsFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        # Create a canvas inside mainNewsFrame
+        self.canvas = ctk.CTkCanvas(self.mainNewsFrame, width = canvasSize, height = canvasSize, highlightthickness = 0, bg = TKINTER_BACKGROUND)
+        self.canvas.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        # Draw the background image
+        photo = ImageTk.PhotoImage(rounded)
+        self.canvas.create_image(0, 0, anchor = "nw", image = photo)
+        self.canvas.image = photo  # keep a reference
+
+        # Get news
+        if self.league_id:
+            self.news = LeagueNews.get_news_for_league(self.league_id)
+        else:
+            self.news = LeagueNews.get_news_for_team(self.team_id)
+
+        if not self.news:
+            self.canvas.create_text(20, 730, anchor = "w", text = "No news available.", fill = "white", font = (APP_FONT_BOLD, 35))  
+            return
+
+        self.leftArrowButton = self.canvas.create_text(20, 740, anchor = "w", text = "<", fill = "white", font = (APP_FONT_BOLD, 25))
+        self.rightArrowButton = self.canvas.create_text(750, 740, anchor = "e", text = ">", fill = "white", font = (APP_FONT_BOLD, 25))
+
+        self.generateTitles()
+        if len(self.newsTitles) == 0:
+            self.canvas.create_text(20, 730, anchor = "w", text = "No news available.", fill = "white", font = (APP_FONT_BOLD, 35))  
+            return
+
+        fontSize = 25 if len(self.newsTitles[0]) > 40 else 30
+        self.titleText = self.canvas.create_text(20, 680, anchor = "w", text = self.newsTitles[0], fill = "white", font = (APP_FONT_BOLD, fontSize))
+
+    def generateTitles(self):
+        self.newsTitles = []
+
+        for newsObj in self.news:
+            match newsObj.news_type:
+                case "milestone":
+                    last_name = Players.get_player_by_id(newsObj.player_id).last_name
+                    title = generate_news_title("milestone", newsObj.milestone_type, None, player = last_name, value = newsObj.milestone_number)
+                    self.newsTitles.append(title)
+                case "big_score":
+                    matchObj = Matches.get_match_by_id(newsObj.match_id)
+                    homeTeam = Teams.get_team_by_id(matchObj.home_id)
+                    awayTeam = Teams.get_team_by_id(matchObj.away_id)
+
+                    if matchObj.score_home > matchObj.score_away:
+                        winner = homeTeam
+                    elif matchObj.score_home < matchObj.score_away:
+                        winner = awayTeam
+                    else:
+                        winner = None
+
+                    type_ = "big_win" if winner else "big_score"
+
+                    if type_ == "big_win":
+                        firstTeam = homeTeam.name if winner == homeTeam else awayTeam.name
+                        secondTeam = awayTeam.name if winner == homeTeam else homeTeam.name
+                    else:
+                        firstTeam = homeTeam.name
+                        secondTeam = awayTeam.name
+
+                    title = generate_news_title("big_score", None, type_, team1 = firstTeam, team2 = secondTeam, score = f"{matchObj.score_home} - {matchObj.score_away}")
+                    self.newsTitles.append(title)
+                case "injury":
+                    player = Players.get_player_by_id(newsObj.player_id)
+
+                    injured = PlayerBans.get_player_injured(newsObj.player_id)
+
+                    if not injured:
+                        continue
+
+                    bans = PlayerBans.get_bans_for_player(newsObj.player_id)
+                    for ban in bans:
+                        if ban.injury:
+                            injuryLength = ban.injury - newsObj.date 
+
+                    # turn injury length into months (round up)
+                    injuryMonths = -(-injuryLength.days // 30)  # Ceiling division
+
+                    title = generate_news_title(newsObj.news_type, None, None, player = player.last_name, months = injuryMonths)
+                    self.newsTitles.append(title)
+                case "disciplinary":
+                    matchObj = Matches.get_match_by_id(newsObj.match_id)
+                    homeTeam = Teams.get_team_by_id(matchObj.home_id).name
+
+                    title = generate_news_title(newsObj.news_type, None, None, number = newsObj.news_number, team = homeTeam)
+                    self.newsTitles.append(title)   
 
     def injuries(self):
         """

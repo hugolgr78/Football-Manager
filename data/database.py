@@ -4533,9 +4533,11 @@ class LeagueNews(Base):
     matchday = Column(Integer)
     player_id = Column(String(128), ForeignKey('players.id'))
     match_id = Column(String(128), ForeignKey('matches.id'))
+    milestone_type = Column(String(128))
+    news_number = Column(Integer)
 
     @classmethod
-    def add_news(cls, news_type, date, league_id, matchday = None, player_id = None, match_id = None):
+    def add_news(cls, news_type, date, league_id, matchday = None, player_id = None, match_id = None, milestone_type = None, news_number = None):
         session = DatabaseManager().get_session()
         try:
             news_entry = LeagueNews(
@@ -4545,6 +4547,8 @@ class LeagueNews(Base):
                 league_id = league_id,
                 player_id = player_id,
                 match_id = match_id,
+                milestone_type = milestone_type,
+                news_number = news_number
             )
             session.add(news_entry)
 
@@ -4568,6 +4572,18 @@ class LeagueNews(Base):
             session.close()
 
     @classmethod
+    def get_news_for_team(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            news_entries = session.query(LeagueNews).filter(LeagueNews.team_id == team_id).all()
+
+            # Sort by date and return latest 10
+            news_entries = sorted(news_entries, key = lambda x: x.date, reverse = True)[:10]
+            return news_entries
+        finally:
+            session.close()
+
+    @classmethod
     def batch_add_news(cls, newsObjects):
         session = DatabaseManager().get_session()
         try:
@@ -4581,6 +4597,8 @@ class LeagueNews(Base):
                     "matchday": news[3],
                     "player_id": news[4],
                     "match_id": news[5],
+                    "milestone_type": news[6],
+                    "news_number": news[7]
                 }
                 for news in newsObjects
             ]

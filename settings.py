@@ -637,6 +637,45 @@ TIPS = [
     "Shouts can affect the game in your favor if you use them wisely based on the situation.",
 ]
 
+NEWS_TITLES = {
+    "milestone_goals": [
+        "{player} hits {value} goals.",
+    ],
+    "milestone_assists": [
+        "{player} hits {value} assists.",
+    ],
+    "milestone_clean_sheets": [
+        "{player} hits {value} clean sheets.",
+    ],
+    "injury": [
+        "{player} sidelined for {months} months",
+        "Injury blow: {player} out for {months} months",
+        "{player} faces {months}-month layoff"
+    ],
+    "big_win": [
+        "{team1} wins against {team2}: {score}",
+    ],
+    "big_score": [
+        "{team1} and {team2} light up the pitch: {score}",
+    ],
+    "transfer": [
+        "{player} joins {team}",
+        "Transfer completed: {player} to {team}",
+        "{player} moves to {team}"
+    ],
+    "disciplinary": [
+        "{number} cards in {team}'s match",
+    ],
+    "position_change": [
+        "{team} takes the lead!",
+        "{team} drops to the relegation zone"
+    ],
+    "overthrow": [
+        "Upset: {team1} beats {team2}",
+        "Shock result in {team1} vs {team2}",
+        "{team1} dethrones {team2}"
+    ]
+}
 
 from data.database import StatsManager
 

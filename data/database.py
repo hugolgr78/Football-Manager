@@ -1,3 +1,4 @@
+from asyncio import events
 import re, datetime, os, shutil, time, gc, logging
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
@@ -4532,12 +4533,9 @@ class LeagueNews(Base):
     matchday = Column(Integer)
     player_id = Column(String(128), ForeignKey('players.id'))
     match_id = Column(String(128), ForeignKey('matches.id'))
-    suspension = Column(Integer)
-    injury = Column(DateTime)
-
 
     @classmethod
-    def add_news(cls, news_type, date, league_id, matchday = None, player_id = None, match_id = None, suspension = None, injury = None):
+    def add_news(cls, news_type, date, league_id, matchday = None, player_id = None, match_id = None):
         session = DatabaseManager().get_session()
         try:
             news_entry = LeagueNews(
@@ -4547,13 +4545,8 @@ class LeagueNews(Base):
                 league_id = league_id,
                 player_id = player_id,
                 match_id = match_id,
-                suspension = suspension,
-                injury = injury
             )
             session.add(news_entry)
-
-            # Ensure max of 5 news per league by deleting old news
-            cls.check_news_to_delete(league_id)
 
             session.commit()
         except Exception as e:
@@ -4567,24 +4560,37 @@ class LeagueNews(Base):
         session = DatabaseManager().get_session()
         try:
             news_entries = session.query(LeagueNews).filter(LeagueNews.league_id == league_id).all()
+
+            # Sort by date and return latest 10
+            news_entries = sorted(news_entries, key = lambda x: x.date, reverse = True)[:10]
             return news_entries
         finally:
             session.close()
 
     @classmethod
-    def check_news_to_delete(cls, league_id):
+    def batch_add_news(cls, newsObjects):
         session = DatabaseManager().get_session()
         try:
-            news_entries = cls.get_news_for_league(league_id)
-            if len(news_entries) >= 5:
-                # Sort by date ascending to delete oldest first and keep a max of 5
-                news_entries = sorted(news_entries, key = lambda x: x.date)
-                entries_to_delete = news_entries[:-5]
-                for entry in entries_to_delete:
-                    session.delete(entry)
+            # Create a list of dictionaries representing each news item
+            news_dicts = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "news_type": news[0],
+                    "date": news[1],
+                    "league_id": news[2],
+                    "matchday": news[3],
+                    "player_id": news[4],
+                    "match_id": news[5],
+                }
+                for news in newsObjects
+            ]
 
+            # Use session.execute with an insert statement
+            session.execute(insert(LeagueNews), news_dicts)
+            session.commit()
         except Exception as e:
             session.rollback()
+            logger.exception("Error in batch_add_news: %s", e)
             raise e
         finally:
             session.close()
@@ -6490,6 +6496,7 @@ def process_payload(payload):
         call_if_not_empty(payload["morale_updates"], Players.batch_update_morales)
         call_if_not_empty(payload["lineup_updates"], TeamLineup.batch_add_lineups)
         call_if_not_empty(payload["stats_updates"], MatchStats.batch_add_stats)
+        call_if_not_empty(payload["news_to_add"], LeagueNews.batch_add_news)
 
         if "players_to_update" in payload:
             call_if_not_empty(payload["players_to_update"], Players.batch_reduce_morales_to_25)

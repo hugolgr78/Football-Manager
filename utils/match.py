@@ -1151,7 +1151,10 @@ class Match():
                 "morale_updates": [],
                 "lineup_updates": [],
                 "stats_updates": [],
+                "news_to_add": [],
             }
+
+            totalCards = 0
 
             homeManager = Managers.get_manager_by_id(self.homeTeam.manager_id)
             awayManager = Managers.get_manager_by_id(self.awayTeam.manager_id)
@@ -1226,7 +1229,13 @@ class Match():
                     ban = get_player_ban(event["type"], currDate)
                     logger.debug(f"{prefix} Computed ban length={ban} for player={player_id} type={event['type']}")
                     payload["player_bans"].append((player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate))
+
+                    if event["type"] == "injury" and ban - currDate > timedelta(days = 60):
+                        payload["news_to_add"].append(("injury", currDate, self.match.league_id, self.match.matchday, player_id, None))
+                    else:
+                        totalCards += 1
                 elif event["type"] == "yellow_card":
+                    totalCards += 1
                     events_to_add.append((self.match.id, "yellow_card", minute, player_id))
                     payload["yellow_card_checks"].append((player_id, self.match.league_id, YELLOW_THRESHOLD, currDate))
                     logger.debug(f"{prefix} Home yellow card queued: match={self.match.id} player={player_id} minute={minute}")
@@ -1268,7 +1277,13 @@ class Match():
                     ban = get_player_ban(event["type"], currDate)
                     logger.debug(f"{prefix} Computed ban length={ban} for player={player_id} type={event['type']}")
                     payload["player_bans"].append((player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate))
+                    
+                    if event["type"] == "injury" and ban - currDate > timedelta(days = 60):
+                        payload["news_to_add"].append(("injury", currDate, self.match.league_id, self.match.matchday, player_id, None))
+                    else:
+                        totalCards += 1
                 elif event["type"] == "yellow_card":
+                    totalCards += 1
                     events_to_add.append((self.match.id, "yellow_card", minute, player_id))
                     payload["yellow_card_checks"].append((player_id, self.match.league_id, YELLOW_THRESHOLD, currDate))
                     logger.debug(f"{prefix} Away yellow card queued: match={self.match.id} player={player_id} minute={minute}")
@@ -1276,6 +1291,9 @@ class Match():
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
                     logger.debug(f"{prefix} Away event queued: event={event["type"]}, match={self.match.id}, player={player_id}, minute={minute}")
                 
+            if totalCards >= 5:
+                payload["news_to_add"].append(("disciplinary", currDate, self.match.league_id, self.match.matchday, None, self.match.id))
+
             if self.homeCleanSheet:
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"]))
 
@@ -1287,6 +1305,9 @@ class Match():
             # Matches update
             logger.debug(f"{prefix} Submitting match score update: {self.score[0]} : {self.score[1]}")
             payload["score_updates"].append((self.match.id, self.score[0], self.score[1]))
+
+            if self.score[0] + self.score[1] >= 5:
+                payload["news_to_add"].append(("big_score", currDate, self.match.league_id, self.match.matchday, None, self.match.id))
 
             # Players updates
             fitness_to_update = []

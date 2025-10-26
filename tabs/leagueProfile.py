@@ -842,7 +842,7 @@ class Graphs(ctk.CTkFrame):
         else:
             points_result = TeamHistory.get_points_by_team(team_id)
             if points_result:
-                points = [poi[0] for poi in pointsResult]
+                points = [poi[0] for poi in points_result]
                 self.createGraphs(points, index, max(15, self.leagueTeams[0].points), "points", self.pointsCanvas, False, False)
 
         self.resetButton.configure(state = "disabled")
@@ -1136,7 +1136,7 @@ class News(ctk.CTkFrame):
         if src.mode != "RGBA":
             src = src.convert("RGBA")
         alpha = src.split()[-1]
-        alpha = alpha.point(lambda p: int(p * 0.6))  # 0.45 = 45% opacity
+        alpha = alpha.point(lambda p: int(p * 0.6))
         src.putalpha(alpha)
 
         rounded = Image.new("RGBA", src.size, TKINTER_BACKGROUND)  # fill the new image with a background color

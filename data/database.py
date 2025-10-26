@@ -4522,6 +4522,73 @@ class Settings(Base):
         finally:
             session.close()
 
+class LeagueNews(Base):
+    __tablename__ = 'league_news'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    news_type = Column(Enum("milestone", "injury", "big_score", "transfer", "disciplinary", "position_change", "overthrow"), nullable = False)
+    date = Column(DateTime, nullable = False)
+    league_id = Column(String(128), ForeignKey('leagues.id'), nullable = False)
+    matchday = Column(Integer)
+    player_id = Column(String(128), ForeignKey('players.id'))
+    match_id = Column(String(128), ForeignKey('matches.id'))
+    suspension = Column(Integer)
+    injury = Column(DateTime)
+
+
+    @classmethod
+    def add_news(cls, news_type, date, league_id, matchday = None, player_id = None, match_id = None, suspension = None, injury = None):
+        session = DatabaseManager().get_session()
+        try:
+            news_entry = LeagueNews(
+                news_type = news_type,
+                date = date,
+                matchday = matchday,
+                league_id = league_id,
+                player_id = player_id,
+                match_id = match_id,
+                suspension = suspension,
+                injury = injury
+            )
+            session.add(news_entry)
+
+            # Ensure max of 5 news per league by deleting old news
+            cls.check_news_to_delete(league_id)
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_news_for_league(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            news_entries = session.query(LeagueNews).filter(LeagueNews.league_id == league_id).all()
+            return news_entries
+        finally:
+            session.close()
+
+    @classmethod
+    def check_news_to_delete(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            news_entries = cls.get_news_for_league(league_id)
+            if len(news_entries) >= 5:
+                # Sort by date ascending to delete oldest first and keep a max of 5
+                news_entries = sorted(news_entries, key = lambda x: x.date)
+                entries_to_delete = news_entries[:-5]
+                for entry in entries_to_delete:
+                    session.delete(entry)
+
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
 class StatsManager:
     @staticmethod
     def get_goals_scored(leagueTeams, league_id):

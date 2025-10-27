@@ -3907,7 +3907,6 @@ class News(ctk.CTkFrame):
         # Paste transparent src where the mask allows it
         rounded.paste(src, (0, 0), mask)
 
-
         # Create a canvas inside mainNewsFrame
         self.canvas = tk.Canvas(self.mainNewsFrame, width = canvasSize, height = canvasSize, highlightthickness = 0, bg = TKINTER_BACKGROUND)
         self.canvas.place(relx = 0.5, rely = 0.5, anchor = "center")
@@ -3933,10 +3932,6 @@ class News(ctk.CTkFrame):
         self.canvas.tag_bind(self.leftArrowButton, "<Button-1>", lambda e: self.moveTitle(-1))
         self.canvas.tag_bind(self.rightArrowButton, "<Button-1>", lambda e: self.moveTitle(1))
 
-        # self.hoverArea = self.canvas.create_rectangle(0, 0, 770, 700, outline = "", fill = "")
-        # self.canvas.tag_raise(self.hoverArea)
-        # self.canvas.tag_bind(self.hoverArea, "<Enter>", self.showNewsDetails)
-        # self.canvas.tag_bind(self.hoverArea, "<Leave>", self.removeNewsDetails)
         self.canvas.bind("<Motion>", self.checkHover)
         self.canvas.bind("<Enter>", self.showNewsDetails)
         self.canvas.bind("<Leave>", self.removeNewsDetails)
@@ -3951,14 +3946,22 @@ class News(ctk.CTkFrame):
         self.titleText = self.canvas.create_text(20, 680, anchor = "w", text = self.newsTitles[0], fill = "white", font = (APP_FONT_BOLD, fontSize))
         self.title_coords = [20, 680]  # Track current coordinates of the title
 
+        self.newsText = self.canvas.create_text(20, 800, anchor = "nw", text = self.newsDetails[0], fill = "white", font = (APP_FONT, 15))
+        self.newsText_coords = [20, 800]  # Track current coordinates of the news text
+
     def generateTitles(self):
+        """
+        Generates the news titles for each news item.
+        """
+        
         self.newsTitles = []
 
-        for newsObj in self.news:
+        for i, newsObj in enumerate(self.news):
+            self.newsDetails.append(f"More detail here {i}")
             match newsObj.news_type:
                 case "milestone":
                     last_name = Players.get_player_by_id(newsObj.player_id).last_name
-                    title = generate_news_title("milestone", newsObj.milestone_type, None, player = last_name, value = newsObj.milestone_number)
+                    title = generate_news_title("milestone", newsObj.milestone_type, None, player = last_name, value = newsObj.news_number)
                     self.newsTitles.append(title)
                 case "big_score":
                     matchObj = Matches.get_match_by_id(newsObj.match_id)
@@ -4008,9 +4011,20 @@ class News(ctk.CTkFrame):
                     title = generate_news_title(newsObj.news_type, None, None, number = newsObj.news_number, team = homeTeam)
                     self.newsTitles.append(title)   
 
+    def generateDetails(self):
+        """
+        Generates the news details for each news item.
+        """
+        
+        self.newsDetails = []
+        pass
+
     def checkHover(self, event):
         """
         Check if the mouse is hovering over the news area.
+
+        Args:
+            event (Event): The event object.
         """
 
         if 0 <= event.x <= 770 and 0 <= event.y <= 700:
@@ -4025,6 +4039,9 @@ class News(ctk.CTkFrame):
     def showNewsDetails(self, event):
         """
         Animate title up when hovering.
+
+        Args:
+            event (Event): The event object.
         """
 
         if event.y > 700:
@@ -4034,16 +4051,22 @@ class News(ctk.CTkFrame):
     def removeNewsDetails(self, event):
         """
         Animate title down when leaving.
+
+        Args:
+            event (Event): The event object.
         """
 
         self.animate_title((self.title_coords[0], 680))
 
     def animate_title(self, target):
         """
-        Smoothly animate the title to the target position with safe cancellation.
+        Smoothly animate the title (and news details) to the target position with safe cancellation.
+        The news details follows the title: always 20 px below when moving up, snap to 800 when fully down.
+
         Args:
             target (tuple): The target (x, y) position for the title.
         """
+
         target_x, target_y = target
 
         # Cancel previous animation safely
@@ -4057,10 +4080,13 @@ class News(ctk.CTkFrame):
         # Track coordinates manually
         if not hasattr(self, "title_coords"):
             self.title_coords = [20, 680]
+        if not hasattr(self, "newsText_coords"):
+            self.newsText_coords = [20, 800]
 
-        x0, y0 = self.title_coords
         steps = 70
         delay = 15
+
+        x0, y0 = self.title_coords
 
         def ease(t):
             return t * t * (3 - 2 * t)
@@ -4072,15 +4098,32 @@ class News(ctk.CTkFrame):
 
             dx = new_x - self.title_coords[0]
             dy = new_y - self.title_coords[1]
+
+            # Move title
             self.canvas.move(self.titleText, dx, dy)
             self.title_coords = [new_x, new_y]
+
+            # Move news text: 20 px below if moving up, follow title
+            if target_y < 680:  # title moving up
+                new_news_y = new_y + 40
+            else:  # moving down
+                new_news_y = self.newsText_coords[1] + dy
+                if new_y == 680:  # fully down
+                    new_news_y = 800
+
+            dy_news = new_news_y - self.newsText_coords[1]
+            self.canvas.move(self.newsText, 0, dy_news)
+            self.newsText_coords[1] = new_news_y
 
             if step < steps:
                 self.anim_id = self.canvas.after(delay, animate, step + 1)
             else:
-                # Snap to final position
+                # Snap final positions
                 try:
                     self.canvas.coords(self.titleText, target_x, target_y)
+                    final_news_y = target_y + 40 if target_y < 680 else 800
+                    self.canvas.coords(self.newsText, target_x, final_news_y)
+                    self.newsText_coords[1] = final_news_y
                 except Exception:
                     pass
                 self.title_coords = [target_x, target_y]
@@ -4092,10 +4135,13 @@ class News(ctk.CTkFrame):
         """
         Animate the current news title sliding left/right only if fully down.
         If the title is moving up/down, just replace the text without horizontal slide.
-        
+        Updates both title and details text.
+
         Args:
             direction (int): 1 for right, -1 for left.
         """
+
+        # Determine next index
         if direction == 1:
             nextNews = (self.currentNews + 1) % len(self.newsTitles)
         else:
@@ -4106,6 +4152,7 @@ class News(ctk.CTkFrame):
         # If the title is not fully down, just replace the text
         if self.title_coords[1] != 680:
             self.canvas.itemconfigure(self.titleText, text=self.newsTitles[nextNews], font=(APP_FONT_BOLD, fontSize))
+            self.canvas.itemconfigure(self.newsText, text=self.newsDetails[nextNews])
             self.currentNews = nextNews
             return
 
@@ -4124,6 +4171,9 @@ class News(ctk.CTkFrame):
             font=(APP_FONT_BOLD, fontSize),
             anchor="w"
         )
+
+        # Update details immediately
+        self.canvas.itemconfigure(self.newsText, text=self.newsDetails[nextNews])
 
         steps = 30
         delay = 15
@@ -4145,9 +4195,10 @@ class News(ctk.CTkFrame):
 
                 self.canvas.move(self.titleText, dx_old, 0)
                 self.canvas.move(newText, dx_new, 0)
-
-                # Update tracked coordinates
                 self.title_coords[0] = old_x
+
+                # News text only moves vertically if needed (here fully down, so no horizontal)
+                self.canvas.move(self.newsText, 0, 0)
 
                 self.canvas.after(delay, animate, step + 1)
             else:

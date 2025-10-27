@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import tkinter as tk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
@@ -3863,6 +3864,7 @@ class News(ctk.CTkFrame):
         self.parent = parent
         self.league_id = league_id
         self.team_id = team_id
+        self.hovering = False
 
         self.mainNewsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 620, height = 613)
         self.mainNewsFrame.place(relx = 0, rely = 0, anchor = "nw")
@@ -3894,12 +3896,8 @@ class News(ctk.CTkFrame):
         src = Image.open("Images/news_backdrop.png")
         src = src.resize((canvasSize, canvasSize))
 
-        # Add transparency (alpha) directly to src
         if src.mode != "RGBA":
             src = src.convert("RGBA")
-        alpha = src.split()[-1]
-        alpha = alpha.point(lambda p: int(p * 0.6))
-        src.putalpha(alpha)
 
         rounded = Image.new("RGBA", src.size, TKINTER_BACKGROUND)  # fill the new image with background color
         mask = Image.new("L", src.size, 0)
@@ -3911,12 +3909,12 @@ class News(ctk.CTkFrame):
 
 
         # Create a canvas inside mainNewsFrame
-        self.canvas = ctk.CTkCanvas(self.mainNewsFrame, width = canvasSize, height = canvasSize, highlightthickness = 0, bg = TKINTER_BACKGROUND)
+        self.canvas = tk.Canvas(self.mainNewsFrame, width = canvasSize, height = canvasSize, highlightthickness = 0, bg = TKINTER_BACKGROUND)
         self.canvas.place(relx = 0.5, rely = 0.5, anchor = "center")
 
         # Draw the background image
         photo = ImageTk.PhotoImage(rounded)
-        self.canvas.create_image(0, 0, anchor = "nw", image = photo)
+        self.image = self.canvas.create_image(0, 0, anchor = "nw", image = photo)
         self.canvas.image = photo  # keep a reference
 
         # Get news
@@ -3932,13 +3930,26 @@ class News(ctk.CTkFrame):
         self.leftArrowButton = self.canvas.create_text(20, 740, anchor = "w", text = "<", fill = "white", font = (APP_FONT_BOLD, 25))
         self.rightArrowButton = self.canvas.create_text(750, 740, anchor = "e", text = ">", fill = "white", font = (APP_FONT_BOLD, 25))
 
+        self.canvas.tag_bind(self.leftArrowButton, "<Button-1>", lambda e: self.moveTitle(-1))
+        self.canvas.tag_bind(self.rightArrowButton, "<Button-1>", lambda e: self.moveTitle(1))
+
+        # self.hoverArea = self.canvas.create_rectangle(0, 0, 770, 700, outline = "", fill = "")
+        # self.canvas.tag_raise(self.hoverArea)
+        # self.canvas.tag_bind(self.hoverArea, "<Enter>", self.showNewsDetails)
+        # self.canvas.tag_bind(self.hoverArea, "<Leave>", self.removeNewsDetails)
+        self.canvas.bind("<Motion>", self.checkHover)
+        self.canvas.bind("<Enter>", self.showNewsDetails)
+        self.canvas.bind("<Leave>", self.removeNewsDetails)
+
         self.generateTitles()
         if len(self.newsTitles) == 0:
             self.canvas.create_text(20, 730, anchor = "w", text = "No news available.", fill = "white", font = (APP_FONT_BOLD, 35))  
             return
 
-        fontSize = 25 if len(self.newsTitles[0]) > 40 else 30
+        fontSize = 25 if len(self.newsTitles[0]) > 35 else 30
+        self.currentNews = 0
         self.titleText = self.canvas.create_text(20, 680, anchor = "w", text = self.newsTitles[0], fill = "white", font = (APP_FONT_BOLD, fontSize))
+        self.title_coords = [20, 680]  # Track current coordinates of the title
 
     def generateTitles(self):
         self.newsTitles = []
@@ -3996,6 +4007,157 @@ class News(ctk.CTkFrame):
 
                     title = generate_news_title(newsObj.news_type, None, None, number = newsObj.news_number, team = homeTeam)
                     self.newsTitles.append(title)   
+
+    def checkHover(self, event):
+        """
+        Check if the mouse is hovering over the news area.
+        """
+
+        if 0 <= event.x <= 770 and 0 <= event.y <= 700:
+            if not self.hovering:
+                self.hovering = True
+                self.showNewsDetails(event)
+        else:
+            if self.hovering:
+                self.hovering = False
+                self.removeNewsDetails(event)
+
+    def showNewsDetails(self, event):
+        """
+        Animate title up when hovering.
+        """
+
+        if event.y > 700:
+            return
+        self.animate_title((self.title_coords[0], 50))
+
+    def removeNewsDetails(self, event):
+        """
+        Animate title down when leaving.
+        """
+
+        self.animate_title((self.title_coords[0], 680))
+
+    def animate_title(self, target):
+        """
+        Smoothly animate the title to the target position with safe cancellation.
+        Args:
+            target (tuple): The target (x, y) position for the title.
+        """
+        target_x, target_y = target
+
+        # Cancel previous animation safely
+        if hasattr(self, "anim_id") and self.anim_id is not None:
+            try:
+                self.canvas.after_cancel(self.anim_id)
+            except ValueError:
+                pass
+            self.anim_id = None
+
+        # Track coordinates manually
+        if not hasattr(self, "title_coords"):
+            self.title_coords = [20, 680]
+
+        x0, y0 = self.title_coords
+        steps = 70
+        delay = 15
+
+        def ease(t):
+            return t * t * (3 - 2 * t)
+
+        def animate(step=0):
+            t = ease(step / steps)
+            new_x = x0 + (target_x - x0) * t
+            new_y = y0 + (target_y - y0) * t
+
+            dx = new_x - self.title_coords[0]
+            dy = new_y - self.title_coords[1]
+            self.canvas.move(self.titleText, dx, dy)
+            self.title_coords = [new_x, new_y]
+
+            if step < steps:
+                self.anim_id = self.canvas.after(delay, animate, step + 1)
+            else:
+                # Snap to final position
+                try:
+                    self.canvas.coords(self.titleText, target_x, target_y)
+                except Exception:
+                    pass
+                self.title_coords = [target_x, target_y]
+                self.anim_id = None
+
+        animate()
+
+    def moveTitle(self, direction):
+        """
+        Animate the current news title sliding left/right only if fully down.
+        If the title is moving up/down, just replace the text without horizontal slide.
+        
+        Args:
+            direction (int): 1 for right, -1 for left.
+        """
+        if direction == 1:
+            nextNews = (self.currentNews + 1) % len(self.newsTitles)
+        else:
+            nextNews = (self.currentNews - 1) % len(self.newsTitles)
+
+        fontSize = 25 if len(self.newsTitles[nextNews]) > 35 else 30
+
+        # If the title is not fully down, just replace the text
+        if self.title_coords[1] != 680:
+            self.canvas.itemconfigure(self.titleText, text=self.newsTitles[nextNews], font=(APP_FONT_BOLD, fontSize))
+            self.currentNews = nextNews
+            return
+
+        # --- Full horizontal slide ---
+        self.canvas.update_idletasks()
+        canvas_width = self.canvas.winfo_width()
+        end_x = 20
+        current_y = 680  # fully down
+        start_x = canvas_width + 400 if direction == 1 else -800
+        old_target_x = -800 if direction == 1 else canvas_width + 400
+
+        newText = self.canvas.create_text(
+            start_x, current_y,
+            text=self.newsTitles[nextNews],
+            fill="white",
+            font=(APP_FONT_BOLD, fontSize),
+            anchor="w"
+        )
+
+        steps = 30
+        delay = 15
+
+        def ease(t):
+            return t * t * (3 - 2 * t)
+
+        old_start_x = self.title_coords[0]
+
+        def animate(step=0):
+            if step <= steps:
+                t = ease(step / steps)
+
+                # Horizontal positions
+                old_x = old_start_x + (old_target_x - old_start_x) * t
+                new_x = start_x + (end_x - start_x) * t
+                dx_old = old_x - self.title_coords[0]
+                dx_new = new_x - self.canvas.coords(newText)[0]
+
+                self.canvas.move(self.titleText, dx_old, 0)
+                self.canvas.move(newText, dx_new, 0)
+
+                # Update tracked coordinates
+                self.title_coords[0] = old_x
+
+                self.canvas.after(delay, animate, step + 1)
+            else:
+                self.canvas.coords(newText, end_x, current_y)
+                self.title_coords = [end_x, current_y]
+                self.canvas.delete(self.titleText)
+                self.titleText = newText
+                self.currentNews = nextNews
+
+        animate()
 
     def injuries(self):
         """

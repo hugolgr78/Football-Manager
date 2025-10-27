@@ -653,10 +653,10 @@ NEWS_TITLES = {
         "{player} faces {months}-month layoff"
     ],
     "big_win": [
-        "{team1} wins against {team2}: {score}",
+        "{team1} {score} {team2}",
     ],
     "big_score": [
-        "{team1} and {team2} light up the pitch: {score}",
+        "{team1} and {team2} bring the show",
     ],
     "transfer": [
         "{player} joins {team}",
@@ -673,7 +673,6 @@ NEWS_TITLES = {
     "overthrow": [
         "Upset: {team1} beats {team2}",
         "Shock result in {team1} vs {team2}",
-        "{team1} dethrones {team2}"
     ]
 }
 

@@ -1308,6 +1308,8 @@ class Match():
 
             if self.score[0] + self.score[1] >= 5:
                 payload["news_to_add"].append(("big_score", currDate, self.match.league_id, self.match.matchday, None, self.match.id, None, None))
+            if abs(self.score[0] - self.score[1]) >= 4:
+                payload["news_to_add"].append(("big_win", currDate, self.match.league_id, self.match.matchday, None, self.match.id, None, None))
 
             # Players updates
             fitness_to_update = []

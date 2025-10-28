@@ -3941,7 +3941,12 @@ class News(ctk.CTkFrame):
             self.canvas.create_text(20, 730, anchor = "w", text = "No news available.", fill = "white", font = (APP_FONT_BOLD, 35))  
             return
 
-        fontSize = 25 if len(self.newsTitles[0]) > 35 else 30
+        fontSize = 30
+        if len(self.newsTitles[0]) > 50:
+            fontSize = 20
+        elif len(self.newsTitles[0]) > 40:
+            fontSize = 25 
+        
         self.currentNews = 0
         self.titleText = self.canvas.create_text(20, 680, anchor = "w", text = self.newsTitles[0], fill = "white", font = (APP_FONT_BOLD, fontSize))
         self.title_coords = [20, 680]  # Track current coordinates of the title
@@ -3955,40 +3960,57 @@ class News(ctk.CTkFrame):
         """
         
         self.newsTitles = []
+        self.newsDetails = []
 
         for i, newsObj in enumerate(self.news):
-            self.newsDetails.append(f"More detail here {i}")
             match newsObj.news_type:
                 case "milestone":
                     last_name = Players.get_player_by_id(newsObj.player_id).last_name
-                    title = generate_news_title("milestone", newsObj.milestone_type, None, player = last_name, value = newsObj.news_number)
+                    title = generate_news_title("milestone", player = last_name, value = newsObj.news_number, milestone_type = newsObj.milestone_type)
                     self.newsTitles.append(title)
                 case "big_score":
                     matchObj = Matches.get_match_by_id(newsObj.match_id)
                     homeTeam = Teams.get_team_by_id(matchObj.home_id)
                     awayTeam = Teams.get_team_by_id(matchObj.away_id)
+                    events = MatchEvents.get_events_by_match(matchObj.id)
+
+                    for event in events:
+                        if event.event_type == "goal" or event.event_type == "penalty_goal":
+                            player1 = Players.get_player_by_id(event.player_id).last_name
+
+                    firstTeam = homeTeam.name
+                    secondTeam = awayTeam.name
+
+                    title = generate_news_title("big_score", team1 = firstTeam, team2 = secondTeam)
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("big_score", team1 = firstTeam, team2 = secondTeam, score = f"{matchObj.score_home}-{matchObj.score_away}", player1 = player1)
+                    self.newsDetails.append(detail)
+                case "big_win":
+                    matchObj = Matches.get_match_by_id(newsObj.match_id)
+                    homeTeam = Teams.get_team_by_id(matchObj.home_id)
+                    awayTeam = Teams.get_team_by_id(matchObj.away_id)
 
                     if matchObj.score_home > matchObj.score_away:
-                        winner = homeTeam
-                    elif matchObj.score_home < matchObj.score_away:
-                        winner = awayTeam
-                    else:
-                        winner = None
-
-                    type_ = "big_win" if winner else "big_score"
-
-                    if type_ == "big_win":
-                        firstTeam = homeTeam.name if winner == homeTeam else awayTeam.name
-                        secondTeam = awayTeam.name if winner == homeTeam else homeTeam.name
-                    else:
+                        winner = "home"
                         firstTeam = homeTeam.name
                         secondTeam = awayTeam.name
+                    else:
+                        winner = "away"
+                        firstTeam = awayTeam.name
+                        secondTeam = homeTeam.name
 
-                    title = generate_news_title("big_score", None, type_, team1 = firstTeam, team2 = secondTeam, score = f"{matchObj.score_home} - {matchObj.score_away}")
+                    manager = Managers.get_manager_by_id(firstTeam.manager_id)[0] if winner == "home" else Managers.get_manager_by_id(secondTeam.manager_id)[0]
+                    stadium = homeTeam.stadium if winner == "home" else awayTeam.stadium
+                    potm = TeamLineup.get_player_OTM(matchObj.id)
+
+                    title = generate_news_title("big_win", team1 = firstTeam, team2 = secondTeam, score = f"{matchObj.score_home}-{matchObj.score_away}")
                     self.newsTitles.append(title)
+
+                    detail = generate_news_detail("big_win", team1 = firstTeam, team2 = secondTeam, score = f"{matchObj.score_home}-{matchObj.score_away}", manager = f"{manager.first_name} {manager.last_name}", stadium = stadium.name, potm = f"{Players.get_player_by_id(potm.player_id).first_name} {Players.get_player_by_id(potm.player_id).last_name}")
+                    self.newsDetails.append(detail)
                 case "injury":
                     player = Players.get_player_by_id(newsObj.player_id)
-
                     injured = PlayerBans.get_player_injured(newsObj.player_id)
 
                     if not injured:
@@ -4002,22 +4024,14 @@ class News(ctk.CTkFrame):
                     # turn injury length into months (round up)
                     injuryMonths = -(-injuryLength.days // 30)  # Ceiling division
 
-                    title = generate_news_title(newsObj.news_type, None, None, player = player.last_name, months = injuryMonths)
+                    title = generate_news_title(newsObj.news_type, player = player.last_name, months = injuryMonths)
                     self.newsTitles.append(title)
                 case "disciplinary":
                     matchObj = Matches.get_match_by_id(newsObj.match_id)
                     homeTeam = Teams.get_team_by_id(matchObj.home_id).name
 
-                    title = generate_news_title(newsObj.news_type, None, None, number = newsObj.news_number, team = homeTeam)
+                    title = generate_news_title(newsObj.news_type, number = newsObj.news_number, team = homeTeam)
                     self.newsTitles.append(title)   
-
-    def generateDetails(self):
-        """
-        Generates the news details for each news item.
-        """
-        
-        self.newsDetails = []
-        pass
 
     def checkHover(self, event):
         """
@@ -4147,7 +4161,11 @@ class News(ctk.CTkFrame):
         else:
             nextNews = (self.currentNews - 1) % len(self.newsTitles)
 
-        fontSize = 25 if len(self.newsTitles[nextNews]) > 35 else 30
+        fontSize = 30
+        if len(self.newsTitles[0]) > 50:
+            fontSize = 20
+        elif len(self.newsTitles[0]) > 40:
+            fontSize = 25 
 
         # If the title is not fully down, just replace the text
         if self.title_coords[1] != 680:

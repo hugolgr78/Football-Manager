@@ -1653,29 +1653,28 @@ def get_best_player_for_position(matches, position):
 
     return bestPlayerID, bestRating 
 
-def generate_news_title(news_type, milestone_type = None, match_type = None, **kwargs):
+def generate_news_title(news_type, **kwargs):
     """
     Generates a random news title for the given news_type.
     
     Args:
         news_type (str): The type of news ("milestone", "big_score", etc.).
-        milestone_type (str): Optional, specifies type of milestone ("goals", "assists", "clean_sheets").
-        match_type (str): Optional, specifies type of match news ("big_win", "big_score").
         kwargs: Data to fill placeholders like player, team, score, etc.
     """
-    
-    # Handle milestone subtypes
-    if news_type == "milestone" and milestone_type:
-        key = f"milestone_{milestone_type}"
-        templates = NEWS_TITLES.get(key, NEWS_TITLES["milestone"])
-    
-    # Handle match subtypes
-    elif news_type == "big_score" and match_type:
-        key = match_type  # e.g., "big_win" or "big_score"
-        templates = NEWS_TITLES.get(key, NEWS_TITLES["big_score"])
-    
-    else:
-        templates = NEWS_TITLES.get(news_type, ["Unknown news"])
-
+    templates = NEWS_TITLES.get(news_type, ["Unknown news"])
     template = random.choice(templates)
+
+    return template.format(**kwargs)
+
+def generate_news_detail(news_type, **kwargs):
+    """
+    Generates a random news detail for the given news_type.
+
+    Args:
+        news_type (str): The type of news ("milestone", "big_score", etc.).
+        kwargs: Data to fill placeholders like player, team, score, etc.
+    """
+    templates = NEWS_DETAILS.get(news_type, ["Unknown news"])
+    template = random.choice(templates)
+    
     return template.format(**kwargs)

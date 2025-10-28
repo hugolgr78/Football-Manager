@@ -638,14 +638,8 @@ TIPS = [
 ]
 
 NEWS_TITLES = {
-    "milestone_goals": [
-        "{player} hits {value} goals.",
-    ],
-    "milestone_assists": [
-        "{player} hits {value} assists.",
-    ],
-    "milestone_clean_sheets": [
-        "{player} hits {value} clean sheets.",
+    "milestone": [
+        "{player} hits {value} {milestone}.",
     ],
     "injury": [
         "{player} sidelined for {months} months",
@@ -666,8 +660,16 @@ NEWS_TITLES = {
     "disciplinary": [
         "{number} cards in {team}'s match",
     ],
-    "position_change": [
-        "{team} takes the lead!",
+    "lead_change": [
+        "{team} takes the lead!"
+    ],
+    "planetary_change": [
+        "{team} moves into the planetary spots",
+    ],
+    "playoff_change": [
+        "{team} moves into the playoff positions",
+    ],
+    "relegation_change": [
         "{team} drops to the relegation zone"
     ],
     "overthrow": [
@@ -675,6 +677,68 @@ NEWS_TITLES = {
         "Shock result in {team1} vs {team2}",
     ]
 }
+
+NEWS_DETAILS = {
+    "milestone": [
+        "{player} has reached an impressive milestone of {value} {milestone} in the league this season.\nThe {position} has been instrumental for {team}, contributing consistently in front of goal\nand helping the side climb the table.",
+        "With {value} {milestone}  now to their name in league competition, {player} continues to shine\nas one of {team}'s key performers. Their form has been vital in maintaining\n{team}'s momentum this campaign.",
+        "{player}'s {value} {milestone} in the league marks another chapter in a standout season.\nThe {position} has been in unstoppable form, earning praise from both fans\nand pundits alike.",
+        "After finding the net again against {opponent}, {player} has now reached {value} {milestone} \nin the league this season — a remarkable achievement that underlines their\nconsistency and finishing ability."
+    ],
+    "injury": [
+        "{player} suffered a serious setback in {team}'s {score} match against {opponent}.\nScans later revealed a {injury_type}, ruling the {position} out for approximately {months} months.\nThe injury comes at a difficult time as {team} fights for crucial league points.",
+        "It was a worrying moment for {team} as {player} limped off during their clash with {opponent}.\nMedical reports confirmed the {position} faces {months} months out, leaving {manager}\nshort on options ahead of a busy league schedule.",
+        "Disaster for {team}: {player} picked up an injury during the {competition} fixture versus {opponent}.\nThey are expected to be sidelined for {months} months — a blow that could prove costly\nin the battle for {team_goal}.",
+        "{player} has been ruled out for around {months} months after sustaining an injury\nin {team}'s {score} defeat to {opponent}. The timing couldn’t be worse as {team}\ncontinues their push for a higher league finish."
+    ],
+    "big_win": [
+        "{team1} sent shockwaves through the league with a commanding {score} victory over {team2}.\n{potm} was the standout performer, leading by example in a dominant team display.",
+        "A statement win from {team1}! The {score} triumph over {team2} showcased their attacking power\nand tactical precision under {manager}. Fans were treated to a superb performance from start to finish.",
+        "{team1} produced a ruthless display to dismantle {team2} {score} at {stadium}.\nThe performance was one of their best this season, with relentless energy and sharp finishing throughout."
+    ],
+    "big_score": [
+        "Fans were treated to a thrilling encounter as {team1} and\n{team2} battled in a {score} classic. Both teams showed relentless\nattacking spirit, creating chances from start to finish.",
+        "Supporters witnessed a goal fest as {team1} and {team2}\ndelivered a {score} spectacle. {player1} found the net first in a game packed with\nend-to-end action.",
+        "It was an unforgettable contest as {team1} faced {team2}\nin a {score} showdown. The match had everything — intensity, momentum swings,\nand goals that kept the crowd on edge."
+    ],
+    "transfer": [
+        "{player} has completed a high-profile move to {team} in a deal worth around {fee}.\nThe {age}-year-old {position} joins ahead of the league’s second half and is expected\nto make an immediate impact under {manager}.",
+        "After weeks of speculation, {player} has officially joined {team}.\nThe {nationality} international arrives from {previous_team}, bringing top-flight experience\nand creativity to bolster {team}'s attack.",
+        "{team} have confirmed the signing of {player} for {fee}.\n{player} expressed excitement at joining the club, stating that they 'can’t wait to help {team}\nclimb the table' as they aim for a strong league finish."
+    ],
+    "disciplinary": [
+        "{team}'s {score} clash with {opponent} turned fiery as {number} cards were shown by the referee.\n{player} was among those booked in a match full of late tackles and rising tempers.",
+        "A heated contest between {team} and {opponent} saw {number} cards handed out.\n{manager} voiced frustration post-match, admitting the team must show more composure\nif they’re to succeed in the league.",
+        "{stadium} was the scene of chaos as {team} and {opponent} racked up {number} cards in total.\nThe tension on the pitch reflected the high stakes of the league battle,\nwith emotions running high from start to finish."
+    ],
+    "lead_change": [
+        "With their latest victory over {opponent}, {team} has climbed to the top of the league table.\n{manager}'s side have been in imperious form, and the fans are starting to dream of lifting the trophy.",
+        "{team} now sits at the summit after their {score} triumph against {opponent}.\nThe momentum is building, and confidence in the camp couldn’t be higher as the title race heats up.",
+        "{team} takes the lead in the standings after a solid run of results.\n{star_player}'s recent performances have been pivotal in pushing them ahead of their rivals."
+    ],
+    "planetary_change": [
+        "A string of strong results sees {team} move into the planetary qualification spots.\n{manager} praised the squad’s discipline and teamwork after their latest {score} win against {opponent}.",
+        "{team}'s {score} victory over {opponent} lifts them into contention for planetary football next season.\nThe fans are beginning to believe a European return could be on the horizon.",
+        "For the first time this season, {team} have broken into the planetary spots after their win against {opponent}.\n{manager}'s efforts to rebuild confidence seem to be paying off in style."
+    ],
+    "playoff_change": [
+        "{team} has surged into the playoff positions following a crucial {score} win over {opponent}.\nThe squad’s resilience and determination were on full display as they fought for every point.",
+        "With their latest victory, {team} has climbed into the playoff spots.\n{manager} hailed the team’s character and focus after a hard-fought {score} result against {opponent}.",
+        "{team} now finds themselves in the playoff positions after a string of impressive performances.\nThe fans are hopeful that this momentum can be sustained as the season progresses."
+    ],
+    "relegation_change": [
+        "A disappointing defeat to {opponent} has seen {team} slip into the relegation zone.\n{manager} has urged calm, but fans are growing concerned after a series of poor results.",
+        "{team}’s {score} loss against {opponent} leaves them inside the bottom three.\nWith survival hopes fading, the pressure is mounting on {manager} to turn things around quickly.",
+        "Following another frustrating draw, {team} have dropped into the relegation zone.\nThe {position_group} will need to step up if the club is to avoid a tense end to the league season."
+    ],
+    "overthrow": [
+        "A huge upset in the league as {team1} stunned {team2} with a {score} victory.\nThe underdogs showed incredible resilience, frustrating their more fancied opponents for the full 90 minutes.",
+        "Shockwaves through the league as {team1} beat {team2} {score}.\n{player} was the hero, netting the decisive goal late on to secure an unforgettable win.",
+        "In one of the season’s biggest surprises, {team1} defeated {team2} {score}.\nThe result shakes up the title race and highlights the unpredictable nature of this year’s competition."
+    ]
+}
+
+
 
 from data.database import StatsManager
 

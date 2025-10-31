@@ -1306,10 +1306,10 @@ class Match():
             logger.debug(f"{prefix} Submitting match score update: {self.score[0]} : {self.score[1]}")
             payload["score_updates"].append((self.match.id, self.score[0], self.score[1]))
 
-            if self.score[0] + self.score[1] >= 5:
-                payload["news_to_add"].append(("big_score", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None))
             if abs(self.score[0] - self.score[1]) >= 4:
                 payload["news_to_add"].append(("big_win", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None))
+            elif self.score[0] + self.score[1] >= 5:
+                payload["news_to_add"].append(("big_score", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None))
 
             # Players updates
             fitness_to_update = []

@@ -4527,7 +4527,7 @@ class LeagueNews(Base):
     __tablename__ = 'league_news'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    news_type = Column(Enum("milestone", "injury", "big_score", "transfer", "disciplinary", "position_change", "overthrow"), nullable = False)
+    news_type = Column(Enum("milestone", "injury", "big_win", "big_score", "transfer", "disciplinary", "position_change", "overthrow"), nullable = False)
     date = Column(DateTime, nullable = False)
     league_id = Column(String(128), ForeignKey('leagues.id'), nullable = False)
     matchday = Column(Integer)

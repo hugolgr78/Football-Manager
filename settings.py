@@ -718,17 +718,19 @@ NEWS_DETAILS = {
         "adapt quickly to overcome this setback."
     ],
 
+    ## DONE
     "big_win": [
-        "{team1} sent shockwaves through the league with a commanding {score} victory over {team2}.\n"
-        "{potm} was the standout performer, leading by example in a dominant team display.",
+        "{team1} sent shockwaves through the league with a commanding {score}\n"
+        "victory over {team2}. {potm} was the standout performer, leading by\n"
+        "example in a dominant team display.",
 
-        "A statement win from {team1}! The {score} triumph over {team2} showcased their attacking power\n"
-        "and tactical precision under {manager}. Fans were treated to a superb performance\n"
-        "from start to finish.",
+        "A statement win from {team1}! The {score} triumph over {team2}\n"
+        "showcased their attacking power and tactical precision under {manager}. Fans were\n"
+        "treated to a superb performance from start to finish.",
 
-        "{team1} produced a ruthless display to dismantle {team2} {score} at {stadium}.\n"
-        "The performance was one of their best this season, with relentless energy\n"
-        "and sharp finishing throughout."
+        "{team1} produced a ruthless display to dismantle {team2} {score} at\n"
+        "{stadium}. The performance was one of their best this season, with\n"
+        "relentless energy and sharp finishing throughout."
     ],
 
     ## DONE

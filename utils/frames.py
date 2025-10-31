@@ -3942,9 +3942,9 @@ class News(ctk.CTkFrame):
             return
 
         fontSize = 30
-        if len(self.newsTitles[0]) > 50:
+        if len(self.newsTitles[0]) > 40:
             fontSize = 20
-        elif len(self.newsTitles[0]) > 40:
+        elif len(self.newsTitles[0]) > 35:
             fontSize = 25 
         
         self.currentNews = 0
@@ -3993,21 +3993,21 @@ class News(ctk.CTkFrame):
 
                     if matchObj.score_home > matchObj.score_away:
                         winner = "home"
-                        firstTeam = homeTeam.name
-                        secondTeam = awayTeam.name
+                        firstTeam = homeTeam
+                        secondTeam = awayTeam
                     else:
                         winner = "away"
-                        firstTeam = awayTeam.name
-                        secondTeam = homeTeam.name
+                        firstTeam = awayTeam
+                        secondTeam = homeTeam
 
-                    manager = Managers.get_manager_by_id(firstTeam.manager_id)[0] if winner == "home" else Managers.get_manager_by_id(secondTeam.manager_id)[0]
+                    manager = Managers.get_manager_by_id(firstTeam.manager_id) if winner == "home" else Managers.get_manager_by_id(secondTeam.manager_id)
                     stadium = homeTeam.stadium if winner == "home" else awayTeam.stadium
                     potm = TeamLineup.get_player_OTM(matchObj.id)
 
-                    title = generate_news_title("big_win", team1 = firstTeam, team2 = secondTeam, score = f"{matchObj.score_home}-{matchObj.score_away}")
+                    title = generate_news_title("big_win", team1 = firstTeam.name, team2 = secondTeam.name, score = f"{matchObj.score_home}-{matchObj.score_away}")
                     self.newsTitles.append(title)
 
-                    detail = generate_news_detail("big_win", team1 = firstTeam, team2 = secondTeam, score = f"{matchObj.score_home}-{matchObj.score_away}", manager = f"{manager.first_name} {manager.last_name}", stadium = stadium.name, potm = f"{Players.get_player_by_id(potm.player_id).first_name} {Players.get_player_by_id(potm.player_id).last_name}")
+                    detail = generate_news_detail("big_win", team1 = firstTeam.name, team2 = secondTeam.name, score = f"{matchObj.score_home}-{matchObj.score_away}", manager = manager.last_name, stadium = stadium, potm = Players.get_player_by_id(potm.player_id).last_name)
                     self.newsDetails.append(detail)
                 case "injury":
                     player = Players.get_player_by_id(newsObj.player_id)
@@ -4203,15 +4203,15 @@ class News(ctk.CTkFrame):
             nextNews = (self.currentNews - 1) % len(self.newsTitles)
 
         fontSize = 30
-        if len(self.newsTitles[0]) > 50:
+        if len(self.newsTitles[nextNews]) > 40:
             fontSize = 20
-        elif len(self.newsTitles[0]) > 40:
+        elif len(self.newsTitles[nextNews]) > 35:
             fontSize = 25 
 
         # If the title is not fully down, just replace the text
         if self.title_coords[1] != 680:
-            self.canvas.itemconfigure(self.titleText, text=self.newsTitles[nextNews], font=(APP_FONT_BOLD, fontSize))
-            self.canvas.itemconfigure(self.newsText, text=self.newsDetails[nextNews])
+            self.canvas.itemconfigure(self.titleText, text = self.newsTitles[nextNews], font = (APP_FONT_BOLD, fontSize))
+            self.canvas.itemconfigure(self.newsText, text = self.newsDetails[nextNews])
             self.currentNews = nextNews
             return
 

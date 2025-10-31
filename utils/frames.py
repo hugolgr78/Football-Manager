@@ -4026,12 +4026,53 @@ class News(ctk.CTkFrame):
 
                     title = generate_news_title(newsObj.news_type, player = player.last_name, months = injuryMonths)
                     self.newsTitles.append(title)
+
+                    match = Matches.get_team_last_match(player.team_id, newsObj.date)
+                    playerTeam = Teams.get_team_by_id(player.team_id)
+                    teamName = playerTeam.name
+                    manager = Managers.get_manager_by_id(playerTeam.manager_id)
+                    opponentTeam = Teams.get_team_by_id(match.away_id if match.home_id == player.team_id else match.home_id).name
+                    score = f"{match.score_home}-{match.score_away}"
+                    competition = League.get_league_by_id(match.league_id).name
+
+                    detail = generate_news_detail("injury", player = player.last_name, team = teamName, opponent = opponentTeam, score = score, competition = competition, months = injuryMonths, position = player.position, injury_type = "N/A", manager = manager.last_name)
+                    self.newsDetails.append(detail)
+
                 case "disciplinary":
                     matchObj = Matches.get_match_by_id(newsObj.match_id)
-                    homeTeam = Teams.get_team_by_id(matchObj.home_id).name
+                    homeTeam = Teams.get_team_by_id(matchObj.home_id)
+                    homeName = homeTeam.name
+                    awayTeam = Teams.get_team_by_id(matchObj.away_id)
+                    awayName = awayTeam.name
+                    stadium = homeTeam.stadium
+                    number = newsObj.news_number
 
-                    title = generate_news_title(newsObj.news_type, number = newsObj.news_number, team = homeTeam)
+                    events = MatchEvents.get_events_by_match(matchObj.id)
+                    homeCount = 0
+                    awayCount = 0
+                    detailPlayer = None
+                    for event in events:
+                        if event.event_type == "yellow_card" or event.event_type == "red_card":
+                            player = Players.get_player_by_id(event.player_id)
+
+                            if not detailPlayer:
+                                detailPlayer = player.last_name
+                            
+                            if player.team_id == homeTeam.id:
+                                homeCount += 1
+                            else:
+                                awayCount += 1
+                    
+                    if homeCount > awayCount:
+                        manager = Managers.get_manager_by_id(homeTeam.manager_id).last_name
+                    else:
+                        manager = Managers.get_manager_by_id(awayTeam.manager_id).last_name
+
+                    title = generate_news_title(newsObj.news_type, number = newsObj.news_number, team = homeName)
                     self.newsTitles.append(title)   
+
+                    detail = generate_news_detail("disciplinary", player = detailPlayer, team = homeName, opponent = awayName, score = f"{matchObj.score_home}-{matchObj.score_away}", stadium = stadium, number = number, manager = manager)
+                    self.newsDetails.append(detail)
 
     def checkHover(self, event):
         """

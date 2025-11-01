@@ -1476,6 +1476,9 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
             "players_to_update": [],
             "emails_to_send": [],
             "news_to_add": [],
+            "player_goals_to_check": [],
+            "player_assists_to_check": [],
+            "player_clean_sheets_to_check": [],
         }
 
         for p in worker_payloads:

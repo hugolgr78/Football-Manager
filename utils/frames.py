@@ -1448,17 +1448,17 @@ class PlayerFrame(ctk.CTkFrame):
                     img = ctk.CTkImage(src, None, (src.width, src.height))
                     ctk.CTkLabel(self.statFrame, image = img, text = "").place(relx = 0.1 + i * 0.2, rely = 0.5, anchor = "center")
             case "Goals / Assists":
-                playerGoals = MatchEvents.get_goals_and_pens_by_player(self.player.id, self.league.league_id)
-                playerAssists = MatchEvents.get_assists_by_player(self.player.id, self.league.league_id)
+                playerGoals = MatchEvents.get_goals_and_pens_by_player(self.player.id)
+                playerAssists = MatchEvents.get_assists_by_player(self.player.id)
 
                 ctk.CTkLabel(self.statFrame, text = f"{playerGoals} / {playerAssists}", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
             case "Yellows / Reds":
-                yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id, self.league.league_id)
-                redCards = MatchEvents.get_red_cards_by_player(self.player.id, self.league.league_id)
+                yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id)
+                redCards = MatchEvents.get_red_cards_by_player(self.player.id)
 
                 ctk.CTkLabel(self.statFrame, text = f"{yellowCards} / {redCards}", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
             case "POTM Awards":
-                potmAwards = TeamLineup.get_player_potm_awards(self.player.id, self.league.league_id)
+                potmAwards = TeamLineup.get_player_potm_awards(self.player.id)
 
                 ctk.CTkLabel(self.statFrame, text = f"{potmAwards}", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
             case "Form":
@@ -3962,12 +3962,26 @@ class News(ctk.CTkFrame):
         self.newsTitles = []
         self.newsDetails = []
 
-        for i, newsObj in enumerate(self.news):
+        for _, newsObj in enumerate(self.news):
             match newsObj.news_type:
                 case "milestone":
-                    last_name = Players.get_player_by_id(newsObj.player_id).last_name
+                    player = Players.get_player_by_id(newsObj.player_id)
+                    last_name = player.last_name
+                    position = player.position
+                    team = Teams.get_team_by_id(player.team_id).name
+                    competition = League.get_league_by_id(newsObj.league_id).name
+
+                    match = Matches.get_match_by_id(newsObj.match_id)
+                    if match.home_id == player.team_id:
+                        opponentTeam = Teams.get_team_by_id(match.away_id).name
+                    else:
+                        opponentTeam = Teams.get_team_by_id(match.home_id).name
+
                     title = generate_news_title("milestone", player = last_name, value = newsObj.news_number, milestone_type = newsObj.milestone_type)
                     self.newsTitles.append(title)
+
+                    detail = generate_news_detail("milestone", player = last_name, value = newsObj.news_number, milestone_type = newsObj.milestone_type, position = position, team = team, comp = competition, opponent = opponentTeam)
+                    self.newsDetails.append(detail)
                 case "big_score":
                     matchObj = Matches.get_match_by_id(newsObj.match_id)
                     homeTeam = Teams.get_team_by_id(matchObj.home_id)

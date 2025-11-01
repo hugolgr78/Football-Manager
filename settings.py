@@ -639,7 +639,7 @@ TIPS = [
 
 NEWS_TITLES = {
     "milestone": [
-        "{player} hits {value} {milestone}.",
+        "{player} hits {value} {milestone_type}.",
     ],
     "injury": [
         "{player} sidelined for {months} months",
@@ -679,22 +679,24 @@ NEWS_TITLES = {
 }
 
 NEWS_DETAILS = {
+
+    ## DONE
     "milestone": [
-        "{player} has reached an impressive milestone of {value} {milestone} in the {league} this season.\n"
-        "The {position} has been instrumental for {team}, contributing consistently in front of goal\n"
-        "and helping the side climb the table.",
+        "{player} has reached an impressive milestone of {value} {milestone_type} in the {comp}\n"
+        "this season. The {position} has been instrumental for {team}, contributing\n"
+        "consistently in front of goal and helping the side climb the table.",
 
-        "With {value} {milestone}  now to their name in the {league}, {player} continues to shine\n"
-        "as one of {team}'s key performers. Their form has been vital in maintaining\n"
-        "{team}'s momentum this campaign.",
+        "With {value} {milestone_type} now to their name in the {comp}, {player} continues to\n"
+        "shine as one of {team}'s key performers. Their form has been vital in\n"
+        "maintaining {team}'s momentum this campaign.",
 
-        "{player}'s {value} {milestone} in the {league} marks another chapter in a standout season.\n"
+        "{player}'s {value} {milestone_type} in the {comp} marks another chapter in a standout season.\n"
         "The {position} has been in unstoppable form, earning praise from both fans\n"
         "and pundits alike.",
 
-        "After finding the net again against {opponent}, {player} has now reached {value} {milestone}\n"
-        "in the {league} this season — a remarkable achievement that underlines their\n"
-        "consistency and finishing ability."
+        "{player} was in good form again against {opponent} and has now reached\n"
+        "{value} {milestone_type} in the {comp} this season — a remarkable achievement that\n"
+        "underlines their consistency and ability."
     ],
 
     ## DONE

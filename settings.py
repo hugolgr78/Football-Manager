@@ -680,20 +680,20 @@ NEWS_TITLES = {
 
 NEWS_DETAILS = {
     "milestone": [
-        "{player} has reached an impressive milestone of {value} {milestone} in the league this season.\n"
+        "{player} has reached an impressive milestone of {value} {milestone} in the {league} this season.\n"
         "The {position} has been instrumental for {team}, contributing consistently in front of goal\n"
         "and helping the side climb the table.",
 
-        "With {value} {milestone}  now to their name in league competition, {player} continues to shine\n"
+        "With {value} {milestone}  now to their name in the {league}, {player} continues to shine\n"
         "as one of {team}'s key performers. Their form has been vital in maintaining\n"
         "{team}'s momentum this campaign.",
 
-        "{player}'s {value} {milestone} in the league marks another chapter in a standout season.\n"
+        "{player}'s {value} {milestone} in the {league} marks another chapter in a standout season.\n"
         "The {position} has been in unstoppable form, earning praise from both fans\n"
         "and pundits alike.",
 
         "After finding the net again against {opponent}, {player} has now reached {value} {milestone}\n"
-        "in the league this season — a remarkable achievement that underlines their\n"
+        "in the {league} this season — a remarkable achievement that underlines their\n"
         "consistency and finishing ability."
     ],
 
@@ -791,30 +791,30 @@ NEWS_DETAILS = {
         "of their rivals."
     ],
 
-    "planetary_change": [
-        "A string of strong results sees {team} move into the planetary qualification spots.\n"
-        "{manager} praised the squad’s discipline and teamwork after their latest {score}\n"
-        "win against {opponent}.",
+    # "planetary_change": [
+    #     "A string of strong results sees {team} move into the planetary qualification spots.\n"
+    #     "{manager} praised the squad’s discipline and teamwork after their latest {score}\n"
+    #     "win against {opponent}.",
 
-        "{team}'s {score} victory over {opponent} lifts them into contention for planetary football next season.\n"
-        "The fans are beginning to believe a European return could be on the horizon.",
+    #     "{team}'s {score} victory over {opponent} lifts them into contention for planetary football next season.\n"
+    #     "The fans are beginning to believe a European return could be on the horizon.",
 
-        "For the first time this season, {team} have broken into the planetary spots\n"
-        "after their win against {opponent}. {manager}'s efforts to rebuild confidence\n"
-        "seem to be paying off in style."
-    ],
+    #     "For the first time this season, {team} have broken into the planetary spots\n"
+    #     "after their win against {opponent}. {manager}'s efforts to rebuild confidence\n"
+    #     "seem to be paying off in style."
+    # ],
 
-    "playoff_change": [
-        "{team} has surged into the playoff positions following a crucial {score} win over {opponent}.\n"
-        "The squad’s resilience and determination were on full display as they fought for every point.",
+    # "playoff_change": [
+    #     "{team} has surged into the playoff positions following a crucial {score} win over {opponent}.\n"
+    #     "The squad’s resilience and determination were on full display as they fought for every point.",
 
-        "With their latest victory, {team} has climbed into the playoff spots.\n"
-        "{manager} hailed the team’s character and focus after a hard-fought {score}\n"
-        "result against {opponent}.",
+    #     "With their latest victory, {team} has climbed into the playoff spots.\n"
+    #     "{manager} hailed the team’s character and focus after a hard-fought {score}\n"
+    #     "result against {opponent}.",
 
-        "{team} now finds themselves in the playoff positions after a string of impressive performances.\n"
-        "The fans are hopeful that this momentum can be sustained as the season progresses."
-    ],
+    #     "{team} now finds themselves in the playoff positions after a string of impressive performances.\n"
+    #     "The fans are hopeful that this momentum can be sustained as the season progresses."
+    # ],
 
     "relegation_change": [
         "A disappointing defeat to {opponent} has seen {team} slip into the relegation zone.\n"

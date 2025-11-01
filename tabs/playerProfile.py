@@ -304,18 +304,18 @@ class Profile(ctk.CTkFrame):
             ctk.CTkLabel(self.statsFrame, image = img, text = "").place(relx = 0.98, rely = 0.5, anchor = "e")
 
         played = TeamLineup.get_number_matches_by_player(self.player.id, self.parent.league.id)
-        yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id)
-        redCards = MatchEvents.get_red_cards_by_player(self.player.id)
+        yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id, self.parent.league.id)
+        redCards = MatchEvents.get_red_cards_by_player(self.player.id, self.parent.league.id)
         averageRating = TeamLineup.get_player_average_rating(self.player.id, self.parent.league.id)
 
         if self.player.position != "goalkeeper":
-            goals = MatchEvents.get_goals_and_pens_by_player(self.player.id)
-            assists = MatchEvents.get_assists_by_player(self.player.id)
+            goals = MatchEvents.get_goals_and_pens_by_player(self.player.id, self.parent.league.id)
+            assists = MatchEvents.get_assists_by_player(self.player.id, self.parent.league.id)
             stats = [averageRating, redCards, yellowCards, assists, goals, played]
             statsNames = ["averageRating", "redCard", "yellowCard", "assist", "goal", "played"]
         else:
-            cleanSheets = MatchEvents.get_clean_sheets_by_player(self.player.id)
-            savedPens = MatchEvents.get_penalty_saves_by_player(self.player.id)
+            cleanSheets = MatchEvents.get_clean_sheets_by_player(self.player.id, self.parent.league.id)
+            savedPens = MatchEvents.get_penalty_saves_by_player(self.player.id, self.parent.league.id)
             stats = [averageRating, cleanSheets, savedPens, redCards, yellowCards, played]
             statsNames = ["averageRating", "cleanSheet", "savedPen", "redCard", "yellowCard", "played"]
 

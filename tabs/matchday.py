@@ -2399,19 +2399,22 @@ class MatchDay(ctk.CTkFrame):
         """
 
         payload = {
-                "team_updates": [],
-                "manager_updates": [],
-                "match_events": [],
-                "player_bans": [],
-                "yellow_card_checks": [],
-                "score_updates": [],
-                "fitness_updates": [],
-                "sharpness_updates": [],
-                "morale_updates": [],
-                "lineup_updates": [],
-                "stats_updates": [],
-                "news_to_add": [],
-            }
+            "team_updates": [],
+            "manager_updates": [],
+            "match_events": [],
+            "player_bans": [],
+            "yellow_card_checks": [],
+            "score_updates": [],
+            "fitness_updates": [],
+            "sharpness_updates": [],
+            "morale_updates": [],
+            "lineup_updates": [],
+            "stats_updates": [],
+            "news_to_add": [],
+            "player_goals_to_check": [],
+            "player_assists_to_check": [],
+            "player_clean_sheets_to_check": [],
+        }
         
         payloads = []
 

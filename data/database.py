@@ -2274,20 +2274,25 @@ class MatchEvents(Base):
             session.close()
     
     @classmethod
-    def get_goals_by_player(cls, player_id):
+    def get_goals_by_player(cls, player_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            goals = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "goal").count()
+            goals = session.query(MatchEvents).join(Matches).filter(
+                MatchEvents.player_id == player_id,
+                Matches.league_id == comp_id,
+                MatchEvents.event_type == "goal"
+            ).count()
             return goals
         finally:
             session.close()
 
     @classmethod
-    def get_goals_and_pens_by_player(cls, player_id):
+    def get_goals_and_pens_by_player(cls, player_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            goals = session.query(MatchEvents).filter(
+            goals = session.query(MatchEvents).join(Matches).filter(
                 MatchEvents.player_id == player_id,
+                Matches.league_id == comp_id,
                 or_(MatchEvents.event_type == "goal", MatchEvents.event_type == "penalty_goal")
             ).count()
             return goals
@@ -2333,10 +2338,14 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_assists_by_player(cls, player_id):
+    def get_assists_by_player(cls, player_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            assists = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "assist").count()
+            assists = session.query(MatchEvents).join(Matches).filter(
+                MatchEvents.player_id == player_id,
+                MatchEvents.event_type == "assist",
+                Matches.league_id == comp_id
+            ).count()
             return assists
         finally:
             session.close()
@@ -2371,10 +2380,14 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_yellow_cards_by_player(cls, player_id):
+    def get_yellow_cards_by_player(cls, player_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            yellow_cards = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "yellow_card").count()
+            yellow_cards = session.query(MatchEvents).join(Matches).filter(
+                MatchEvents.player_id == player_id,
+                MatchEvents.event_type == "yellow_card",
+                Matches.league_id == comp_id
+            ).count()
             return yellow_cards
         finally:
             session.close()
@@ -2433,10 +2446,14 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_red_cards_by_player(cls, player_id):
+    def get_red_cards_by_player(cls, player_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            red_cards = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "red_card").count()
+            red_cards = session.query(MatchEvents).join(Matches).filter(
+                MatchEvents.player_id == player_id,
+                MatchEvents.event_type == "red_card",
+                Matches.league_id == comp_id
+            ).count()
             return red_cards
         finally:
             session.close()
@@ -2471,10 +2488,14 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_own_goals_by_player(cls, player_id):
+    def get_own_goals_by_player(cls, player_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            own_goals = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "own_goal").count()
+            own_goals = session.query(MatchEvents).join(Matches).filter(
+                MatchEvents.player_id == player_id,
+                MatchEvents.event_type == "own_goal",
+                Matches.league_id == comp_id
+            ).count()
             return own_goals
         finally:
             session.close()
@@ -2509,10 +2530,14 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_penalty_goals_by_player(cls, player_id):
+    def get_penalty_goals_by_player(cls, player_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            penalty_goals = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "penalty_goal").count()
+            penalty_goals = session.query(MatchEvents).join(Matches).filter(
+                MatchEvents.player_id == player_id,
+                MatchEvents.event_type == "penalty_goal",
+                Matches.league_id == comp_id
+            ).count()
             return penalty_goals
         finally:
             session.close()
@@ -2547,10 +2572,14 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_penalty_saves_by_player(cls, player_id):
+    def get_penalty_saves_by_player(cls, player_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            penalty_saves = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "penalty_saved").count()
+            penalty_saves = session.query(MatchEvents).join(Matches).filter(
+                MatchEvents.player_id == player_id,
+                MatchEvents.event_type == "penalty_saved",
+                Matches.league_id == comp_id
+            ).count()
             return penalty_saves
         finally:
             session.close()
@@ -2585,10 +2614,14 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_clean_sheets_by_player(cls, player_id):
+    def get_clean_sheets_by_player(cls, player_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            clean_sheets = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "clean_sheet").count()
+            clean_sheets = session.query(MatchEvents).join(Matches).filter(
+                MatchEvents.player_id == player_id,
+                MatchEvents.event_type == "clean_sheet",
+                Matches.league_id == comp_id
+            ).count()
             return clean_sheets
         finally:
             session.close()
@@ -4613,6 +4646,21 @@ class LeagueNews(Base):
         finally:
             session.close()
 
+    @classmethod
+    def check_milestone_news(cls, player_id, league_id, news_number, milestone_type):
+        session = DatabaseManager().get_session()
+        try:
+            news_entry = session.query(LeagueNews).filter(
+                LeagueNews.player_id == player_id,
+                LeagueNews.league_id == league_id,
+                LeagueNews.news_number == news_number,
+                LeagueNews.news_type == "milestone",    
+                LeagueNews.milestone_type == milestone_type
+            ).first()
+            return news_entry is not None
+        finally:
+            session.close()
+
 class StatsManager:
     @staticmethod
     def get_goals_scored(leagueTeams, league_id):
@@ -6514,7 +6562,6 @@ def process_payload(payload):
         call_if_not_empty(payload["morale_updates"], Players.batch_update_morales)
         call_if_not_empty(payload["lineup_updates"], TeamLineup.batch_add_lineups)
         call_if_not_empty(payload["stats_updates"], MatchStats.batch_add_stats)
-        call_if_not_empty(payload["news_to_add"], LeagueNews.batch_add_news)
 
         if "players_to_update" in payload:
             call_if_not_empty(payload["players_to_update"], Players.batch_reduce_morales_to_25)
@@ -6539,6 +6586,38 @@ def process_payload(payload):
 
             player_id, competition_id, threshold, date = check
             MatchEvents.check_yellow_card_ban(player_id, competition_id, threshold, date)
+
+        for playerID, competitionID, matchID in payload["player_goals_to_check"]:
+            player_goals = MatchEvents.get_goals_and_pens_by_player(playerID, competitionID)
+            matchDate = Matches.get_match_by_id(matchID).date
+
+            if player_goals % 10 == 0:
+                news = LeagueNews.check_milestone_news(playerID, competitionID, player_goals, "goal")
+
+                if not news:
+                    payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hours = 8, minutes = 0, seconds = 0, microseconds = 0), competitionID, None, playerID, matchID, "goals", player_goals))
+
+        for playerID, competitionID, matchID in payload["player_assists_to_check"]:
+            player_assists = MatchEvents.get_assists_by_player(playerID, competitionID)
+            matchDate = Matches.get_match_by_id(matchID).date
+
+            if player_assists % 10 == 0:
+                news = LeagueNews.check_milestone_news(playerID, competitionID, player_assists, "assist")
+
+                if not news:
+                    payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hours = 8, minutes = 0, seconds = 0, microseconds = 0), competitionID, None, playerID, matchID, "assists", player_assists))
+
+        for playerID, competitionID, matchID in payload["player_clean_sheets_to_check"]:
+            player_clean_sheets = MatchEvents.get_clean_sheets_by_player(playerID, competitionID)
+            matchDate = Matches.get_match_by_id(matchID).date
+
+            if player_clean_sheets % 10 == 0:
+                news = LeagueNews.check_milestone_news(playerID, competitionID, player_clean_sheets, "clean_sheet")
+
+                if not news:
+                    payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hours = 8, minutes = 0, seconds = 0, microseconds = 0), competitionID, None, playerID, matchID, "clean sheets", player_clean_sheets))
+
+        call_if_not_empty(payload["news_to_add"], LeagueNews.batch_add_news)
 
     except Exception as e:
         print(f"Error updating teams: {e}")

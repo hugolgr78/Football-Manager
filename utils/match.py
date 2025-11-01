@@ -1152,6 +1152,9 @@ class Match():
                 "lineup_updates": [],
                 "stats_updates": [],
                 "news_to_add": [],
+                "player_goals_to_check": [],
+                "player_assists_to_check": [],
+                "player_clean_sheets_to_check": [],
             }
 
             totalCards = 0
@@ -1212,10 +1215,14 @@ class Match():
                 else:
                     minute = str(minute)
 
-                if event["type"] == "goal":
+                if event["type"] == "goal" or event["type"] == "penalty_goal":
                     events_to_add.append((self.match.id, "goal", minute, player_id))
-                    events_to_add.append((self.match.id, "assist", minute, assister_id))
                     logger.debug(f"{prefix} Home goal event queued: match={self.match.id} player={player_id} minute={minute}")
+                    payload["player_goals_to_check"].append((player_id, self.match.league_id, self.match.id))
+                    
+                    if assister_id:
+                        events_to_add.append((self.match.id, "assist", minute, assister_id))
+                        payload["player_assists_to_check"].append((assister_id, self.match.league_id, self.match.id))
                 elif event["type"] == "penalty_miss":
                     goalkeeper_id = event["keeper"]
                     events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
@@ -1260,10 +1267,14 @@ class Match():
                 else:
                     minute = str(minute)
 
-                if event["type"] == "goal":
+                if event["type"] == "goal" or event["type"] == "penalty_goal":
                     events_to_add.append((self.match.id, "goal", minute, player_id))
-                    events_to_add.append((self.match.id, "assist", minute, assister_id))
                     logger.debug(f"{prefix} Away goal event queued: match={self.match.id} player={player_id} minute={minute}")
+                    payload["player_goals_to_check"].append((player_id, self.match.league_id, self.match.id))
+                    
+                    if assister_id:
+                        events_to_add.append((self.match.id, "assist", minute, assister_id))
+                        payload["player_assists_to_check"].append((assister_id, self.match.league_id, self.match.id))
                 elif event["type"] == "penalty_miss":
                     goalkeeper_id = event["keeper"]
                     events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
@@ -1296,9 +1307,11 @@ class Match():
 
             if self.homeCleanSheet:
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"]))
+                payload["player_clean_sheets_to_check"].append((self.homeCurrentLineup["Goalkeeper"], self.match.league_id, self.match.id))
 
             if self.awayCleanSheet:
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"]))
+                payload["player_clean_sheets_to_check"].append((self.awayCurrentLineup["Goalkeeper"], self.match.league_id, self.match.id))
 
             payload["match_events"] = events_to_add
 

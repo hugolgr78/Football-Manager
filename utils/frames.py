@@ -1448,17 +1448,17 @@ class PlayerFrame(ctk.CTkFrame):
                     img = ctk.CTkImage(src, None, (src.width, src.height))
                     ctk.CTkLabel(self.statFrame, image = img, text = "").place(relx = 0.1 + i * 0.2, rely = 0.5, anchor = "center")
             case "Goals / Assists":
-                playerGoals = MatchEvents.get_goals_and_pens_by_player(self.player.id)
-                playerAssists = MatchEvents.get_assists_by_player(self.player.id)
+                playerGoals = MatchEvents.get_goals_and_pens_by_player(self.player.id, self.league.league_id)
+                playerAssists = MatchEvents.get_assists_by_player(self.player.id, self.league.league_id)
 
                 ctk.CTkLabel(self.statFrame, text = f"{playerGoals} / {playerAssists}", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
             case "Yellows / Reds":
-                yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id)
-                redCards = MatchEvents.get_red_cards_by_player(self.player.id)
+                yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id, self.league.league_id)
+                redCards = MatchEvents.get_red_cards_by_player(self.player.id, self.league.league_id)
 
                 ctk.CTkLabel(self.statFrame, text = f"{yellowCards} / {redCards}", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
             case "POTM Awards":
-                potmAwards = TeamLineup.get_player_potm_awards(self.player.id)
+                potmAwards = TeamLineup.get_player_potm_awards(self.player.id, self.league.league_id)
 
                 ctk.CTkLabel(self.statFrame, text = f"{potmAwards}", fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15)).place(relx = 0.5, rely = 0.5, anchor = "center")
             case "Form":

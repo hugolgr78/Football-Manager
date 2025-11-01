@@ -6588,6 +6588,22 @@ def teamStrength(playerIDs, role, playerOBJs):
 
 def process_payload(payload):
     try: 
+
+        goalsBefore = {}
+        for playerID, competitionID, matchID in payload["player_goals_to_check"]:
+            player_goals = MatchEvents.get_goals_and_pens_by_player(playerID, competitionID)
+            goalsBefore[(playerID, competitionID, matchID)] = player_goals
+
+        assistsBefore = {}
+        for playerID, competitionID, matchID in payload["player_assists_to_check"]:
+            player_assists = MatchEvents.get_assists_by_player(playerID, competitionID)
+            assistsBefore[(playerID, competitionID, matchID)] = player_assists
+    
+        cleanSheetsBefore = {}
+        for playerID, competitionID, matchID in payload["player_clean_sheets_to_check"]:
+            player_clean_sheets = MatchEvents.get_clean_sheets_by_player(playerID, competitionID)
+            cleanSheetsBefore[(playerID, competitionID, matchID)] = player_clean_sheets
+
         call_if_not_empty(payload["team_updates"], LeagueTeams.batch_update_teams)
         call_if_not_empty(payload["manager_updates"], Managers.batch_update_managers)
         call_if_not_empty(payload["match_events"], MatchEvents.batch_add_events)
@@ -6622,35 +6638,26 @@ def process_payload(payload):
             player_id, competition_id, threshold, date = check
             MatchEvents.check_yellow_card_ban(player_id, competition_id, threshold, date)
 
-        for playerID, competitionID, matchID in payload["player_goals_to_check"]:
-            player_goals = MatchEvents.get_goals_and_pens_by_player(playerID, competitionID)
+        for (playerID, competitionID, matchID), before in goalsBefore.items():
+            after = MatchEvents.get_goals_and_pens_by_player(playerID, competitionID)
             matchDate = Matches.get_match_by_id(matchID).date
 
-            if player_goals % 10 == 0:
-                news = LeagueNews.check_milestone_news(playerID, competitionID, player_goals, "goal")
+            if any(before < i <= after for i in range(2, after + 1, 2)):
+                payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "goals", after))
 
-                if not news:
-                    payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "goals", player_goals))
-
-        for playerID, competitionID, matchID in payload["player_assists_to_check"]:
-            player_assists = MatchEvents.get_assists_by_player(playerID, competitionID)
+        for (playerID, competitionID, matchID), before in assistsBefore.items():
+            after = MatchEvents.get_assists_by_player(playerID, competitionID)
             matchDate = Matches.get_match_by_id(matchID).date
 
-            if player_assists % 10 == 0:
-                news = LeagueNews.check_milestone_news(playerID, competitionID, player_assists, "assist")
+            if any(before < i <= after for i in range(10, after + 1, 10)):
+                payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "assists", after))
 
-                if not news:
-                    payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "assists", player_assists))
-
-        for playerID, competitionID, matchID in payload["player_clean_sheets_to_check"]:
-            player_clean_sheets = MatchEvents.get_clean_sheets_by_player(playerID, competitionID)
+        for (playerID, competitionID, matchID), before in cleanSheetsBefore.items():
+            after = MatchEvents.get_clean_sheets_by_player(playerID, competitionID)
             matchDate = Matches.get_match_by_id(matchID).date
 
-            if player_clean_sheets % 10 == 0:
-                news = LeagueNews.check_milestone_news(playerID, competitionID, player_clean_sheets, "clean_sheet")
-
-                if not news:
-                    payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "clean sheets", player_clean_sheets))
+            if any(before < i <= after for i in range(10, after + 1, 10)):
+                payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "clean sheets", after))
 
         call_if_not_empty(payload["news_to_add"], LeagueNews.batch_add_news)
 

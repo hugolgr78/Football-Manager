@@ -690,9 +690,9 @@ NEWS_DETAILS = {
         "shine as one of {team}'s key performers. Their form has been vital in\n"
         "maintaining {team}'s momentum this campaign.",
 
-        "{player}'s {value} {milestone_type} in the {comp} marks another chapter in a standout season.\n"
-        "The {position} has been in unstoppable form, earning praise from both fans\n"
-        "and pundits alike.",
+        "{player}'s {value} {milestone_type} in the {comp} marks another chapter in a\n"
+        "standout season. The {position} has been in unstoppable form, earning praise\n"
+        "from fans and pundits alike.",
 
         "{player} was in good form again against {opponent} and has now reached\n"
         "{value} {milestone_type} in the {comp} this season — a remarkable achievement that\n"

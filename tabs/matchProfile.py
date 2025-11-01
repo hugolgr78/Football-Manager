@@ -542,7 +542,12 @@ class MatchProfile(ctk.CTkFrame):
 
                 if event.event_type == "goal" or event.event_type == "penalty_goal":
                     src = Image.open("Images/goal.png")
-                    assist_event = self.matchEvents[self.matchEvents.index(event) + 1] if event.event_type == "goal" else None
+
+                    for event in self.matchEvents:
+                        if event.event_type == "assist" and event.time == time and event.player_id != player.id:
+                            assist_event = event
+                            break   
+                        
                     subText = Players.get_player_by_id(assist_event.player_id).last_name if assist_event else "Penalty"
                 elif event.event_type == "own_goal":
                     src = Image.open("Images/ownGoal.png")

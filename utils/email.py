@@ -100,7 +100,7 @@ class EmailFrame(ctk.CTkFrame):
         Emails.mark_email_as_read(self.email_id)
         self.parentTab.removeNotificationDot()
 
-        if self.unreadLabel.winfo_ismapped():
+        if hasattr(self, "unreadLabel") and self.unreadLabel.winfo_ismapped():
             self.unreadLabel.place_forget()
 
         self.parentTab.currentEmail = self

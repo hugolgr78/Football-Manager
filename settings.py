@@ -780,17 +780,17 @@ NEWS_DETAILS = {
     ],
 
     "lead_change": [
-        "With their latest victory over {opponent}, {team} has climbed to the top of the league table.\n"
-        "{manager}'s side have been in imperious form, and the fans are starting to dream\n"
+        "{team} have climbed to the top of the league table after the latest round of results.\n"
+        "{manager}'s side have shown impressive consistency, and supporters are beginning to dream\n"
         "of lifting the trophy.",
 
-        "{team} now sits at the summit after their {score} triumph against {opponent}.\n"
-        "The momentum is building, and confidence in the camp couldn’t be higher\n"
+        "{team} now sit at the summit following their recent performance against {opponent}.\n"
+        "Momentum is building, and confidence in the camp couldn’t be higher\n"
         "as the title race heats up.",
 
-        "{team} takes the lead in the standings after a solid run of results.\n"
-        "{star_player}'s recent performances have been pivotal in pushing them ahead\n"
-        "of their rivals."
+        "{team} move into first place after a s teady run of form.\n"
+        "Key contributions from across the squad have been crucial in keeping them ahead\n"
+        "of their closest rivals."
     ],
 
     # "planetary_change": [

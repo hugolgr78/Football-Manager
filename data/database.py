@@ -2596,14 +2596,20 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_penalty_saves_by_player(cls, player_id, comp_id):
+    def get_penalty_saves_by_player(cls, player_id, comp = None):
         session = DatabaseManager().get_session()
         try:
-            penalty_saves = session.query(MatchEvents).join(Matches).filter(
-                MatchEvents.player_id == player_id,
-                MatchEvents.event_type == "penalty_saved",
-                Matches.league_id == comp_id
-            ).count()
+            if comp:
+                penalty_saves = session.query(MatchEvents).join(Matches).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "penalty_saved",
+                    Matches.league_id == comp
+                ).count()
+            else:
+                penalty_saves = session.query(MatchEvents).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "penalty_saved"
+                ).count()
             return penalty_saves
         finally:
             session.close()
@@ -2638,14 +2644,20 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_clean_sheets_by_player(cls, player_id, comp_id):
+    def get_clean_sheets_by_player(cls, player_id, comp = None):
         session = DatabaseManager().get_session()
         try:
-            clean_sheets = session.query(MatchEvents).join(Matches).filter(
-                MatchEvents.player_id == player_id,
-                MatchEvents.event_type == "clean_sheet",
-                Matches.league_id == comp_id
-            ).count()
+            if comp:
+                clean_sheets = session.query(MatchEvents).join(Matches).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "clean_sheet",
+                    Matches.league_id == comp
+                ).count()
+            else:
+                clean_sheets = session.query(MatchEvents).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "clean_sheet"
+                ).count()
             return clean_sheets
         finally:
             session.close()
@@ -3425,6 +3437,26 @@ class TeamHistory(Base):
         try:
             team = session.query(TeamHistory).filter(TeamHistory.position == position, TeamHistory.matchday == matchday).first()
             return team
+        finally:
+            session.close()
+
+    @classmethod
+    def check_league_changes(cls, matchday, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            league_teams = session.query(LeagueTeams).filter(LeagueTeams.league_id == league_id).all()
+            changes = []
+
+            for league_team in league_teams:
+                team_history = session.query(TeamHistory).filter(
+                    TeamHistory.team_id == league_team.team_id,
+                    TeamHistory.matchday == matchday - 1
+                ).first()
+
+                if team_history and team_history.position != league_team.position:
+                    changes.append((league_team.team_id, team_history.position, league_team.position))
+
+            return changes
         finally:
             session.close()
 
@@ -6642,7 +6674,7 @@ def process_payload(payload):
             after = MatchEvents.get_goals_and_pens_by_player(playerID, competitionID)
             matchDate = Matches.get_match_by_id(matchID).date
 
-            if any(before < i <= after for i in range(2, after + 1, 2)):
+            if any(before < i <= after for i in range(10, after + 1, 10)):
                 payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "goals", after))
 
         for (playerID, competitionID, matchID), before in assistsBefore.items():

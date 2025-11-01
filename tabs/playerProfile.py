@@ -303,10 +303,10 @@ class Profile(ctk.CTkFrame):
             img = ctk.CTkImage(src, None, (src.width, src.height))
             ctk.CTkLabel(self.statsFrame, image = img, text = "").place(relx = 0.98, rely = 0.5, anchor = "e")
 
-        played = TeamLineup.get_number_matches_by_player(self.player.id, comp = self.parent.league.id)
+        played = TeamLineup.get_number_matches_by_player(self.player.id, self.parent.league.id)
         yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id, comp = self.parent.league.id)
         redCards = MatchEvents.get_red_cards_by_player(self.player.id, comp = self.parent.league.id)
-        averageRating = TeamLineup.get_player_average_rating(self.player.id, comp = self.parent.league.id)
+        averageRating = TeamLineup.get_player_average_rating(self.player.id, self.parent.league.id)
 
         if self.player.position != "goalkeeper":
             goals = MatchEvents.get_goals_and_pens_by_player(self.player.id, comp = self.parent.league.id)

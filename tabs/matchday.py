@@ -2169,7 +2169,7 @@ class MatchDay(ctk.CTkFrame):
                     extra = True
 
                 events[str(minute) + ":" + str(second)] = {"type": type_, "extra": extra}
-                matchInstance.score.appendScore(1, home)
+                matchInstance.appendScore(1, home)
 
         homeScore = int(self.matchFrame.score.split("-")[0])
         awayScore = int(self.matchFrame.score.split("-")[1])

@@ -529,7 +529,7 @@ class MainMenu(ctk.CTkFrame):
         run_match_simulation([self.currDate, stopDate], self.currDate, progress_callback = self.updateProgressBar)
 
         self.currDate += overallTimeInBetween
-        Game.increment_game_date(self.manager_id, overallTimeInBetween)
+        Game.set_game_date(self.manager_id, stopDate)
         self._logger.debug("Updated game date to %s with %s difference", self.currDate, overallTimeInBetween)
 
         # ------------------- Reset/End -------------------

@@ -1509,15 +1509,15 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
             LeagueTeams.update_team_positions(id_)
             if League.check_all_matches_complete(id_, currDate):
 
+                matchday = League.get_current_matchday(id_)
+                for team in LeagueTeams.get_teams_by_league(id_):
+                    TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
+
                 if id_ == managerLeague.league_id:
                     _, email = League.team_of_the_week(id_, matchday, team = managerTeam.id)
  
                     if email:
                         Emails.add_email("team_of_the_week", matchday, None, None, managerLeague.league_id, (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0))
-
-                for team in LeagueTeams.get_teams_by_league(id_):
-                    matchday = League.get_current_matchday(id_)
-                    TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
 
                 # Check for lead changes, relegation changes here
                 if matchday > 20:
@@ -1721,7 +1721,7 @@ def get_overthrow_threshold(league_id):
     from data.database import Teams
 
     averages = Teams.get_average_current_ability_per_team(league_id)
-    avg_ca = [e["avg_ca"] for e in averages]
+    avg_ca = [e["avg_ca"] for e in averages.values()]
 
     league_spread = max(avg_ca) - min(avg_ca)
     overthrow_threshold = 0.55 * league_spread

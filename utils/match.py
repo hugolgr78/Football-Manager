@@ -1338,21 +1338,22 @@ class Match():
             elif self.score[0] + self.score[1] >= 5:
                 payload["news_to_add"].append(("big_score", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, None))
 
-            if self.winner.id == self.homeTeam.id:
-                # check for overthrow on the away team 
-                homeAverage = Teams.get_team_average_current_ability(self.homeTeam.id)
-                awayAverage = Teams.get_team_average_current_ability(self.awayTeam.id)
+            if self.winner:
+                if self.winner.id == self.homeTeam.id:
+                    # check for overthrow on the away team 
+                    homeAverage = Teams.get_team_average_current_ability(self.homeTeam.id)
+                    awayAverage = Teams.get_team_average_current_ability(self.awayTeam.id)
 
-                if awayAverage - homeAverage >= get_overthrow_threshold(self.match.league_id):
-                    payload["news_to_add"].append(("overthrow", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, self.homeTeam.id))
-                
-            elif self.winner.id == self.awayTeam.id:
-                # check for overthrow on the home team
-                homeAverage = Teams.get_team_average_current_ability(self.homeTeam.id)
-                awayAverage = Teams.get_team_average_current_ability(self.awayTeam.id)
+                    if awayAverage - homeAverage >= get_overthrow_threshold(self.match.league_id):
+                        payload["news_to_add"].append(("overthrow", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, self.homeTeam.id))
+                    
+                elif self.winner.id == self.awayTeam.id:
+                    # check for overthrow on the home team
+                    homeAverage = Teams.get_team_average_current_ability(self.homeTeam.id)
+                    awayAverage = Teams.get_team_average_current_ability(self.awayTeam.id)
 
-                if homeAverage - awayAverage >= get_overthrow_threshold(self.match.league_id):
-                    payload["news_to_add"].append(("overthrow", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, self.awayTeam.id))
+                    if homeAverage - awayAverage >= get_overthrow_threshold(self.match.league_id):
+                        payload["news_to_add"].append(("overthrow", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, self.awayTeam.id))
 
             # Players updates
             fitness_to_update = []

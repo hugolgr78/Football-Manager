@@ -4704,7 +4704,8 @@ class LeagueNews(Base):
                     "player_id": news[4],
                     "match_id": news[5],
                     "milestone_type": news[6],
-                    "news_number": news[7]
+                    "news_number": news[7],
+                    "team_id": news[8]
                 }
                 for news in newsObjects
             ]

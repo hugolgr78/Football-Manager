@@ -62,8 +62,6 @@ class EmailFrame(ctk.CTkFrame):
         self.canvas.bind("<Enter>", lambda e: self.onFrameHover())
         self.canvas.bind("<Button-1>", lambda e: self.displayEmailInfo())
 
-        print(Teams.get_average_current_ability_per_team(self.league.id))
-
     def onFrameHover(self):
         """
         This method is called when the mouse enters the email frame.

@@ -1517,19 +1517,8 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
                     TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
 
                 # Check for lead changes, relegation changes here
-                # if matchday > 20:
-                changes = TeamHistory.check_league_changes(matchday, id_)
-                
-                for change in changes:
-                    if change[2] == 1 and change[1] != 1:
-                        # Lead change
-                        match = Matches.get_team_last_match(change[0], currDate)
-                        LeagueNews.add_news("lead_change", (match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), id_, match_id = match.id, team_id = change[0])
-
-                    elif change[2] > 17 and change[1] < 18 and League.calculate_league_depth(id_) != 4:
-                        # Relegation change
-                        match = Matches.get_team_last_match(change[0], currDate)
-                        LeagueNews.add_news("relegation_change", (match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), id_, match_id = match.id, team_id = change[0])
+                if matchday > 20:
+                    check_league_changes(id_, matchday, currDate)
 
                 League.update_current_matchday(id_)
             _logger.debug(f"Updated league standings and matchdays for league {id_}")
@@ -1697,3 +1686,26 @@ def generate_news_detail(news_type, **kwargs):
     template = random.choice(templates)
     
     return template.format(**kwargs)
+
+def check_league_changes(league_id, matchday, currDate):
+    """
+    Check for lead changes and relegation changes in a league.
+    
+    Args:
+        league_id (int): The ID of the league to check.
+    """
+
+    from data.database import TeamHistory, Matches, LeagueNews, League
+    
+    changes = TeamHistory.check_league_changes(matchday, league_id)
+                
+    for change in changes:
+        if change[2] == 1 and change[1] != 1:
+            # Lead change
+            match = Matches.get_team_last_match(change[0], currDate)
+            LeagueNews.add_news("lead_change", (match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), league_id, match_id = match.id, team_id = change[0])
+
+        elif change[2] > 17 and change[1] < 18 and League.calculate_league_depth(league_id) != 4:
+            # Relegation change
+            match = Matches.get_team_last_match(change[0], currDate)
+            LeagueNews.add_news("relegation_change", (match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), league_id, match_id = match.id, team_id = change[0])

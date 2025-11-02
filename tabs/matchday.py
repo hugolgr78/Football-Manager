@@ -2460,6 +2460,10 @@ class MatchDay(ctk.CTkFrame):
             if email:
                 Emails.add_email("team_of_the_week", self.matchFrame.matchInstance.matchday, None, None, self.league.id, (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0))
 
+            # Check for lead changes, relegation changes here
+            if matchday > 20:
+                check_league_changes(self.league.id, matchday, currDate)
+
             League.update_current_matchday(self.league.id)
 
         logger.debug("Checking player game happiness.")

@@ -1368,7 +1368,7 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
         progress_callback (function, optional): A callback function to report progress. Defaults to None.
     """
     
-    from data.database import Matches, Managers, Teams, League, Emails, LeagueTeams, PlayerBans, TeamHistory, process_payload, check_player_games_happy
+    from data.database import Matches, Managers, Teams, League, Emails, LeagueTeams, PlayerBans, TeamHistory, LeagueNews, process_payload, check_player_games_happy
     from data.gamesDatabase import Game
     from concurrent.futures import ProcessPoolExecutor, as_completed
     import os, time, logging, glob, traceback
@@ -1435,6 +1435,7 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
 
                             if not match.league_id in teams:
                                 teams[match.league_id] = []
+
                             teams[match.league_id].append(match.home_id)
                             teams[match.league_id].append(match.away_id)
 
@@ -1518,16 +1519,17 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
                 # Check for lead changes, relegation changes here
                 # if matchday > 20:
                 changes = TeamHistory.check_league_changes(matchday, id_)
-                print(changes)
+                
+                for change in changes:
+                    if change[2] == 1 and change[1] != 1:
+                        # Lead change
+                        match = Matches.get_team_last_match(change[0], currDate)
+                        LeagueNews.add_news("lead_change", (match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), id_, match_id = match.id, team_id = change[0])
 
-                # Ouptput example:
-                # [('70fcca65-4f58-4f38-8d5a-fc54f7c37195', 6, 9), ('de968d86-b3a8-47cc-9261-a438ad0a8798', 4, 1), ('7eee616d-a664-4d58-af90-92de75a4fd49', 7, 10), 
-                # ('5ce65495-6dc7-4c18-b85f-1f4acc9ee241', 8, 5), ('2627e5d0-e0e6-4069-b610-7bf538697893', 9, 2), ('13123e95-cc41-44a6-a53b-f928bef63707', 10, 11), 
-                # ('831ec791-ec8e-4a1a-8f10-51e2ceb19350', 11, 12), ('086b61b3-9520-4278-9738-3234753712c1', 16, 6), ('c3a1ac17-704c-4501-8439-ca3be0d8d711', 19, 17), 
-                # ('e937b81e-c908-492d-8730-7c9ef5face6a', 12, 13), ('9e9989f7-0cb2-4bcf-9bb0-4a4d241591be', 13, 14), ('84a53a27-7539-453d-bb17-8310d1061d13', 20, 18), 
-                # ('cd437fe8-2b4c-49ec-ab26-0aa146067be7', 17, 20), ('34a2da70-b791-4e53-bf84-a2576e5bb3fe', 18, 19), ('019aeaa9-f47c-4945-9551-9de6fbb1e82f', 1, 3), 
-                # ('08c2a36f-7251-4890-8e0c-a08e235a5607', 5, 8), ('ef8fff94-2bdd-4ad2-9014-cd09aecb1e33', 2, 7), ('60f88ad1-05c1-4609-b0ee-1c34786ac1fd', 14, 15), 
-                # ('c99bf579-334a-4ddb-94b8-68ddf86a5fdb', 15, 16), ('3c943565-757d-49ce-975e-fc6ef91a65de', 3, 4)]
+                    elif change[2] > 17 and change[1] < 18 and League.calculate_league_depth(id_) != 4:
+                        # Relegation change
+                        match = Matches.get_team_last_match(change[0], currDate)
+                        LeagueNews.add_news("relegation_change", (match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), id_, match_id = match.id, team_id = change[0])
 
                 League.update_current_matchday(id_)
             _logger.debug(f"Updated league standings and matchdays for league {id_}")

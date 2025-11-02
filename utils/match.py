@@ -1242,7 +1242,7 @@ class Match():
                     payload["player_bans"].append((player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate))
 
                     if event["type"] == "injury" and ban - currDate > timedelta(days = 60):
-                        payload["news_to_add"].append(("injury", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, player_id, None, None, None))
+                        payload["news_to_add"].append(("injury", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, player_id, None, None, None, self.homeTeam.id))
                     else:
                         totalCards += 1
                 elif event["type"] == "yellow_card":
@@ -1298,7 +1298,7 @@ class Match():
                     payload["player_bans"].append((player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate))
                     
                     if event["type"] == "injury" and ban - currDate > timedelta(days = 60):
-                        payload["news_to_add"].append(("injury", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, player_id, None, None, None))
+                        payload["news_to_add"].append(("injury", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, player_id, None, None, None, self.awayTeam.id))
                     else:
                         totalCards += 1
                 elif event["type"] == "yellow_card":
@@ -1311,7 +1311,7 @@ class Match():
                     logger.debug(f"{prefix} Away event queued: event={event["type"]}, match={self.match.id}, player={player_id}, minute={minute}")
                 
             if totalCards >= 10:
-                payload["news_to_add"].append(("disciplinary", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, totalCards))
+                payload["news_to_add"].append(("disciplinary", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, totalCards, None))
 
             if self.homeCleanSheet:
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"]))
@@ -1331,10 +1331,12 @@ class Match():
             logger.debug(f"{prefix} Submitting match score update: {self.score[0]} : {self.score[1]}")
             payload["score_updates"].append((self.match.id, self.score[0], self.score[1]))
 
-            if abs(self.score[0] - self.score[1]) >= 4:
-                payload["news_to_add"].append(("big_win", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None))
+            if self.score[0] - self.score[1] >= 4:
+                payload["news_to_add"].append(("big_win", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, self.homeTeam.id))
+            elif self.score[1] - self.score[0] >= 4:
+                payload["news_to_add"].append(("big_win", (self.match.date + timedelta(days = 1)).replace(hour = 0, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, self.awayTeam.id))
             elif self.score[0] + self.score[1] >= 5:
-                payload["news_to_add"].append(("big_score", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None))
+                payload["news_to_add"].append(("big_score", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, None))
 
             # Players updates
             fitness_to_update = []

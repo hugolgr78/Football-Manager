@@ -4616,17 +4616,18 @@ class LeagueNews(Base):
     __tablename__ = 'league_news'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    news_type = Column(Enum("milestone", "injury", "big_win", "big_score", "transfer", "disciplinary", "position_change", "overthrow"), nullable = False)
+    news_type = Column(Enum("milestone", "injury", "big_win", "big_score", "transfer", "disciplinary", "lead_change", "planetary_change", "playoff_change", "relegation_change", "overthrow"), nullable = False)
     date = Column(DateTime, nullable = False)
     league_id = Column(String(128), ForeignKey('leagues.id'), nullable = False)
     matchday = Column(Integer)
     player_id = Column(String(128), ForeignKey('players.id'))
     match_id = Column(String(128), ForeignKey('matches.id'))
+    team_id = Column(String(128), ForeignKey('teams.id'))
     milestone_type = Column(String(128))
     news_number = Column(Integer)
 
     @classmethod
-    def add_news(cls, news_type, date, league_id, matchday = None, player_id = None, match_id = None, milestone_type = None, news_number = None):
+    def add_news(cls, news_type, date, league_id, matchday = None, player_id = None, match_id = None, milestone_type = None, news_number = None, team_id = None):
         session = DatabaseManager().get_session()
         try:
             news_entry = LeagueNews(
@@ -4636,6 +4637,7 @@ class LeagueNews(Base):
                 league_id = league_id,
                 player_id = player_id,
                 match_id = match_id,
+                team_id = team_id,
                 milestone_type = milestone_type,
                 news_number = news_number
             )
@@ -4664,22 +4666,27 @@ class LeagueNews(Base):
     def get_news_for_team(cls, team_id):
         session = DatabaseManager().get_session()
         try:
-            # Get all the news entries where the player_id is from the team or the match_id has home/away team as the team
-            news_entries = session.query(LeagueNews).outerjoin(
-                Players, LeagueNews.player_id == Players.id
-            ).outerjoin(
-                Matches, LeagueNews.match_id == Matches.id
-            ).filter(
-                or_(
-                    Players.team_id == team_id,
-                    Matches.home_id == team_id,
-                    Matches.away_id == team_id
-                )
-            ).all()
 
-            # Sort by date and return latest 10
-            news_entries = sorted(news_entries, key = lambda x: x.date, reverse = True)[:10]
-            return news_entries
+            news_query = (
+                session.query(LeagueNews)
+                .filter(
+                    or_(
+                        LeagueNews.team_id == team_id,
+                        LeagueNews.player_id.in_(
+                            session.query(Players.id).filter(Players.team_id == team_id)
+                        ),
+                        LeagueNews.match_id.in_(
+                            session.query(Matches.id).filter(
+                                or_(Matches.home_id == team_id, Matches.away_id == team_id)
+                            )
+                        ),
+                    )
+                )
+                .order_by(LeagueNews.date.desc())
+                .limit(10)
+            )
+
+            return news_query.all()
         finally:
             session.close()
 
@@ -6620,7 +6627,6 @@ def teamStrength(playerIDs, role, playerOBJs):
 
 def process_payload(payload):
     try: 
-
         goalsBefore = {}
         for playerID, competitionID, matchID in payload["player_goals_to_check"]:
             player_goals = MatchEvents.get_goals_and_pens_by_player(playerID, competitionID)
@@ -6675,21 +6681,21 @@ def process_payload(payload):
             matchDate = Matches.get_match_by_id(matchID).date
 
             if any(before < i <= after for i in range(10, after + 1, 10)):
-                payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "goals", after))
+                payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "goals", after, None))
 
         for (playerID, competitionID, matchID), before in assistsBefore.items():
             after = MatchEvents.get_assists_by_player(playerID, competitionID)
             matchDate = Matches.get_match_by_id(matchID).date
 
             if any(before < i <= after for i in range(10, after + 1, 10)):
-                payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "assists", after))
+                payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "assists", after, None))
 
         for (playerID, competitionID, matchID), before in cleanSheetsBefore.items():
             after = MatchEvents.get_clean_sheets_by_player(playerID, competitionID)
             matchDate = Matches.get_match_by_id(matchID).date
 
             if any(before < i <= after for i in range(10, after + 1, 10)):
-                payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "clean sheets", after))
+                payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "clean sheets", after, None))
 
         call_if_not_empty(payload["news_to_add"], LeagueNews.batch_add_news)
 

@@ -834,19 +834,20 @@ NEWS_DETAILS = {
         "consistency if the club is to avoid a tense end to the season."
     ],
 
-
+    ## DONE
     "overthrow": [
-        "A huge upset in the league as {team1} stunned {team2} with a {score} victory.\n"
-        "The underdogs showed incredible resilience, frustrating their more fancied opponents\n"
-        "for the full 90 minutes.",
+        "A huge upset in the league as {team1} stunned {team2}\n"
+        "with a {score} victory. The underdogs showed incredible resilience, frustrating\n"
+        "their more fancied opponents for the full 90 minutes.",
 
         "Shockwaves through the league as {team1} beat {team2} {score}.\n"
-        "{player} was the hero, netting the decisive goal late on to secure\n"
-        "an unforgettable win.",
+        "{manager} praised the team's performance, highlighting their discipline and\n"
+        "teamwork. The match captivated fans with impressive play and strategic\n"
+        "mastery throughout.",
 
-        "In one of the season’s biggest surprises, {team1} defeated {team2} {score}.\n"
-        "The result shakes up the title race and highlights the unpredictable nature\n"
-        "of this year’s competition."
+        "In one of the season’s biggest surprises, {team1} defeated\n"
+        "{team2} {score}. The result shakes up the title race and highlights the\n"
+        "unpredictable nature of this year’s competition."
     ]
 }
 

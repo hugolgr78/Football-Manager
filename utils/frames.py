@@ -4111,6 +4111,18 @@ class News(ctk.CTkFrame):
 
                     detail = generate_news_detail("relegation_change", team = team.name, opponent = opponentTeam, manager = manager)
                     self.newsDetails.append(detail)
+                case "overthrow":
+                    team = Teams.get_team_by_id(newsObj.team_id)
+                    match = Matches.get_match_by_id(newsObj.match_id)
+                    team2 = Teams.get_team_by_id(match.away_id if match.home_id == team.id else match.home_id).name
+                    score = f"{match.score_home}-{match.score_away}"
+                    manager = Managers.get_manager_by_id(team.manager_id).last_name
+
+                    title = generate_news_title("overthrow", team1 = team.name, team2 = team2)
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("overthrow", team1 = team.name, team2 = team2, score = score, manager = manager)
+                    self.newsDetails.append(detail)
 
     def checkHover(self, event):
         """

@@ -642,39 +642,39 @@ NEWS_TITLES = {
         "{player} hits {value} {milestone_type}.",
     ],
     "injury": [
-        "{player} sidelined for {months} months",
-        "Injury blow: {player} out for {months} months",
-        "{player} faces {months}-month layoff"
+        "{player} sidelined for {months} months.",
+        "Injury blow: {player} out for {months} months.",
+        "{player} faces {months}-month layoff."
     ],
     "big_win": [
-        "{team1} {score} {team2}",
+        "{team1} {score} {team2}.",
     ],
     "big_score": [
-        "{team1} and {team2} bring the show",
+        "{team1} and {team2} bring the show.",
     ],
     "transfer": [
-        "{player} joins {team}",
-        "Transfer completed: {player} to {team}",
-        "{player} moves to {team}"
+        "{player} joins {team}.",
+        "Transfer completed: {player} to {team}.",
+        "{player} moves to {team}."
     ],
     "disciplinary": [
-        "{number} cards in {team}'s match",
+        "{number} cards in {team}'s match.",
     ],
     "lead_change": [
         "{team} takes the lead!"
     ],
     "planetary_change": [
-        "{team} moves into the planetary spots",
+        "{team} moves into the planetary spots.",
     ],
     "playoff_change": [
-        "{team} moves into the playoff positions",
+        "{team} moves into the playoff positions.",
     ],
     "relegation_change": [
-        "{team} drops to the relegation zone"
+        "{team} drops to the relegation zone."
     ],
     "overthrow": [
         "Upset: {team1} beats {team2}",
-        "Shock result in {team1} vs {team2}",
+        "Shock result in {team1} vs {team2}.",
     ]
 }
 
@@ -779,18 +779,19 @@ NEWS_DETAILS = {
         "the high stakes of the league battle, with emotions running high from start to finish."
     ],
 
+    ## DONE
     "lead_change": [
-        "{team} have climbed to the top of the league table after the latest round of results.\n"
-        "{manager}'s side have shown impressive consistency, and supporters are beginning to dream\n"
-        "of lifting the trophy.",
+        "{team} have climbed to the top of the league table after the latest\n"
+        "round of results. {manager}'s side have shown impressive consistency, and\n"
+        "supporters are beginning to dream of lifting the trophy.",
 
-        "{team} now sit at the summit following their recent performance against {opponent}.\n"
-        "Momentum is building, and confidence in the camp couldn’t be higher\n"
-        "as the title race heats up.",
+        "{team} now sit at the summit following their recent performance\n"
+        "against {opponent}. Momentum is building, and confidence in the camp\n"
+        "couldn’t be higher as the title race heats up.",
 
-        "{team} move into first place after a s teady run of form.\n"
-        "Key contributions from across the squad have been crucial in keeping them ahead\n"
-        "of their closest rivals."
+        "{team} move into first place after a steady run of form. Key\n"
+        "contributions from across the squad have been crucial in keeping them\n"
+        "ahead of their closest rivals."
     ],
 
     # "planetary_change": [
@@ -818,19 +819,21 @@ NEWS_DETAILS = {
     #     "The fans are hopeful that this momentum can be sustained as the season progresses."
     # ],
 
+    ## DONE
     "relegation_change": [
-        "A disappointing defeat to {opponent} has seen {team} slip into the relegation zone.\n"
-        "{manager} has urged calm, but fans are growing concerned after a series\n"
-        "of poor results.",
+        "{team} have slipped into the relegation zone after recent results against\n"
+        "{opponent} and others went against them. {manager} has called for focus and\n"
+        "determination to climb back to safety.",
 
-        "{team}’s {score} loss against {opponent} leaves them inside the bottom three.\n"
-        "With survival hopes fading, the pressure is mounting on {manager}\n"
-        "to turn things around quickly.",
+        "After a tough run of form, including a setback against {opponent},\n"
+        "{team} now find themselves in the bottom three. Pressure is\n"
+        "mounting on {manager} to inspire a turnaround before it’s too late.",
 
-        "Following another frustrating draw, {team} have dropped into the relegation zone.\n"
-        "The {position_group} will need to step up if the club is to avoid\n"
-        "a tense end to the league season."
+        "Results elsewhere and a hard-fought match against {opponent} have seen\n"
+        "{team} drop into the relegation zone. The squad will need to find\n"
+        "consistency if the club is to avoid a tense end to the season."
     ],
+
 
     "overthrow": [
         "A huge upset in the league as {team1} stunned {team2} with a {score} victory.\n"

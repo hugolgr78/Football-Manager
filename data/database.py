@@ -621,7 +621,6 @@ class Players(Base):
                 league_ID = LeagueTeams.get_league_by_team(team.id).league_id
                 league_name = League.get_league_by_id(league_ID).name
                 league_depth = League.calculate_league_depth(league_ID)
-                min_CA_level = 150 - (league_depth * 50) 
                 player_nationality_percentage = get_planet_percentage(league_depth)
 
                 for planet, leagues in PLANET_LEAGUES.items():
@@ -677,7 +676,7 @@ class Players(Base):
                         if specific_pos not in new_player_positions:
                             new_player_positions[0] = specific_pos
 
-                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, min_level = min_CA_level)
+                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, league_depth)
                         playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
 
                         team_players.append({
@@ -715,7 +714,7 @@ class Players(Base):
                                                     weights=position_weights[:min(len(specific_pos_list), 4)])[0]
                         new_player_positions = random.sample(specific_pos_list, k=num_positions)
 
-                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, min_level = min_CA_level)
+                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, league_depth)
                         playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
 
                         team_players.append({

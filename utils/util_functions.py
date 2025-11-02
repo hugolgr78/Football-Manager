@@ -466,57 +466,60 @@ def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius = 10, **kwargs):
     ]
     return canvas.create_polygon(points, smooth = True, splinestep = 36, **kwargs)
 
-def generate_CA(age, team_strength, min_level = 150):
+def generate_CA(age, team_strength, depth):
     """
-    Generate a player's Current Ability (CA) based on age and team strength.
-    Young players (<21) are very likely to be within +10 of min_level,
-    but it's still (rarely) possible to exceed it.
-    
+    Generate a player's Current Ability (CA) based on age, team strength, and division.
+    Each division has an overlapping CA range to allow realistic variability.
+
     Args:
         age (int): The age of the player.
         team_strength (float): The strength of the team (1.0 = average, >1.0 = stronger).
-        min_level (int): The minimum level for the player.
+        depth (int): The division depth (0 = top division, higher numbers = lower divisions).
     """
 
-    max_level = min_level + 50
-    CAs = list(range(min_level, max_level + 1))
+    division_ranges = {
+        0: (150, 200),
+        1: (110, 160),
+        2: (70, 120),
+        3: (30, 80)
+    }
 
-    # Age factor & skew
+    div_min, div_max = division_ranges.get(depth, (70, 130))
+
+    # Map team_strength to a normalized factor inside division range
+    # Example: team_strength 0.7 -> 0, 1.55 -> 1
+    strength_norm = (team_strength - 0.7) / (1.55 - 0.7)
+    strength_norm = max(0.0, min(1.0, strength_norm))
+    
+    # Calculate base mean CA inside division range
+    mean_CA = div_min + (div_max - div_min) * strength_norm
+    
+    # Age factor: young players biased lower, old players slightly lower too
     if age < 21:
-        age_factor = 0.1 + 0.02 * age
-        # Penalize CAs above +10 extra heavily
-        def penalty(ca):
-            if ca <= min_level + 10:
-                return 1.0
-            else:
-                # exponential penalty for > +10
-                return math.exp(-0.5 * (ca - (min_level + 10)))
-        skew_power = 4  # strong bias toward low values
+        age_bias = -0.15 * (21 - age) * (div_max - div_min)
     elif age <= 25:
-        age_factor = 1.15
-        penalty = lambda ca: 1.0
-        skew_power = 3
+        age_bias = 0
     elif age <= 30:
-        age_factor = 1.05
-        penalty = lambda ca: 1.0
-        skew_power = 3
+        age_bias = -0.05 * (age - 25) * (div_max - div_min)
     else:
-        age_factor = 0.9
-        penalty = lambda ca: 1.0
-        skew_power = 3
-
-    # Skewed weights: lower CA more likely
-    weights = [(max_level - ca + 1) ** skew_power * age_factor * penalty(ca)
-               for ca in CAs]
-
-    # Apply team strength: shift distribution toward higher CAs
-    if team_strength != 1.0:
-        scale = 15 * (team_strength - 1)
-        weights = [w * math.exp(scale * ((ca - min_level) / (max_level - min_level)))
-                   for ca, w in zip(CAs, weights)]
-
-    level = random.choices(CAs, weights = weights, k = 1)[0]
-    return max(5, level)
+        age_bias = -0.1 * (age - 30) * (div_max - div_min)
+    
+    mean_CA += age_bias
+    
+    # Random spread around mean
+    std_dev = (div_max - div_min) / 6  # most players fall within ±1 std dev
+    ca = random.gauss(mean_CA, std_dev)
+    
+    # Optional: reduce probability for elite >180 players
+    if ca > 175:
+        drop = math.exp(-(ca - 175) / 3)  # probability scaling
+        if random.random() > drop:
+            ca = 175 + random.random() * 5 
+        
+    # Clamp to division bounds
+    ca = max(div_min, min(div_max, int(ca)))
+    
+    return ca
 
 def generate_youth_player_level(max_level = 150):
     """
@@ -1709,3 +1712,18 @@ def check_league_changes(league_id, matchday, currDate):
             # Relegation change
             match = Matches.get_team_last_match(change[0], currDate)
             LeagueNews.add_news("relegation_change", (match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), league_id, match_id = match.id, team_id = change[0])
+
+def get_overthrow_threshold(league_id):
+    """
+    Get a random threshold for overthrow events.
+    """
+
+    from data.database import Teams
+
+    averages = Teams.get_average_current_ability_per_team(league_id)
+    avg_ca = [e["avg_ca"] for e in averages]
+
+    league_spread = max(avg_ca) - min(avg_ca)
+    overthrow_threshold = 0.55 * league_spread
+
+    return overthrow_threshold

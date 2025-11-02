@@ -850,6 +850,8 @@ NEWS_DETAILS = {
     ]
 }
 
+OVERTHROW_THRESHOLD = 20
+
 from data.database import StatsManager
 
 STAT_FUNCTIONS = {

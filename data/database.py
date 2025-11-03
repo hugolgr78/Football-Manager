@@ -4615,15 +4615,15 @@ class LeagueNews(Base):
     __tablename__ = 'league_news'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    news_type = Column(Enum("milestone", "injury", "big_win", "big_score", "transfer", "disciplinary", "lead_change", "planetary_change", "playoff_change", "relegation_change", "overthrow"), nullable = False)
+    news_type = Column(Enum("milestone", "injury", "big_win", "big_score", "transfer", "disciplinary", "lead_change", "planetary_change", "playoff_change", "relegation_change", "overthrow", "player_goals"), nullable = False)
     date = Column(DateTime, nullable = False)
     league_id = Column(String(128), ForeignKey('leagues.id'), nullable = False)
     matchday = Column(Integer)
     player_id = Column(String(128), ForeignKey('players.id'))
     match_id = Column(String(128), ForeignKey('matches.id'))
-    team_id = Column(String(128), ForeignKey('teams.id'))
     milestone_type = Column(String(128))
     news_number = Column(Integer)
+    team_id = Column(String(128), ForeignKey('teams.id'))
 
     @classmethod
     def add_news(cls, news_type, date, league_id, matchday = None, player_id = None, match_id = None, milestone_type = None, news_number = None, team_id = None):
@@ -4636,9 +4636,9 @@ class LeagueNews(Base):
                 league_id = league_id,
                 player_id = player_id,
                 match_id = match_id,
-                team_id = team_id,
                 milestone_type = milestone_type,
-                news_number = news_number
+                news_number = news_number,
+                team_id = team_id,
             )
             session.add(news_entry)
 
@@ -6628,9 +6628,9 @@ def teamStrength(playerIDs, role, playerOBJs):
 def process_payload(payload):
     try: 
         goalsBefore = {}
-        for playerID, competitionID, matchID in payload["player_goals_to_check"]:
+        for playerID, competitionID, matchID, goals in payload["player_goals_to_check"]:
             player_goals = MatchEvents.get_goals_and_pens_by_player(playerID, competitionID)
-            goalsBefore[(playerID, competitionID, matchID)] = player_goals
+            goalsBefore[(playerID, competitionID, matchID, goals)] = player_goals
 
         assistsBefore = {}
         for playerID, competitionID, matchID in payload["player_assists_to_check"]:
@@ -6676,12 +6676,15 @@ def process_payload(payload):
             player_id, competition_id, threshold, date = check
             MatchEvents.check_yellow_card_ban(player_id, competition_id, threshold, date)
 
-        for (playerID, competitionID, matchID), before in goalsBefore.items():
-            after = MatchEvents.get_goals_and_pens_by_player(playerID, competitionID)
+        for (playerID, competitionID, matchID, goals), before in goalsBefore.items():
+            after = before + goals
             matchDate = Matches.get_match_by_id(matchID).date
 
             if any(before < i <= after for i in range(10, after + 1, 10)):
                 payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "goals", after, None))
+            
+            if goals >= 3:
+                payload["news_to_add"].append(("player_goals", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, None, goals, None))
 
         for (playerID, competitionID, matchID), before in assistsBefore.items():
             after = MatchEvents.get_assists_by_player(playerID, competitionID)

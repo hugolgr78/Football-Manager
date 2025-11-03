@@ -1219,8 +1219,12 @@ class Match():
                     events_to_add.append((self.match.id, "goal", minute, player_id))
                     logger.debug(f"{prefix} Home goal event queued: match={self.match.id} player={player_id} minute={minute}")
 
-                    if all(player_id not in tup for tup in payload["player_goals_to_check"]):
-                        payload["player_goals_to_check"].append((player_id, self.match.league_id, self.match.id))
+                    for i, (pid, league_id, match_id, goals) in enumerate(payload["player_goals_to_check"]):
+                        if pid == player_id:
+                            payload["player_goals_to_check"][i] = (pid, league_id, match_id, goals + 1)
+                            break
+                    else:
+                        payload["player_goals_to_check"].append((player_id, self.match.league_id, self.match.id, 1))
                     
                     if assister_id:
                         events_to_add.append((self.match.id, "assist", minute, assister_id))
@@ -1275,8 +1279,12 @@ class Match():
                     events_to_add.append((self.match.id, "goal", minute, player_id))
                     logger.debug(f"{prefix} Away goal event queued: match={self.match.id} player={player_id} minute={minute}")
                     
-                    if all(player_id not in tup for tup in payload["player_goals_to_check"]):
-                        payload["player_goals_to_check"].append((player_id, self.match.league_id, self.match.id))
+                    for i, (pid, league_id, match_id, goals) in enumerate(payload["player_goals_to_check"]):
+                        if pid == player_id:
+                            payload["player_goals_to_check"][i] = (pid, league_id, match_id, goals + 1)
+                            break
+                    else:
+                        payload["player_goals_to_check"].append((player_id, self.match.league_id, self.match.id, 1))
                     
                     if assister_id:
                         events_to_add.append((self.match.id, "assist", minute, assister_id))

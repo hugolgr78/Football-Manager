@@ -675,6 +675,10 @@ NEWS_TITLES = {
     "overthrow": [
         "Upset: {team1} beats {team2}",
         "Shock result in {team1} vs {team2}.",
+    ],
+    "player_goals": [
+        "{player} scores {value} goals vs {opponent}.",
+        "{player} shines with {value} goals against {opponent}.",
     ]
 }
 
@@ -848,6 +852,29 @@ NEWS_DETAILS = {
         "In one of the season’s biggest surprises, {team1} defeated\n"
         "{team2} {score}. The result shakes up the title race and highlights the\n"
         "unpredictable nature of this year’s competition."
+    ],
+
+
+    "player_goals": [
+        # "{player} produced a remarkable performance in {team}'s\n"
+        # "{competition} clash with {opponent}, scoring {value} goals to leave\n"
+        # "the crowd in awe. The {position}'s finishing was clinicalthroughout,\n"
+        # "showcasing the attacking quality {manager} has nurtured this season.",
+
+        # "A memorable night for {player}, who struck {value} times against {opponent}\n"
+        # "in the {competition}. The {team} forward was unstoppable,\n"
+        # "linking up superbly with teammates and proving why {manager} values\n"
+        # "their sharp instincts in front of goal.",
+
+        # "{player} was at the heart of everything for {team} during their\n"
+        # "{competition} encounter with {opponent}. The {position}\n"
+        # "bagged {value} goals, displaying excellent movement and composure that\n"
+        # "delighted {manager} and the fans alike.",
+
+        "There was no stopping {player} in {team}'s {competition} fixture\n"
+        "against {opponent}. The {position} delivered a commanding attacking\n"
+        "display, scoring {value} goals and constantly troubling the opposition defence\n"
+        "with relentless pressure and precision."
     ]
 }
 

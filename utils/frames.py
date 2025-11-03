@@ -4138,6 +4138,30 @@ class News(ctk.CTkFrame):
 
                     detail = generate_news_detail("player_goals", player = player.last_name, team = team.name, opponent = opponentTeam, value = value, competition = competition, position = position, manager = manager)
                     self.newsDetails.append(detail)
+                case "winless_form":
+                    team = Teams.get_team_by_id(newsObj.team_id)
+                    value = newsObj.news_number
+                    match = Matches.get_match_by_id(newsObj.match_id)
+                    manager = Managers.get_manager_by_id(team.manager_id).last_name
+                    competition = League.get_league_by_id(match.league_id).name
+
+                    title = generate_news_title("winless_form", team = team.name, value = value)
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("winless_form", team = team.name, value = value, competition = competition, manager = manager)
+                    self.newsDetails.append(detail)
+                case "unbeaten_form":
+                    team = Teams.get_team_by_id(newsObj.team_id)
+                    value = newsObj.news_number
+                    match = Matches.get_match_by_id(newsObj.match_id)
+                    manager = Managers.get_manager_by_id(team.manager_id).last_name
+                    competition = League.get_league_by_id(match.league_id).name
+
+                    title = generate_news_title("unbeaten_form", team = team.name, value = value)
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("unbeaten_form", team = team.name, value = value, competition = competition, manager = manager)
+                    self.newsDetails.append(detail)
 
     def checkHover(self, event):
         """

@@ -679,7 +679,15 @@ NEWS_TITLES = {
     "player_goals": [
         "{player} scores {value} goals vs {opponent}.",
         "{player} shines with {value} goals against {opponent}.",
-    ]
+    ],
+    "winless_form" : [
+        "{team} now winless in {value} games.",
+        "{team} extends winless streak to {value} matches.",
+    ],
+    "unbeaten_form" : [
+        "{team} extends unbeaten run to {value} games.",
+        "{team} remains unbeaten for {value} matches.",
+    ],
 }
 
 NEWS_DETAILS = {
@@ -854,28 +862,68 @@ NEWS_DETAILS = {
         "unpredictable nature of this year’s competition."
     ],
 
-
+    ## DONE
     "player_goals": [
-        # "{player} produced a remarkable performance in {team}'s\n"
-        # "{competition} clash with {opponent}, scoring {value} goals to leave\n"
-        # "the crowd in awe. The {position}'s finishing was clinicalthroughout,\n"
-        # "showcasing the attacking quality {manager} has nurtured this season.",
+        "{player} produced a remarkable performance in {team}'s\n"
+        "{competition} clash with {opponent}, scoring {value} goals to leave\n"
+        "the crowd in awe. The {position}'s finishing was clinicalthroughout,\n"
+        "showcasing the attacking quality {manager} has nurtured this season.",
 
-        # "A memorable night for {player}, who struck {value} times against {opponent}\n"
-        # "in the {competition}. The {team} forward was unstoppable,\n"
-        # "linking up superbly with teammates and proving why {manager} values\n"
-        # "their sharp instincts in front of goal.",
+        "A memorable night for {player}, who struck {value} times against {opponent}\n"
+        "in the {competition}. The {team} forward was unstoppable,\n"
+        "linking up superbly with teammates and proving why {manager} values\n"
+        "their sharp instincts in front of goal.",
 
-        # "{player} was at the heart of everything for {team} during their\n"
-        # "{competition} encounter with {opponent}. The {position}\n"
-        # "bagged {value} goals, displaying excellent movement and composure that\n"
-        # "delighted {manager} and the fans alike.",
+        "{player} was at the heart of everything for {team} during their\n"
+        "{competition} encounter with {opponent}. The {position}\n"
+        "bagged {value} goals, displaying excellent movement and composure that\n"
+        "delighted {manager} and the fans alike.",
 
         "There was no stopping {player} in {team}'s {competition} fixture\n"
         "against {opponent}. The {position} delivered a commanding attacking\n"
         "display, scoring {value} goals and constantly troubling the opposition defence\n"
         "with relentless pressure and precision."
+    ],
+
+    "winless_form": [
+        "Frustration continues for {team}, who are now without a victory\n"
+        "in their last {value} {competition} fixtures. {manager} will be eager to find a spark \n"
+        "to turn performances into results as the {team} squad\n"
+        "looks to regain confidence on the pitch.",
+
+        "{team}’s struggle to secure a win stretched to {value} games\n"
+        "following their recent encounter in the {competition}. Despite showing\n"
+        "flashes of quality, {manager} knows the team must find greater consistency\n"
+        "to end this difficult spell.",
+
+        "It has been a testing run for {team}, who remain winless in {value}\n"
+        "consecutive matches. The players continue to work under {manager}’s\n"
+        "guidance to find the form to make them competitive in the {competition}.",
+
+        "{team} extended their winless streak to {value} {competition} games,\n"
+        "a sequence that has tested the resolve of both players and staff. {manager}\n"
+        "will be hoping for a positive reaction in the upcoming fixtures."
+    ],
+
+    "unbeaten_form": [
+        "Momentum remains strong for {team}, who have now gone\n"
+        "{value} games unbeaten in the {competition}. {manager} praised the team’s\n"
+        "discipline and togetherness as they continue to build on this solid run\n"
+        "of performances.",
+
+        "{team} extended their unbeaten streak to {value} matches, showing\n"
+        "impressive resilience and composure in recent weeks. {manager}’s approach\n"
+        "appears to be paying off as the squad grows in confidence with each game.",
+
+        "Another positive display sees {team} remain unbeaten in {value}\n"
+        "consecutive {competition} fixtures. {manager} has highlighted the unity within\n"
+        "the camp as a key factor behind this consistent spell of form.",
+
+        "The good form continues for {team}, who have yet to taste defeat\n"
+        "in their last {value} matches. {manager} will look to maintain this momentum as\n"
+        "the side aims to carry their confidence into future {competition} encounters."
     ]
+
 }
 
 OVERTHROW_THRESHOLD = 20

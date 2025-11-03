@@ -1842,6 +1842,44 @@ class Matches(Base):
         finally:
             session.close()
 
+    @classmethod
+    def get_team_winless_streak(cls, team_id, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team_id, league_id)
+            current_streak = 0
+            for match in matches:
+                if match.score_home == match.score_away:
+                    current_streak += 1
+                elif match.home_id == team_id and match.score_home < match.score_away:
+                    current_streak += 1
+                elif match.away_id == team_id and match.score_away < match.score_home:
+                    current_streak += 1
+                else:
+                    break
+            return current_streak
+        finally:
+            session.close()
+    
+    @classmethod
+    def get_team_unbeaten_streak(cls, team_id, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team_id, league_id)
+            current_streak = 0
+            for match in matches:
+                if match.score_home == match.score_away:
+                    current_streak += 1
+                elif match.home_id == team_id and match.score_home > match.score_away:
+                    current_streak += 1
+                elif match.away_id == team_id and match.score_away > match.score_home:
+                    current_streak += 1
+                else:
+                    break
+            return current_streak
+        finally:
+            session.close()
+
 class LinkedMatches(Base):
     __tablename__ = 'linked_matches'
 
@@ -4615,7 +4653,7 @@ class LeagueNews(Base):
     __tablename__ = 'league_news'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    news_type = Column(Enum("milestone", "injury", "big_win", "big_score", "transfer", "disciplinary", "lead_change", "planetary_change", "playoff_change", "relegation_change", "overthrow", "player_goals"), nullable = False)
+    news_type = Column(Enum("milestone", "injury", "big_win", "big_score", "transfer", "disciplinary", "lead_change", "planetary_change", "playoff_change", "relegation_change", "overthrow", "player_goals", "winless_form", "unbeaten_form"), nullable = False)
     date = Column(DateTime, nullable = False)
     league_id = Column(String(128), ForeignKey('leagues.id'), nullable = False)
     matchday = Column(Integer)
@@ -4657,6 +4695,19 @@ class LeagueNews(Base):
 
             # Sort by date and return latest 10
             news_entries = sorted(news_entries, key = lambda x: x.date, reverse = True)[:10]
+            return news_entries
+        finally:
+            session.close()
+
+    @classmethod
+    def get_news_by_type_and_team(cls, news_type, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            news_entries = session.query(LeagueNews).filter(
+                LeagueNews.news_type == news_type,
+                LeagueNews.team_id == team_id
+            ).all()
+
             return news_entries
         finally:
             session.close()
@@ -4716,6 +4767,18 @@ class LeagueNews(Base):
         except Exception as e:
             session.rollback()
             logger.exception("Error in batch_add_news: %s", e)
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_remove_news(cls, news_ids):
+        session = DatabaseManager().get_session()
+        try:
+            session.query(LeagueNews).filter(LeagueNews.id.in_(news_ids)).delete(synchronize_session = False)
+            session.commit()
+        except Exception as e:
+            session.rollback()
             raise e
         finally:
             session.close()
@@ -6700,7 +6763,29 @@ def process_payload(payload):
             if any(before < i <= after for i in range(10, after + 1, 10)):
                 payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "clean sheets", after, None))
 
+        payload["news_to_remove"] = []
+        for teamID, matchID, leagueID in payload["form_to_check"]:
+            winless = Matches.get_team_winless_streak(teamID, leagueID)
+            unbeatean = Matches.get_team_unbeaten_streak(teamID, leagueID)
+
+            current_news = LeagueNews.get_news_by_type_and_team("winless_form", teamID)
+            if current_news:
+                payload["news_to_remove"].append(current_news[0].id)
+            
+            current_news = LeagueNews.get_news_by_type_and_team("unbeaten_form", teamID)
+            if current_news:
+                payload["news_to_remove"].append(current_news[0].id)
+
+            if winless >= 5:
+                matchDate = Matches.get_match_by_id(matchID).date
+                payload["news_to_add"].append(("winless_form", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), leagueID, None, None, matchID, None, winless, teamID))
+
+            if unbeatean >= 5:
+                matchDate = Matches.get_match_by_id(matchID).date
+                payload["news_to_add"].append(("unbeaten_form", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), leagueID, None, None, matchID, None, unbeatean, teamID))
+                
         call_if_not_empty(payload["news_to_add"], LeagueNews.batch_add_news)
+        call_if_not_empty(payload["news_to_remove"], LeagueNews.batch_remove_news)
 
     except Exception as e:
         print(f"Error updating teams: {e}")

@@ -1155,6 +1155,7 @@ class Match():
                 "player_goals_to_check": [],
                 "player_assists_to_check": [],
                 "player_clean_sheets_to_check": [],
+                "form_to_check": []
             }
 
             totalCards = 0
@@ -1354,7 +1355,7 @@ class Match():
 
                     if awayAverage - homeAverage >= get_overthrow_threshold(self.match.league_id):
                         payload["news_to_add"].append(("overthrow", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, self.homeTeam.id))
-                    
+
                 elif self.winner.id == self.awayTeam.id:
                     # check for overthrow on the home team
                     homeAverage = Teams.get_team_average_current_ability(self.homeTeam.id)
@@ -1362,6 +1363,9 @@ class Match():
 
                     if homeAverage - awayAverage >= get_overthrow_threshold(self.match.league_id):
                         payload["news_to_add"].append(("overthrow", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, self.awayTeam.id))
+
+            payload["form_to_check"].append((self.homeTeam.id, self.match.id, self.match.league_id))
+            payload["form_to_check"].append((self.awayTeam.id, self.match.id, self.match.league_id))
 
             # Players updates
             fitness_to_update = []

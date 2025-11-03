@@ -2414,6 +2414,7 @@ class MatchDay(ctk.CTkFrame):
             "player_goals_to_check": [],
             "player_assists_to_check": [],
             "player_clean_sheets_to_check": [],
+            "form_to_check": []
         }
         
         payloads = []

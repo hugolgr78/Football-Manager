@@ -3882,7 +3882,7 @@ class News(ctk.CTkFrame):
         self.injuries()
         self.suspensions()
         self.transfers()
-        
+
         if self.league_id:
             self.teamOTWFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
             self.teamOTWFrame.place(relx = 0.98, rely = 0.75, anchor = "ne")
@@ -3926,23 +3926,21 @@ class News(ctk.CTkFrame):
             self.news = LeagueNews.get_news_for_team(self.team_id)
 
         if not self.news:
-            self.canvas.create_text(20, 730, anchor = "w", text = "No news available.", fill = "white", font = (APP_FONT_BOLD, 35))  
+            self.canvas.create_text(20, self.canvasHeight - 40, anchor = "w", text = "No news available.", fill = "white", font = (APP_FONT_BOLD, 35))  
             return
 
-        self.leftArrowButton = self.canvas.create_text(20, self .canvasHeight - 30, anchor = "w", text = "<", fill = "white", font = (APP_FONT_BOLD, 25))
-        self.rightArrowButton = self.canvas.create_text(self.canvasWidth - 20, self.canvasHeight - 30, anchor = "e", text = ">", fill = "white", font = (APP_FONT_BOLD, 25))
+        if len(self.news) > 1:
+            self.leftArrowButton = self.canvas.create_text(20, self .canvasHeight - 30, anchor = "w", text = "<", fill = "white", font = (APP_FONT_BOLD, 25))
+            self.rightArrowButton = self.canvas.create_text(self.canvasWidth - 20, self.canvasHeight - 30, anchor = "e", text = ">", fill = "white", font = (APP_FONT_BOLD, 25))
 
-        self.canvas.tag_bind(self.leftArrowButton, "<Button-1>", lambda e: self.moveTitle(-1))
-        self.canvas.tag_bind(self.rightArrowButton, "<Button-1>", lambda e: self.moveTitle(1))
+            self.canvas.tag_bind(self.leftArrowButton, "<Button-1>", lambda e: self.moveTitle(-1))
+            self.canvas.tag_bind(self.rightArrowButton, "<Button-1>", lambda e: self.moveTitle(1))
 
         self.canvas.bind("<Motion>", self.checkHover)
         self.canvas.bind("<Enter>", self.showNewsDetails)
         self.canvas.bind("<Leave>", self.removeNewsDetails)
 
         self.generateTitles()
-        if len(self.newsTitles) == 0:
-            self.canvas.create_text(20, self.canvasHeight - 40, anchor = "w", text = "No news available.", fill = "white", font = (APP_FONT_BOLD, 35))  
-            return
 
         fontSize = 30
         if len(self.newsTitles[0]) > 40:
@@ -3957,7 +3955,8 @@ class News(ctk.CTkFrame):
         self.newsText = self.canvas.create_text(self.canvasWidth - 20, self.canvasHeight + 30, anchor = "nw", text = self.newsDetails[0], fill = "white", font = (APP_FONT, 15))
         self.newsText_coords = [20, self.canvasHeight + 30]  # Track current coordinates of the news text
 
-        self.afterID = self.after(self.movingTime, lambda: self.moveTitle(1))
+        if len(self.newsTitles) > 1:
+            self.afterID = self.after(self.movingTime, lambda: self.moveTitle(1))
 
     def generateTitles(self):
         """
@@ -4410,7 +4409,10 @@ class News(ctk.CTkFrame):
         ctk.CTkLabel(self.injuriesFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
         ctk.CTkLabel(self.injuriesFrame, text = "Injuries", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
 
-        ctk.CTkLabel(self.injuriesFrame, text = "Find out which players are currently injured in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+        if self.league_id:
+            ctk.CTkLabel(self.injuriesFrame, text = "Find out which players are currently injured in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+        else:
+            ctk.CTkLabel(self.injuriesFrame, text = "Find out which players are currently injured in the team.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
 
         src = Image.open("Images/expand.png")
         src = src.resize((25, 25))
@@ -4428,7 +4430,10 @@ class News(ctk.CTkFrame):
         ctk.CTkLabel(self.suspensionsFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
         ctk.CTkLabel(self.suspensionsFrame, text = "Suspensions", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
 
-        ctk.CTkLabel(self.suspensionsFrame, text = "Discover which players are currently suspended in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+        if self.league_id:
+            ctk.CTkLabel(self.suspensionsFrame, text = "Discover which players are currently suspended in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+        else:
+            ctk.CTkLabel(self.suspensionsFrame, text = "Discover which players are currently suspended in the team.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
 
         src = Image.open("Images/expand.png")
         src = src.resize((25, 25))
@@ -4446,7 +4451,10 @@ class News(ctk.CTkFrame):
         ctk.CTkLabel(self.transfersFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
         ctk.CTkLabel(self.transfersFrame, text = "Transfers", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
 
-        ctk.CTkLabel(self.transfersFrame, text = "Find out about the latest transfers in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+        if self.league_id:
+            ctk.CTkLabel(self.transfersFrame, text = "Find out about the latest transfers in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+        else:
+            ctk.CTkLabel(self.transfersFrame, text = "Find out about the latest transfers in the team.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
 
         src = Image.open("Images/expand.png")
         src = src.resize((25, 25))

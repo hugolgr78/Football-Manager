@@ -4694,7 +4694,7 @@ class LeagueNews(Base):
             news_entries = session.query(LeagueNews).filter(LeagueNews.league_id == league_id).all()
 
             # Sort by date and return latest 10
-            news_entries = sorted(news_entries, key = lambda x: x.date, reverse = True)[:10]
+            news_entries = sorted(news_entries, key = lambda x: x.date, reverse = True)[:7]
             return news_entries
         finally:
             session.close()
@@ -4733,7 +4733,7 @@ class LeagueNews(Base):
                     )
                 )
                 .order_by(LeagueNews.date.desc())
-                .limit(10)
+                .limit(7)
             )
 
             return news_query.all()

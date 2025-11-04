@@ -3878,23 +3878,26 @@ class News(ctk.CTkFrame):
         self.transfersFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
         self.transfersFrame.place(relx = 0.98, rely = 0.5, anchor = "ne")  
 
-        self.teamOTWFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
-        self.teamOTWFrame.place(relx = 0.98, rely = 0.75, anchor = "ne")
-
         self.mainNews()
         self.injuries()
         self.suspensions()
         self.transfers()
-        self.team_of_the_week() 
+        
+        if self.league_id:
+            self.teamOTWFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
+            self.teamOTWFrame.place(relx = 0.98, rely = 0.75, anchor = "ne")
+            self.team_of_the_week() 
 
     def mainNews(self):
         """
         Populates the main news frame with league news using a Canvas.
         """
 
-        canvasSize = 770
+        self.canvasWidth = 770
+        self.canvasHeight = 385
+        self.movingTime = 7000
         src = Image.open("Images/news_backdrop.png")
-        src = src.resize((canvasSize, canvasSize))
+        src = src.resize((self.canvasWidth, self.canvasHeight))
 
         if src.mode != "RGBA":
             src = src.convert("RGBA")
@@ -3908,8 +3911,8 @@ class News(ctk.CTkFrame):
         rounded.paste(src, (0, 0), mask)
 
         # Create a canvas inside mainNewsFrame
-        self.canvas = tk.Canvas(self.mainNewsFrame, width = canvasSize, height = canvasSize, highlightthickness = 0, bg = TKINTER_BACKGROUND)
-        self.canvas.place(relx = 0.5, rely = 0.5, anchor = "center")
+        self.canvas = tk.Canvas(self.mainNewsFrame, width = self.canvasWidth, height = self.canvasHeight, highlightthickness = 0, bg = TKINTER_BACKGROUND)
+        self.canvas.place(relx = 0.5, rely = 0, anchor = "n")
 
         # Draw the background image
         photo = ImageTk.PhotoImage(rounded)
@@ -3926,8 +3929,8 @@ class News(ctk.CTkFrame):
             self.canvas.create_text(20, 730, anchor = "w", text = "No news available.", fill = "white", font = (APP_FONT_BOLD, 35))  
             return
 
-        self.leftArrowButton = self.canvas.create_text(20, 740, anchor = "w", text = "<", fill = "white", font = (APP_FONT_BOLD, 25))
-        self.rightArrowButton = self.canvas.create_text(750, 740, anchor = "e", text = ">", fill = "white", font = (APP_FONT_BOLD, 25))
+        self.leftArrowButton = self.canvas.create_text(20, self .canvasHeight - 30, anchor = "w", text = "<", fill = "white", font = (APP_FONT_BOLD, 25))
+        self.rightArrowButton = self.canvas.create_text(self.canvasWidth - 20, self.canvasHeight - 30, anchor = "e", text = ">", fill = "white", font = (APP_FONT_BOLD, 25))
 
         self.canvas.tag_bind(self.leftArrowButton, "<Button-1>", lambda e: self.moveTitle(-1))
         self.canvas.tag_bind(self.rightArrowButton, "<Button-1>", lambda e: self.moveTitle(1))
@@ -3938,7 +3941,7 @@ class News(ctk.CTkFrame):
 
         self.generateTitles()
         if len(self.newsTitles) == 0:
-            self.canvas.create_text(20, 730, anchor = "w", text = "No news available.", fill = "white", font = (APP_FONT_BOLD, 35))  
+            self.canvas.create_text(20, self.canvasHeight - 40, anchor = "w", text = "No news available.", fill = "white", font = (APP_FONT_BOLD, 35))  
             return
 
         fontSize = 30
@@ -3948,13 +3951,13 @@ class News(ctk.CTkFrame):
             fontSize = 25 
         
         self.currentNews = 0
-        self.titleText = self.canvas.create_text(20, 680, anchor = "w", text = self.newsTitles[0], fill = "white", font = (APP_FONT_BOLD, fontSize))
-        self.title_coords = [20, 680]  # Track current coordinates of the title
+        self.titleText = self.canvas.create_text(20, self.canvasHeight - 90, anchor = "w", text = self.newsTitles[0], fill = "white", font = (APP_FONT_BOLD, fontSize))
+        self.title_coords = [20, self.canvasHeight - 90]  # Track current coordinates of the title
 
-        self.newsText = self.canvas.create_text(20, 800, anchor = "nw", text = self.newsDetails[0], fill = "white", font = (APP_FONT, 15))
-        self.newsText_coords = [20, 800]  # Track current coordinates of the news text
+        self.newsText = self.canvas.create_text(self.canvasWidth - 20, self.canvasHeight + 30, anchor = "nw", text = self.newsDetails[0], fill = "white", font = (APP_FONT, 15))
+        self.newsText_coords = [20, self.canvasHeight + 30]  # Track current coordinates of the news text
 
-        self.afterID = self.after(5000, lambda: self.moveTitle(1))
+        self.afterID = self.after(self.movingTime, lambda: self.moveTitle(1))
 
     def generateTitles(self):
         """
@@ -3968,13 +3971,12 @@ class News(ctk.CTkFrame):
         numNews = len(self.news)
 
         # --- Layout constants ---
-        canvas_width = 770
-        y_pos = 740  # vertical position (same as before)
+        y_pos = self.canvasHeight - 30  # vertical position (same as before)
         indicator_radius = 6
         spacing = 30  # fixed horizontal distance between indicators
 
-        total_width = (numNews - 1) * spacing
-        start_x = (canvas_width - total_width) / 2
+        totalWidth = (numNews - 1) * spacing
+        start_x = (self.canvasWidth - totalWidth) / 2
 
         for i, newsObj in enumerate(self.news):
 
@@ -4195,7 +4197,7 @@ class News(ctk.CTkFrame):
             event (Event): The event object.
         """
 
-        if 0 <= event.x <= 770 and 0 <= event.y <= 700:
+        if 0 <= event.x <= self.canvasWidth and 0 <= event.y <= self.canvasHeight - 70:
             if not self.hovering:
                 self.hovering = True
                 self.showNewsDetails(event)
@@ -4212,7 +4214,7 @@ class News(ctk.CTkFrame):
             event (Event): The event object.
         """
 
-        if event.y > 700:
+        if event.y > self.canvasHeight - 70:
             return
         self.animate_title((self.title_coords[0], 50))
 
@@ -4224,7 +4226,7 @@ class News(ctk.CTkFrame):
             event (Event): The event object.
         """
 
-        self.animate_title((self.title_coords[0], 680))
+        self.animate_title((self.title_coords[0], self.canvasHeight - 90))
 
     def animate_title(self, target):
         """
@@ -4247,9 +4249,9 @@ class News(ctk.CTkFrame):
 
         # Track coordinates manually
         if not hasattr(self, "title_coords"):
-            self.title_coords = [20, 680]
+            self.title_coords = [20, self.canvasHeight - 90]
         if not hasattr(self, "newsText_coords"):
-            self.newsText_coords = [20, 800]
+            self.newsText_coords = [20, self.canvasHeight + 30]
 
         steps = 70
         delay = 15
@@ -4272,12 +4274,12 @@ class News(ctk.CTkFrame):
             self.title_coords = [new_x, new_y]
 
             # Move news text: 20 px below if moving up, follow title
-            if target_y < 680:  # title moving up
+            if target_y < self.canvasHeight - 90:  # title moving up
                 new_news_y = new_y + 40
             else:  # moving down
                 new_news_y = self.newsText_coords[1] + dy
-                if new_y == 680:  # fully down
-                    new_news_y = 800
+                if new_y == self.canvasHeight - 90:  # fully down
+                    new_news_y = self.canvasHeight + 30
 
             dy_news = new_news_y - self.newsText_coords[1]
             self.canvas.move(self.newsText, 0, dy_news)
@@ -4289,7 +4291,7 @@ class News(ctk.CTkFrame):
                 # Snap final positions
                 try:
                     self.canvas.coords(self.titleText, target_x, target_y)
-                    final_news_y = target_y + 40 if target_y < 680 else 800
+                    final_news_y = target_y + 40 if target_y < self.canvasHeight - 90 else self.canvasHeight + 30
                     self.canvas.coords(self.newsText, target_x, final_news_y)
                     self.newsText_coords[1] = final_news_y
                 except Exception:
@@ -4334,18 +4336,18 @@ class News(ctk.CTkFrame):
             fontSize = 25 
 
         # If the title is not fully down, just replace the text
-        if self.title_coords[1] != 680:
+        if self.title_coords[1] != self.canvasHeight - 90:
             self.canvas.itemconfigure(self.titleText, text = self.newsTitles[nextNews], font = (APP_FONT_BOLD, fontSize))
             self.canvas.itemconfigure(self.newsText, text = self.newsDetails[nextNews])
             self.currentNews = nextNews
-            self.afterID = self.after(5000, lambda: self.moveTitle(1))
+            self.afterID = self.after(self.movingTime, lambda: self.moveTitle(1))
             return
 
         # --- Full horizontal slide ---
         self.canvas.update_idletasks()
         canvas_width = self.canvas.winfo_width()
         end_x = 20
-        current_y = 680  # fully down
+        current_y = self.canvasHeight - 90  # fully down
         start_x = canvas_width + 400 if direction == 1 else -800
         old_target_x = -800 if direction == 1 else canvas_width + 400
 
@@ -4395,7 +4397,7 @@ class News(ctk.CTkFrame):
                 self.currentNews = nextNews
 
         animate()
-        self.afterID = self.after(5000, lambda: self.moveTitle(1))
+        self.afterID = self.after(self.movingTime, lambda: self.moveTitle(1))
 
     def injuries(self):
         """

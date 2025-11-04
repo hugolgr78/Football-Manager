@@ -3961,8 +3961,30 @@ class News(ctk.CTkFrame):
         
         self.newsTitles = []
         self.newsDetails = []
+        self.currentNewsInds = []
 
-        for _, newsObj in enumerate(self.news):
+        numNews = len(self.news)
+
+        # --- Layout constants ---
+        canvas_width = 770
+        y_pos = 740  # vertical position (same as before)
+        indicator_radius = 6
+        spacing = 30  # fixed horizontal distance between indicators
+
+        total_width = (numNews - 1) * spacing
+        start_x = (canvas_width - total_width) / 2
+
+        for i, newsObj in enumerate(self.news):
+
+            x_center = start_x + i * spacing
+            oval = self.canvas.create_oval(
+                x_center - indicator_radius, y_pos - indicator_radius,
+                x_center + indicator_radius, y_pos + indicator_radius,
+                fill="white" if i == 0 else "gray",
+                outline=""
+            )
+            self.currentNewsInds.append(oval)
+
             match newsObj.news_type:
                 case "milestone":
                     player = Players.get_player_by_id(newsObj.player_id)
@@ -4322,6 +4344,10 @@ class News(ctk.CTkFrame):
 
         # Update details immediately
         self.canvas.itemconfigure(self.newsText, text=self.newsDetails[nextNews])
+
+        for i, oval in enumerate(self.currentNewsInds):
+            color = "white" if i == nextNews else "gray"
+            self.canvas.itemconfigure(oval, fill = color)
 
         steps = 30
         delay = 15

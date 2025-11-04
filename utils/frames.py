@@ -3954,6 +3954,8 @@ class News(ctk.CTkFrame):
         self.newsText = self.canvas.create_text(20, 800, anchor = "nw", text = self.newsDetails[0], fill = "white", font = (APP_FONT, 15))
         self.newsText_coords = [20, 800]  # Track current coordinates of the news text
 
+        self.afterID = self.after(5000, lambda: self.moveTitle(1))
+
     def generateTitles(self):
         """
         Generates the news titles for each news item.
@@ -4307,11 +4309,23 @@ class News(ctk.CTkFrame):
             direction (int): 1 for right, -1 for left.
         """
 
+        if hasattr(self, "afterID") and self.afterID is not None:
+            try:
+                self.after_cancel(self.afterID)
+            except Exception:
+                pass
+            self.afterID = None
+
         # Determine next index
         if direction == 1:
             nextNews = (self.currentNews + 1) % len(self.newsTitles)
         else:
             nextNews = (self.currentNews - 1) % len(self.newsTitles)
+
+        # Update the indicator dots
+        for i, oval in enumerate(self.currentNewsInds):
+            color = "white" if i == nextNews else "gray"
+            self.canvas.itemconfigure(oval, fill = color)
 
         fontSize = 30
         if len(self.newsTitles[nextNews]) > 40:
@@ -4324,6 +4338,7 @@ class News(ctk.CTkFrame):
             self.canvas.itemconfigure(self.titleText, text = self.newsTitles[nextNews], font = (APP_FONT_BOLD, fontSize))
             self.canvas.itemconfigure(self.newsText, text = self.newsDetails[nextNews])
             self.currentNews = nextNews
+            self.afterID = self.after(5000, lambda: self.moveTitle(1))
             return
 
         # --- Full horizontal slide ---
@@ -4345,9 +4360,6 @@ class News(ctk.CTkFrame):
         # Update details immediately
         self.canvas.itemconfigure(self.newsText, text=self.newsDetails[nextNews])
 
-        for i, oval in enumerate(self.currentNewsInds):
-            color = "white" if i == nextNews else "gray"
-            self.canvas.itemconfigure(oval, fill = color)
 
         steps = 30
         delay = 15
@@ -4383,6 +4395,7 @@ class News(ctk.CTkFrame):
                 self.currentNews = nextNews
 
         animate()
+        self.afterID = self.after(5000, lambda: self.moveTitle(1))
 
     def injuries(self):
         """

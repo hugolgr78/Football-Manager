@@ -54,9 +54,9 @@ class TeamProfile(ctk.CTkFrame):
         else:
             self.squad = None
             self.schedule = None
-            self.titles = ["Profile", "Squad", "Schedule", "History", "News"]
-            self.tabs = [self.profile, self.squad, self.schedule, self.history, self.news]
-            self.classNames = [Profile, Squad, Schedule, History, News]
+            self.titles = ["Profile", "Squad", "Schedule", "News", "History"]
+            self.tabs = [self.profile, self.squad, self.schedule, self.news, self.history]
+            self.classNames = [Profile, Squad, Schedule, News, History]
 
         self.activeButton = 0
         self.buttons = []

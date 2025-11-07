@@ -4544,8 +4544,6 @@ class News(ctk.CTkFrame):
         else:
             injuries = PlayerBans.get_injuries_team(self.team_id)
 
-        injuries.sort(key = lambda x: x.injury, reverse = True)
-
         if len(injuries) <= 5:
             injuriesFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
             injuriesFrame.pack(pady = 10, padx = 5)
@@ -4557,6 +4555,8 @@ class News(ctk.CTkFrame):
 
         if len(injuries) == 0:
             ctk.CTkLabel(injuriesFrame, text = "No players are currently injured.", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.4, anchor = "center")
+
+        injuries.sort(key = lambda x: x.injury, reverse = True)
 
         for injury in injuries:
             player = Players.get_player_by_id(injury.player_id)
@@ -4608,8 +4608,6 @@ class News(ctk.CTkFrame):
         else:
             suspensions = PlayerBans.get_suspensions_team(self.team_id)
 
-        suspensions.sort(key = lambda x: x.suspension, reverse = True)
-
         if len(suspensions) <= 5:
             suspensionsFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
             suspensionsFrame.pack(pady = 10, padx = 5)
@@ -4621,6 +4619,8 @@ class News(ctk.CTkFrame):
 
         if len(suspensions) == 0:
             ctk.CTkLabel(suspensionsFrame, text = "No players are currently suspended.", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.4, anchor = "center")
+
+        suspensions.sort(key = lambda x: x.suspension, reverse = True)
 
         for suspension in suspensions:
             player = Players.get_player_by_id(suspension.player_id)

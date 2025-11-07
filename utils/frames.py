@@ -3963,7 +3963,7 @@ class News(ctk.CTkFrame):
         self.newsText = self.canvas.create_text(self.canvasWidth - 20, self.canvasHeight + 30, anchor = "nw", text = self.newsDetails[0], fill = "white", font = (APP_FONT, 15))
         self.newsText_coords = [20, self.canvasHeight + 30]  # Track current coordinates of the news text
 
-        self.dateText = self.canvas.create_text(self.canvasWidth - 20, 20, anchor = "ne", text = self.news[0].date.strftime("%d %B %Y"), fill = "white", font = (APP_FONT, 15))
+        self.dateText = self.canvas.create_text(self.canvasWidth - 20, 20, anchor = "ne", text = self.news[0].date.strftime("%d %B %Y"), fill = "white", font = (APP_FONT, 10))
 
         if len(self.newsTitles) > 1:
             self.afterID = self.after(self.movingTime, lambda: self.moveTitle(1))
@@ -4474,7 +4474,7 @@ class News(ctk.CTkFrame):
         src = Image.open("Images/expand.png")
         src = src.resize((25, 25))
         img = ctk.CTkImage(src, None, (src.width, src.height))
-        b = ctk.CTkButton(self.suspensionsFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND)
+        b = ctk.CTkButton(self.suspensionsFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND, command = self.showSuspensions)
         b.place(relx = 0.95, rely = 0.9, anchor = "se")
         self.buttons.append(b)
 
@@ -4544,6 +4544,8 @@ class News(ctk.CTkFrame):
         else:
             injuries = PlayerBans.get_injuries_team(self.team_id)
 
+        injuries.sort(key = lambda x: x.injury, reverse = True)
+
         if len(injuries) <= 5:
             injuriesFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
             injuriesFrame.pack(pady = 10, padx = 5)
@@ -4552,6 +4554,9 @@ class News(ctk.CTkFrame):
         else:
             injuriesFrame = ctk.CTkScrollableFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
             injuriesFrame.pack(pady = 10, padx = 5)
+
+        if len(injuries) == 0:
+            ctk.CTkLabel(injuriesFrame, text = "No players are currently injured.", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.4, anchor = "center")
 
         for injury in injuries:
             player = Players.get_player_by_id(injury.player_id)
@@ -4576,6 +4581,61 @@ class News(ctk.CTkFrame):
             remainingDays = injuryTime.days % 30
 
             ctk.CTkLabel(player_frame, text = f"{months}M, {remainingDays}D", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
+            player_frame.pack(pady = 5, padx = 5)
+
+        frame.place(relx = 0.5, rely = 0.5, anchor = "center")
+    
+    def showSuspensions(self):
+        """
+        Opens a frame showing all suspensions.
+        """
+
+        for button in self.buttons:
+            button.configure(state = "disabled")
+
+        frame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 500, height = 320, corner_radius = 15, background_corner_colors = [GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND], border_width = 3, border_color = APP_BLUE)
+
+        headerFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 485, height = 50, corner_radius = 15)
+        headerFrame.pack(pady = 10, padx = 5)
+
+        ctk.CTkLabel(headerFrame, text = "Suspensions", font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+        backButton = ctk.CTkButton(headerFrame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeFrame(frame))
+        backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
+
+        if self.league_id:
+            suspensions = PlayerBans.get_suspensions_league(self.league_id)
+        else:
+            suspensions = PlayerBans.get_suspensions_team(self.team_id)
+
+        suspensions.sort(key = lambda x: x.suspension, reverse = True)
+
+        if len(suspensions) <= 5:
+            suspensionsFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
+            suspensionsFrame.pack(pady = 10, padx = 5)
+
+            suspensionsFrame.pack_propagate(False)
+        else:
+            suspensionsFrame = ctk.CTkScrollableFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
+            suspensionsFrame.pack(pady = 10, padx = 5)
+
+        if len(suspensions) == 0:
+            ctk.CTkLabel(suspensionsFrame, text = "No players are currently suspended.", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.4, anchor = "center")
+
+        for suspension in suspensions:
+            player = Players.get_player_by_id(suspension.player_id)
+
+            player_frame = ctk.CTkFrame(suspensionsFrame, fg_color = GREY_BACKGROUND, width = 450, height = 40)
+
+            src = Image.open("Images/default_user.png")
+            src.thumbnail((30, 30))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(player_frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+            player = Players.get_player_by_id(player.id)
+            PlayerProfileLink(player_frame, player, f"{player.first_name} {player.last_name}", "white", 0.2, 0.5, "w", GREY_BACKGROUND, self.parent)
+
+            ctk.CTkLabel(player_frame, text = suspension.suspension, font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
             player_frame.pack(pady = 5, padx = 5)
 
         frame.place(relx = 0.5, rely = 0.5, anchor = "center")

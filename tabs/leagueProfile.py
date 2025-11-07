@@ -49,9 +49,9 @@ class LeagueProfile(ctk.CTkFrame):
         self.stats = None
         self.history = None
         self.news = None
-        self.titles = ["Profile", "Matchdays", "Graphs", "Stats", "History", "News"]
-        self.tabs = [self.profile, self.matchdays, self.graphs, self.stats, self.history, self.news]
-        self.classNames = [Profile, Matchdays, Graphs, Stats, History, News]
+        self.titles = ["Profile", "Matchdays", "Graphs", "Stats", "News", "History"]
+        self.tabs = [self.profile, self.matchdays, self.graphs, self.stats, self.news, self.history]
+        self.classNames = [Profile, Matchdays, Graphs, Stats, News, History]
 
         self.activeButton = 0
         self.buttons = []

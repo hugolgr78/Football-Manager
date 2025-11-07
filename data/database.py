@@ -4225,6 +4225,55 @@ class PlayerBans(Base):
         finally:
             session.close()
 
+    @classmethod
+    def get_suspensions_league(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).filter(
+                PlayerBans.suspension is not None,
+                PlayerBans.competition_id == league_id
+            ).all()
+            return bans
+        finally:
+            session.close()
+
+    @classmethod
+    def get_suspensions_team(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).join(Players).filter(
+                PlayerBans.suspension is not None,
+                Players.team_id == team_id
+            ).all()
+            return bans
+        finally:
+            session.close()
+
+    @classmethod
+    def get_injuries_league(cls, league_id):
+        # For each ban_type injury entry, check the player id is in a team whose league is the league id
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).join(Players).join(LeagueTeams, LeagueTeams.team_id == Players.team_id).filter(
+                PlayerBans.ban_type == "injury",
+                LeagueTeams.league_id == league_id
+            ).all()
+            return bans
+        finally:
+            session.close()
+
+    @classmethod
+    def get_injuries_team(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).join(Players).filter(
+                PlayerBans.ban_type == "injury",
+                Players.team_id == team_id
+            ).all()
+            return bans
+        finally:
+            session.close()
+
 class SavedLineups(Base):
     __tablename__ = 'saved_lineups'
 

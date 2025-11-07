@@ -3865,9 +3865,10 @@ class News(ctk.CTkFrame):
         self.league_id = league_id
         self.team_id = team_id
         self.hovering = False
+        self.buttons = []
 
-        self.mainNewsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 620, height = 613)
-        self.mainNewsFrame.place(relx = 0, rely = 0, anchor = "nw")
+        self.recordsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 620, height = 297, corner_radius = 15)
+        self.recordsFrame.place(relx = 0, rely = 0.5, anchor = "nw")
 
         self.injuriesFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
         self.injuriesFrame.place(relx = 0.98, rely = 0, anchor = "ne")
@@ -3879,6 +3880,7 @@ class News(ctk.CTkFrame):
         self.transfersFrame.place(relx = 0.98, rely = 0.5, anchor = "ne")  
 
         self.mainNews()
+        self.records()
         self.injuries()
         self.suspensions()
         self.transfers()
@@ -3894,8 +3896,8 @@ class News(ctk.CTkFrame):
         """
 
         self.canvasWidth = 770
-        self.canvasHeight = 385
-        self.movingTime = 7000
+        self.canvasHeight = 371
+        self.movingTime = 10000
         src = Image.open("Images/news_backdrop.png")
         src = src.resize((self.canvasWidth, self.canvasHeight))
 
@@ -3911,8 +3913,8 @@ class News(ctk.CTkFrame):
         rounded.paste(src, (0, 0), mask)
 
         # Create a canvas inside mainNewsFrame
-        self.canvas = tk.Canvas(self.mainNewsFrame, width = self.canvasWidth, height = self.canvasHeight, highlightthickness = 0, bg = TKINTER_BACKGROUND)
-        self.canvas.place(relx = 0.5, rely = 0, anchor = "n")
+        self.canvas = tk.Canvas(self, width = self.canvasWidth, height = self.canvasHeight, highlightthickness = 0, bg = TKINTER_BACKGROUND)
+        self.canvas.place(relx = 0, rely = 0, anchor = "nw")
 
         # Draw the background image
         photo = ImageTk.PhotoImage(rounded)
@@ -3935,6 +3937,12 @@ class News(ctk.CTkFrame):
 
             self.canvas.tag_bind(self.leftArrowButton, "<Button-1>", lambda e: self.moveTitle(-1))
             self.canvas.tag_bind(self.rightArrowButton, "<Button-1>", lambda e: self.moveTitle(1))
+
+            self.canvas.tag_bind(self.leftArrowButton, "<Enter>", lambda e: self.canvas.config(cursor="hand2"))
+            self.canvas.tag_bind(self.leftArrowButton, "<Leave>", lambda e: self.canvas.config(cursor=""))
+
+            self.canvas.tag_bind(self.rightArrowButton, "<Enter>", lambda e: self.canvas.config(cursor="hand2"))
+            self.canvas.tag_bind(self.rightArrowButton, "<Leave>", lambda e: self.canvas.config(cursor=""))
 
         self.canvas.bind("<Motion>", self.checkHover)
         self.canvas.bind("<Enter>", self.showNewsDetails)
@@ -4398,6 +4406,29 @@ class News(ctk.CTkFrame):
         animate()
         self.afterID = self.after(self.movingTime, lambda: self.moveTitle(1))
 
+    def records(self):
+        """
+        Populates the records frame with the titles.
+        """
+
+        src = Image.open("Images/averageRating.png")
+        src.thumbnail((40, 40))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.recordsFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.1, anchor = "w")
+        ctk.CTkLabel(self.recordsFrame, text = "Records", text_color = "white", font = (APP_FONT_BOLD, 25)).place(relx = 0.1, rely = 0.105, anchor = "w")
+
+        if self.league_id:
+            ctk.CTkLabel(self.recordsFrame, text = "Discover all records from the league.", font = (APP_FONT, 17), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.5, anchor = "center")
+        else:
+            ctk.CTkLabel(self.recordsFrame, text = "Discover all records from the team.", font = (APP_FONT, 17), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        src = Image.open("Images/expand.png")
+        src = src.resize((40, 40))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        b = ctk.CTkButton(self.recordsFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND)
+        b.place(relx = 0.95, rely = 0.9, anchor = "se")
+        self.buttons.append(b)
+
     def injuries(self):
         """
         Populates the injuries frame with injury news.
@@ -4417,7 +4448,9 @@ class News(ctk.CTkFrame):
         src = Image.open("Images/expand.png")
         src = src.resize((25, 25))
         img = ctk.CTkImage(src, None, (src.width, src.height))
-        ctk.CTkLabel(self.injuriesFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.95, rely = 0.9, anchor = "se")
+        b = ctk.CTkButton(self.injuriesFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND, command = self.showInjuries)
+        b.place(relx = 0.95, rely = 0.9, anchor = "se")
+        self.buttons.append(b)
 
     def suspensions(self):
         """
@@ -4438,7 +4471,9 @@ class News(ctk.CTkFrame):
         src = Image.open("Images/expand.png")
         src = src.resize((25, 25))
         img = ctk.CTkImage(src, None, (src.width, src.height))
-        ctk.CTkLabel(self.suspensionsFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.95, rely = 0.9, anchor = "se")
+        b = ctk.CTkButton(self.suspensionsFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND)
+        b.place(relx = 0.95, rely = 0.9, anchor = "se")
+        self.buttons.append(b)
 
     def transfers(self):
         """
@@ -4459,7 +4494,9 @@ class News(ctk.CTkFrame):
         src = Image.open("Images/expand.png")
         src = src.resize((25, 25))
         img = ctk.CTkImage(src, None, (src.width, src.height))
-        ctk.CTkLabel(self.transfersFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.95, rely = 0.9, anchor = "se")
+        b = ctk.CTkButton(self.transfersFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND)
+        b.place(relx = 0.95, rely = 0.9, anchor = "se")
+        self.buttons.append(b)
 
     def team_of_the_week(self):
         """
@@ -4477,4 +4514,74 @@ class News(ctk.CTkFrame):
         src = Image.open("Images/expand.png")
         src = src.resize((25, 25))
         img = ctk.CTkImage(src, None, (src.width, src.height))
-        ctk.CTkLabel(self.teamOTWFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.95, rely = 0.9, anchor = "se")
+        b = ctk.CTkButton(self.teamOTWFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND)
+        b.place(relx = 0.95, rely = 0.9, anchor = "se")
+        self.buttons.append(b)
+
+    def showInjuries(self):
+        """
+        Opens a frame showing all injuries.
+        """
+
+        for button in self.buttons:
+            button.configure(state = "disabled")
+
+        frame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 500, height = 320, corner_radius = 15, background_corner_colors = [GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND], border_width = 3, border_color = APP_BLUE)
+
+        headerFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 485, height = 50, corner_radius = 15)
+        headerFrame.pack(pady = 10, padx = 5)
+
+        ctk.CTkLabel(headerFrame, text = "Injuries", font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+        backButton = ctk.CTkButton(headerFrame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeFrame(frame))
+        backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
+
+        if self.league_id:
+            injuries = PlayerBans.get_injuries_league(self.league_id)
+        else:
+            injuries = PlayerBans.get_injuries_team(self.team_id)
+
+        if len(injuries) <= 5:
+            injuriesFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
+            injuriesFrame.pack(pady = 10, padx = 5)
+
+            injuriesFrame.pack_propagate(False)
+        else:
+            injuriesFrame = ctk.CTkScrollableFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
+            injuriesFrame.pack(pady = 10, padx = 5)
+
+        for injury in injuries:
+            player = Players.get_player_by_id(injury.player_id)
+
+            player_frame = ctk.CTkFrame(injuriesFrame, fg_color = GREY_BACKGROUND, width = 450, height = 40)
+            player_frame.pack(pady = 5, padx = 5)
+
+            src = Image.open("Images/default_user.png")
+            src.thumbnail((30, 30))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(player_frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+            player = Players.get_player_by_id(player.id)
+            PlayerProfileLink(player_frame, player, f"{player.first_name} {player.last_name}", "white", 0.2, 0.5, "w", GREY_BACKGROUND, self.parent)
+
+            currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
+            injuryTime = injury.injury - currDate
+            months = injuryTime.days // 30
+            remainingDays = injuryTime.days % 30
+
+            ctk.CTkLabel(player_frame, text = f"{months}M, {remainingDays}D", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
+
+        frame.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+    def closeFrame(self, frame):
+        """
+        Closes the expanded statistics view.
+
+        Args:
+            frame (ctk.CTkFrame): The frame to close.  
+        """
+        
+        frame.destroy()
+
+        for button in self.buttons:
+            button.configure(state = "normal")

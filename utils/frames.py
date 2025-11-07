@@ -3963,6 +3963,8 @@ class News(ctk.CTkFrame):
         self.newsText = self.canvas.create_text(self.canvasWidth - 20, self.canvasHeight + 30, anchor = "nw", text = self.newsDetails[0], fill = "white", font = (APP_FONT, 15))
         self.newsText_coords = [20, self.canvasHeight + 30]  # Track current coordinates of the news text
 
+        self.dateText = self.canvas.create_text(self.canvasWidth - 20, 20, anchor = "ne", text = self.news[0].date.strftime("%d %B %Y"), fill = "white", font = (APP_FONT, 15))
+
         if len(self.newsTitles) > 1:
             self.afterID = self.after(self.movingTime, lambda: self.moveTitle(1))
 
@@ -4346,6 +4348,7 @@ class News(ctk.CTkFrame):
         if self.title_coords[1] != self.canvasHeight - 90:
             self.canvas.itemconfigure(self.titleText, text = self.newsTitles[nextNews], font = (APP_FONT_BOLD, fontSize))
             self.canvas.itemconfigure(self.newsText, text = self.newsDetails[nextNews])
+            self.canvas.itemconfigure(self.dateText, text = self.news[nextNews].date.strftime("%d %B %Y"))
             self.currentNews = nextNews
             self.afterID = self.after(self.movingTime, lambda: self.moveTitle(1))
             return
@@ -4368,7 +4371,7 @@ class News(ctk.CTkFrame):
 
         # Update details immediately
         self.canvas.itemconfigure(self.newsText, text=self.newsDetails[nextNews])
-
+        self.canvas.itemconfigure(self.dateText, text = self.news[nextNews].date.strftime("%d %B %Y"))
 
         steps = 30
         delay = 15
@@ -4554,7 +4557,6 @@ class News(ctk.CTkFrame):
             player = Players.get_player_by_id(injury.player_id)
 
             player_frame = ctk.CTkFrame(injuriesFrame, fg_color = GREY_BACKGROUND, width = 450, height = 40)
-            player_frame.pack(pady = 5, padx = 5)
 
             src = Image.open("Images/default_user.png")
             src.thumbnail((30, 30))
@@ -4565,11 +4567,16 @@ class News(ctk.CTkFrame):
             PlayerProfileLink(player_frame, player, f"{player.first_name} {player.last_name}", "white", 0.2, 0.5, "w", GREY_BACKGROUND, self.parent)
 
             currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
+
+            if currDate >= injury.injury:
+                continue
+
             injuryTime = injury.injury - currDate
             months = injuryTime.days // 30
             remainingDays = injuryTime.days % 30
 
             ctk.CTkLabel(player_frame, text = f"{months}M, {remainingDays}D", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
+            player_frame.pack(pady = 5, padx = 5)
 
         frame.place(relx = 0.5, rely = 0.5, anchor = "center")
 

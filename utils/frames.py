@@ -3924,6 +3924,7 @@ class News(ctk.CTkFrame):
         # Get news
         if self.league_id:
             self.news = LeagueNews.get_news_for_league(self.league_id)
+            self.league = League.get_league_by_id(self.league_id)
         else:
             self.news = LeagueNews.get_news_for_team(self.team_id)
 
@@ -4517,7 +4518,7 @@ class News(ctk.CTkFrame):
         src = Image.open("Images/expand.png")
         src = src.resize((25, 25))
         img = ctk.CTkImage(src, None, (src.width, src.height))
-        b = ctk.CTkButton(self.teamOTWFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND)
+        b = ctk.CTkButton(self.teamOTWFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND, command = self.showTeamOTW)
         b.place(relx = 0.95, rely = 0.9, anchor = "se")
         self.buttons.append(b)
 
@@ -4640,6 +4641,62 @@ class News(ctk.CTkFrame):
 
         frame.place(relx = 0.5, rely = 0.5, anchor = "center")
 
+    def showTeamOTW(self):
+        """
+        Opens a frame showing all Team of the Week selections.
+        """
+        
+        for button in self.buttons:
+            button.configure(state = "disabled")
+
+        self.currentFrameIndex = self.league.current_matchday - 2
+        self.teamFrames = [None] * (self.currentFrameIndex + 1)
+
+        frame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 320, height = 550, corner_radius = 15, background_corner_colors = [GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND], border_width = 3, border_color = APP_BLUE)
+        frame.pack_propagate(False)
+
+        headerFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 320, height = 50, corner_radius = 15)
+        headerFrame.pack(pady = 10, padx = 5)
+
+        self.matchdayLabel = ctk.CTkLabel(headerFrame, text = f"Matchday {self.currentFrameIndex + 1}", font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND)
+        self.matchdayLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        rightbutton = ctk.CTkButton(headerFrame, text = ">", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND, hover_color = GREY_BACKGROUND, corner_radius = 5, height = 20, width = 20, command = lambda: self.changeWeek(1))
+        rightbutton.place(relx = 0.9, rely = 0.5, anchor = "e")
+
+        leftButton = ctk.CTkButton(headerFrame, text = "<", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND, hover_color = GREY_BACKGROUND, corner_radius = 5, height = 20, width = 20, command = lambda: self.changeWeek(-1))
+        leftButton.place(relx = 0.1, rely = 0.5, anchor = "w")
+
+        backButton = ctk.CTkButton(frame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeFrame(frame))
+        backButton.place(relx = 0.5, rely = 0.95, anchor = "s")
+
+        self.teamFrames[self.currentFrameIndex] = TeamOTW(self, self.league_id, self.currentFrameIndex + 1)
+        self.teamFrames[self.currentFrameIndex].place(relx = 0.5, rely = 0.15, anchor = "n")
+
+        frame.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+    def changeWeek(self, direction):
+        """
+        Changes the team of the week pitch based on the direction.
+        
+        Args:
+            direction (int): 1 for next week, -1 for previous week.
+        """
+        
+        if direction == 1:
+            nextIndex = (self.currentFrameIndex + 1) % len(self.teamFrames)
+        else:
+            nextIndex = (self.currentFrameIndex - 1) % len(self.teamFrames)
+
+        self.teamFrames[self.currentFrameIndex].place_forget()
+        self.currentFrameIndex = nextIndex
+
+        if not self.teamFrames[nextIndex]:
+            self.teamFrames[nextIndex] = TeamOTW(self, self.league_id, nextIndex + 1)
+        
+        self.teamFrames[nextIndex].place(relx = 0.5, rely = 0.15, anchor = "n")
+        self.matchdayLabel.configure(text = f"Matchday {nextIndex + 1}")
+
     def closeFrame(self, frame):
         """
         Closes the expanded statistics view.
@@ -4652,3 +4709,20 @@ class News(ctk.CTkFrame):
 
         for button in self.buttons:
             button.configure(state = "normal")
+
+class TeamOTW(ctk.CTkFrame):
+    def __init__(self, parent, league_id, matchday):
+        """
+        Class for displaying a pitch with the team of the week display.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            league_id (int): The league ID.
+            matchday (int): The matchday number.
+        """
+
+        super().__init__(parent, fg_color = GREY_BACKGROUND, width = 300, height = 440, corner_radius = 0)
+
+        self.parent = parent
+        self.league_id = league_id
+        self.matchday = matchday

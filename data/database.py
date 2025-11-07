@@ -4230,7 +4230,7 @@ class PlayerBans(Base):
         session = DatabaseManager().get_session()
         try:
             bans = session.query(PlayerBans).filter(
-                PlayerBans.suspension is not None,
+                PlayerBans.suspension.isnot(None),
                 PlayerBans.competition_id == league_id
             ).all()
             return bans
@@ -4242,7 +4242,7 @@ class PlayerBans(Base):
         session = DatabaseManager().get_session()
         try:
             bans = session.query(PlayerBans).join(Players).filter(
-                PlayerBans.suspension is not None,
+                PlayerBans.suspension.isnot(None),
                 Players.team_id == team_id
             ).all()
             return bans

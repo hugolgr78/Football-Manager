@@ -1,8 +1,10 @@
+from email.mime import image
 import customtkinter as ctk
+import tkinter as tk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
-from PIL import Image
+from PIL import Image, ImageDraw, ImageTk
 import io, calendar
 import tkinter.font as tkFont
 from utils.teamLogo import TeamLogo
@@ -2167,7 +2169,181 @@ class FootballPitchLineup(FootballPitchVertical):
         """
         
         self.counter = num
+
+class FootballPitchTeamOTW(FootballPitchVertical):
+    def __init__(self, parent, team, width, height, relx, rely, anchor, fgColor, pitchColor):
+        """
+        Football pitch frame for displaying the team of the week, found in the tactics tab and in-game for substitutions.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            team (dict): The team of the week data.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+            fgColor (str): The foreground color of the frame.
+            pitchColor (str): The color of the pitch.
+        """
+
+        super().__init__(parent, width, height, relx, rely, anchor, fgColor, pitchColor)
+        super().draw_pitch()
+
+        self.team = team
+
+        self.player_radius = 15
+        self.pitch_width = width
+        self.pitch_height = height
+        self.images = []
+        self.team_logo_pos = (0.9, 0.8)
+
+        self.positions = {
+            "Goalkeeper": (0.5, 0.94),      
+            "Left Back": (0.12, 0.75),      
+            "Right Back": (0.88, 0.75),     
+            "Center Back Right": (0.675, 0.75),  
+            "Center Back": (0.5, 0.75),  
+            "Center Back Left": (0.325, 0.75),  
+            "Defensive Midfielder": (0.5, 0.6),     
+            "Defensive Midfielder Right": (0.65, 0.6),      
+            "Defensive Midfielder Left": (0.35, 0.6),   
+            "Left Midfielder": (0.12, 0.4),     
+            "Central Midfielder Right": (0.65, 0.4),    
+            "Central Midfielder": (0.5, 0.4),     
+            "Central Midfielder Left": (0.35, 0.4),     
+            "Right Midfielder": (0.88, 0.4),    
+            "Left Winger": (0.12, 0.25),    
+            "Right Winger": (0.88, 0.25),   
+            "Attacking Midfielder": (0.5, 0.25),    
+            "Striker Left": (0.3, 0.15),    
+            "Striker Right": (0.7, 0.15),   
+            "Center Forward": (0.5, 0.05),  
+        }
+
+        self.addPlayers()
+
+    def addPlayers(self):
+        """
+        Adds player ovals to the pitch based on the team of the week data.
+        """
+
+        for position, (playerID, rating) in self.team.items():
+            player = Players.get_player_by_id(playerID)
+            team = Teams.get_team_by_id(player.team_id)
+            relx, rely = self.positions[position]
+
+            self.canvas.create_oval(
+                relx * self.pitch_width - self.player_radius,
+                rely * self.pitch_height - self.player_radius,
+                relx * self.pitch_width + self.player_radius,
+                rely * self.pitch_height + self.player_radius,
+                fill = APP_BLUE,
+                outline = APP_BLUE,
+            )
+
+            self.canvas.create_text(
+                relx * self.pitch_width,
+                rely * self.pitch_height + 25,
+                text = player.last_name,
+                fill = "white",
+                font = (APP_FONT, 10),
+            )
+
+            self.addRating(position, rating, potm = False)
+
+            src = Image.open(io.BytesIO(team.logo))
+            src.thumbnail((18, 18))
+            image = ImageTk.PhotoImage(src)
+            self.images.append(image)
+            
+            # Calculate the center position of the oval
+            oval_center_x = relx * self.pitch_width
+            oval_center_y = rely * self.pitch_height
+            
+            # Calculate the icon position relative to the oval center
+            icon_x = oval_center_x + (self.team_logo_pos[0] - 0.5) * (2 * self.player_radius)
+            icon_y = oval_center_y + (self.team_logo_pos[1] - 0.5) * (2 * self.player_radius)
+            self.canvas.create_image(icon_x, icon_y, image = image)
+
+    def addRating(self, position, text, potm):
+        """
+        Adds a rating oval with text to the player's oval on the pitch.
+
+        Args:
+            position (str): The position of the player.
+            text (float): The rating text to display.
+            potm (bool): Whether the rating is for Player of the Month.
+        """
         
+        # Use positions from self.positions dictionary (these are relative coordinates)
+
+        player_relx, player_rely = self.positions[position]
+        
+        # Calculate the center position of the oval
+        oval_center_x = player_relx * self.pitch_width
+        oval_center_y = player_rely * self.pitch_height
+        
+        # Calculate the icon position relative to the oval center
+        # positions[0] and positions[1] are relative offsets from the icon positions
+        icon_x = oval_center_x + (0.9 - 0.5) * (2 * self.player_radius)
+        icon_y = oval_center_y + (0.1 - 0.5) * (2 * self.player_radius)
+
+        if text >= 7:
+            oval_color = PIE_GREEN
+        elif text >= 5:
+            oval_color = NEUTRAL_COLOR
+        else:
+            oval_color = PIE_RED
+
+        if potm:
+            oval_color = POTM_BLUE
+
+        # Text has at least 1 dp and max 2 dps
+        formatted_text = text
+        if "." not in str(text):
+            formatted_text = f"{text}.0"
+        elif len(str(text).split(".")[1]) == 1:
+            formatted_text = f"{text}0"
+
+        # === Font settings ===
+        font_name = APP_FONT_BOLD
+        font_size = 9
+        font = tkFont.Font(family = font_name, size = font_size)
+
+        # === Measure text width ===
+        text_width = font.measure(formatted_text)
+        padding_x = 6  # left/right padding
+        padding_y = 2  # top/bottom padding
+
+        rect_width = text_width + 2 * padding_x
+        rect_height = font.metrics("linespace") + 3 * padding_y
+        radius = rect_height // 2 + 10
+
+        x0 = icon_x - 5
+        y0 = (icon_y - rect_height // 2) - 3
+        x1 = x0 + rect_width
+        y1 = y0 + rect_height
+
+        # === Draw pill ===
+        create_rounded_rectangle(
+            self.canvas,
+            x0, y0, x1, y1,
+            radius = radius,
+            fill = oval_color,
+            outline = oval_color,
+        )
+
+        # === Draw left-aligned text ===
+        self.canvas.create_text(
+            x0 + padding_x,
+            icon_y - 3,
+            text = formatted_text,
+            fill = "white",
+            font = (font_name, font_size),
+            anchor = "w", 
+        )
+
 class FootballPitchMatchDay(FootballPitchVertical):
     def __init__(self, parent, width, height, relx, rely, anchor, fgColor, pitchColor):
         """
@@ -3846,3 +4022,885 @@ class ChoosingLeagueFrame(ctk.CTkFrame):
             return
         else:
             self.endFunction()
+
+class News(ctk.CTkFrame):
+    def __init__(self, parent, league_id = None, team_id = None):
+        """
+        Class for displaying news in the league profile or the teams profile.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            league_id (str, optional): The ID of the league. Defaults to None.
+            team_id (str, optional): The ID of the team. Defaults to None.
+        """
+        
+        super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0)  
+
+        self.parent = parent
+        self.league_id = league_id
+        self.team_id = team_id
+        self.hovering = False
+        self.buttons = []
+
+        self.recordsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 620, height = 297, corner_radius = 15)
+        self.recordsFrame.place(relx = 0, rely = 0.5, anchor = "nw")
+
+        self.injuriesFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
+        self.injuriesFrame.place(relx = 0.98, rely = 0, anchor = "ne")
+
+        self.suspensionsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
+        self.suspensionsFrame.place(relx = 0.98, rely = 0.25, anchor = "ne")
+
+        self.transfersFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
+        self.transfersFrame.place(relx = 0.98, rely = 0.5, anchor = "ne")  
+
+        self.mainNews()
+        self.records()
+        self.injuries()
+        self.suspensions()
+        self.transfers()
+
+        if self.league_id:
+            self.teamOTWFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
+            self.teamOTWFrame.place(relx = 0.98, rely = 0.75, anchor = "ne")
+            self.team_of_the_week() 
+
+    def mainNews(self):
+        """
+        Populates the main news frame with league news using a Canvas.
+        """
+
+        self.canvasWidth = 770
+        self.canvasHeight = 371
+        self.movingTime = 10000
+        src = Image.open("Images/news_backdrop.png")
+        src = src.resize((self.canvasWidth, self.canvasHeight))
+
+        if src.mode != "RGBA":
+            src = src.convert("RGBA")
+
+        rounded = Image.new("RGBA", src.size, TKINTER_BACKGROUND)  # fill the new image with background color
+        mask = Image.new("L", src.size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.rounded_rectangle((0, 0, src.width, src.height), 25, fill = 255)
+
+        # Paste transparent src where the mask allows it
+        rounded.paste(src, (0, 0), mask)
+
+        # Create a canvas inside mainNewsFrame
+        self.canvas = tk.Canvas(self, width = self.canvasWidth, height = self.canvasHeight, highlightthickness = 0, bg = TKINTER_BACKGROUND)
+        self.canvas.place(relx = 0, rely = 0, anchor = "nw")
+
+        # Draw the background image
+        photo = ImageTk.PhotoImage(rounded)
+        self.image = self.canvas.create_image(0, 0, anchor = "nw", image = photo)
+        self.canvas.image = photo  # keep a reference
+
+        # Get news
+        if self.league_id:
+            self.news = LeagueNews.get_news_for_league(self.league_id)
+            self.league = League.get_league_by_id(self.league_id)
+        else:
+            self.news = LeagueNews.get_news_for_team(self.team_id)
+
+        if not self.news:
+            self.canvas.create_text(20, self.canvasHeight - 40, anchor = "w", text = "No news available.", fill = "white", font = (APP_FONT_BOLD, 35))  
+            return
+
+        if len(self.news) > 1:
+            self.leftArrowButton = self.canvas.create_text(20, self .canvasHeight - 30, anchor = "w", text = "<", fill = "white", font = (APP_FONT_BOLD, 25))
+            self.rightArrowButton = self.canvas.create_text(self.canvasWidth - 20, self.canvasHeight - 30, anchor = "e", text = ">", fill = "white", font = (APP_FONT_BOLD, 25))
+
+            self.canvas.tag_bind(self.leftArrowButton, "<Button-1>", lambda e: self.moveTitle(-1))
+            self.canvas.tag_bind(self.rightArrowButton, "<Button-1>", lambda e: self.moveTitle(1))
+
+            self.canvas.tag_bind(self.leftArrowButton, "<Enter>", lambda e: self.canvas.config(cursor="hand2"))
+            self.canvas.tag_bind(self.leftArrowButton, "<Leave>", lambda e: self.canvas.config(cursor=""))
+
+            self.canvas.tag_bind(self.rightArrowButton, "<Enter>", lambda e: self.canvas.config(cursor="hand2"))
+            self.canvas.tag_bind(self.rightArrowButton, "<Leave>", lambda e: self.canvas.config(cursor=""))
+
+        self.canvas.bind("<Motion>", self.checkHover)
+        self.canvas.bind("<Enter>", self.showNewsDetails)
+        self.canvas.bind("<Leave>", self.removeNewsDetails)
+
+        self.generateTitles()
+
+        fontSize = 30
+        if len(self.newsTitles[0]) > 40:
+            fontSize = 20
+        elif len(self.newsTitles[0]) > 35:
+            fontSize = 25 
+        
+        self.currentNews = 0
+        self.titleText = self.canvas.create_text(20, self.canvasHeight - 90, anchor = "w", text = self.newsTitles[0], fill = "white", font = (APP_FONT_BOLD, fontSize))
+        self.title_coords = [20, self.canvasHeight - 90]  # Track current coordinates of the title
+
+        self.newsText = self.canvas.create_text(self.canvasWidth - 20, self.canvasHeight + 30, anchor = "nw", text = self.newsDetails[0], fill = "white", font = (APP_FONT, 15))
+        self.newsText_coords = [20, self.canvasHeight + 30]  # Track current coordinates of the news text
+
+        self.dateText = self.canvas.create_text(self.canvasWidth - 20, 20, anchor = "ne", text = self.news[0].date.strftime("%d %B %Y"), fill = "white", font = (APP_FONT, 10))
+
+        if len(self.newsTitles) > 1:
+            self.afterID = self.after(self.movingTime, lambda: self.moveTitle(1))
+
+    def generateTitles(self):
+        """
+        Generates the news titles for each news item.
+        """
+        
+        self.newsTitles = []
+        self.newsDetails = []
+        self.currentNewsInds = []
+
+        numNews = len(self.news)
+
+        # --- Layout constants ---
+        y_pos = self.canvasHeight - 30  # vertical position (same as before)
+        indicator_radius = 6
+        spacing = 30  # fixed horizontal distance between indicators
+
+        totalWidth = (numNews - 1) * spacing
+        start_x = (self.canvasWidth - totalWidth) / 2
+
+        for i, newsObj in enumerate(self.news):
+
+            x_center = start_x + i * spacing
+            oval = self.canvas.create_oval(
+                x_center - indicator_radius, y_pos - indicator_radius,
+                x_center + indicator_radius, y_pos + indicator_radius,
+                fill="white" if i == 0 else "gray",
+                outline=""
+            )
+            self.currentNewsInds.append(oval)
+
+            match newsObj.news_type:
+                case "milestone":
+                    player = Players.get_player_by_id(newsObj.player_id)
+                    last_name = player.last_name
+                    position = player.position
+                    team = Teams.get_team_by_id(player.team_id).name
+                    competition = League.get_league_by_id(newsObj.league_id).name
+
+                    match = Matches.get_match_by_id(newsObj.match_id)
+                    if match.home_id == player.team_id:
+                        opponentTeam = Teams.get_team_by_id(match.away_id).name
+                    else:
+                        opponentTeam = Teams.get_team_by_id(match.home_id).name
+
+                    title = generate_news_title("milestone", player = last_name, value = newsObj.news_number, milestone_type = newsObj.milestone_type)
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("milestone", player = last_name, value = newsObj.news_number, milestone_type = newsObj.milestone_type, position = position, team = team, comp = competition, opponent = opponentTeam)
+                    self.newsDetails.append(detail)
+                case "big_score":
+                    matchObj = Matches.get_match_by_id(newsObj.match_id)
+                    homeTeam = Teams.get_team_by_id(matchObj.home_id)
+                    awayTeam = Teams.get_team_by_id(matchObj.away_id)
+                    events = MatchEvents.get_events_by_match(matchObj.id)
+
+                    for event in events:
+                        if event.event_type == "goal" or event.event_type == "penalty_goal":
+                            player1 = Players.get_player_by_id(event.player_id).last_name
+
+                    firstTeam = homeTeam.name
+                    secondTeam = awayTeam.name
+
+                    title = generate_news_title("big_score", team1 = firstTeam, team2 = secondTeam)
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("big_score", team1 = firstTeam, team2 = secondTeam, score = f"{matchObj.score_home}-{matchObj.score_away}", player1 = player1)
+                    self.newsDetails.append(detail)
+                case "big_win":
+                    matchObj = Matches.get_match_by_id(newsObj.match_id)
+                    homeTeam = Teams.get_team_by_id(matchObj.home_id)
+                    awayTeam = Teams.get_team_by_id(matchObj.away_id)
+
+                    if matchObj.score_home > matchObj.score_away:
+                        winner = "home"
+                        firstTeam = homeTeam
+                        secondTeam = awayTeam
+                    else:
+                        winner = "away"
+                        firstTeam = awayTeam
+                        secondTeam = homeTeam
+
+                    manager = Managers.get_manager_by_id(firstTeam.manager_id) if winner == "home" else Managers.get_manager_by_id(secondTeam.manager_id)
+                    stadium = homeTeam.stadium if winner == "home" else awayTeam.stadium
+                    potm = TeamLineup.get_player_OTM(matchObj.id)
+
+                    title = generate_news_title("big_win", team1 = firstTeam.name, team2 = secondTeam.name, score = f"{matchObj.score_home}-{matchObj.score_away}")
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("big_win", team1 = firstTeam.name, team2 = secondTeam.name, score = f"{matchObj.score_home}-{matchObj.score_away}", manager = manager.last_name, stadium = stadium, potm = Players.get_player_by_id(potm.player_id).last_name)
+                    self.newsDetails.append(detail)
+                case "injury":
+                    player = Players.get_player_by_id(newsObj.player_id)
+                    injured = PlayerBans.get_player_injured(newsObj.player_id)
+
+                    if not injured:
+                        continue
+
+                    bans = PlayerBans.get_bans_for_player(newsObj.player_id)
+                    for ban in bans:
+                        if ban.injury:
+                            injuryLength = ban.injury - newsObj.date 
+
+                    # turn injury length into months (round up)
+                    injuryMonths = -(-injuryLength.days // 30)  # Ceiling division
+
+                    title = generate_news_title(newsObj.news_type, player = player.last_name, months = injuryMonths)
+                    self.newsTitles.append(title)
+
+                    match = Matches.get_team_last_match(player.team_id, newsObj.date)
+                    playerTeam = Teams.get_team_by_id(player.team_id)
+                    teamName = playerTeam.name
+                    manager = Managers.get_manager_by_id(playerTeam.manager_id)
+                    opponentTeam = Teams.get_team_by_id(match.away_id if match.home_id == player.team_id else match.home_id).name
+                    score = f"{match.score_home}-{match.score_away}"
+                    competition = League.get_league_by_id(match.league_id).name
+
+                    detail = generate_news_detail("injury", player = player.last_name, team = teamName, opponent = opponentTeam, score = score, competition = competition, months = injuryMonths, position = player.position, injury_type = "N/A", manager = manager.last_name)
+                    self.newsDetails.append(detail)
+
+                case "disciplinary":
+                    matchObj = Matches.get_match_by_id(newsObj.match_id)
+                    homeTeam = Teams.get_team_by_id(matchObj.home_id)
+                    homeName = homeTeam.name
+                    awayTeam = Teams.get_team_by_id(matchObj.away_id)
+                    awayName = awayTeam.name
+                    stadium = homeTeam.stadium
+                    number = newsObj.news_number
+
+                    events = MatchEvents.get_events_by_match(matchObj.id)
+                    homeCount = 0
+                    awayCount = 0
+                    detailPlayer = None
+                    for event in events:
+                        if event.event_type == "yellow_card" or event.event_type == "red_card":
+                            player = Players.get_player_by_id(event.player_id)
+
+                            if not detailPlayer:
+                                detailPlayer = player.last_name
+                            
+                            if player.team_id == homeTeam.id:
+                                homeCount += 1
+                            else:
+                                awayCount += 1
+                    
+                    if homeCount > awayCount:
+                        manager = Managers.get_manager_by_id(homeTeam.manager_id).last_name
+                    else:
+                        manager = Managers.get_manager_by_id(awayTeam.manager_id).last_name
+
+                    title = generate_news_title(newsObj.news_type, number = newsObj.news_number, team = homeName)
+                    self.newsTitles.append(title)   
+
+                    detail = generate_news_detail("disciplinary", player = detailPlayer, team = homeName, opponent = awayName, score = f"{matchObj.score_home}-{matchObj.score_away}", stadium = stadium, number = number, manager = manager)
+                    self.newsDetails.append(detail)
+                case "lead_change":
+                    team = Teams.get_team_by_id(newsObj.team_id)
+                    match = Matches.get_match_by_id(newsObj.match_id)
+                    opponentTeam = Teams.get_team_by_id(match.away_id if match.home_id == team.id else match.home_id).name
+
+                    manager = Managers.get_manager_by_id(team.manager_id).last_name
+
+                    title = generate_news_title("lead_change", team = team.name)
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("lead_change", team = team.name, opponent = opponentTeam, manager = manager)
+                    self.newsDetails.append(detail)
+                case "relegation_change":
+                    team = Teams.get_team_by_id(newsObj.team_id)
+                    match = Matches.get_match_by_id(newsObj.match_id)
+                    opponentTeam = Teams.get_team_by_id(match.away_id if match.home_id == team.id else match.home_id).name
+
+                    manager = Managers.get_manager_by_id(team.manager_id).last_name
+
+                    title = generate_news_title("relegation_change", team = team.name)
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("relegation_change", team = team.name, opponent = opponentTeam, manager = manager)
+                    self.newsDetails.append(detail)
+                case "overthrow":
+                    team = Teams.get_team_by_id(newsObj.team_id)
+                    match = Matches.get_match_by_id(newsObj.match_id)
+                    team2 = Teams.get_team_by_id(match.away_id if match.home_id == team.id else match.home_id).name
+                    score = f"{match.score_home}-{match.score_away}"
+                    manager = Managers.get_manager_by_id(team.manager_id).last_name
+
+                    title = generate_news_title("overthrow", team1 = team.name, team2 = team2)
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("overthrow", team1 = team.name, team2 = team2, score = score, manager = manager)
+                    self.newsDetails.append(detail)
+                case "player_goals":
+                    player = Players.get_player_by_id(newsObj.player_id)
+                    team = Teams.get_team_by_id(player.team_id)
+                    match = Matches.get_match_by_id(newsObj.match_id)
+                    opponentTeam = Teams.get_team_by_id(match.away_id if match.home_id == player.team_id else match.home_id).name
+                    manager = Managers.get_manager_by_id(team.manager_id).last_name
+                    value = newsObj.news_number
+                    competition = League.get_league_by_id(match.league_id).name
+                    position = player.position
+
+                    title = generate_news_title("player_goals", player = player.last_name, value = value, opponent = opponentTeam)
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("player_goals", player = player.last_name, team = team.name, opponent = opponentTeam, value = value, competition = competition, position = position, manager = manager)
+                    self.newsDetails.append(detail)
+                case "winless_form":
+                    team = Teams.get_team_by_id(newsObj.team_id)
+                    value = newsObj.news_number
+                    match = Matches.get_match_by_id(newsObj.match_id)
+                    manager = Managers.get_manager_by_id(team.manager_id).last_name
+                    competition = League.get_league_by_id(match.league_id).name
+
+                    title = generate_news_title("winless_form", team = team.name, value = value)
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("winless_form", team = team.name, value = value, competition = competition, manager = manager)
+                    self.newsDetails.append(detail)
+                case "unbeaten_form":
+                    team = Teams.get_team_by_id(newsObj.team_id)
+                    value = newsObj.news_number
+                    match = Matches.get_match_by_id(newsObj.match_id)
+                    manager = Managers.get_manager_by_id(team.manager_id).last_name
+                    competition = League.get_league_by_id(match.league_id).name
+
+                    title = generate_news_title("unbeaten_form", team = team.name, value = value)
+                    self.newsTitles.append(title)
+
+                    detail = generate_news_detail("unbeaten_form", team = team.name, value = value, competition = competition, manager = manager)
+                    self.newsDetails.append(detail)
+
+    def checkHover(self, event):
+        """
+        Check if the mouse is hovering over the news area.
+
+        Args:
+            event (Event): The event object.
+        """
+
+        if 0 <= event.x <= self.canvasWidth and 0 <= event.y <= self.canvasHeight - 70:
+            if not self.hovering:
+                self.hovering = True
+                self.showNewsDetails(event)
+        else:
+            if self.hovering:
+                self.hovering = False
+                self.removeNewsDetails(event)
+
+    def showNewsDetails(self, event):
+        """
+        Animate title up when hovering.
+
+        Args:
+            event (Event): The event object.
+        """
+
+        if event.y > self.canvasHeight - 70:
+            return
+        self.animate_title((self.title_coords[0], 50))
+
+    def removeNewsDetails(self, event):
+        """
+        Animate title down when leaving.
+
+        Args:
+            event (Event): The event object.
+        """
+
+        self.animate_title((self.title_coords[0], self.canvasHeight - 90))
+
+    def animate_title(self, target):
+        """
+        Smoothly animate the title (and news details) to the target position with safe cancellation.
+        The news details follows the title: always 20 px below when moving up, snap to 800 when fully down.
+
+        Args:
+            target (tuple): The target (x, y) position for the title.
+        """
+
+        target_x, target_y = target
+
+        # Cancel previous animation safely
+        if hasattr(self, "anim_id") and self.anim_id is not None:
+            try:
+                self.canvas.after_cancel(self.anim_id)
+            except ValueError:
+                pass
+            self.anim_id = None
+
+        # Track coordinates manually
+        if not hasattr(self, "title_coords"):
+            self.title_coords = [20, self.canvasHeight - 90]
+        if not hasattr(self, "newsText_coords"):
+            self.newsText_coords = [20, self.canvasHeight + 30]
+
+        steps = 70
+        delay = 15
+
+        x0, y0 = self.title_coords
+
+        def ease(t):
+            return t * t * (3 - 2 * t)
+
+        def animate(step=0):
+            t = ease(step / steps)
+            new_x = x0 + (target_x - x0) * t
+            new_y = y0 + (target_y - y0) * t
+
+            dx = new_x - self.title_coords[0]
+            dy = new_y - self.title_coords[1]
+
+            # Move title
+            self.canvas.move(self.titleText, dx, dy)
+            self.title_coords = [new_x, new_y]
+
+            # Move news text: 20 px below if moving up, follow title
+            if target_y < self.canvasHeight - 90:  # title moving up
+                new_news_y = new_y + 40
+            else:  # moving down
+                new_news_y = self.newsText_coords[1] + dy
+                if new_y == self.canvasHeight - 90:  # fully down
+                    new_news_y = self.canvasHeight + 30
+
+            dy_news = new_news_y - self.newsText_coords[1]
+            self.canvas.move(self.newsText, 0, dy_news)
+            self.newsText_coords[1] = new_news_y
+
+            if step < steps:
+                self.anim_id = self.canvas.after(delay, animate, step + 1)
+            else:
+                # Snap final positions
+                try:
+                    self.canvas.coords(self.titleText, target_x, target_y)
+                    final_news_y = target_y + 40 if target_y < self.canvasHeight - 90 else self.canvasHeight + 30
+                    self.canvas.coords(self.newsText, target_x, final_news_y)
+                    self.newsText_coords[1] = final_news_y
+                except Exception:
+                    pass
+                self.title_coords = [target_x, target_y]
+                self.anim_id = None
+
+        animate()
+
+    def moveTitle(self, direction):
+        """
+        Animate the current news title sliding left/right only if fully down.
+        If the title is moving up/down, just replace the text without horizontal slide.
+        Updates both title and details text.
+
+        Args:
+            direction (int): 1 for right, -1 for left.
+        """
+
+        if hasattr(self, "afterID") and self.afterID is not None:
+            try:
+                self.after_cancel(self.afterID)
+            except Exception:
+                pass
+            self.afterID = None
+
+        # Determine next index
+        if direction == 1:
+            nextNews = (self.currentNews + 1) % len(self.newsTitles)
+        else:
+            nextNews = (self.currentNews - 1) % len(self.newsTitles)
+
+        # Update the indicator dots
+        for i, oval in enumerate(self.currentNewsInds):
+            color = "white" if i == nextNews else "gray"
+            self.canvas.itemconfigure(oval, fill = color)
+
+        fontSize = 30
+        if len(self.newsTitles[nextNews]) > 40:
+            fontSize = 20
+        elif len(self.newsTitles[nextNews]) > 35:
+            fontSize = 25 
+
+        # If the title is not fully down, just replace the text
+        if self.title_coords[1] != self.canvasHeight - 90:
+            self.canvas.itemconfigure(self.titleText, text = self.newsTitles[nextNews], font = (APP_FONT_BOLD, fontSize))
+            self.canvas.itemconfigure(self.newsText, text = self.newsDetails[nextNews])
+            self.canvas.itemconfigure(self.dateText, text = self.news[nextNews].date.strftime("%d %B %Y"))
+            self.currentNews = nextNews
+            self.afterID = self.after(self.movingTime, lambda: self.moveTitle(1))
+            return
+
+        # --- Full horizontal slide ---
+        self.canvas.update_idletasks()
+        canvas_width = self.canvas.winfo_width()
+        end_x = 20
+        current_y = self.canvasHeight - 90  # fully down
+        start_x = canvas_width + 400 if direction == 1 else -800
+        old_target_x = -800 if direction == 1 else canvas_width + 400
+
+        newText = self.canvas.create_text(
+            start_x, current_y,
+            text=self.newsTitles[nextNews],
+            fill="white",
+            font=(APP_FONT_BOLD, fontSize),
+            anchor="w"
+        )
+
+        # Update details immediately
+        self.canvas.itemconfigure(self.newsText, text=self.newsDetails[nextNews])
+        self.canvas.itemconfigure(self.dateText, text = self.news[nextNews].date.strftime("%d %B %Y"))
+
+        steps = 30
+        delay = 15
+
+        def ease(t):
+            return t * t * (3 - 2 * t)
+
+        old_start_x = self.title_coords[0]
+
+        def animate(step=0):
+            if step <= steps:
+                t = ease(step / steps)
+
+                # Horizontal positions
+                old_x = old_start_x + (old_target_x - old_start_x) * t
+                new_x = start_x + (end_x - start_x) * t
+                dx_old = old_x - self.title_coords[0]
+                dx_new = new_x - self.canvas.coords(newText)[0]
+
+                self.canvas.move(self.titleText, dx_old, 0)
+                self.canvas.move(newText, dx_new, 0)
+                self.title_coords[0] = old_x
+
+                # News text only moves vertically if needed (here fully down, so no horizontal)
+                self.canvas.move(self.newsText, 0, 0)
+
+                self.canvas.after(delay, animate, step + 1)
+            else:
+                self.canvas.coords(newText, end_x, current_y)
+                self.title_coords = [end_x, current_y]
+                self.canvas.delete(self.titleText)
+                self.titleText = newText
+                self.currentNews = nextNews
+
+        animate()
+        self.afterID = self.after(self.movingTime, lambda: self.moveTitle(1))
+
+    def records(self):
+        """
+        Populates the records frame with the titles.
+        """
+
+        src = Image.open("Images/averageRating.png")
+        src.thumbnail((40, 40))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.recordsFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.1, anchor = "w")
+        ctk.CTkLabel(self.recordsFrame, text = "Records", text_color = "white", font = (APP_FONT_BOLD, 25)).place(relx = 0.1, rely = 0.105, anchor = "w")
+
+        if self.league_id:
+            ctk.CTkLabel(self.recordsFrame, text = "Discover all records from the league.", font = (APP_FONT, 17), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.5, anchor = "center")
+        else:
+            ctk.CTkLabel(self.recordsFrame, text = "Discover all records from the team.", font = (APP_FONT, 17), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        src = Image.open("Images/expand.png")
+        src = src.resize((40, 40))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        b = ctk.CTkButton(self.recordsFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND)
+        b.place(relx = 0.95, rely = 0.9, anchor = "se")
+        self.buttons.append(b)
+
+    def injuries(self):
+        """
+        Populates the injuries frame with injury news.
+        """
+
+        src = Image.open("Images/injury.png")
+        src.thumbnail((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.injuriesFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
+        ctk.CTkLabel(self.injuriesFrame, text = "Injuries", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
+
+        if self.league_id:
+            ctk.CTkLabel(self.injuriesFrame, text = "Find out which players are currently injured in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+        else:
+            ctk.CTkLabel(self.injuriesFrame, text = "Find out which players are currently injured in the team.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        src = Image.open("Images/expand.png")
+        src = src.resize((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        b = ctk.CTkButton(self.injuriesFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND, command = self.showInjuries)
+        b.place(relx = 0.95, rely = 0.9, anchor = "se")
+        self.buttons.append(b)
+
+    def suspensions(self):
+        """
+        Populates the suspensions frame with suspension news.
+        """
+
+        src = Image.open("Images/redCard.png")
+        src.thumbnail((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.suspensionsFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
+        ctk.CTkLabel(self.suspensionsFrame, text = "Suspensions", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
+
+        if self.league_id:
+            ctk.CTkLabel(self.suspensionsFrame, text = "Discover which players are currently suspended in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+        else:
+            ctk.CTkLabel(self.suspensionsFrame, text = "Discover which players are currently suspended in the team.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        src = Image.open("Images/expand.png")
+        src = src.resize((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        b = ctk.CTkButton(self.suspensionsFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND, command = self.showSuspensions)
+        b.place(relx = 0.95, rely = 0.9, anchor = "se")
+        self.buttons.append(b)
+
+    def transfers(self):
+        """
+        Populates the transfers frame with transfer news.
+        """
+
+        src = Image.open("Images/contract.png")
+        src.thumbnail((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.transfersFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
+        ctk.CTkLabel(self.transfersFrame, text = "Transfers", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
+
+        if self.league_id:
+            ctk.CTkLabel(self.transfersFrame, text = "Find out about the latest transfers in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+        else:
+            ctk.CTkLabel(self.transfersFrame, text = "Find out about the latest transfers in the team.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        src = Image.open("Images/expand.png")
+        src = src.resize((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        b = ctk.CTkButton(self.transfersFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND)
+        b.place(relx = 0.95, rely = 0.9, anchor = "se")
+        self.buttons.append(b)
+
+    def team_of_the_week(self):
+        """
+        Populates the team of the week frame with team news.
+        """
+
+        src = Image.open("Images/pitch.png")
+        src.thumbnail((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self.teamOTWFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
+        ctk.CTkLabel(self.teamOTWFrame, text = "Team of the Week", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
+
+        ctk.CTkLabel(self.teamOTWFrame, text = "Discover all team of the weeks for the league up till the last matchday.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        src = Image.open("Images/expand.png")
+        src = src.resize((25, 25))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        b = ctk.CTkButton(self.teamOTWFrame, image = img, text = "", fg_color = GREY_BACKGROUND, height = 0, width = 0, hover_color = GREY_BACKGROUND, command = self.showTeamOTW)
+        b.place(relx = 0.95, rely = 0.9, anchor = "se")
+        self.buttons.append(b)
+
+    def showInjuries(self):
+        """
+        Opens a frame showing all injuries.
+        """
+
+        for button in self.buttons:
+            button.configure(state = "disabled")
+
+        frame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 500, height = 320, corner_radius = 15, background_corner_colors = [GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND], border_width = 3, border_color = APP_BLUE)
+
+        headerFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 485, height = 50, corner_radius = 15)
+        headerFrame.pack(pady = 10, padx = 5)
+
+        ctk.CTkLabel(headerFrame, text = "Injuries", font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+        backButton = ctk.CTkButton(headerFrame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeFrame(frame))
+        backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
+
+        if self.league_id:
+            injuries = PlayerBans.get_injuries_league(self.league_id)
+        else:
+            injuries = PlayerBans.get_injuries_team(self.team_id)
+
+        if len(injuries) <= 5:
+            injuriesFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
+            injuriesFrame.pack(pady = 10, padx = 5)
+
+            injuriesFrame.pack_propagate(False)
+        else:
+            injuriesFrame = ctk.CTkScrollableFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
+            injuriesFrame.pack(pady = 10, padx = 5)
+
+        if len(injuries) == 0:
+            ctk.CTkLabel(injuriesFrame, text = "No players are currently injured.", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.4, anchor = "center")
+
+        injuries.sort(key = lambda x: x.injury, reverse = True)
+
+        for injury in injuries:
+            player = Players.get_player_by_id(injury.player_id)
+
+            player_frame = ctk.CTkFrame(injuriesFrame, fg_color = GREY_BACKGROUND, width = 450, height = 40)
+
+            src = Image.open("Images/default_user.png")
+            src.thumbnail((30, 30))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(player_frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+            player = Players.get_player_by_id(player.id)
+            PlayerProfileLink(player_frame, player, f"{player.first_name} {player.last_name}", "white", 0.2, 0.5, "w", GREY_BACKGROUND, self.parent)
+
+            currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
+
+            if currDate >= injury.injury:
+                continue
+
+            injuryTime = injury.injury - currDate
+            months = injuryTime.days // 30
+            remainingDays = injuryTime.days % 30
+
+            ctk.CTkLabel(player_frame, text = f"{months}M, {remainingDays}D", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
+            player_frame.pack(pady = 5, padx = 5)
+
+        frame.place(relx = 0.5, rely = 0.5, anchor = "center")
+    
+    def showSuspensions(self):
+        """
+        Opens a frame showing all suspensions.
+        """
+
+        for button in self.buttons:
+            button.configure(state = "disabled")
+
+        frame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 500, height = 320, corner_radius = 15, background_corner_colors = [GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND], border_width = 3, border_color = APP_BLUE)
+
+        headerFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 485, height = 50, corner_radius = 15)
+        headerFrame.pack(pady = 10, padx = 5)
+
+        ctk.CTkLabel(headerFrame, text = "Suspensions", font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+        backButton = ctk.CTkButton(headerFrame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeFrame(frame))
+        backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
+
+        if self.league_id:
+            suspensions = PlayerBans.get_suspensions_league(self.league_id)
+        else:
+            suspensions = PlayerBans.get_suspensions_team(self.team_id)
+
+        if len(suspensions) <= 5:
+            suspensionsFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
+            suspensionsFrame.pack(pady = 10, padx = 5)
+
+            suspensionsFrame.pack_propagate(False)
+        else:
+            suspensionsFrame = ctk.CTkScrollableFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
+            suspensionsFrame.pack(pady = 10, padx = 5)
+
+        if len(suspensions) == 0:
+            ctk.CTkLabel(suspensionsFrame, text = "No players are currently suspended.", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.4, anchor = "center")
+
+        suspensions.sort(key = lambda x: x.suspension, reverse = True)
+
+        for suspension in suspensions:
+            player = Players.get_player_by_id(suspension.player_id)
+
+            player_frame = ctk.CTkFrame(suspensionsFrame, fg_color = GREY_BACKGROUND, width = 450, height = 40)
+
+            src = Image.open("Images/default_user.png")
+            src.thumbnail((30, 30))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(player_frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+            player = Players.get_player_by_id(player.id)
+            PlayerProfileLink(player_frame, player, f"{player.first_name} {player.last_name}", "white", 0.2, 0.5, "w", GREY_BACKGROUND, self.parent)
+
+            ctk.CTkLabel(player_frame, text = suspension.suspension, font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
+            player_frame.pack(pady = 5, padx = 5)
+
+        frame.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+    def showTeamOTW(self):
+        """
+        Opens a frame showing all Team of the Week selections.
+        """
+        
+        for button in self.buttons:
+            button.configure(state = "disabled")
+
+        self.currentFrameIndex = self.league.current_matchday - 2
+        self.teamFrames = [None] * (self.currentFrameIndex + 1)
+
+        frame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 320, height = 550, corner_radius = 15, background_corner_colors = [GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND], border_width = 3, border_color = APP_BLUE)
+        frame.pack_propagate(False)
+
+        headerFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 320, height = 50, corner_radius = 15)
+        headerFrame.pack(pady = 10, padx = 5)
+
+        self.matchdayLabel = ctk.CTkLabel(headerFrame, text = f"Matchday {self.currentFrameIndex + 1}", font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND)
+        self.matchdayLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        rightbutton = ctk.CTkButton(headerFrame, text = ">", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND, hover_color = GREY_BACKGROUND, corner_radius = 5, height = 20, width = 20, command = lambda: self.changeWeek(1, frame))
+        rightbutton.place(relx = 0.9, rely = 0.5, anchor = "e")
+
+        leftButton = ctk.CTkButton(headerFrame, text = "<", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND, hover_color = GREY_BACKGROUND, corner_radius = 5, height = 20, width = 20, command = lambda: self.changeWeek(-1, frame))
+        leftButton.place(relx = 0.1, rely = 0.5, anchor = "w")
+
+        backButton = ctk.CTkButton(frame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeFrame(frame))
+        backButton.place(relx = 0.5, rely = 0.98, anchor = "s")
+
+        self.teamFrames[self.currentFrameIndex] = TeamOTW(frame, self.league_id, self.currentFrameIndex + 1)
+        self.teamFrames[self.currentFrameIndex].place(relx = 0.5, rely = 0.1, anchor = "n")
+
+        frame.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+    def changeWeek(self, direction, frame):
+        """
+        Changes the team of the week pitch based on the direction.
+        
+        Args:
+            direction (int): 1 for next week, -1 for previous week.
+        """
+        
+        if direction == 1:
+            nextIndex = (self.currentFrameIndex + 1) % len(self.teamFrames)
+        else:
+            nextIndex = (self.currentFrameIndex - 1) % len(self.teamFrames)
+
+        self.teamFrames[self.currentFrameIndex].place_forget()
+        self.currentFrameIndex = nextIndex
+
+        if not self.teamFrames[nextIndex]:
+            self.teamFrames[nextIndex] = TeamOTW(frame, self.league_id, nextIndex + 1)
+        
+        self.teamFrames[nextIndex].place(relx = 0.5, rely = 0.1, anchor = "n")
+        self.matchdayLabel.configure(text = f"Matchday {nextIndex + 1}")
+
+    def closeFrame(self, frame):
+        """
+        Closes the expanded statistics view.
+
+        Args:
+            frame (ctk.CTkFrame): The frame to close.  
+        """
+        
+        frame.destroy()
+
+        for button in self.buttons:
+            button.configure(state = "normal")
+
+class TeamOTW(ctk.CTkFrame):
+    def __init__(self, parent, league_id, matchday):
+        """
+        Class for displaying a pitch with the team of the week display.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            league_id (int): The league ID.
+            matchday (int): The matchday number.
+        """
+
+        super().__init__(parent, fg_color = GREY_BACKGROUND, width = 300, height = 450, corner_radius = 0)
+
+        self.parent = parent
+        self.league_id = league_id
+        self.matchday = matchday
+
+        self.team = League.team_of_the_week(self.league_id, self.matchday)[0]
+        self.pitch = FootballPitchTeamOTW(self, self.team, 300, 550, 0.5, 0.5, "center", GREY_BACKGROUND, "green")

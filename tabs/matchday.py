@@ -2169,7 +2169,7 @@ class MatchDay(ctk.CTkFrame):
                     extra = True
 
                 events[str(minute) + ":" + str(second)] = {"type": type_, "extra": extra}
-                matchInstance.score.appendScore(1, home)
+                matchInstance.appendScore(1, home)
 
         homeScore = int(self.matchFrame.score.split("-")[0])
         awayScore = int(self.matchFrame.score.split("-")[1])
@@ -2399,18 +2399,23 @@ class MatchDay(ctk.CTkFrame):
         """
 
         payload = {
-                "team_updates": [],
-                "manager_updates": [],
-                "match_events": [],
-                "player_bans": [],
-                "yellow_card_checks": [],
-                "score_updates": [],
-                "fitness_updates": [],
-                "sharpness_updates": [],
-                "morale_updates": [],
-                "lineup_updates": [],
-                "stats_updates": [],
-            }
+            "team_updates": [],
+            "manager_updates": [],
+            "match_events": [],
+            "player_bans": [],
+            "yellow_card_checks": [],
+            "score_updates": [],
+            "fitness_updates": [],
+            "sharpness_updates": [],
+            "morale_updates": [],
+            "lineup_updates": [],
+            "stats_updates": [],
+            "news_to_add": [],
+            "player_goals_to_check": [],
+            "player_assists_to_check": [],
+            "player_clean_sheets_to_check": [],
+            "form_to_check": []
+        }
         
         payloads = []
 
@@ -2419,11 +2424,9 @@ class MatchDay(ctk.CTkFrame):
         logger.debug("Saving data for other matches in the league.")
         for frame in self.otherMatchesFrame.winfo_children():
             if frame.matchInstance:
-                # frame.matchInstance.saveData(auto = False)
                 payloads.append(frame.matchInstance.saveData())
 
         logger.debug("Saving data for the managed match.")
-        # self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away")
         payloads.append(self.matchFrame.matchInstance.saveData(managing_team = "home" if self.home else "away"))
 
         logger.debug("Combining payloads.")
@@ -2448,9 +2451,19 @@ class MatchDay(ctk.CTkFrame):
 
         logger.debug("Checking if all matches are complete for the matchday.")
         if League.check_all_matches_complete(self.league.id, currDate):
+            logger.debug("All matches complete, creating team of the week and team history.")
+            _, email = League.team_of_the_week(self.league.id, self.matchFrame.matchInstance.matchday, team = self.homeTeam.id if self.home else self.awayTeam.id)
+            logger.debug("Team of the week created.")
             for team in LeagueTeams.get_teams_by_league(self.league.id):
                 matchday = League.get_current_matchday(self.league.id)
                 TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
+            
+            if email:
+                Emails.add_email("team_of_the_week", self.matchFrame.matchInstance.matchday, None, None, self.league.id, (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+
+            # Check for lead changes, relegation changes here
+            if matchday > 20:
+                check_league_changes(self.league.id, matchday, currDate)
 
             League.update_current_matchday(self.league.id)
 

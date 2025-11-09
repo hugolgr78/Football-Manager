@@ -2,9 +2,9 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
-from PIL import Image
+from PIL import Image, ImageDraw
 import io
-from utils.frames import LeagueTable, MatchdayFrame
+from utils.frames import LeagueTable, MatchdayFrame, News
 from utils.playerProfileLink import PlayerProfileLink
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
@@ -48,9 +48,10 @@ class LeagueProfile(ctk.CTkFrame):
         self.graphs = None
         self.stats = None
         self.history = None
-        self.titles = ["Profile", "Matchdays", "Graphs", "Stats", "History"]
-        self.tabs = [self.profile, self.matchdays, self.graphs, self.stats, self.history]
-        self.classNames = [Profile, Matchdays, Graphs, Stats, History]
+        self.news = None
+        self.titles = ["Profile", "Matchdays", "Graphs", "Stats", "News", "History"]
+        self.tabs = [self.profile, self.matchdays, self.graphs, self.stats, self.news, self.history]
+        self.classNames = [Profile, Matchdays, Graphs, Stats, News, History]
 
         self.activeButton = 0
         self.buttons = []
@@ -67,14 +68,14 @@ class LeagueProfile(ctk.CTkFrame):
         """
 
         self.buttonHeight = 40
-        self.buttonWidth = 160
+        self.buttonWidth = 140
         self.button_background = TKINTER_BACKGROUND
         self.hover_background = GREY_BACKGROUND
-        self.gap = 0.08
+        self.gap = 0.07
 
         gapCount = 0
         for i in range(len(self.tabs)):
-            button = ctk.CTkButton(self.tabsFrame, text = self.titles[i], font = (APP_FONT, 20), fg_color = self.button_background, corner_radius = 0, height = self.buttonHeight, width = self.buttonWidth, hover_color = self.hover_background)
+            button = ctk.CTkButton(self.tabsFrame, text = self.titles[i], font = (APP_FONT, 18), fg_color = self.button_background, corner_radius = 0, height = self.buttonHeight, width = self.buttonWidth, hover_color = self.hover_background)
             button.place(relx = self.gap * gapCount, rely = 0, anchor = "nw")
             button.configure(command = lambda i = i: self.changeTab(i))
             
@@ -87,7 +88,7 @@ class LeagueProfile(ctk.CTkFrame):
         ctk.CTkCanvas(self.tabsFrame, width = 1220, height = 5, bg = APP_BLUE, bd = 0, highlightthickness = 0).place(relx = 0, rely = 0.82, anchor = "w")
 
         if self.changeBackFunction:
-            backButton = ctk.CTkButton(self.tabsFrame, text = "Back", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, corner_radius = 5, height = self.buttonHeight - 10, width = 100, hover_color = CLOSE_RED, command = lambda: self.changeBackFunction())
+            backButton = ctk.CTkButton(self.tabsFrame, text = "Back", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, corner_radius = 5, height = self.buttonHeight - 10, width = 80, hover_color = CLOSE_RED, command = lambda: self.changeBackFunction())
             backButton.place(relx = 0.94, rely = 0, anchor = "ne")
 
         self.legendRows = 1
@@ -145,7 +146,10 @@ class LeagueProfile(ctk.CTkFrame):
         self.buttons[self.activeButton].configure(state = "disabled")
 
         if not self.tabs[self.activeButton]:
-            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.league)
+            if self.titles[self.activeButton] != "News":
+                self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.league)
+            else:
+                self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, league_id = self.league.id)
 
         self.tabs[self.activeButton].pack()
 

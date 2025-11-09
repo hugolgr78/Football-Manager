@@ -1,3 +1,4 @@
+from asyncio import events
 import re, datetime, os, shutil, time, gc, logging
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
@@ -620,7 +621,6 @@ class Players(Base):
                 league_ID = LeagueTeams.get_league_by_team(team.id).league_id
                 league_name = League.get_league_by_id(league_ID).name
                 league_depth = League.calculate_league_depth(league_ID)
-                min_CA_level = 150 - (league_depth * 50) 
                 player_nationality_percentage = get_planet_percentage(league_depth)
 
                 for planet, leagues in PLANET_LEAGUES.items():
@@ -676,7 +676,7 @@ class Players(Base):
                         if specific_pos not in new_player_positions:
                             new_player_positions[0] = specific_pos
 
-                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, min_level = min_CA_level)
+                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, league_depth)
                         playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
 
                         team_players.append({
@@ -714,7 +714,7 @@ class Players(Base):
                                                     weights=position_weights[:min(len(specific_pos_list), 4)])[0]
                         new_player_positions = random.sample(specific_pos_list, k=num_positions)
 
-                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, min_level = min_CA_level)
+                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, league_depth)
                         playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
 
                         team_players.append({
@@ -1842,6 +1842,44 @@ class Matches(Base):
         finally:
             session.close()
 
+    @classmethod
+    def get_team_winless_streak(cls, team_id, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team_id, league_id)
+            current_streak = 0
+            for match in matches:
+                if match.score_home == match.score_away:
+                    current_streak += 1
+                elif match.home_id == team_id and match.score_home < match.score_away:
+                    current_streak += 1
+                elif match.away_id == team_id and match.score_away < match.score_home:
+                    current_streak += 1
+                else:
+                    break
+            return current_streak
+        finally:
+            session.close()
+    
+    @classmethod
+    def get_team_unbeaten_streak(cls, team_id, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team_id, league_id)
+            current_streak = 0
+            for match in matches:
+                if match.score_home == match.score_away:
+                    current_streak += 1
+                elif match.home_id == team_id and match.score_home > match.score_away:
+                    current_streak += 1
+                elif match.away_id == team_id and match.score_away > match.score_home:
+                    current_streak += 1
+                else:
+                    break
+            return current_streak
+        finally:
+            session.close()
+
 class LinkedMatches(Base):
     __tablename__ = 'linked_matches'
 
@@ -2273,22 +2311,33 @@ class MatchEvents(Base):
             session.close()
     
     @classmethod
-    def get_goals_by_player(cls, player_id):
+    def get_goals_by_player(cls, player_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            goals = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "goal").count()
+            goals = session.query(MatchEvents).join(Matches).filter(
+                MatchEvents.player_id == player_id,
+                Matches.league_id == comp_id,
+                MatchEvents.event_type == "goal"
+            ).count()
             return goals
         finally:
             session.close()
 
     @classmethod
-    def get_goals_and_pens_by_player(cls, player_id):
+    def get_goals_and_pens_by_player(cls, player_id, comp = None):
         session = DatabaseManager().get_session()
         try:
-            goals = session.query(MatchEvents).filter(
-                MatchEvents.player_id == player_id,
-                or_(MatchEvents.event_type == "goal", MatchEvents.event_type == "penalty_goal")
-            ).count()
+            if comp:
+                goals = session.query(MatchEvents).join(Matches).filter(
+                    MatchEvents.player_id == player_id,
+                    Matches.league_id == comp,
+                    or_(MatchEvents.event_type == "goal", MatchEvents.event_type == "penalty_goal")
+                ).count()
+            else:
+                goals = session.query(MatchEvents).filter(
+                    MatchEvents.player_id == player_id,
+                    or_(MatchEvents.event_type == "goal", MatchEvents.event_type == "penalty_goal")
+                ).count()
             return goals
         finally:
             session.close()
@@ -2332,10 +2381,20 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_assists_by_player(cls, player_id):
+    def get_assists_by_player(cls, player_id, comp = None):
         session = DatabaseManager().get_session()
         try:
-            assists = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "assist").count()
+            if comp:
+                assists = session.query(MatchEvents).join(Matches).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "assist",
+                    Matches.league_id == comp
+                ).count()
+            else:
+                assists = session.query(MatchEvents).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "assist"
+                ).count()
             return assists
         finally:
             session.close()
@@ -2370,10 +2429,20 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_yellow_cards_by_player(cls, player_id):
+    def get_yellow_cards_by_player(cls, player_id, comp = None):
         session = DatabaseManager().get_session()
         try:
-            yellow_cards = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "yellow_card").count()
+            if comp:
+                yellow_cards = session.query(MatchEvents).join(Matches).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "yellow_card",
+                    Matches.league_id == comp
+                ).count()
+            else:
+                yellow_cards = session.query(MatchEvents).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "yellow_card"
+                ).count()
             return yellow_cards
         finally:
             session.close()
@@ -2432,10 +2501,20 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_red_cards_by_player(cls, player_id):
+    def get_red_cards_by_player(cls, player_id, comp = None):
         session = DatabaseManager().get_session()
         try:
-            red_cards = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "red_card").count()
+            if comp:
+                red_cards = session.query(MatchEvents).join(Matches).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "red_card",
+                    Matches.league_id == comp
+                ).count()
+            else:
+                red_cards = session.query(MatchEvents).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "red_card"
+                ).count()
             return red_cards
         finally:
             session.close()
@@ -2470,10 +2549,14 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_own_goals_by_player(cls, player_id):
+    def get_own_goals_by_player(cls, player_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            own_goals = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "own_goal").count()
+            own_goals = session.query(MatchEvents).join(Matches).filter(
+                MatchEvents.player_id == player_id,
+                MatchEvents.event_type == "own_goal",
+                Matches.league_id == comp_id
+            ).count()
             return own_goals
         finally:
             session.close()
@@ -2508,10 +2591,14 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_penalty_goals_by_player(cls, player_id):
+    def get_penalty_goals_by_player(cls, player_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            penalty_goals = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "penalty_goal").count()
+            penalty_goals = session.query(MatchEvents).join(Matches).filter(
+                MatchEvents.player_id == player_id,
+                MatchEvents.event_type == "penalty_goal",
+                Matches.league_id == comp_id
+            ).count()
             return penalty_goals
         finally:
             session.close()
@@ -2546,10 +2633,20 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_penalty_saves_by_player(cls, player_id):
+    def get_penalty_saves_by_player(cls, player_id, comp = None):
         session = DatabaseManager().get_session()
         try:
-            penalty_saves = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "penalty_saved").count()
+            if comp:
+                penalty_saves = session.query(MatchEvents).join(Matches).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "penalty_saved",
+                    Matches.league_id == comp
+                ).count()
+            else:
+                penalty_saves = session.query(MatchEvents).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "penalty_saved"
+                ).count()
             return penalty_saves
         finally:
             session.close()
@@ -2584,10 +2681,20 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_clean_sheets_by_player(cls, player_id):
+    def get_clean_sheets_by_player(cls, player_id, comp = None):
         session = DatabaseManager().get_session()
         try:
-            clean_sheets = session.query(MatchEvents).filter(MatchEvents.player_id == player_id, MatchEvents.event_type == "clean_sheet").count()
+            if comp:
+                clean_sheets = session.query(MatchEvents).join(Matches).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "clean_sheet",
+                    Matches.league_id == comp
+                ).count()
+            else:
+                clean_sheets = session.query(MatchEvents).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "clean_sheet"
+                ).count()
             return clean_sheets
         finally:
             session.close()
@@ -3079,6 +3186,34 @@ class League(Base):
             raise e
         finally:
             session.close()
+
+    @classmethod
+    def team_of_the_week(cls, league_id, matchday, team = None):
+        session = DatabaseManager().get_session()
+        try:
+            matches = session.query(Matches).filter(
+                Matches.league_id == league_id,
+                Matches.matchday == matchday
+            ).all()
+
+            positions = FORMATIONS_POSITIONS["4-3-3 DM"]
+            teamOTW = {}
+
+            for position in positions:
+                player, rating = get_best_player_for_position(matches, position)
+                teamOTW[position] = [player, rating]
+
+            if team:
+                player_in_team = any(Players.get_player_by_id(player).team_id == team for player, _ in teamOTW.values())
+            else:
+                player_in_team = False
+
+            return teamOTW, player_in_team
+        except Exception as e:
+            logger.exception("Error in team_of_the_week: %s", e)
+            raise e
+        finally:
+            session.close()
             
 class LeagueTeams(Base):
     __tablename__ = 'league_teams'
@@ -3342,6 +3477,26 @@ class TeamHistory(Base):
         finally:
             session.close()
 
+    @classmethod
+    def check_league_changes(cls, matchday, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            league_teams = session.query(LeagueTeams).filter(LeagueTeams.league_id == league_id).all()
+            changes = []
+
+            for league_team in league_teams:
+                team_history = session.query(TeamHistory).filter(
+                    TeamHistory.team_id == league_team.team_id,
+                    TeamHistory.matchday == matchday - 1
+                ).first()
+
+                if team_history and team_history.position != league_team.position:
+                    changes.append((league_team.team_id, team_history.position, league_team.position))
+
+            return changes
+        finally:
+            session.close()
+
 class Referees(Base):
     __tablename__ = 'referees'
     
@@ -3451,7 +3606,7 @@ class Emails(Base):
     __tablename__ = 'emails'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday", "calendar_events"), nullable = False)
+    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday", "calendar_events", "team_of_the_week"), nullable = False)
     matchday = Column(Integer)
     date = Column(DateTime, nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))
@@ -3460,6 +3615,8 @@ class Emails(Base):
     comp_id = Column(String(128))
     action_complete = Column(Boolean, default = False)
     send = Column(Boolean, default = True)
+    read = Column(Boolean, default = False)
+    important = Column(Boolean, default = False)
 
     @classmethod
     def add_emails(cls, manager_id):
@@ -3528,7 +3685,7 @@ class Emails(Base):
             session.close()
 
     @classmethod
-    def add_email(cls, email_type, matchday, player_id, ban_length, comp_id, date):
+    def add_email(cls, email_type, matchday, player_id, ban_length, comp_id, date, important = False):
         session = DatabaseManager().get_session()
         try:
             new_email = Emails(
@@ -3537,6 +3694,7 @@ class Emails(Base):
                 player_id = player_id,
                 comp_id = comp_id,
                 date = date,
+                important = important
             )
 
             if email_type == "player_ban":
@@ -3704,6 +3862,33 @@ class Emails(Base):
                 return new_send_value
             else:
                 return None
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def mark_email_as_read(cls, email_id):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.id == email_id).first()
+            if email:
+                email.read = True
+                session.commit()
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_mark_all_as_read(cls, date):
+        session = DatabaseManager().get_session()
+        try:
+            emails = session.query(Emails).filter(Emails.date <= date, Emails.read == False)
+
+            for email in emails:
+                email.read = True
+
+            session.commit()
         except Exception as e:
             session.rollback()
             raise e
@@ -4035,6 +4220,55 @@ class PlayerBans(Base):
                 PlayerBans.ban_type == "injury",
                 PlayerBans.injury >= start_date,
                 PlayerBans.injury <= end_date
+            ).all()
+            return bans
+        finally:
+            session.close()
+
+    @classmethod
+    def get_suspensions_league(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).filter(
+                PlayerBans.suspension.isnot(None),
+                PlayerBans.competition_id == league_id
+            ).all()
+            return bans
+        finally:
+            session.close()
+
+    @classmethod
+    def get_suspensions_team(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).join(Players).filter(
+                PlayerBans.suspension.isnot(None),
+                Players.team_id == team_id
+            ).all()
+            return bans
+        finally:
+            session.close()
+
+    @classmethod
+    def get_injuries_league(cls, league_id):
+        # For each ban_type injury entry, check the player id is in a team whose league is the league id
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).join(Players).join(LeagueTeams, LeagueTeams.team_id == Players.team_id).filter(
+                PlayerBans.ban_type == "injury",
+                LeagueTeams.league_id == league_id
+            ).all()
+            return bans
+        finally:
+            session.close()
+
+    @classmethod
+    def get_injuries_team(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            bans = session.query(PlayerBans).join(Players).filter(
+                PlayerBans.ban_type == "injury",
+                Players.team_id == team_id
             ).all()
             return bans
         finally:
@@ -4461,6 +4695,155 @@ class Settings(Base):
         except Exception as e:
             session.rollback()
             raise e
+        finally:
+            session.close()
+
+class LeagueNews(Base):
+    __tablename__ = 'league_news'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    news_type = Column(Enum("milestone", "injury", "big_win", "big_score", "transfer", "disciplinary", "lead_change", "planetary_change", "playoff_change", "relegation_change", "overthrow", "player_goals", "winless_form", "unbeaten_form"), nullable = False)
+    date = Column(DateTime, nullable = False)
+    league_id = Column(String(128), ForeignKey('leagues.id'), nullable = False)
+    matchday = Column(Integer)
+    player_id = Column(String(128), ForeignKey('players.id'))
+    match_id = Column(String(128), ForeignKey('matches.id'))
+    milestone_type = Column(String(128))
+    news_number = Column(Integer)
+    team_id = Column(String(128), ForeignKey('teams.id'))
+
+    @classmethod
+    def add_news(cls, news_type, date, league_id, matchday = None, player_id = None, match_id = None, milestone_type = None, news_number = None, team_id = None):
+        session = DatabaseManager().get_session()
+        try:
+            news_entry = LeagueNews(
+                news_type = news_type,
+                date = date,
+                matchday = matchday,
+                league_id = league_id,
+                player_id = player_id,
+                match_id = match_id,
+                milestone_type = milestone_type,
+                news_number = news_number,
+                team_id = team_id,
+            )
+            session.add(news_entry)
+
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_news_for_league(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            news_entries = session.query(LeagueNews).filter(LeagueNews.league_id == league_id).all()
+
+            # Sort by date and return latest 10
+            news_entries = sorted(news_entries, key = lambda x: x.date, reverse = True)[:7]
+            return news_entries
+        finally:
+            session.close()
+
+    @classmethod
+    def get_news_by_type_and_team(cls, news_type, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            news_entries = session.query(LeagueNews).filter(
+                LeagueNews.news_type == news_type,
+                LeagueNews.team_id == team_id
+            ).all()
+
+            return news_entries
+        finally:
+            session.close()
+
+    @classmethod
+    def get_news_for_team(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+
+            news_query = (
+                session.query(LeagueNews)
+                .filter(
+                    or_(
+                        LeagueNews.team_id == team_id,
+                        LeagueNews.player_id.in_(
+                            session.query(Players.id).filter(Players.team_id == team_id)
+                        ),
+                        LeagueNews.match_id.in_(
+                            session.query(Matches.id).filter(
+                                or_(Matches.home_id == team_id, Matches.away_id == team_id)
+                            )
+                        ),
+                    )
+                )
+                .order_by(LeagueNews.date.desc())
+                .limit(7)
+            )
+
+            return news_query.all()
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_add_news(cls, newsObjects):
+        session = DatabaseManager().get_session()
+        try:
+            # Create a list of dictionaries representing each news item
+            news_dicts = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "news_type": news[0],
+                    "date": news[1],
+                    "league_id": news[2],
+                    "matchday": news[3],
+                    "player_id": news[4],
+                    "match_id": news[5],
+                    "milestone_type": news[6],
+                    "news_number": news[7],
+                    "team_id": news[8]
+                }
+                for news in newsObjects
+            ]
+
+            # Use session.execute with an insert statement
+            session.execute(insert(LeagueNews), news_dicts)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            logger.exception("Error in batch_add_news: %s", e)
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def batch_remove_news(cls, news_ids):
+        session = DatabaseManager().get_session()
+        try:
+            session.query(LeagueNews).filter(LeagueNews.id.in_(news_ids)).delete(synchronize_session = False)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def check_milestone_news(cls, player_id, league_id, news_number, milestone_type):
+        session = DatabaseManager().get_session()
+        try:
+            news_entry = session.query(LeagueNews).filter(
+                LeagueNews.player_id == player_id,
+                LeagueNews.league_id == league_id,
+                LeagueNews.news_number == news_number,
+                LeagueNews.news_type == "milestone",    
+                LeagueNews.milestone_type == milestone_type
+            ).first()
+            return news_entry is not None
         finally:
             session.close()
 
@@ -6356,6 +6739,21 @@ def teamStrength(playerIDs, role, playerOBJs):
 
 def process_payload(payload):
     try: 
+        goalsBefore = {}
+        for playerID, competitionID, matchID, goals in payload["player_goals_to_check"]:
+            player_goals = MatchEvents.get_goals_and_pens_by_player(playerID, competitionID)
+            goalsBefore[(playerID, competitionID, matchID, goals)] = player_goals
+
+        assistsBefore = {}
+        for playerID, competitionID, matchID in payload["player_assists_to_check"]:
+            player_assists = MatchEvents.get_assists_by_player(playerID, competitionID)
+            assistsBefore[(playerID, competitionID, matchID)] = player_assists
+    
+        cleanSheetsBefore = {}
+        for playerID, competitionID, matchID in payload["player_clean_sheets_to_check"]:
+            player_clean_sheets = MatchEvents.get_clean_sheets_by_player(playerID, competitionID)
+            cleanSheetsBefore[(playerID, competitionID, matchID)] = player_clean_sheets
+
         call_if_not_empty(payload["team_updates"], LeagueTeams.batch_update_teams)
         call_if_not_empty(payload["manager_updates"], Managers.batch_update_managers)
         call_if_not_empty(payload["match_events"], MatchEvents.batch_add_events)
@@ -6381,7 +6779,7 @@ def process_payload(payload):
             if player.team_id == userTeam.id and sendEmail:
                 emailDate = date + timedelta(days = 1)
                 if ban_type == "injury":
-                    Emails.add_email("player_injury", None, player_id, ban_length, None, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+                    Emails.add_email("player_injury", None, player_id, ban_length, None, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0), important = True)
                 else:
                     Emails.add_email("player_ban", None, player_id, ban_length, competition_id, emailDate.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
 
@@ -6389,6 +6787,54 @@ def process_payload(payload):
 
             player_id, competition_id, threshold, date = check
             MatchEvents.check_yellow_card_ban(player_id, competition_id, threshold, date)
+
+        for (playerID, competitionID, matchID, goals), before in goalsBefore.items():
+            after = before + goals
+            matchDate = Matches.get_match_by_id(matchID).date
+
+            if any(before < i <= after for i in range(10, after + 1, 10)):
+                payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "goals", after, None))
+            
+            if goals >= 3:
+                payload["news_to_add"].append(("player_goals", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, None, goals, None))
+
+        for (playerID, competitionID, matchID), before in assistsBefore.items():
+            after = MatchEvents.get_assists_by_player(playerID, competitionID)
+            matchDate = Matches.get_match_by_id(matchID).date
+
+            if any(before < i <= after for i in range(10, after + 1, 10)):
+                payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "assists", after, None))
+
+        for (playerID, competitionID, matchID), before in cleanSheetsBefore.items():
+            after = MatchEvents.get_clean_sheets_by_player(playerID, competitionID)
+            matchDate = Matches.get_match_by_id(matchID).date
+
+            if any(before < i <= after for i in range(10, after + 1, 10)):
+                payload["news_to_add"].append(("milestone", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), competitionID, None, playerID, matchID, "clean sheets", after, None))
+
+        payload["news_to_remove"] = []
+        for teamID, matchID, leagueID in payload["form_to_check"]:
+            winless = Matches.get_team_winless_streak(teamID, leagueID)
+            unbeatean = Matches.get_team_unbeaten_streak(teamID, leagueID)
+
+            current_news = LeagueNews.get_news_by_type_and_team("winless_form", teamID)
+            if current_news:
+                payload["news_to_remove"].append(current_news[0].id)
+            
+            current_news = LeagueNews.get_news_by_type_and_team("unbeaten_form", teamID)
+            if current_news:
+                payload["news_to_remove"].append(current_news[0].id)
+
+            if winless >= 5:
+                matchDate = Matches.get_match_by_id(matchID).date
+                payload["news_to_add"].append(("winless_form", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), leagueID, None, None, matchID, None, winless, teamID))
+
+            if unbeatean >= 5:
+                matchDate = Matches.get_match_by_id(matchID).date
+                payload["news_to_add"].append(("unbeaten_form", (matchDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), leagueID, None, None, matchID, None, unbeatean, teamID))
+                
+        call_if_not_empty(payload["news_to_add"], LeagueNews.batch_add_news)
+        call_if_not_empty(payload["news_to_remove"], LeagueNews.batch_remove_news)
 
     except Exception as e:
         print(f"Error updating teams: {e}")

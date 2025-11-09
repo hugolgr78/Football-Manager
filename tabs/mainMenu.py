@@ -134,6 +134,7 @@ class MainMenu(ctk.CTkFrame):
 
         self.createTabs()
         self.addDate()
+        self.addInboxNotification()
 
         # instance logger
         self._logger = logging.getLogger(__name__)
@@ -179,6 +180,37 @@ class MainMenu(ctk.CTkFrame):
         settingsButton.configure(command = lambda: self.changeTab(len(self.tabs) - 1))
         self.buttons.append(settingsButton)
 
+        inboxButton = self.buttons[1]
+        inboxButton.bind("<Enter>", lambda e: self.onHoverInbox())
+        inboxButton.bind("<Leave>", lambda e: self.onLeaveInbox())
+
+        src = Image.open("Images/player_bad.png")
+        src.thumbnail((10, 10))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        self.inboxNotification = ctk.CTkLabel(inboxButton, image = img, text = "", fg_color = TKINTER_BACKGROUND)
+        self.inboxNotification.bind("<Button-1>", lambda e: self.changeTab(1))
+        self.inboxNotification.bind("<Enter>", lambda e: self.onHoverInbox())
+
+    def onHoverInbox(self):
+        """
+        Event handler for when the mouse hovers over the Inbox button.
+        """
+
+        self.buttons[1].configure(fg_color = GREY_BACKGROUND)
+
+        if self.inboxNotification.winfo_ismapped():
+            self.inboxNotification.configure(fg_color = GREY_BACKGROUND)
+
+    def onLeaveInbox(self):
+        """
+        Event handler for when the mouse leaves the Inbox button.
+        """
+
+        self.buttons[1].configure(fg_color = TKINTER_BACKGROUND)
+
+        if self.inboxNotification.winfo_ismapped():
+            self.inboxNotification.configure(fg_color = TKINTER_BACKGROUND)
+
     def canvas(self, width, height, rely):
         """
         Helper function to create a canvas separator.
@@ -219,6 +251,32 @@ class MainMenu(ctk.CTkFrame):
             self.tabs[self.activeButton].updateCalendar()
         elif self.activeButton == 1:
             self.tabs[self.activeButton].resetOpenEmail()
+
+    def addInboxNotification(self):
+        """
+        Adds a small red dot next to the Inbox tab title to indicate new messages.
+        """
+
+        if self.inboxNotification.winfo_ismapped():
+            return
+        
+        emails = Emails.get_all_emails(Game.get_game_date(self.manager_id))
+        hasUnread = any(not email.read for email in emails)
+
+        if not hasUnread:
+            return
+            
+        self.inboxNotification.place(relx = 0.94, rely = 0, anchor = "ne")
+
+    def removeInboxNotification(self):
+        """
+        Removes the red dot notification from the Inbox tab title.
+        """
+
+        if not self.inboxNotification.winfo_ismapped():
+            return
+        
+        self.inboxNotification.place_forget()
 
     def addDate(self):
         """
@@ -280,10 +338,9 @@ class MainMenu(ctk.CTkFrame):
         self._logger.debug("Filtered teamIDs to %d teams in loaded leagues", len(teamIDs))
 
         # Stop date is the earliest of next match or next email
-        dates = []
-        dates.append(Matches.get_team_next_match(self.team.id, self.currDate).date)
-        dates.append(Emails.get_next_email(self.currDate).date)
-        stopDate = min(dates)
+        gameDate = Matches.get_team_next_match(self.team.id, self.currDate).date
+        emailDate = Emails.get_next_email(self.currDate).date
+        stopDate = min(gameDate, emailDate)
         overallTimeInBetween = stopDate - self.currDate
         self._logger.debug("Computed stopDate=%s overallTimeInBetween=%s", stopDate, overallTimeInBetween)
 
@@ -472,11 +529,12 @@ class MainMenu(ctk.CTkFrame):
         run_match_simulation([self.currDate, stopDate], self.currDate, progress_callback = self.updateProgressBar)
 
         self.currDate += overallTimeInBetween
-        Game.increment_game_date(self.manager_id, overallTimeInBetween)
+        Game.set_game_date(self.manager_id, stopDate)
         self._logger.debug("Updated game date to %s with %s difference", self.currDate, overallTimeInBetween)
 
         # ------------------- Reset/End -------------------
 
+        self.addInboxNotification()
         self.progressBar.set(1.0)
         self.progressLabel.configure(text = "100%")
         self.dateLabel.configure(text = f"Date: {self.currDate}")

@@ -138,6 +138,17 @@ class Game(Base):
             session.close()
 
     @classmethod
+    def set_game_date(cls, manager_id, new_date):
+        session = GamesDatabaseManager().get_session()
+        try:
+            game = session.query(Game).filter(Game.manager_id == manager_id).first()
+            if game:
+                game.curr_date = new_date
+                session.commit()
+        finally:
+            session.close()
+
+    @classmethod
     def get_manager_id_by_save_name(cls, save_name):
         session = GamesDatabaseManager().get_session()
         try:

@@ -45,11 +45,11 @@ class RefereeProfile(ctk.CTkFrame):
         Create tab buttons for navigating between different referee profile sections.
         """
 
-        self.buttonHeight = 40
-        self.buttonWidth = 200
         self.button_background = TKINTER_BACKGROUND
         self.hover_background = GREY_BACKGROUND
-        self.gap = 0.102
+        self.buttonHeight = 40
+        self.buttonWidth = 140
+        self.gap = 0.07
 
         gapCount = 0
         for i in range(len(self.tabs)):

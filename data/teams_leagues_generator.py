@@ -30,8 +30,10 @@ league_names = {
     "Solarion": ["Solarion", "Solarion 2", "Solarion 3", "Solarion 4"]
 }
 
-league_strengths = [1.28, 0.82, 1.22, 1.33, 1.18, 1.25, 1.15, 0.88, 0.79, 1.00, 
-                    1.30, 1.32, 1.27, 1.21, 0.96, 1.31, 1.12, 1.35, 1.26, 0.91] 
+league_strengths = [
+    1.60, 0.60, 1.45, 1.55, 1.35, 1.48, 1.25, 0.75, 0.70, 1.00,
+    1.52, 1.58, 1.42, 1.30, 0.85, 1.50, 1.20, 1.62, 1.40, 0.80
+]
 
 logo_templates_path = "data/Logo Templates"
 team_logos_path = "Images/Teams"

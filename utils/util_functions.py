@@ -466,57 +466,60 @@ def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius = 10, **kwargs):
     ]
     return canvas.create_polygon(points, smooth = True, splinestep = 36, **kwargs)
 
-def generate_CA(age, team_strength, min_level = 150):
+def generate_CA(age, team_strength, depth):
     """
-    Generate a player's Current Ability (CA) based on age and team strength.
-    Young players (<21) are very likely to be within +10 of min_level,
-    but it's still (rarely) possible to exceed it.
-    
+    Generate a player's Current Ability (CA) based on age, team strength, and division.
+    Each division has an overlapping CA range to allow realistic variability.
+
     Args:
         age (int): The age of the player.
         team_strength (float): The strength of the team (1.0 = average, >1.0 = stronger).
-        min_level (int): The minimum level for the player.
+        depth (int): The division depth (0 = top division, higher numbers = lower divisions).
     """
 
-    max_level = min_level + 50
-    CAs = list(range(min_level, max_level + 1))
+    division_ranges = {
+        0: (150, 200),
+        1: (110, 160),
+        2: (70, 120),
+        3: (30, 80)
+    }
 
-    # Age factor & skew
+    div_min, div_max = division_ranges.get(depth, (70, 130))
+
+    # Map team_strength to a normalized factor inside division range
+    # Example: team_strength 0.7 -> 0, 1.55 -> 1
+    strength_norm = (team_strength - 0.7) / (1.55 - 0.7)
+    strength_norm = max(0.0, min(1.0, strength_norm))
+    
+    # Calculate base mean CA inside division range
+    mean_CA = div_min + (div_max - div_min) * strength_norm
+    
+    # Age factor: young players biased lower, old players slightly lower too
     if age < 21:
-        age_factor = 0.1 + 0.02 * age
-        # Penalize CAs above +10 extra heavily
-        def penalty(ca):
-            if ca <= min_level + 10:
-                return 1.0
-            else:
-                # exponential penalty for > +10
-                return math.exp(-0.5 * (ca - (min_level + 10)))
-        skew_power = 4  # strong bias toward low values
+        age_bias = -0.15 * (21 - age) * (div_max - div_min)
     elif age <= 25:
-        age_factor = 1.15
-        penalty = lambda ca: 1.0
-        skew_power = 3
+        age_bias = 0
     elif age <= 30:
-        age_factor = 1.05
-        penalty = lambda ca: 1.0
-        skew_power = 3
+        age_bias = -0.05 * (age - 25) * (div_max - div_min)
     else:
-        age_factor = 0.9
-        penalty = lambda ca: 1.0
-        skew_power = 3
-
-    # Skewed weights: lower CA more likely
-    weights = [(max_level - ca + 1) ** skew_power * age_factor * penalty(ca)
-               for ca in CAs]
-
-    # Apply team strength: shift distribution toward higher CAs
-    if team_strength != 1.0:
-        scale = 15 * (team_strength - 1)
-        weights = [w * math.exp(scale * ((ca - min_level) / (max_level - min_level)))
-                   for ca, w in zip(CAs, weights)]
-
-    level = random.choices(CAs, weights = weights, k = 1)[0]
-    return max(5, level)
+        age_bias = -0.1 * (age - 30) * (div_max - div_min)
+    
+    mean_CA += age_bias
+    
+    # Random spread around mean
+    std_dev = (div_max - div_min) / 6  # most players fall within ±1 std dev
+    ca = random.gauss(mean_CA, std_dev)
+    
+    # Optional: reduce probability for elite >180 players
+    if ca > 175:
+        drop = math.exp(-(ca - 175) / 3)  # probability scaling
+        if random.random() > drop:
+            ca = 175 + random.random() * 5 
+        
+    # Clamp to division bounds
+    ca = max(div_min, min(div_max, int(ca)))
+    
+    return ca
 
 def generate_youth_player_level(max_level = 150):
     """
@@ -1368,7 +1371,8 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
         progress_callback (function, optional): A callback function to report progress. Defaults to None.
     """
     
-    from data.database import Matches, Managers, League, LeagueTeams, PlayerBans, TeamHistory, process_payload, check_player_games_happy
+    from data.database import Matches, Managers, Teams, League, Emails, LeagueTeams, PlayerBans, TeamHistory, LeagueNews, process_payload, check_player_games_happy
+    from data.gamesDatabase import Game
     from concurrent.futures import ProcessPoolExecutor, as_completed
     import os, time, logging, glob, traceback
 
@@ -1392,7 +1396,9 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
         matches = []
         teams = {}
         mgr = Managers.get_all_user_managers()[0]
-        base_name = f"{mgr.first_name}{mgr.last_name}"
+        managerTeam = Teams.get_teams_by_manager(mgr.id)[0]
+        managerLeague = LeagueTeams.get_league_by_team(managerTeam.id)
+        base_name = Game.get_games_by_manager_id(mgr.id)[0].save_name
 
         # Create the pool once, outside the batch loop
         with ProcessPoolExecutor(max_workers=CHUNK_SIZE, initializer=_init_worker, initargs=(base_name,)) as ex:
@@ -1432,6 +1438,7 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
 
                             if not match.league_id in teams:
                                 teams[match.league_id] = []
+
                             teams[match.league_id].append(match.home_id)
                             teams[match.league_id].append(match.away_id)
 
@@ -1472,6 +1479,11 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
             "stats_updates": [],
             "players_to_update": [],
             "emails_to_send": [],
+            "news_to_add": [],
+            "player_goals_to_check": [],
+            "player_assists_to_check": [],
+            "player_clean_sheets_to_check": [],
+            "form_to_check": []
         }
 
         for p in worker_payloads:
@@ -1497,9 +1509,20 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
         for id_ in leagueIDs:
             LeagueTeams.update_team_positions(id_)
             if League.check_all_matches_complete(id_, currDate):
+
+                matchday = League.get_current_matchday(id_)
                 for team in LeagueTeams.get_teams_by_league(id_):
-                    matchday = League.get_current_matchday(id_)
                     TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
+
+                if id_ == managerLeague.league_id:
+                    _, email = League.team_of_the_week(id_, matchday, team = managerTeam.id)
+ 
+                    if email:
+                        Emails.add_email("team_of_the_week", matchday, None, None, managerLeague.league_id, (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+
+                # Check for lead changes, relegation changes here
+                if matchday > 20:
+                    check_league_changes(id_, matchday, currDate)
 
                 League.update_current_matchday(id_)
             _logger.debug(f"Updated league standings and matchdays for league {id_}")
@@ -1620,3 +1643,92 @@ def add_file_with_progress(zipf, file_path, arcname, progress_callback=None):
                 read_bytes += len(chunk)
                 if progress_callback:
                     progress_callback(read_bytes, file_size)
+
+def get_best_player_for_position(matches, position):
+    """
+    Finds the best player for a given position from a list of matches.
+    """
+
+    from data.database import TeamLineup
+
+    bestRating = -1
+    bestPlayerID = None
+
+    for match in matches:
+        lineup = TeamLineup.get_lineup_by_match(match.id)
+
+        for entry in lineup:
+            if entry.start_position == position:
+                if entry.rating and entry.rating > bestRating:
+                    bestRating = entry.rating
+                    bestPlayerID = entry.player_id
+            elif not entry.start_position and entry.end_position == position:
+                if entry.rating and entry.rating > bestRating:
+                    bestRating = entry.rating
+                    bestPlayerID = entry.player_id
+
+    return bestPlayerID, bestRating 
+
+def generate_news_title(news_type, **kwargs):
+    """
+    Generates a random news title for the given news_type.
+    
+    Args:
+        news_type (str): The type of news ("milestone", "big_score", etc.).
+        kwargs: Data to fill placeholders like player, team, score, etc.
+    """
+    templates = NEWS_TITLES.get(news_type, ["Unknown news"])
+    template = random.choice(templates)
+
+    return template.format(**kwargs)
+
+def generate_news_detail(news_type, **kwargs):
+    """
+    Generates a random news detail for the given news_type.
+
+    Args:
+        news_type (str): The type of news ("milestone", "big_score", etc.).
+        kwargs: Data to fill placeholders like player, team, score, etc.
+    """
+    templates = NEWS_DETAILS.get(news_type, ["Unknown news"])
+    template = random.choice(templates)
+    
+    return template.format(**kwargs)
+
+def check_league_changes(league_id, matchday, currDate):
+    """
+    Check for lead changes and relegation changes in a league.
+    
+    Args:
+        league_id (int): The ID of the league to check.
+    """
+
+    from data.database import TeamHistory, Matches, LeagueNews, League
+    
+    changes = TeamHistory.check_league_changes(matchday, league_id)
+                
+    for change in changes:
+        if change[2] == 1 and change[1] != 1:
+            # Lead change
+            match = Matches.get_team_last_match(change[0], currDate)
+            LeagueNews.add_news("lead_change", (match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), league_id, match_id = match.id, team_id = change[0])
+
+        elif change[2] > 17 and change[1] < 18 and League.calculate_league_depth(league_id) != 4:
+            # Relegation change
+            match = Matches.get_team_last_match(change[0], currDate)
+            LeagueNews.add_news("relegation_change", (match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), league_id, match_id = match.id, team_id = change[0])
+
+def get_overthrow_threshold(league_id):
+    """
+    Get a random threshold for overthrow events.
+    """
+
+    from data.database import Teams
+
+    averages = Teams.get_average_current_ability_per_team(league_id)
+    avg_ca = [e["avg_ca"] for e in averages.values()]
+
+    league_spread = max(avg_ca) - min(avg_ca)
+    overthrow_threshold = 0.55 * league_spread
+
+    return overthrow_threshold

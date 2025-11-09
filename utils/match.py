@@ -23,6 +23,7 @@ class Match():
         self.awayTeam = Teams.get_team_by_id(self.match.away_id)
         self.league = LeagueTeams.get_league_by_team(self.homeTeam.id)
         self.referee = Referees.get_referee_by_id(self.match.referee_id)
+        self.matchday = self.match.matchday
 
         self.homePlayersOBJ = {p.id: p for p in Players.get_all_players_by_team(self.homeTeam.id)}
         self.awayPlayersOBJ = {p.id: p for p in Players.get_all_players_by_team(self.awayTeam.id)}
@@ -46,9 +47,6 @@ class Match():
         self.awayRatings = {}
         self.ratingsBoost = None
         self.ratingsDecay = None
-
-        self.homeCleanSheet = False
-        self.awayCleanSheet = False
 
         self.numHomeYellows = 0
         self.numAwayYellows = 0
@@ -1150,7 +1148,14 @@ class Match():
                 "morale_updates": [],
                 "lineup_updates": [],
                 "stats_updates": [],
+                "news_to_add": [],
+                "player_goals_to_check": [],
+                "player_assists_to_check": [],
+                "player_clean_sheets_to_check": [],
+                "form_to_check": []
             }
+
+            totalCards = 0
 
             homeManager = Managers.get_manager_by_id(self.homeTeam.manager_id)
             awayManager = Managers.get_manager_by_id(self.awayTeam.manager_id)
@@ -1208,10 +1213,22 @@ class Match():
                 else:
                     minute = str(minute)
 
-                if event["type"] == "goal":
+                if event["type"] == "goal" or event["type"] == "penalty_goal":
                     events_to_add.append((self.match.id, "goal", minute, player_id))
-                    events_to_add.append((self.match.id, "assist", minute, assister_id))
                     logger.debug(f"{prefix} Home goal event queued: match={self.match.id} player={player_id} minute={minute}")
+
+                    for i, (pid, league_id, match_id, goals) in enumerate(payload["player_goals_to_check"]):
+                        if pid == player_id:
+                            payload["player_goals_to_check"][i] = (pid, league_id, match_id, goals + 1)
+                            break
+                    else:
+                        payload["player_goals_to_check"].append((player_id, self.match.league_id, self.match.id, 1))
+                    
+                    if assister_id:
+                        events_to_add.append((self.match.id, "assist", minute, assister_id))
+
+                        if all(assister_id not in tup for tup in payload["player_assists_to_check"]):
+                            payload["player_assists_to_check"].append((assister_id, self.match.league_id, self.match.id))
                 elif event["type"] == "penalty_miss":
                     goalkeeper_id = event["keeper"]
                     events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
@@ -1225,7 +1242,13 @@ class Match():
                     ban = get_player_ban(event["type"], currDate)
                     logger.debug(f"{prefix} Computed ban length={ban} for player={player_id} type={event['type']}")
                     payload["player_bans"].append((player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate))
+
+                    if event["type"] == "injury" and ban - currDate > timedelta(days = 60):
+                        payload["news_to_add"].append(("injury", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, player_id, None, None, None, self.homeTeam.id))
+                    else:
+                        totalCards += 1
                 elif event["type"] == "yellow_card":
+                    totalCards += 1
                     events_to_add.append((self.match.id, "yellow_card", minute, player_id))
                     payload["yellow_card_checks"].append((player_id, self.match.league_id, YELLOW_THRESHOLD, currDate))
                     logger.debug(f"{prefix} Home yellow card queued: match={self.match.id} player={player_id} minute={minute}")
@@ -1250,10 +1273,22 @@ class Match():
                 else:
                     minute = str(minute)
 
-                if event["type"] == "goal":
+                if event["type"] == "goal" or event["type"] == "penalty_goal":
                     events_to_add.append((self.match.id, "goal", minute, player_id))
-                    events_to_add.append((self.match.id, "assist", minute, assister_id))
                     logger.debug(f"{prefix} Away goal event queued: match={self.match.id} player={player_id} minute={minute}")
+                    
+                    for i, (pid, league_id, match_id, goals) in enumerate(payload["player_goals_to_check"]):
+                        if pid == player_id:
+                            payload["player_goals_to_check"][i] = (pid, league_id, match_id, goals + 1)
+                            break
+                    else:
+                        payload["player_goals_to_check"].append((player_id, self.match.league_id, self.match.id, 1))
+                    
+                    if assister_id:
+                        events_to_add.append((self.match.id, "assist", minute, assister_id))
+
+                        if all(assister_id not in tup for tup in payload["player_assists_to_check"]):
+                            payload["player_assists_to_check"].append((assister_id, self.match.league_id, self.match.id))
                 elif event["type"] == "penalty_miss":
                     goalkeeper_id = event["keeper"]
                     events_to_add.append((self.match.id, "penalty_miss", minute, player_id))
@@ -1267,7 +1302,13 @@ class Match():
                     ban = get_player_ban(event["type"], currDate)
                     logger.debug(f"{prefix} Computed ban length={ban} for player={player_id} type={event['type']}")
                     payload["player_bans"].append((player_id, self.match.league_id if event["type"] == "red_card" else None, ban, event["type"], currDate))
+                    
+                    if event["type"] == "injury" and ban - currDate > timedelta(days = 60):
+                        payload["news_to_add"].append(("injury", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, player_id, None, None, None, self.awayTeam.id))
+                    else:
+                        totalCards += 1
                 elif event["type"] == "yellow_card":
+                    totalCards += 1
                     events_to_add.append((self.match.id, "yellow_card", minute, player_id))
                     payload["yellow_card_checks"].append((player_id, self.match.league_id, YELLOW_THRESHOLD, currDate))
                     logger.debug(f"{prefix} Away yellow card queued: match={self.match.id} player={player_id} minute={minute}")
@@ -1275,17 +1316,53 @@ class Match():
                     events_to_add.append((self.match.id, event["type"], minute, player_id))
                     logger.debug(f"{prefix} Away event queued: event={event["type"]}, match={self.match.id}, player={player_id}, minute={minute}")
                 
-            if self.homeCleanSheet:
+            if totalCards >= 10:
+                payload["news_to_add"].append(("disciplinary", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, totalCards, None))
+
+            if self.score[1] == 0:
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"]))
 
-            if self.awayCleanSheet:
+                if all(self.homeCurrentLineup["Goalkeeper"] not in tup for tup in payload["player_clean_sheets_to_check"]):
+                    payload["player_clean_sheets_to_check"].append((self.homeCurrentLineup["Goalkeeper"], self.match.league_id, self.match.id))
+
+            if self.score[0] == 0:
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"]))
+
+                if all(self.awayCurrentLineup["Goalkeeper"] not in tup for tup in payload["player_clean_sheets_to_check"]):
+                    payload["player_clean_sheets_to_check"].append((self.awayCurrentLineup["Goalkeeper"], self.match.league_id, self.match.id))
 
             payload["match_events"] = events_to_add
 
             # Matches update
             logger.debug(f"{prefix} Submitting match score update: {self.score[0]} : {self.score[1]}")
             payload["score_updates"].append((self.match.id, self.score[0], self.score[1]))
+
+            if self.score[0] - self.score[1] >= 4:
+                payload["news_to_add"].append(("big_win", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, self.homeTeam.id))
+            elif self.score[1] - self.score[0] >= 4:
+                payload["news_to_add"].append(("big_win", (self.match.date + timedelta(days = 1)).replace(hour = 0, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, self.awayTeam.id))
+            elif self.score[0] + self.score[1] >= 5:
+                payload["news_to_add"].append(("big_score", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, None))
+
+            if self.winner:
+                if self.winner.id == self.homeTeam.id:
+                    # check for overthrow on the away team 
+                    homeAverage = Teams.get_team_average_current_ability(self.homeTeam.id)
+                    awayAverage = Teams.get_team_average_current_ability(self.awayTeam.id)
+
+                    if awayAverage - homeAverage >= get_overthrow_threshold(self.match.league_id):
+                        payload["news_to_add"].append(("overthrow", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, self.homeTeam.id))
+
+                elif self.winner.id == self.awayTeam.id:
+                    # check for overthrow on the home team
+                    homeAverage = Teams.get_team_average_current_ability(self.homeTeam.id)
+                    awayAverage = Teams.get_team_average_current_ability(self.awayTeam.id)
+
+                    if homeAverage - awayAverage >= get_overthrow_threshold(self.match.league_id):
+                        payload["news_to_add"].append(("overthrow", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, None, self.awayTeam.id))
+
+            payload["form_to_check"].append((self.homeTeam.id, self.match.id, self.match.league_id))
+            payload["form_to_check"].append((self.awayTeam.id, self.match.id, self.match.league_id))
 
             # Players updates
             fitness_to_update = []

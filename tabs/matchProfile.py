@@ -544,9 +544,9 @@ class MatchProfile(ctk.CTkFrame):
                     src = Image.open("Images/goal.png")
 
                     assist_event = None
-                    for event in self.matchEvents:
-                        if event.event_type == "assist" and event.time == time and event.player_id != player.id:
-                            assist_event = event
+                    for event2 in self.matchEvents:
+                        if event2.event_type == "assist" and event2.time == time and event2.player_id != player.id:
+                            assist_event = event2
                             break   
                         
                     subText = Players.get_player_by_id(assist_event.player_id).last_name if assist_event else "Penalty"
@@ -566,7 +566,7 @@ class MatchProfile(ctk.CTkFrame):
                 elif event.event_type == "injury":
                     src = Image.open("Images/injury.png")
                     subText = "Injury"
-            elif event.event_type == "sub_off":
+            else:
                 # Sub on event is the next event in the list
                 sub_on_event = self.matchEvents[self.matchEvents.index(event) + 1] if self.matchEvents.index(event) + 1 < len(self.matchEvents) else None
                 player_on = Players.get_player_by_id(sub_on_event.player_id) if sub_on_event else None

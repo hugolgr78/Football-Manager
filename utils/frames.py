@@ -1,3 +1,4 @@
+from email.mime import image
 import customtkinter as ctk
 import tkinter as tk
 from settings import *
@@ -2168,7 +2169,181 @@ class FootballPitchLineup(FootballPitchVertical):
         """
         
         self.counter = num
+
+class FootballPitchTeamOTW(FootballPitchVertical):
+    def __init__(self, parent, team, width, height, relx, rely, anchor, fgColor, pitchColor):
+        """
+        Football pitch frame for displaying the team of the week, found in the tactics tab and in-game for substitutions.
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            team (dict): The team of the week data.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+            fgColor (str): The foreground color of the frame.
+            pitchColor (str): The color of the pitch.
+        """
+
+        super().__init__(parent, width, height, relx, rely, anchor, fgColor, pitchColor)
+        super().draw_pitch()
+
+        self.team = team
+
+        self.player_radius = 15
+        self.pitch_width = width
+        self.pitch_height = height
+        self.images = []
+        self.team_logo_pos = (0.9, 0.8)
+
+        self.positions = {
+            "Goalkeeper": (0.5, 0.94),      
+            "Left Back": (0.12, 0.75),      
+            "Right Back": (0.88, 0.75),     
+            "Center Back Right": (0.675, 0.75),  
+            "Center Back": (0.5, 0.75),  
+            "Center Back Left": (0.325, 0.75),  
+            "Defensive Midfielder": (0.5, 0.6),     
+            "Defensive Midfielder Right": (0.65, 0.6),      
+            "Defensive Midfielder Left": (0.35, 0.6),   
+            "Left Midfielder": (0.12, 0.4),     
+            "Central Midfielder Right": (0.65, 0.4),    
+            "Central Midfielder": (0.5, 0.4),     
+            "Central Midfielder Left": (0.35, 0.4),     
+            "Right Midfielder": (0.88, 0.4),    
+            "Left Winger": (0.12, 0.25),    
+            "Right Winger": (0.88, 0.25),   
+            "Attacking Midfielder": (0.5, 0.25),    
+            "Striker Left": (0.3, 0.15),    
+            "Striker Right": (0.7, 0.15),   
+            "Center Forward": (0.5, 0.05),  
+        }
+
+        self.addPlayers()
+
+    def addPlayers(self):
+        """
+        Adds player ovals to the pitch based on the team of the week data.
+        """
+
+        for position, (playerID, rating) in self.team.items():
+            player = Players.get_player_by_id(playerID)
+            team = Teams.get_team_by_id(player.team_id)
+            relx, rely = self.positions[position]
+
+            self.canvas.create_oval(
+                relx * self.pitch_width - self.player_radius,
+                rely * self.pitch_height - self.player_radius,
+                relx * self.pitch_width + self.player_radius,
+                rely * self.pitch_height + self.player_radius,
+                fill = APP_BLUE,
+                outline = APP_BLUE,
+            )
+
+            self.canvas.create_text(
+                relx * self.pitch_width,
+                rely * self.pitch_height + 25,
+                text = player.last_name,
+                fill = "white",
+                font = (APP_FONT, 10),
+            )
+
+            self.addRating(position, rating, potm = False)
+
+            src = Image.open(io.BytesIO(team.logo))
+            src.thumbnail((18, 18))
+            image = ImageTk.PhotoImage(src)
+            self.images.append(image)
+            
+            # Calculate the center position of the oval
+            oval_center_x = relx * self.pitch_width
+            oval_center_y = rely * self.pitch_height
+            
+            # Calculate the icon position relative to the oval center
+            icon_x = oval_center_x + (self.team_logo_pos[0] - 0.5) * (2 * self.player_radius)
+            icon_y = oval_center_y + (self.team_logo_pos[1] - 0.5) * (2 * self.player_radius)
+            self.canvas.create_image(icon_x, icon_y, image = image)
+
+    def addRating(self, position, text, potm):
+        """
+        Adds a rating oval with text to the player's oval on the pitch.
+
+        Args:
+            position (str): The position of the player.
+            text (float): The rating text to display.
+            potm (bool): Whether the rating is for Player of the Month.
+        """
         
+        # Use positions from self.positions dictionary (these are relative coordinates)
+
+        player_relx, player_rely = self.positions[position]
+        
+        # Calculate the center position of the oval
+        oval_center_x = player_relx * self.pitch_width
+        oval_center_y = player_rely * self.pitch_height
+        
+        # Calculate the icon position relative to the oval center
+        # positions[0] and positions[1] are relative offsets from the icon positions
+        icon_x = oval_center_x + (0.9 - 0.5) * (2 * self.player_radius)
+        icon_y = oval_center_y + (0.1 - 0.5) * (2 * self.player_radius)
+
+        if text >= 7:
+            oval_color = PIE_GREEN
+        elif text >= 5:
+            oval_color = NEUTRAL_COLOR
+        else:
+            oval_color = PIE_RED
+
+        if potm:
+            oval_color = POTM_BLUE
+
+        # Text has at least 1 dp and max 2 dps
+        formatted_text = text
+        if "." not in str(text):
+            formatted_text = f"{text}.0"
+        elif len(str(text).split(".")[1]) == 1:
+            formatted_text = f"{text}0"
+
+        # === Font settings ===
+        font_name = APP_FONT_BOLD
+        font_size = 9
+        font = tkFont.Font(family = font_name, size = font_size)
+
+        # === Measure text width ===
+        text_width = font.measure(formatted_text)
+        padding_x = 6  # left/right padding
+        padding_y = 2  # top/bottom padding
+
+        rect_width = text_width + 2 * padding_x
+        rect_height = font.metrics("linespace") + 3 * padding_y
+        radius = rect_height // 2 + 10
+
+        x0 = icon_x - 5
+        y0 = (icon_y - rect_height // 2) - 3
+        x1 = x0 + rect_width
+        y1 = y0 + rect_height
+
+        # === Draw pill ===
+        create_rounded_rectangle(
+            self.canvas,
+            x0, y0, x1, y1,
+            radius = radius,
+            fill = oval_color,
+            outline = oval_color,
+        )
+
+        # === Draw left-aligned text ===
+        self.canvas.create_text(
+            x0 + padding_x,
+            icon_y - 3,
+            text = formatted_text,
+            fill = "white",
+            font = (font_name, font_size),
+            anchor = "w", 
+        )
+
 class FootballPitchMatchDay(FootballPitchVertical):
     def __init__(self, parent, width, height, relx, rely, anchor, fgColor, pitchColor):
         """
@@ -4661,21 +4836,21 @@ class News(ctk.CTkFrame):
         self.matchdayLabel = ctk.CTkLabel(headerFrame, text = f"Matchday {self.currentFrameIndex + 1}", font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND)
         self.matchdayLabel.place(relx = 0.5, rely = 0.5, anchor = "center")
 
-        rightbutton = ctk.CTkButton(headerFrame, text = ">", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND, hover_color = GREY_BACKGROUND, corner_radius = 5, height = 20, width = 20, command = lambda: self.changeWeek(1))
+        rightbutton = ctk.CTkButton(headerFrame, text = ">", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND, hover_color = GREY_BACKGROUND, corner_radius = 5, height = 20, width = 20, command = lambda: self.changeWeek(1, frame))
         rightbutton.place(relx = 0.9, rely = 0.5, anchor = "e")
 
-        leftButton = ctk.CTkButton(headerFrame, text = "<", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND, hover_color = GREY_BACKGROUND, corner_radius = 5, height = 20, width = 20, command = lambda: self.changeWeek(-1))
+        leftButton = ctk.CTkButton(headerFrame, text = "<", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND, hover_color = GREY_BACKGROUND, corner_radius = 5, height = 20, width = 20, command = lambda: self.changeWeek(-1, frame))
         leftButton.place(relx = 0.1, rely = 0.5, anchor = "w")
 
         backButton = ctk.CTkButton(frame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeFrame(frame))
-        backButton.place(relx = 0.5, rely = 0.95, anchor = "s")
+        backButton.place(relx = 0.5, rely = 0.98, anchor = "s")
 
-        self.teamFrames[self.currentFrameIndex] = TeamOTW(self, self.league_id, self.currentFrameIndex + 1)
-        self.teamFrames[self.currentFrameIndex].place(relx = 0.5, rely = 0.15, anchor = "n")
+        self.teamFrames[self.currentFrameIndex] = TeamOTW(frame, self.league_id, self.currentFrameIndex + 1)
+        self.teamFrames[self.currentFrameIndex].place(relx = 0.5, rely = 0.1, anchor = "n")
 
         frame.place(relx = 0.5, rely = 0.5, anchor = "center")
 
-    def changeWeek(self, direction):
+    def changeWeek(self, direction, frame):
         """
         Changes the team of the week pitch based on the direction.
         
@@ -4692,9 +4867,9 @@ class News(ctk.CTkFrame):
         self.currentFrameIndex = nextIndex
 
         if not self.teamFrames[nextIndex]:
-            self.teamFrames[nextIndex] = TeamOTW(self, self.league_id, nextIndex + 1)
+            self.teamFrames[nextIndex] = TeamOTW(frame, self.league_id, nextIndex + 1)
         
-        self.teamFrames[nextIndex].place(relx = 0.5, rely = 0.15, anchor = "n")
+        self.teamFrames[nextIndex].place(relx = 0.5, rely = 0.1, anchor = "n")
         self.matchdayLabel.configure(text = f"Matchday {nextIndex + 1}")
 
     def closeFrame(self, frame):
@@ -4721,8 +4896,11 @@ class TeamOTW(ctk.CTkFrame):
             matchday (int): The matchday number.
         """
 
-        super().__init__(parent, fg_color = GREY_BACKGROUND, width = 300, height = 440, corner_radius = 0)
+        super().__init__(parent, fg_color = GREY_BACKGROUND, width = 300, height = 450, corner_radius = 0)
 
         self.parent = parent
         self.league_id = league_id
         self.matchday = matchday
+
+        self.team = League.team_of_the_week(self.league_id, self.matchday)[0]
+        self.pitch = FootballPitchTeamOTW(self, self.team, 300, 550, 0.5, 0.5, "center", GREY_BACKGROUND, "green")

@@ -1662,6 +1662,10 @@ def get_best_player_for_position(matches, position):
                 if entry.rating and entry.rating > bestRating:
                     bestRating = entry.rating
                     bestPlayerID = entry.player_id
+            elif not entry.start_position and entry.end_position == position:
+                if entry.rating and entry.rating > bestRating:
+                    bestRating = entry.rating
+                    bestPlayerID = entry.player_id
 
     return bestPlayerID, bestRating 
 

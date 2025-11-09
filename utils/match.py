@@ -48,9 +48,6 @@ class Match():
         self.ratingsBoost = None
         self.ratingsDecay = None
 
-        self.homeCleanSheet = False
-        self.awayCleanSheet = False
-
         self.numHomeYellows = 0
         self.numAwayYellows = 0
         self.numHomeReds = 0
@@ -1322,13 +1319,13 @@ class Match():
             if totalCards >= 10:
                 payload["news_to_add"].append(("disciplinary", (self.match.date + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0), self.match.league_id, self.match.matchday, None, self.match.id, None, totalCards, None))
 
-            if self.homeCleanSheet:
+            if self.score[1] == 0:
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.homeCurrentLineup["Goalkeeper"]))
 
                 if all(self.homeCurrentLineup["Goalkeeper"] not in tup for tup in payload["player_clean_sheets_to_check"]):
                     payload["player_clean_sheets_to_check"].append((self.homeCurrentLineup["Goalkeeper"], self.match.league_id, self.match.id))
 
-            if self.awayCleanSheet:
+            if self.score[0] == 0:
                 events_to_add.append((self.match.id, "clean_sheet", "90", self.awayCurrentLineup["Goalkeeper"]))
 
                 if all(self.awayCurrentLineup["Goalkeeper"] not in tup for tup in payload["player_clean_sheets_to_check"]):

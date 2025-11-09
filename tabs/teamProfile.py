@@ -5,7 +5,7 @@ from data.gamesDatabase import *
 from PIL import Image
 import io
 
-from utils.frames import MatchFrame, PlayerFrame, next5Matches, TrophiesFrame, CalendarFrame
+from utils.frames import MatchFrame, PlayerFrame, next5Matches, TrophiesFrame, CalendarFrame, News
 from utils.managerProfileLink import ManagerProfileLink
 from utils.leagueProfileLink import LeagueProfileLabel
 from utils.util_functions import *
@@ -45,17 +45,18 @@ class TeamProfile(ctk.CTkFrame):
         self.profile = Profile(self, self.manager_id)
 
         self.history = None
+        self.news = None
         if self.manager.user == 1:
             # Dont show squad and schedule for user managers
-            self.titles = ["Profile", "History"]
-            self.tabs = [self.profile, self.history]
-            self.classNames = [Profile, History]
+            self.titles = ["Profile", "History", "News"]
+            self.tabs = [self.profile, self.history, self.news]
+            self.classNames = [Profile, History, News]
         else:
             self.squad = None
             self.schedule = None
-            self.titles = ["Profile", "Squad", "Schedule", "History"]
-            self.tabs = [self.profile, self.squad, self.schedule, self.history]
-            self.classNames = [Profile, Squad, Schedule, History]
+            self.titles = ["Profile", "Squad", "Schedule", "News", "History"]
+            self.tabs = [self.profile, self.squad, self.schedule, self.news, self.history]
+            self.classNames = [Profile, Squad, Schedule, News, History]
 
         self.activeButton = 0
         self.buttons = []
@@ -74,11 +75,11 @@ class TeamProfile(ctk.CTkFrame):
         Create the tab buttons for the team profile interface.
         """
 
-        self.buttonHeight = 40
-        self.buttonWidth = 200
         self.button_background = TKINTER_BACKGROUND
         self.hover_background = GREY_BACKGROUND
-        self.gap = 0.102
+        self.buttonHeight = 40
+        self.buttonWidth = 140
+        self.gap = 0.07
 
         gapCount = 0
         for i in range(len(self.tabs)):
@@ -126,7 +127,10 @@ class TeamProfile(ctk.CTkFrame):
         self.buttons[self.activeButton].configure(state = "disabled")
 
         if not self.tabs[self.activeButton]:
-            self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.manager_id)
+            if self.classNames[self.activeButton].__name__ == "News":
+                self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, team_id = self.team.id)
+            else:
+                self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.manager_id)
 
         self.tabs[self.activeButton].pack()
 

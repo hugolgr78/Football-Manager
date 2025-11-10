@@ -928,6 +928,9 @@ NEWS_DETAILS = {
 
 OVERTHROW_THRESHOLD = 20
 
+KEEPER_ATTRIBUTES = ["aerial_reach", "reflexes", "throwing", "handling", "kicking", "one_on_ones", "shot_stopping"]
+MENTAL_ATTRIBUTES = ["teamwork", "composure", "decisions", "work_rate", "stamina", "pace", "jumping", "strength", "aggression", "acceleration", "balance", "creativity"]
+
 from data.database import StatsManager
 
 STAT_FUNCTIONS = {

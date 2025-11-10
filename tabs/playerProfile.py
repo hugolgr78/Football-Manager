@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from settings import *
-from data.database import Matches, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players, Managers, League
+from data.database import Matches, PlayerAttributes, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players, Managers, League
 from data.gamesDatabase import *
 from PIL import Image
 import io
@@ -35,9 +35,9 @@ class PlayerProfile(ctk.CTkFrame):
         self.matches = None
         self.attributes = None
         self.history = None
-        self.titles = ["Profile", "Matches", "Attributes", "History"]
-        self.tabs = [self.profile, self.matches, self.attributes, self.history]
-        self.classNames = [Profile, MatchesTab, Attributes, History]
+        self.titles = ["Profile", "Attributes", "Matches",  "History"]
+        self.tabs = [self.profile, self.attributes, self.matches, self.history]
+        self.classNames = [Profile, Attributes, MatchesTab, History]
 
         self.activeButton = 0
         self.buttons = []
@@ -398,6 +398,122 @@ class Profile(ctk.CTkFrame):
 
         ctk.CTkLabel(self.attributesFrame, text = positionCodes[self.player.position], font = (APP_FONT_BOLD, 18), fg_color = TKINTER_BACKGROUND).place(relx = 0.94, rely = 0.5, anchor = "center")
 
+class Attributes(ctk.CTkFrame):
+    def __init__(self, parent, player):
+        """
+        Initialize the Attributes tab for displaying player's attributes.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame (playerProfile).
+            player (Player): The player object whose attributes are to be displayed.
+        """
+        
+        super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
+
+        self.parent = parent
+        self.player = player
+
+        self.attributesFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 700, height = 300, corner_radius = 15)
+        self.attributesFrame.place(relx = 0.13, rely = 0.02, anchor = "nw")
+
+        self.technicalFrame = ctk.CTkFrame(self.attributesFrame, fg_color = TKINTER_BACKGROUND, width = 340, height = 290)
+        self.technicalFrame.place(x = 5, y = 5, anchor = "nw")
+
+        self.otherFrame = ctk.CTkFrame(self.attributesFrame, fg_color = TKINTER_BACKGROUND, width = 340, height = 290)
+        self.otherFrame.place(x = 355, y = 5, anchor = "nw")
+
+        ctk.CTkFrame(self, width = 7, height = 280, fg_color = GREY_BACKGROUND, corner_radius = 0).place(relx = 0.118, rely = 0.02, anchor = "nw")
+        ctk.CTkFrame(self, width = 7, height = 280, fg_color = GREY_BACKGROUND, corner_radius = 0).place(relx = 0.85, rely = 0.02, anchor = "nw")
+
+        if player.position != "goalkeeper":
+            # technical = PlayerAttributes.get_player_attributes(player.id)
+            technical = {
+                "Corners": 9,
+                "Crossing": 12,
+                "Dribbling": 14,
+                "Finishing": 13,
+                "First Touch": 15,
+                "Free Kicks": 8,
+                "Heading": 10,
+                "Long Shots": 12,
+                "Marking": 11,
+                "Passing": 14,
+                "Penalty": 18,
+                "Tackling": 10,
+                "Vision": 15,
+                "Positioning": 4
+            }   
+        else:
+            # technical = PlayerAttributes.get_keeper_attributes(player.id)
+            technical = {
+                "Aerial Reach": 15,
+                "First Touch": 11,
+                "Reflexes": 17,
+                "Throwing": 13,
+                "One on Ones": 16,
+                "Kicking": 14,
+                "Handling": 15,
+                "Shot Stopping": 17
+            }
+        
+        # mental_physical = PlayerAttributes.get_mental_attributes(player.id)
+        mental_physical = {
+            "Teamwork": 13,
+            "Composure": 14,
+            "Decisions": 15,
+            "Work Rate": 12,
+            "Stamina": 14,
+            "Pace": 15,
+            "Jumping": 11,
+            "Strength": 13,
+            "Aggression": 10,
+            "Acceleration": 14,
+            "Balance": 13,
+            "Creativity": 15
+        }
+
+        self.addAttributes(technical, self.technicalFrame)
+        self.addAttributes(mental_physical, self.otherFrame, type_ = "Mental & Physical")
+
+    def addAttributes(self, data, frame, type_ = "Technical"):
+
+        frame.grid_rowconfigure((0, 1, 2, 3, 4, 5, 6, 7), weight = 0)
+        frame.grid_columnconfigure((0, 1), weight = 0)
+
+        ctk.CTkLabel(frame, text = f"{type_} Attributes", font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).grid(row = 0, column = 0, columnspan = 2, pady = 10)
+
+        row = 1
+        column = 0
+        for i, (attr, value) in enumerate(data.items()):
+
+            if i % 2 != 0:
+                backgroundColor = GREY_BACKGROUND
+            else:
+                backgroundColor = TKINTER_BACKGROUND
+                
+            frame2 = ctk.CTkFrame(frame, fg_color = backgroundColor, width = 160, height = 30, corner_radius = 0)
+
+            ctk.CTkLabel(frame2, text = attr, font = (APP_FONT, 15), fg_color = backgroundColor, height = 0).place(relx = 0.1, rely = 0.5, anchor = "w")
+
+            if value < 5:
+                textColor = "grey"
+            elif value < 10:
+                textColor = "white"
+            elif value < 15:
+                textColor = PIE_GREEN
+            else:
+                textColor = APP_BLUE
+
+            ctk.CTkLabel(frame2, text = value, font = (APP_FONT, 15), fg_color = backgroundColor, text_color = textColor, height = 0).place(relx = 0.85, rely = 0.5, anchor = "e")
+
+            frame2.grid(row = row, column = column, padx = 10)
+
+            if i == 6:
+                row = 1
+                column = 1
+            else:
+                row += 1    
+
 class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):
         """
@@ -423,21 +539,6 @@ class MatchesTab(ctk.CTkFrame):
 
             canvas = ctk.CTkCanvas(self.matchesFrame, width = 940, height = 5, bg = GREY_BACKGROUND, highlightthickness = 0)
             canvas.pack(fill = "x")
-
-class Attributes(ctk.CTkFrame):
-    def __init__(self, parent, player):
-        """
-        Initialize the Attributes tab for displaying player's attributes.
-        
-        Args:
-            parent (ctk.CTkFrame): The parent frame (playerProfile).
-            player (Player): The player object whose attributes are to be displayed.
-        """
-        
-        super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
-
-        self.parent = parent
-        self.player = player
 
 class History(ctk.CTkScrollableFrame):
     def __init__(self, parent, player):

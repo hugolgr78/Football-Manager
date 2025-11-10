@@ -4847,6 +4847,93 @@ class LeagueNews(Base):
         finally:
             session.close()
 
+class PlayerAttributes(Base):
+    __tablename__ = 'player_attributes'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    player_id = Column(String(128), ForeignKey('players.id'))
+    corners = Column(Integer, nullable = False, default = 0)
+    crossing = Column(Integer, nullable = False, default = 0)
+    dribbling = Column(Integer, nullable = False, default = 0)
+    finishing = Column(Integer, nullable = False, default = 0)
+    first_touch = Column(Integer, nullable = False, default = 0)
+    free_kick = Column(Integer, nullable = False, default = 0)
+    heading = Column(Integer, nullable = False, default = 0)
+    long_shots = Column(Integer, nullable = False, default = 0)
+    marking = Column(Integer, nullable = False, default = 0)
+    passing = Column(Integer, nullable = False, default = 0)
+    penalty = Column(Integer, nullable = False, default = 0)
+    tackling = Column(Integer, nullable = False, default = 0)
+    vision = Column(Integer, nullable = False, default = 0)
+    positioning = Column(Integer, nullable = False, default = 0)
+    teamwork = Column(Integer, nullable = False, default = 0)
+    composure = Column(Integer, nullable = False, default = 0)
+    decisions = Column(Integer, nullable = False, default = 0)
+    work_rate = Column(Integer, nullable = False, default = 0)
+    stamina = Column(Integer, nullable = False, default = 0)
+    pace = Column(Integer, nullable = False, default = 0)
+    jumping = Column(Integer, nullable = False, default = 0)
+    strength = Column(Integer, nullable = False, default = 0)
+    aggression = Column(Integer, nullable = False, default = 0)
+    acceleration = Column(Integer, nullable = False, default = 0)
+    balance = Column(Integer, nullable = False, default = 0)
+    creativity = Column(Integer, nullable = False, default = 0)
+    aerial_reach = Column(Integer, nullable = False, default = 0)
+    throwing = Column(Integer, nullable = False, default = 0)
+    one_on_ones = Column(Integer, nullable = False, default = 0)
+    kicking = Column(Integer, nullable = False, default = 0)
+    handling = Column(Integer, nullable = False, default = 0)
+    shot_stopping = Column(Integer, nullable = False, default = 0)
+
+    @classmethod
+    def get_player_attributes(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            attributes = session.query(PlayerAttributes).filter(PlayerAttributes.player_id == player_id).first()
+            
+            # Create a dictionary of attribute to value without the ones from KEEPER_ATTRIBUTES and MENTAL_ATTRIBUTES
+            if attributes:
+                attr_dict = {
+                    attr.capitalize().replace('_', ' '): getattr(attributes, attr)
+                    for attr in vars(attributes)
+                    if attr not in ('id', 'player_id') and attr not in KEEPER_ATTRIBUTES and attr not in MENTAL_ATTRIBUTES
+                }
+                return attr_dict
+        finally:
+            session.close()
+
+    @classmethod
+    def get_keeper_attributes(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            attributes = session.query(PlayerAttributes).filter(PlayerAttributes.player_id == player_id).first()
+            
+            # Create a dictionary of only the keeper attributes and first_touch
+            if attributes:
+                attr_dict = {
+                    attr.capitalize().replace('_', ' '): getattr(attributes, attr)
+                    for attr in KEEPER_ATTRIBUTES + ['first_touch']
+                }
+                return attr_dict
+        finally:
+            session.close()
+
+    @classmethod
+    def get_mental_attributes(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            attributes = session.query(PlayerAttributes).filter(PlayerAttributes.player_id == player_id).first()
+            
+            # Create a dictionary of only the mental attributes
+            if attributes:
+                attr_dict = {
+                    attr.capitalize().replace('_', ' '): getattr(attributes, attr)
+                    for attr in MENTAL_ATTRIBUTES
+                }
+                return attr_dict
+        finally:
+            session.close()
+
 class StatsManager:
     @staticmethod
     def get_goals_scored(leagueTeams, league_id):

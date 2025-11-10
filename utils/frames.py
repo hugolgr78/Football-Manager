@@ -2553,25 +2553,12 @@ class FootballPitchMatchDay(FootballPitchVertical):
         self.icon_images[key] = image
         position_tag = f"{position.replace(' ', '_')}+{playerName.replace(' ', '_')}"
 
-        text_tag = f"player_{position_tag}_text"
-        playerName = self.canvas.itemcget(text_tag, "text")
-        self.canvas.delete(text_tag) 
-
-        # Add the text back offset to the right and add the image to the left of the text
+        # Add the image centered under the name
         relx, rely = self.positions[position]
-        text_x = relx * self.pitch_width + 15
-        text_y = rely * self.pitch_height + 25
+        text_x = relx * self.pitch_width
+        text_y = rely * self.pitch_height + 40 
 
-        self.canvas.create_text(
-            text_x,
-            text_y,
-            text = playerName,
-            fill = "white",
-            font = (APP_FONT, 10),
-            tags = text_tag
-        )
-
-        self.canvas.create_image(text_x - 30, text_y, image = image, tags = (position_tag, "injury_icon"))
+        self.canvas.create_image(text_x, text_y, image = image, tags = (position_tag, "injury_icon"))
 
     def addPlayer(self, position, playerName, matchday = False):
         """

@@ -413,7 +413,7 @@ class Attributes(ctk.CTkFrame):
         self.parent = parent
         self.player = player
 
-        self.attributesFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 700, height = 300, corner_radius = 15)
+        self.attributesFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 710, height = 300, corner_radius = 15)
         self.attributesFrame.place(relx = 0.13, rely = 0.02, anchor = "nw")
 
         self.technicalFrame = ctk.CTkFrame(self.attributesFrame, fg_color = TKINTER_BACKGROUND, width = 340, height = 290)
@@ -426,51 +426,51 @@ class Attributes(ctk.CTkFrame):
         ctk.CTkFrame(self, width = 7, height = 280, fg_color = GREY_BACKGROUND, corner_radius = 0).place(relx = 0.85, rely = 0.02, anchor = "nw")
 
         if player.position != "goalkeeper":
-            # technical = PlayerAttributes.get_player_attributes(player.id)
-            technical = {
-                "Corners": 9,
-                "Crossing": 12,
-                "Dribbling": 14,
-                "Finishing": 13,
-                "First Touch": 15,
-                "Free Kicks": 8,
-                "Heading": 10,
-                "Long Shots": 12,
-                "Marking": 11,
-                "Passing": 14,
-                "Penalty": 18,
-                "Tackling": 10,
-                "Vision": 15,
-                "Positioning": 4
-            }   
+            technical = PlayerAttributes.get_player_attributes(player.id)
+            # technical = {
+            #     "Corners": 9,
+            #     "Crossing": 12,
+            #     "Dribbling": 14,
+            #     "Finishing": 13,
+            #     "First Touch": 15,
+            #     "Free Kicks": 8,
+            #     "Heading": 10,
+            #     "Long Shots": 12,
+            #     "Marking": 11,
+            #     "Passing": 14,
+            #     "Penalty": 18,
+            #     "Tackling": 10,
+            #     "Vision": 15,
+            #     "Positioning": 4
+            # }   
         else:
-            # technical = PlayerAttributes.get_keeper_attributes(player.id)
-            technical = {
-                "Aerial Reach": 15,
-                "First Touch": 11,
-                "Reflexes": 17,
-                "Throwing": 13,
-                "One on Ones": 16,
-                "Kicking": 14,
-                "Handling": 15,
-                "Shot Stopping": 17
-            }
+            technical = PlayerAttributes.get_keeper_attributes(player.id)
+            # technical = {
+            #     "Aerial Reach": 15,
+            #     "First Touch": 11,
+            #     "Reflexes": 17,
+            #     "Throwing": 13,
+            #     "One on Ones": 16,
+            #     "Kicking": 14,
+            #     "Handling": 15,
+            #     "Shot Stopping": 17
+            # }
         
-        # mental_physical = PlayerAttributes.get_mental_attributes(player.id)
-        mental_physical = {
-            "Teamwork": 13,
-            "Composure": 14,
-            "Decisions": 15,
-            "Work Rate": 12,
-            "Stamina": 14,
-            "Pace": 15,
-            "Jumping": 11,
-            "Strength": 13,
-            "Aggression": 10,
-            "Acceleration": 14,
-            "Balance": 13,
-            "Creativity": 15
-        }
+        mental_physical = PlayerAttributes.get_mental_attributes(player.id)
+        # mental_physical = {
+        #     "Teamwork": 13,
+        #     "Composure": 14,
+        #     "Decisions": 15,
+        #     "Work Rate": 12,
+        #     "Stamina": 14,
+        #     "Pace": 15,
+        #     "Jumping": 11,
+        #     "Strength": 13,
+        #     "Aggression": 10,
+        #     "Acceleration": 14,
+        #     "Balance": 13,
+        #     "Creativity": 15
+        # }
 
         self.addAttributes(technical, self.technicalFrame)
         self.addAttributes(mental_physical, self.otherFrame, type_ = "Mental & Physical")
@@ -493,7 +493,7 @@ class Attributes(ctk.CTkFrame):
                 
             frame2 = ctk.CTkFrame(frame, fg_color = backgroundColor, width = 160, height = 30, corner_radius = 0)
 
-            ctk.CTkLabel(frame2, text = attr, font = (APP_FONT, 15), fg_color = backgroundColor, height = 0).place(relx = 0.1, rely = 0.5, anchor = "w")
+            ctk.CTkLabel(frame2, text = attr.capitalize().replace('_', ' '), font = (APP_FONT, 15), fg_color = backgroundColor, height = 0).place(relx = 0.1, rely = 0.5, anchor = "w")
 
             if value < 5:
                 textColor = "grey"
@@ -505,6 +505,17 @@ class Attributes(ctk.CTkFrame):
                 textColor = APP_BLUE
 
             ctk.CTkLabel(frame2, text = value, font = (APP_FONT, 15), fg_color = backgroundColor, text_color = textColor, height = 0).place(relx = 0.85, rely = 0.5, anchor = "e")
+
+            if attr in CORE_ATTRIBUTES[self.player.position]:
+                src = Image.open("Images/averageRating.png")
+                src.thumbnail((12, 12))
+                icon = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(frame2, image = icon, text = "", fg_color = backgroundColor, height = 0).place(relx = 0.97, rely = 0.5, anchor = "e")
+            elif attr in SECONDARY_ATTRIBUTES[self.player.position]:
+                src = Image.open("Images/diamond.png")
+                src.thumbnail((12, 12))
+                icon = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(frame2, image = icon, text = "", fg_color = backgroundColor, height = 0).place(relx = 0.97, rely = 0.5, anchor = "e")
 
             frame2.grid(row = row, column = column, padx = 10)
 

@@ -1,4 +1,3 @@
-from asyncio import events
 import re, datetime, os, shutil, time, gc, logging
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
@@ -555,7 +554,7 @@ class Players(Base):
     talked_to = Column(Boolean, default = False)
 
     @classmethod
-    def create_youth_player(cls, team_id, position, required_code, flags, numbers, league_planet):
+    def create_youth_player(cls, team_id, position, required_code, flags, numbers, league_planet, depth, team_strength, attributes_dict):
         if random.random() < 0.8:
             planet = league_planet
         else:
@@ -565,11 +564,24 @@ class Players(Base):
 
         faker = Faker()
         date_of_birth = faker.date_of_birth(minimum_age = 15, maximum_age = 17)
-        playerCA = generate_youth_player_level()
+        player_attributes = generate_attributes(SEASON_START_DATE.year - date_of_birth.year, team_strength, depth, position)
+
+        playerID = str(uuid.uuid4())
+        entry = {
+            "id": str(uuid.uuid4()),
+            "player_id": playerID,
+        }
+
+        for attr, value in player_attributes.items():
+            entry[attr] = value
+
+        attributes_dict.append(entry)
+
+        playerCA = generate_CA(player_attributes, position)
         playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
 
         dict_ = {
-            "id": str(uuid.uuid4()),
+            "id": playerID,
             "team_id": team_id,
             "first_name": faker.first_name_male(),
             "last_name": faker.last_name(),
@@ -616,6 +628,7 @@ class Players(Base):
         teams = Teams.get_all_teams()
 
         players_dict = []
+        player_attributes_dict = []
         try:
             for team in teams:
                 league_ID = LeagueTeams.get_league_by_team(team.id).league_id
@@ -676,11 +689,24 @@ class Players(Base):
                         if specific_pos not in new_player_positions:
                             new_player_positions[0] = specific_pos
 
-                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, league_depth)
+                        player_attributes = generate_attributes(SEASON_START_DATE.year - date_of_birth.year, team.strength, league_depth, overall_position)
+
+                        playerID = str(uuid.uuid4())
+                        entry = {
+                            "id": str(uuid.uuid4()),
+                            "player_id": playerID,
+                        }
+
+                        for attr, value in player_attributes.items():
+                            entry[attr] = value
+
+                        player_attributes_dict.append(entry)
+
+                        playerCA = generate_CA(player_attributes, overall_position)
                         playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
 
                         team_players.append({
-                            "id": str(uuid.uuid4()),
+                            "id": playerID,
                             "team_id": team_id,
                             "first_name": faker.first_name_male(),
                             "last_name": faker.last_name(),
@@ -712,13 +738,26 @@ class Players(Base):
 
                         num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1),
                                                     weights=position_weights[:min(len(specific_pos_list), 4)])[0]
-                        new_player_positions = random.sample(specific_pos_list, k=num_positions)
+                        new_player_positions = random.sample(specific_pos_list, k = num_positions)
 
-                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, league_depth)
+                        player_attributes = generate_attributes(SEASON_START_DATE.year - date_of_birth.year, team.strength, league_depth, overall_position)
+
+                        playerID = str(uuid.uuid4())
+                        entry = {
+                            "id": str(uuid.uuid4()),
+                            "player_id": playerID,
+                        }
+
+                        for attr, value in player_attributes.items():
+                            entry[attr] = value
+
+                        player_attributes_dict.append(entry)
+
+                        playerCA = generate_CA(player_attributes, overall_position)
                         playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
 
                         team_players.append({
-                            "id": str(uuid.uuid4()),
+                            "id": playerID,
                             "team_id": team_id,
                             "first_name": faker.first_name_male(),
                             "last_name": faker.last_name(),
@@ -793,7 +832,7 @@ class Players(Base):
                 # 1) Ensure at least one youth for each specific position
                 for overall_position, specific_pos_list in specific_positions.items():
                     for specific_pos in specific_pos_list:
-                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers, league_planet))
+                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers, league_planet, league_depth, team.strength, player_attributes_dict))
 
                 # 2) Ensure at least base_positions youths for each overall position
                 for overall_position, minimum in base_positions.items():
@@ -801,13 +840,14 @@ class Players(Base):
 
                     while curr_count < minimum:
                         specific_pos = random.choice(specific_positions[overall_position])
-                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers, league_planet))
+                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers, league_planet, league_depth, team.strength, player_attributes_dict))
                         curr_count += 1
 
                 players_dict.extend(team_players)
                 updateProgress(None)
 
             session.bulk_insert_mappings(Players, players_dict)
+            session.bulk_insert_mappings(PlayerAttributes, player_attributes_dict)
             session.commit()
         except Exception as e:
             session.rollback()
@@ -4879,6 +4919,7 @@ class PlayerAttributes(Base):
     balance = Column(Integer, nullable = False, default = 0)
     creativity = Column(Integer, nullable = False, default = 0)
     aerial_reach = Column(Integer, nullable = False, default = 0)
+    reflexes = Column(Integer, nullable = False, default = 0)
     throwing = Column(Integer, nullable = False, default = 0)
     one_on_ones = Column(Integer, nullable = False, default = 0)
     kicking = Column(Integer, nullable = False, default = 0)
@@ -4890,13 +4931,13 @@ class PlayerAttributes(Base):
         session = DatabaseManager().get_session()
         try:
             attributes = session.query(PlayerAttributes).filter(PlayerAttributes.player_id == player_id).first()
-            
-            # Create a dictionary of attribute to value without the ones from KEEPER_ATTRIBUTES and MENTAL_ATTRIBUTES
             if attributes:
                 attr_dict = {
-                    attr.capitalize().replace('_', ' '): getattr(attributes, attr)
-                    for attr in vars(attributes)
-                    if attr not in ('id', 'player_id') and attr not in KEEPER_ATTRIBUTES and attr not in MENTAL_ATTRIBUTES
+                    column.name: getattr(attributes, column.name)
+                    for column in PlayerAttributes.__table__.columns
+                    if column.name not in ('id', 'player_id') and
+                       column.name not in KEEPER_ATTRIBUTES and
+                       column.name not in MENTAL_ATTRIBUTES
                 }
                 return attr_dict
         finally:
@@ -4907,12 +4948,11 @@ class PlayerAttributes(Base):
         session = DatabaseManager().get_session()
         try:
             attributes = session.query(PlayerAttributes).filter(PlayerAttributes.player_id == player_id).first()
-            
-            # Create a dictionary of only the keeper attributes and first_touch
             if attributes:
                 attr_dict = {
-                    attr.capitalize().replace('_', ' '): getattr(attributes, attr)
-                    for attr in KEEPER_ATTRIBUTES + ['first_touch']
+                    attr: getattr(attributes, attr)
+                    for attr in KEEPER_ATTRIBUTES
+                    if hasattr(attributes, attr)
                 }
                 return attr_dict
         finally:
@@ -4923,12 +4963,11 @@ class PlayerAttributes(Base):
         session = DatabaseManager().get_session()
         try:
             attributes = session.query(PlayerAttributes).filter(PlayerAttributes.player_id == player_id).first()
-            
-            # Create a dictionary of only the mental attributes
             if attributes:
                 attr_dict = {
-                    attr.capitalize().replace('_', ' '): getattr(attributes, attr)
+                    attr: getattr(attributes, attr)
                     for attr in MENTAL_ATTRIBUTES
+                    if hasattr(attributes, attr)
                 }
                 return attr_dict
         finally:

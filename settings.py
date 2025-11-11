@@ -928,8 +928,55 @@ NEWS_DETAILS = {
 
 OVERTHROW_THRESHOLD = 20
 
-KEEPER_ATTRIBUTES = ["aerial_reach", "reflexes", "throwing", "handling", "kicking", "one_on_ones", "shot_stopping"]
+KEEPER_ATTRIBUTES = ["aerial_reach", "reflexes", "throwing", "handling", "kicking", "one_on_ones", "shot_stopping", "first_touch"]
 MENTAL_ATTRIBUTES = ["teamwork", "composure", "decisions", "work_rate", "stamina", "pace", "jumping", "strength", "aggression", "acceleration", "balance", "creativity"]
+OUTFIELD_ATTRIBUTES = ["corners", "crossing", "dribbling", "finishing", "first_touch", "free_kick", "heading", "long_shots", "marking", "passing", "penalty", "positioning", "tackling", "vision", "positioning"]
+
+CORE_ATTRIBUTES = {
+    "forward": [
+        "finishing", "dribbling", "first_touch", "heading",
+        "crossing", "composure", "decisions",
+        "pace", "acceleration", "creativity"
+    ],
+    "midfielder": [
+        "passing", "vision", "first_touch",
+        "dribbling", "decisions", "teamwork",
+        "composure", "stamina"
+    ],
+    "defender": [
+        "tackling", "marking", "heading",
+        "positioning", "strength", "jumping",
+        "decisions", "aggression"
+    ],
+    "goalkeeper": [
+        "shot_stopping", "reflexes", "handling",
+        "aerial_reach", "one_on_ones", "positioning",
+        "decisions"
+    ]
+}
+
+SECONDARY_ATTRIBUTES = {
+    "forward": [
+        "vision", "positioning", "strength",
+        "balance", "teamwork", "penalty",
+        "free_kick", "long_shots"
+    ],
+    "midfielder": [
+        "work_rate", "balance", "creativity",
+        "strength", "positioning", "long_shots",
+        "free_kick", "corners", "tackling", "crossing"
+    ],
+    "defender": [
+        "pace", "balance", "composure",
+        "work_rate", "passing", "first_touch",
+        "vision", "long_shots", "free_kick", "crossing"
+    ],
+    "goalkeeper": [
+        "throwing", "kicking", "first_touch",
+        "composure", "strength", "jumping"
+    ]
+}
+
 
 from data.database import StatsManager
 

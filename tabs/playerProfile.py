@@ -5,7 +5,7 @@ from data.gamesDatabase import *
 from PIL import Image
 import io
 from utils.teamLogo import TeamLogo
-from utils.frames import FootballPitchPlayerPos, FormGraph, PlayerMatchFrame
+from utils.frames import FootballPitchPlayerPos, FormGraph, PlayerMatchFrame, AttributesPolygon
 from utils.util_functions import *
 
 class PlayerProfile(ctk.CTkFrame):
@@ -126,7 +126,7 @@ class PlayerProfile(ctk.CTkFrame):
         self.activeButton = index
         self.buttons[self.activeButton].configure(state = "disabled")
 
-        if not self.tabs[self.activeButton]:
+        if self.tabs[self.activeButton] is None:
             self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.player)
 
         self.tabs[self.activeButton].pack()
@@ -426,56 +426,25 @@ class Attributes(ctk.CTkFrame):
         ctk.CTkFrame(self, width = 7, height = 280, fg_color = GREY_BACKGROUND, corner_radius = 0).place(relx = 0.85, rely = 0.02, anchor = "nw")
 
         if player.position != "goalkeeper":
-            technical = PlayerAttributes.get_player_attributes(player.id)
-            # technical = {
-            #     "Corners": 9,
-            #     "Crossing": 12,
-            #     "Dribbling": 14,
-            #     "Finishing": 13,
-            #     "First Touch": 15,
-            #     "Free Kicks": 8,
-            #     "Heading": 10,
-            #     "Long Shots": 12,
-            #     "Marking": 11,
-            #     "Passing": 14,
-            #     "Penalty": 18,
-            #     "Tackling": 10,
-            #     "Vision": 15,
-            #     "Positioning": 4
-            # }   
+            technical = PlayerAttributes.get_player_attributes(player.id)  
         else:
             technical = PlayerAttributes.get_keeper_attributes(player.id)
-            # technical = {
-            #     "Aerial Reach": 15,
-            #     "First Touch": 11,
-            #     "Reflexes": 17,
-            #     "Throwing": 13,
-            #     "One on Ones": 16,
-            #     "Kicking": 14,
-            #     "Handling": 15,
-            #     "Shot Stopping": 17
-            # }
         
         mental_physical = PlayerAttributes.get_mental_attributes(player.id)
-        # mental_physical = {
-        #     "Teamwork": 13,
-        #     "Composure": 14,
-        #     "Decisions": 15,
-        #     "Work Rate": 12,
-        #     "Stamina": 14,
-        #     "Pace": 15,
-        #     "Jumping": 11,
-        #     "Strength": 13,
-        #     "Aggression": 10,
-        #     "Acceleration": 14,
-        #     "Balance": 13,
-        #     "Creativity": 15
-        # }
 
         self.addAttributes(technical, self.technicalFrame)
         self.addAttributes(mental_physical, self.otherFrame, type_ = "Mental & Physical")
+        self.addPolygons(technical, mental_physical)
 
     def addAttributes(self, data, frame, type_ = "Technical"):
+        """
+        Add player attributes to the specified frame.
+        
+        Args:
+            data (dict): Dictionary of attributes to display.
+            frame (ctk.CTkFrame): The frame to add the attributes to.
+            type_ (str, optional): Type of attributes (e.g., "Technical", "Mental & Physical"). Defaults to "Technical".
+        """
 
         frame.grid_rowconfigure((0, 1, 2, 3, 4, 5, 6, 7), weight = 0)
         frame.grid_columnconfigure((0, 1), weight = 0)
@@ -524,6 +493,28 @@ class Attributes(ctk.CTkFrame):
                 column = 1
             else:
                 row += 1    
+
+    def addPolygons(self, technical, mental_physical):
+        """
+        Add attribute polygons to visualize player's strengths.
+        
+        Args:
+            technical (dict): Technical attributes of the player.
+            mental_physical (dict): Mental and physical attributes of the player.
+        """
+
+        core = {k: v for k, v in technical.items() if k in CORE_ATTRIBUTES[self.player.position]}
+        sec = {k: v for k, v in technical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
+
+        core.update({k: v for k, v in mental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
+        sec.update({k: v for k, v in mental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
+
+
+        self.corePoly = AttributesPolygon(self, core, 350, 400, TKINTER_BACKGROUND, "white")
+        self.corePoly.place(relx = 0.33, rely = 0.95, anchor = "s")
+
+        self.secPoly = AttributesPolygon(self, sec, 350, 400, TKINTER_BACKGROUND, "white")
+        self.secPoly.place(relx = 0.67, rely = 0.95, anchor = "s")
 
 class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):

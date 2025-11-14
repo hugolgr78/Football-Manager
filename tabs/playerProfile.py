@@ -511,10 +511,10 @@ class Attributes(ctk.CTkFrame):
 
 
         self.corePoly = AttributesPolygon(self, core, 350, 400, TKINTER_BACKGROUND, "white")
-        self.corePoly.place(relx = 0.33, rely = 0.95, anchor = "s")
+        self.corePoly.place(relx = 0.335, rely = 0.95, anchor = "s")
 
         self.secPoly = AttributesPolygon(self, sec, 350, 400, TKINTER_BACKGROUND, "white")
-        self.secPoly.place(relx = 0.67, rely = 0.95, anchor = "s")
+        self.secPoly.place(relx = 0.69, rely = 0.95, anchor = "s")
 
 class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):

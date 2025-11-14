@@ -180,6 +180,10 @@ class Managers(Base):
                 with open(f"Images/Planets/{planet}.png", "rb") as file:
                     flags[planet] = file.read()
 
+            age = SEASON_START_DATE.year - date_of_birth.year
+            if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
+                age -= 1
+
             userManagerID = str(uuid.uuid4())
             managers_dicts = [
                 {
@@ -190,13 +194,17 @@ class Managers(Base):
                     "flag": flags[nationality.capitalize()],
                     "user": True,
                     "date_of_birth": date_of_birth,
-                    "age": SEASON_START_DATE.year - date_of_birth.year
+                    "age": age,
                 }
             ]
             updateProgress(None)
             for _ in range(699):
                 planet = random.choice(ALL_PLANETS)
                 date_of_birth = faker.date_of_birth(minimum_age = 32, maximum_age = 65)
+
+                age = SEASON_START_DATE.year - date_of_birth.year
+                if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
+                    age -= 1
 
                 managers_dicts.append(
                     {
@@ -207,7 +215,7 @@ class Managers(Base):
                         "flag": flags[planet],
                         "date_of_birth": date_of_birth,
                         "user": False,
-                        "age": SEASON_START_DATE.year - date_of_birth.year,
+                        "age": age,
                     }
                 )
                 updateProgress(None)
@@ -564,7 +572,13 @@ class Players(Base):
 
         faker = Faker()
         date_of_birth = faker.date_of_birth(minimum_age = 15, maximum_age = 17)
-        player_attributes = generate_attributes(SEASON_START_DATE.year - date_of_birth.year, team_strength, depth, position)
+        
+        age = SEASON_START_DATE.year - date_of_birth.year
+        if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
+            age -= 1
+
+
+        player_attributes = generate_attributes(age, team_strength, depth, position)
 
         playerID = str(uuid.uuid4())
         entry = {
@@ -578,7 +592,7 @@ class Players(Base):
         attributes_dict.append(entry)
 
         playerCA = generate_CA(player_attributes, position)
-        playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
+        playerPA = calculate_potential_ability(age, playerCA)
 
         dict_ = {
             "id": playerID,
@@ -588,7 +602,7 @@ class Players(Base):
             "number": random.randint(1, 99),
             "position": position,
             "date_of_birth": date_of_birth,
-            "age": SEASON_START_DATE.year - date_of_birth.year,
+            "age": age,
             "nationality": planet,
             "flag": flags[planet],
             "current_ability": playerCA,
@@ -679,6 +693,10 @@ class Players(Base):
                                 planet = random.choice(ALL_PLANETS)
 
                         date_of_birth = faker.date_of_birth(minimum_age = 18, maximum_age = 35)
+                        age = SEASON_START_DATE.year - date_of_birth.year
+                        if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
+                            age -= 1
+
                         player_number = random.randint(1, 99)
                         while player_number in numbers:
                             player_number = random.randint(1, 99)
@@ -689,7 +707,7 @@ class Players(Base):
                         if specific_pos not in new_player_positions:
                             new_player_positions[0] = specific_pos
 
-                        player_attributes = generate_attributes(SEASON_START_DATE.year - date_of_birth.year, team.strength, league_depth, overall_position)
+                        player_attributes = generate_attributes(age, team.strength, league_depth, overall_position)
 
                         playerID = str(uuid.uuid4())
                         entry = {
@@ -703,7 +721,7 @@ class Players(Base):
                         player_attributes_dict.append(entry)
 
                         playerCA = generate_CA(player_attributes, overall_position)
-                        playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
+                        playerPA = calculate_potential_ability(age, playerCA)
 
                         team_players.append({
                             "id": playerID,
@@ -713,7 +731,7 @@ class Players(Base):
                             "number": player_number,
                             "position": overall_position,
                             "date_of_birth": date_of_birth,
-                            "age": SEASON_START_DATE.year - date_of_birth.year,
+                            "age": age,
                             "nationality": planet,
                             "flag": flags[planet],
                             "specific_positions": ','.join(new_player_positions),
@@ -730,17 +748,20 @@ class Players(Base):
                             while planet == league_planet:
                                 planet = random.choice(ALL_PLANETS)
 
-                        date_of_birth = faker.date_of_birth(minimum_age=18, maximum_age=35)
+                        date_of_birth = faker.date_of_birth(minimum_age  =18, maximum_age = 35)
+                        age = SEASON_START_DATE.year - date_of_birth.year
+                        if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
+                            age -= 1
+
                         player_number = random.randint(1, 99)
                         while player_number in numbers:
                             player_number = random.randint(1, 99)
                         numbers.append(player_number)
 
-                        num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1),
-                                                    weights=position_weights[:min(len(specific_pos_list), 4)])[0]
+                        num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1), weights = position_weights[:min(len(specific_pos_list), 4)])[0]
                         new_player_positions = random.sample(specific_pos_list, k = num_positions)
 
-                        player_attributes = generate_attributes(SEASON_START_DATE.year - date_of_birth.year, team.strength, league_depth, overall_position)
+                        player_attributes = generate_attributes(age, team.strength, league_depth, overall_position)
 
                         playerID = str(uuid.uuid4())
                         entry = {
@@ -754,7 +775,7 @@ class Players(Base):
                         player_attributes_dict.append(entry)
 
                         playerCA = generate_CA(player_attributes, overall_position)
-                        playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
+                        playerPA = calculate_potential_ability(age, playerCA)
 
                         team_players.append({
                             "id": playerID,
@@ -764,7 +785,7 @@ class Players(Base):
                             "number": player_number,
                             "position": overall_position,
                             "date_of_birth": date_of_birth,
-                            "age": SEASON_START_DATE.year - date_of_birth.year,
+                            "age": age,
                             "nationality": planet,
                             "flag": flags[planet],
                             "specific_positions": ','.join(new_player_positions),
@@ -3567,6 +3588,10 @@ class Referees(Base):
                 for _ in range(random.randint(35, 45)):
                     date_of_birth = faker.date_of_birth(minimum_age = 30, maximum_age = 65)
 
+                    age = SEASON_START_DATE.year - date_of_birth.year
+                    if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
+                        age -= 1
+
                     referees_dict.append({
                         "id": str(uuid.uuid4()),
                         "first_name": faker.first_name_male(),
@@ -3575,7 +3600,7 @@ class Referees(Base):
                         "severity": random.choices(["low", "medium", "high"], k = 1)[0],
                         "flag": flags[league_planet],
                         "nationality": league_planet,
-                        "age": 2024 - date_of_birth.year,
+                        "age": age,
                         "date_of_birth": date_of_birth
                     })
                 updateProgress(None)

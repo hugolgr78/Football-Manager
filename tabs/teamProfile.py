@@ -126,7 +126,7 @@ class TeamProfile(ctk.CTkFrame):
         self.activeButton = index
         self.buttons[self.activeButton].configure(state = "disabled")
 
-        if not self.tabs[self.activeButton]:
+        if self.tabs[self.activeButton] is None:
             if self.classNames[self.activeButton].__name__ == "News":
                 self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, team_id = self.team.id)
             else:

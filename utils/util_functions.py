@@ -472,67 +472,101 @@ def generate_attributes(age, team_strength, depth, position):
     Attributes are rated from 1 to 20.
     """
 
-    # Helper function to clamp values
-    def clamp(x, lo = 1, hi = 20):
-        return max(lo, min(hi, int(x)))
+    # --------- HELPERS ----------
+    def clamp(x, low = 1, high = 20):
+        """
+        Clamp value x to be within [lo, hi] and convert to int.
+        """
+        
+        return max(low, min(high, int(x)))
 
-    # ---- AGE EFFECT ----
+    def strength_adjust(val, team_strength):
+        """
+        Apply +1 or -1 depending on team strength.
+        team_strength:
+            < 1.0  => more likely -1
+            = 1.0  => no bias
+            > 1.0  => more likely +1
+        """
+
+        # Convert team_strength (0.5–1.6) into bias -0.5 → +0.6
+        bias = team_strength - 1.0
+
+        # Probability of +1 shift
+        prob_up = 0.5 + bias * 0.5
+
+        r = random.random()
+
+        if r < prob_up:
+            return clamp(val + 1)
+        elif r > (1 - prob_up):
+            return clamp(val - 1)
+        else:
+            return clamp(val)
+
+    # AGE modifiers
     if age < 18:
-        age_mod_tech = 0.6
-        age_mod_phys = 0.9
-        age_mod_mental = 0.6
-    elif age < 20:
-        age_mod_tech = 0.8
+        age_mod_tech = 0.55
         age_mod_phys = 0.95
-        age_mod_mental = 0.8
+        age_mod_mental = 0.55
+
+    elif age < 21:
+        age_mod_tech = 0.75
+        age_mod_phys = 1.00
+        age_mod_mental = 0.75
+
     elif age < 25:
-        age_mod_tech = 1.0
-        age_mod_phys = 1.0
-        age_mod_mental = 0.9
-    elif age < 30:
-        age_mod_tech = 1.1
-        age_mod_phys = 0.95
-        age_mod_mental = 1.0
-    elif age < 35:
+        age_mod_tech = 0.95
+        age_mod_phys = 1.00
+        age_mod_mental = 0.90
+
+    elif age < 29:
         age_mod_tech = 1.05
-        age_mod_phys = 0.85
-        age_mod_mental = 1.1
+        age_mod_phys = 0.95
+        age_mod_mental = 1.00
+
+    elif age < 33:
+        age_mod_tech = 1.05
+        age_mod_phys = 0.90
+        age_mod_mental = 1.10
+
+    elif age < 36:
+        age_mod_tech = 0.95
+        age_mod_phys = 0.80
+        age_mod_mental = 1.10
+
     else:
-        age_mod_tech = 0.9
-        age_mod_phys = 0.75
+        age_mod_tech = 0.85
+        age_mod_phys = 0.70
         age_mod_mental = 1.05
 
-    # ---- LEAGUE DEPTH EFFECT (0 = top, 4 = lowest) ----
-    league_factor = 1.2 - (depth * 0.1)  # top league ~1.2, bottom ~0.8
+    league_factor = DEPTH_MULTIPLIER.get(depth, 1.0)
 
-    # ---- TEAM STRENGTH EFFECT ----
-    team_factor = team_strength  # typical range: 0.5 – 1.6
+    attrs = {}
 
-    attributes = {}
+    tech_list = KEEPER_ATTRIBUTES if position == "goalkeeper" else OUTFIELD_ATTRIBUTES
 
-    # ---- TECHNICAL ATTRIBUTES ----
-    if position == "goalkeeper":
-        tech_attrs = KEEPER_ATTRIBUTES
-    else:
-        tech_attrs = OUTFIELD_ATTRIBUTES
+    # --- TECHNICAL attributes: stronger base range so top league produces 15-18 commonly ---
+    for a in tech_list:
+        # base range raised: 8..16 (so top league *1.4 → effective ~11.2..22.4, clamped to 20)
+        base = random.uniform(8.0, 16.0)
+        val = base * league_factor * age_mod_tech
+        val = clamp(val)
+        val = strength_adjust(val, team_strength)
+        attrs[a] = val
 
-    for attr in tech_attrs:
-        base = random.uniform(6, 14)
-        val = base * league_factor * team_factor * age_mod_tech
-        attributes[attr] = clamp(val)
-
-    # ---- MENTAL & PHYSICAL ATTRIBUTES ----
-    for attr in MENTAL_ATTRIBUTES:
-        base = random.uniform(6, 14)
-        if attr in ["pace", "stamina", "acceleration", "strength", "jumping", "balance"]:
-            # Physical
-            val = base * league_factor * team_factor * age_mod_phys
+    # --- Mental & Physical: use slightly higher base ranges than before so top players can be high ---
+    for a in MENTAL_ATTRIBUTES:
+        base = random.uniform(7.0, 15.0)
+        if a in ["pace", "stamina", "acceleration", "strength", "jumping", "balance"]:
+            val = base * age_mod_phys
         else:
-            # Mental
             val = base * age_mod_mental
-        attributes[attr] = clamp(val)
+        val = clamp(val)
+        val = strength_adjust(val, team_strength)
+        attrs[a] = val
 
-    return attributes
+    return attrs
 
 def generate_CA(player_attributes, position):
     """
@@ -545,8 +579,8 @@ def generate_CA(player_attributes, position):
     secondary = SECONDARY_ATTRIBUTES[position]
 
     # Define weights (core counts more)
-    core_weight = 2.0   # each core attribute is twice as important
-    sec_weight = 1.0    # each secondary attribute is baseline weight
+    core_weight = 4.0
+    sec_weight = 0.4
 
     # Calculate max possible points for scaling
     max_score = (len(core) * 20 * core_weight) + (len(secondary) * 20 * sec_weight)

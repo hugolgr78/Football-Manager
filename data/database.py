@@ -190,7 +190,7 @@ class Managers(Base):
                     "flag": flags[nationality.capitalize()],
                     "user": True,
                     "date_of_birth": date_of_birth,
-                    "age": 2024 - date_of_birth.year
+                    "age": SEASON_START_DATE.year - date_of_birth.year
                 }
             ]
             updateProgress(None)
@@ -207,7 +207,7 @@ class Managers(Base):
                         "flag": flags[planet],
                         "date_of_birth": date_of_birth,
                         "user": False,
-                        "age": 2024 - date_of_birth.year,
+                        "age": SEASON_START_DATE.year - date_of_birth.year,
                     }
                 )
                 updateProgress(None)

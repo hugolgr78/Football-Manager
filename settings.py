@@ -977,6 +977,12 @@ SECONDARY_ATTRIBUTES = {
     ]
 }
 
+DEPTH_MULTIPLIER = {
+    0: 1.40,
+    1: 1.05,
+    2: 0.70,
+    3: 0.50
+}
 
 from data.database import StatsManager
 

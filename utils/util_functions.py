@@ -466,101 +466,149 @@ def create_rounded_rectangle(canvas, x1, y1, x2, y2, radius = 10, **kwargs):
     ]
     return canvas.create_polygon(points, smooth = True, splinestep = 36, **kwargs)
 
-def generate_CA(age, team_strength, depth):
+def generate_attributes(age, team_strength, depth, position):
     """
-    Generate a player's Current Ability (CA) based on age, team strength, and division.
-    Each division has an overlapping CA range to allow realistic variability.
-
-    Args:
-        age (int): The age of the player.
-        team_strength (float): The strength of the team (1.0 = average, >1.0 = stronger).
-        depth (int): The division depth (0 = top division, higher numbers = lower divisions).
+    Generate player attributes based on age, team strength, league depth, and position.
+    Attributes are rated from 1 to 20.
     """
 
-    division_ranges = {
-        0: (150, 200),
-        1: (110, 160),
-        2: (70, 120),
-        3: (30, 80)
-    }
-
-    div_min, div_max = division_ranges.get(depth, (70, 130))
-
-    # Map team_strength to a normalized factor inside division range
-    # Example: team_strength 0.7 -> 0, 1.55 -> 1
-    strength_norm = (team_strength - 0.7) / (1.55 - 0.7)
-    strength_norm = max(0.0, min(1.0, strength_norm))
-    
-    # Calculate base mean CA inside division range
-    mean_CA = div_min + (div_max - div_min) * strength_norm
-    
-    # Age factor: young players biased lower, old players slightly lower too
-    if age < 21:
-        age_bias = -0.15 * (21 - age) * (div_max - div_min)
-    elif age <= 25:
-        age_bias = 0
-    elif age <= 30:
-        age_bias = -0.05 * (age - 25) * (div_max - div_min)
-    else:
-        age_bias = -0.1 * (age - 30) * (div_max - div_min)
-    
-    mean_CA += age_bias
-    
-    # Random spread around mean
-    std_dev = (div_max - div_min) / 6  # most players fall within ±1 std dev
-    ca = random.gauss(mean_CA, std_dev)
-    
-    # Optional: reduce probability for elite >180 players
-    if ca > 175:
-        drop = math.exp(-(ca - 175) / 3)  # probability scaling
-        if random.random() > drop:
-            ca = 175 + random.random() * 5 
+    # --------- HELPERS ----------
+    def clamp(x, low = 1, high = 20):
+        """
+        Clamp value x to be within [lo, hi] and convert to int.
+        """
         
-    # Clamp to division bounds
-    ca = max(div_min, min(div_max, int(ca)))
-    
-    return ca
+        return max(low, min(high, int(x)))
 
-def generate_youth_player_level(max_level = 150):
+    def strength_adjust(val, team_strength):
+        """
+        Apply +1 or -1 depending on team strength.
+        team_strength:
+            < 1.0  => more likely -1
+            = 1.0  => no bias
+            > 1.0  => more likely +1
+        """
+
+        # Convert team_strength (0.5–1.6) into bias -0.5 → +0.6
+        bias = team_strength - 1.0
+
+        # Probability of +1 shift
+        prob_up = 0.5 + bias * 0.5
+
+        r = random.random()
+
+        if r < prob_up:
+            return clamp(val + 1)
+        elif r > (1 - prob_up):
+            return clamp(val - 1)
+        else:
+            return clamp(val)
+
+    # AGE modifiers
+    if age < 18:
+        age_mod_tech = 0.55
+        age_mod_phys = 0.95
+        age_mod_mental = 0.55
+
+    elif age < 21:
+        age_mod_tech = 0.75
+        age_mod_phys = 1.00
+        age_mod_mental = 0.75
+
+    elif age < 25:
+        age_mod_tech = 0.95
+        age_mod_phys = 1.00
+        age_mod_mental = 0.90
+
+    elif age < 29:
+        age_mod_tech = 1.05
+        age_mod_phys = 0.95
+        age_mod_mental = 1.00
+
+    elif age < 33:
+        age_mod_tech = 1.05
+        age_mod_phys = 0.90
+        age_mod_mental = 1.10
+
+    elif age < 36:
+        age_mod_tech = 0.95
+        age_mod_phys = 0.80
+        age_mod_mental = 1.10
+
+    else:
+        age_mod_tech = 0.85
+        age_mod_phys = 0.70
+        age_mod_mental = 1.05
+
+    league_factor = DEPTH_MULTIPLIER.get(depth, 1.0)
+
+    attrs = {}
+
+    tech_list = KEEPER_ATTRIBUTES if position == "goalkeeper" else OUTFIELD_ATTRIBUTES
+
+    # --- TECHNICAL attributes: stronger base range so top league produces 15-18 commonly ---
+    for a in tech_list:
+        # base range raised: 8..16 (so top league *1.4 → effective ~11.2..22.4, clamped to 20)
+        base = random.uniform(8.0, 16.0)
+        val = base * league_factor * age_mod_tech
+        val = clamp(val)
+        val = strength_adjust(val, team_strength)
+        attrs[a] = val
+
+    # --- Mental & Physical: use slightly higher base ranges than before so top players can be high ---
+    for a in MENTAL_ATTRIBUTES:
+        base = random.uniform(7.0, 15.0)
+        if a in ["pace", "stamina", "acceleration", "strength", "jumping", "balance"]:
+            val = base * age_mod_phys
+        else:
+            val = base * age_mod_mental
+        val = clamp(val)
+        val = strength_adjust(val, team_strength)
+        attrs[a] = val
+
+    if position == "goalkeeper":
+        if "jumping" in attrs:
+            jump = attrs["jumping"]
+
+            # aerial reach depends 80% on jumping + noise
+            reach = jump * 0.8 + random.uniform(-2, 2)
+
+            # apply clamp + strength adjust
+            reach = clamp(reach)
+            reach = strength_adjust(reach, team_strength)
+
+            attrs["aerial reach"] = reach
+
+    return attrs
+
+def generate_CA(player_attributes, position):
     """
-    Generate a youth player level between [max_level - 50, max_level].
-    No role/age influence, just weighted by intervals (higher levels rarer).
-    
-    Args:
-        max_level (int): The maximum possible level (capped at 200).
+    Generate Current Ability (CA) based on player attributes and position.
+    CA is scaled 0–200, with core attributes weighted more than secondary.
     """
 
-    # Clamp max_level to 200
-    max_level = min(max_level, 200)
+    # Get the relevant attributes for this position
+    core = CORE_ATTRIBUTES[position]
+    secondary = SECONDARY_ATTRIBUTES[position]
 
-    # Lower bound is max_level - 50, but not below 0
-    min_level = max(max_level - 50, 0)
+    # Define weights (core counts more)
+    core_weight = 4.0
+    sec_weight = 0.4
 
-    # Build intervals of ~10 points
-    intervals = []
-    start = min_level
-    while start < max_level:
-        end = min(start + 10, max_level)
-        intervals.append((start, end))
-        start += 10
+    # Calculate max possible points for scaling
+    max_score = (len(core) * 20 * core_weight) + (len(secondary) * 20 * sec_weight)
 
-    # Default "youth" probability distribution (up to 5 intervals)
-    base_probs = [30, 25, 20, 15, 10]  # favors lower end, rarer at the top
+    # Compute actual score
+    actual_score = 0
+    for attr in core:
+        actual_score += player_attributes.get(attr, 0) * core_weight
+    for attr in secondary:
+        actual_score += player_attributes.get(attr, 0) * sec_weight
 
-    # Trim to match number of intervals
-    probs = base_probs[-len(intervals):]
+    # Scale to 0–200
+    ca = (actual_score / max_score) * 200
 
-    # Normalize to sum 1
-    total = sum(probs)
-    probs = [p / total for p in probs]
-
-    # Choose interval
-    chosen_interval = random.choices(intervals, weights = probs, k = 1)[0]
-
-    # Pick uniformly inside interval
-    return random.randint(chosen_interval[0], chosen_interval[1])
-
-import random
+    return int(ca)
 
 def calculate_potential_ability(age, CA):
     """

@@ -201,7 +201,7 @@ class StartMenu(ctk.CTkFrame):
         Shows the settings frame for a save
         """
 
-        deleteSaveButton = ctk.CTkButton(self.settingsFrame, text = "Delete Save", font = (APP_FONT, 15), fg_color = APP_BLUE, hover_color = CLOSE_RED, corner_radius = 10, width = 150, height = 40, command = self.deleteSave)
+        deleteSaveButton = ctk.CTkButton(self.settingsFrame, text = "Delete Save", font = (APP_FONT, 15), fg_color = CLOSE_RED, hover_color = CLOSE_RED, corner_radius = 10, width = 150, height = 40, command = self.deleteSave)
         deleteSaveButton.place(relx = 0.5, rely = 0.35, anchor = "center")
 
         exportSaveButton = ctk.CTkButton(self.settingsFrame, text = "Export Save", font = (APP_FONT, 15), fg_color = APP_BLUE, corner_radius = 10, width = 150, height = 40, command = self.exportSave)
@@ -733,7 +733,7 @@ class StartMenu(ctk.CTkFrame):
 
         ctk.CTkLabel(self.chooseTeamFrame, text = "Choose a team", font = (APP_FONT_BOLD, 35), bg_color = TKINTER_BACKGROUND).place(relx = 0.03, rely = 0.08, anchor = "nw")
 
-        self.doneButton = ctk.CTkButton(self.chooseTeamFrame, text = "Finish", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 45, command = lambda: self.finishCreateManager())
+        self.doneButton = ctk.CTkButton(self.chooseTeamFrame, text = "Finish", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 45, command = lambda: self.confirmChoices())
         self.doneButton.place(relx = 0.94, rely = 0.075, anchor = "center")
 
         backButton = ctk.CTkButton(self.chooseTeamFrame, text = "< Leagues", font = (APP_FONT, 15), fg_color = GREY_BACKGROUND, corner_radius = 10, width = 100, height = 45, hover_color = CLOSE_RED, command = lambda: self.chooseTeamFrame.place_forget())
@@ -874,18 +874,52 @@ class StartMenu(ctk.CTkFrame):
         self.teamNameLabel.configure(text = team["name"])
         self.createdLabel.configure(text = "Created: " + str(team["year_created"]))
         self.expectedFinish.configure(text = f"Expected finish: {expectedFinish}{suffix}")
+        
+    def confirmChoices(self):
+        """
+        Shows a frame with all choices made before finalizing manager creation.
+        """
+
+        if not self.selectedTeam:
+            self.doneButton.configure(state = "disabled")
+            CTkMessagebox(title = "Error", message = "Please select a team", icon = "cancel")
+            self.doneButton.configure(state = "normal")
+            return
+
+        self.confirmFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, height = 400, width = 500, corner_radius = 15, border_width = 2, border_color = APP_BLUE)
+        self.confirmFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        self.confirmFrame.grid_columnconfigure((0, 1), weight = 1)
+        self.confirmFrame.grid_rowconfigure((0, 1, 2, 3, 4, 5, 6), weight = 1)
+        self.confirmFrame.grid_propagate(False)
+
+        ctk.CTkLabel(self.confirmFrame, text = "Please confirm your choices", font = (APP_FONT_BOLD, 25), bg_color = TKINTER_BACKGROUND).grid(row = 0, column = 0, columnspan = 2, pady = 10)
+
+        ctk.CTkLabel(self.confirmFrame, text = "Save Name:", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).grid(row = 1, column = 0, sticky = "w", padx = 20)
+        ctk.CTkLabel(self.confirmFrame, text = self.saveName, font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).grid(row = 1, column = 1)
+        ctk.CTkLabel(self.confirmFrame, text = "Manager Name:", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).grid(row = 2, column = 0, sticky = "w", padx = 20)
+        ctk.CTkLabel(self.confirmFrame, text = f"{self.first_name} {self.last_name}", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).grid(row = 2, column = 1)
+        ctk.CTkLabel(self.confirmFrame, text = "Date of Birth:", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).grid(row = 3, column = 0, sticky = "w", padx = 20)
+        ctk.CTkLabel(self.confirmFrame, text = str(self.dob), font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).grid(row = 3, column = 1)
+        ctk.CTkLabel(self.confirmFrame, text = "Nationality:", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).grid(row = 4, column = 0, sticky = "w", padx = 20)
+        ctk.CTkLabel(self.confirmFrame, text = self.selectedPlanet, font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).grid(row = 4, column = 1)
+        ctk.CTkLabel(self.confirmFrame, text = "Team:", font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).grid(row = 5, column = 0, sticky = "w", padx = 20)
+        ctk.CTkLabel(self.confirmFrame, text = self.selectedTeam, font = (APP_FONT, 20), bg_color = TKINTER_BACKGROUND).grid(row = 5, column = 1)
+
+        backButton = ctk.CTkButton(self.confirmFrame, text = "< Back", font = (APP_FONT, 15), fg_color = PIE_RED, hover_color = PIE_RED, corner_radius = 10, width = 100, height = 40, command = lambda: self.confirmFrame.place_forget())
+        backButton.grid(row = 6, column = 0, pady = 10)
+
+        confirmButton = ctk.CTkButton(self.confirmFrame, text = "Confirm", font = (APP_FONT, 15), fg_color = APP_BLUE, hover_color = APP_BLUE, corner_radius = 10, width = 100, height = 40, command = lambda: self.finishCreateManager())
+        confirmButton.grid(row = 6, column = 1, pady = 10)
 
     def finishCreateManager(self):
         """
         Finalizes the manager creation process and starts the game.
         """
         
-        if not self.selectedTeam:
-            self.doneButton.configure(state = "disabled")
-            CTkMessagebox(title = "Error", message = "Please select a team", icon = "cancel")
-            self.doneButton.configure(state = "normal")
-            return
-        
+        self.confirmFrame.destroy() 
+        self.update_idletasks()
+
         self.progressFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, height = 200, width = 500, corner_radius = 15, border_width = 2, border_color = APP_BLUE)
         self.progressFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
 

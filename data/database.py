@@ -1,4 +1,3 @@
-from asyncio import events
 import re, datetime, os, shutil, time, gc, logging
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
@@ -181,6 +180,10 @@ class Managers(Base):
                 with open(f"Images/Planets/{planet}.png", "rb") as file:
                     flags[planet] = file.read()
 
+            age = SEASON_START_DATE.year - date_of_birth.year
+            if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
+                age -= 1
+
             userManagerID = str(uuid.uuid4())
             managers_dicts = [
                 {
@@ -191,13 +194,17 @@ class Managers(Base):
                     "flag": flags[nationality.capitalize()],
                     "user": True,
                     "date_of_birth": date_of_birth,
-                    "age": 2024 - date_of_birth.year
+                    "age": age,
                 }
             ]
             updateProgress(None)
             for _ in range(699):
                 planet = random.choice(ALL_PLANETS)
                 date_of_birth = faker.date_of_birth(minimum_age = 32, maximum_age = 65)
+
+                age = SEASON_START_DATE.year - date_of_birth.year
+                if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
+                    age -= 1
 
                 managers_dicts.append(
                     {
@@ -208,7 +215,7 @@ class Managers(Base):
                         "flag": flags[planet],
                         "date_of_birth": date_of_birth,
                         "user": False,
-                        "age": 2024 - date_of_birth.year,
+                        "age": age,
                     }
                 )
                 updateProgress(None)
@@ -555,7 +562,7 @@ class Players(Base):
     talked_to = Column(Boolean, default = False)
 
     @classmethod
-    def create_youth_player(cls, team_id, position, required_code, flags, numbers, league_planet):
+    def create_youth_player(cls, team_id, position, required_code, flags, numbers, league_planet, depth, team_strength, attributes_dict):
         if random.random() < 0.8:
             planet = league_planet
         else:
@@ -565,18 +572,37 @@ class Players(Base):
 
         faker = Faker()
         date_of_birth = faker.date_of_birth(minimum_age = 15, maximum_age = 17)
-        playerCA = generate_youth_player_level()
-        playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
+        
+        age = SEASON_START_DATE.year - date_of_birth.year
+        if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
+            age -= 1
+
+
+        player_attributes = generate_attributes(age, team_strength, depth, position)
+
+        playerID = str(uuid.uuid4())
+        entry = {
+            "id": str(uuid.uuid4()),
+            "player_id": playerID,
+        }
+
+        for attr, value in player_attributes.items():
+            entry[attr] = value
+
+        attributes_dict.append(entry)
+
+        playerCA = generate_CA(player_attributes, position)
+        playerPA = calculate_potential_ability(age, playerCA)
 
         dict_ = {
-            "id": str(uuid.uuid4()),
+            "id": playerID,
             "team_id": team_id,
             "first_name": faker.first_name_male(),
             "last_name": faker.last_name(),
             "number": random.randint(1, 99),
             "position": position,
             "date_of_birth": date_of_birth,
-            "age": SEASON_START_DATE.year - date_of_birth.year,
+            "age": age,
             "nationality": planet,
             "flag": flags[planet],
             "current_ability": playerCA,
@@ -616,6 +642,7 @@ class Players(Base):
         teams = Teams.get_all_teams()
 
         players_dict = []
+        player_attributes_dict = []
         try:
             for team in teams:
                 league_ID = LeagueTeams.get_league_by_team(team.id).league_id
@@ -666,6 +693,10 @@ class Players(Base):
                                 planet = random.choice(ALL_PLANETS)
 
                         date_of_birth = faker.date_of_birth(minimum_age = 18, maximum_age = 35)
+                        age = SEASON_START_DATE.year - date_of_birth.year
+                        if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
+                            age -= 1
+
                         player_number = random.randint(1, 99)
                         while player_number in numbers:
                             player_number = random.randint(1, 99)
@@ -676,18 +707,31 @@ class Players(Base):
                         if specific_pos not in new_player_positions:
                             new_player_positions[0] = specific_pos
 
-                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, league_depth)
-                        playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
+                        player_attributes = generate_attributes(age, team.strength, league_depth, overall_position)
+
+                        playerID = str(uuid.uuid4())
+                        entry = {
+                            "id": str(uuid.uuid4()),
+                            "player_id": playerID,
+                        }
+
+                        for attr, value in player_attributes.items():
+                            entry[attr] = value
+
+                        player_attributes_dict.append(entry)
+
+                        playerCA = generate_CA(player_attributes, overall_position)
+                        playerPA = calculate_potential_ability(age, playerCA)
 
                         team_players.append({
-                            "id": str(uuid.uuid4()),
+                            "id": playerID,
                             "team_id": team_id,
                             "first_name": faker.first_name_male(),
                             "last_name": faker.last_name(),
                             "number": player_number,
                             "position": overall_position,
                             "date_of_birth": date_of_birth,
-                            "age": SEASON_START_DATE.year - date_of_birth.year,
+                            "age": age,
                             "nationality": planet,
                             "flag": flags[planet],
                             "specific_positions": ','.join(new_player_positions),
@@ -704,28 +748,44 @@ class Players(Base):
                             while planet == league_planet:
                                 planet = random.choice(ALL_PLANETS)
 
-                        date_of_birth = faker.date_of_birth(minimum_age=18, maximum_age=35)
+                        date_of_birth = faker.date_of_birth(minimum_age  =18, maximum_age = 35)
+                        age = SEASON_START_DATE.year - date_of_birth.year
+                        if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
+                            age -= 1
+
                         player_number = random.randint(1, 99)
                         while player_number in numbers:
                             player_number = random.randint(1, 99)
                         numbers.append(player_number)
 
-                        num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1),
-                                                    weights=position_weights[:min(len(specific_pos_list), 4)])[0]
-                        new_player_positions = random.sample(specific_pos_list, k=num_positions)
+                        num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1), weights = position_weights[:min(len(specific_pos_list), 4)])[0]
+                        new_player_positions = random.sample(specific_pos_list, k = num_positions)
 
-                        playerCA = generate_CA(SEASON_START_DATE.year - date_of_birth.year, team.strength, league_depth)
-                        playerPA = calculate_potential_ability(SEASON_START_DATE.year - date_of_birth.year, playerCA)
+                        player_attributes = generate_attributes(age, team.strength, league_depth, overall_position)
+
+                        playerID = str(uuid.uuid4())
+                        entry = {
+                            "id": str(uuid.uuid4()),
+                            "player_id": playerID,
+                        }
+
+                        for attr, value in player_attributes.items():
+                            entry[attr] = value
+
+                        player_attributes_dict.append(entry)
+
+                        playerCA = generate_CA(player_attributes, overall_position)
+                        playerPA = calculate_potential_ability(age, playerCA)
 
                         team_players.append({
-                            "id": str(uuid.uuid4()),
+                            "id": playerID,
                             "team_id": team_id,
                             "first_name": faker.first_name_male(),
                             "last_name": faker.last_name(),
                             "number": player_number,
                             "position": overall_position,
                             "date_of_birth": date_of_birth,
-                            "age": SEASON_START_DATE.year - date_of_birth.year,
+                            "age": age,
                             "nationality": planet,
                             "flag": flags[planet],
                             "specific_positions": ','.join(new_player_positions),
@@ -793,7 +853,7 @@ class Players(Base):
                 # 1) Ensure at least one youth for each specific position
                 for overall_position, specific_pos_list in specific_positions.items():
                     for specific_pos in specific_pos_list:
-                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers, league_planet))
+                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers, league_planet, league_depth, team.strength, player_attributes_dict))
 
                 # 2) Ensure at least base_positions youths for each overall position
                 for overall_position, minimum in base_positions.items():
@@ -801,13 +861,14 @@ class Players(Base):
 
                     while curr_count < minimum:
                         specific_pos = random.choice(specific_positions[overall_position])
-                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers, league_planet))
+                        team_players.append(Players.create_youth_player(team_id, overall_position, specific_pos, flags, numbers, league_planet, league_depth, team.strength, player_attributes_dict))
                         curr_count += 1
 
                 players_dict.extend(team_players)
                 updateProgress(None)
 
             session.bulk_insert_mappings(Players, players_dict)
+            session.bulk_insert_mappings(PlayerAttributes, player_attributes_dict)
             session.commit()
         except Exception as e:
             session.rollback()
@@ -3527,6 +3588,10 @@ class Referees(Base):
                 for _ in range(random.randint(35, 45)):
                     date_of_birth = faker.date_of_birth(minimum_age = 30, maximum_age = 65)
 
+                    age = SEASON_START_DATE.year - date_of_birth.year
+                    if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
+                        age -= 1
+
                     referees_dict.append({
                         "id": str(uuid.uuid4()),
                         "first_name": faker.first_name_male(),
@@ -3535,7 +3600,7 @@ class Referees(Base):
                         "severity": random.choices(["low", "medium", "high"], k = 1)[0],
                         "flag": flags[league_planet],
                         "nationality": league_planet,
-                        "age": 2024 - date_of_birth.year,
+                        "age": age,
                         "date_of_birth": date_of_birth
                     })
                 updateProgress(None)
@@ -4844,6 +4909,92 @@ class LeagueNews(Base):
                 LeagueNews.milestone_type == milestone_type
             ).first()
             return news_entry is not None
+        finally:
+            session.close()
+
+class PlayerAttributes(Base):
+    __tablename__ = 'player_attributes'
+
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    player_id = Column(String(128), ForeignKey('players.id'))
+    corners = Column(Integer, nullable = False, default = 0)
+    crossing = Column(Integer, nullable = False, default = 0)
+    dribbling = Column(Integer, nullable = False, default = 0)
+    finishing = Column(Integer, nullable = False, default = 0)
+    first_touch = Column(Integer, nullable = False, default = 0)
+    free_kick = Column(Integer, nullable = False, default = 0)
+    heading = Column(Integer, nullable = False, default = 0)
+    long_shots = Column(Integer, nullable = False, default = 0)
+    marking = Column(Integer, nullable = False, default = 0)
+    passing = Column(Integer, nullable = False, default = 0)
+    penalty = Column(Integer, nullable = False, default = 0)
+    tackling = Column(Integer, nullable = False, default = 0)
+    vision = Column(Integer, nullable = False, default = 0)
+    positioning = Column(Integer, nullable = False, default = 0)
+    teamwork = Column(Integer, nullable = False, default = 0)
+    composure = Column(Integer, nullable = False, default = 0)
+    decisions = Column(Integer, nullable = False, default = 0)
+    work_rate = Column(Integer, nullable = False, default = 0)
+    stamina = Column(Integer, nullable = False, default = 0)
+    pace = Column(Integer, nullable = False, default = 0)
+    jumping = Column(Integer, nullable = False, default = 0)
+    strength = Column(Integer, nullable = False, default = 0)
+    aggression = Column(Integer, nullable = False, default = 0)
+    acceleration = Column(Integer, nullable = False, default = 0)
+    balance = Column(Integer, nullable = False, default = 0)
+    creativity = Column(Integer, nullable = False, default = 0)
+    aerial_reach = Column(Integer, nullable = False, default = 0)
+    reflexes = Column(Integer, nullable = False, default = 0)
+    throwing = Column(Integer, nullable = False, default = 0)
+    one_on_ones = Column(Integer, nullable = False, default = 0)
+    kicking = Column(Integer, nullable = False, default = 0)
+    handling = Column(Integer, nullable = False, default = 0)
+    shot_stopping = Column(Integer, nullable = False, default = 0)
+
+    @classmethod
+    def get_player_attributes(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            attributes = session.query(PlayerAttributes).filter(PlayerAttributes.player_id == player_id).first()
+            if attributes:
+                attr_dict = {
+                    column.name: getattr(attributes, column.name)
+                    for column in PlayerAttributes.__table__.columns
+                    if column.name not in ('id', 'player_id') and
+                       column.name not in KEEPER_ATTRIBUTES and
+                       column.name not in MENTAL_ATTRIBUTES
+                }
+                return attr_dict
+        finally:
+            session.close()
+
+    @classmethod
+    def get_keeper_attributes(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            attributes = session.query(PlayerAttributes).filter(PlayerAttributes.player_id == player_id).first()
+            if attributes:
+                attr_dict = {
+                    attr: getattr(attributes, attr)
+                    for attr in KEEPER_ATTRIBUTES
+                    if hasattr(attributes, attr)
+                }
+                return attr_dict
+        finally:
+            session.close()
+
+    @classmethod
+    def get_mental_attributes(cls, player_id):
+        session = DatabaseManager().get_session()
+        try:
+            attributes = session.query(PlayerAttributes).filter(PlayerAttributes.player_id == player_id).first()
+            if attributes:
+                attr_dict = {
+                    attr: getattr(attributes, attr)
+                    for attr in MENTAL_ATTRIBUTES
+                    if hasattr(attributes, attr)
+                }
+                return attr_dict
         finally:
             session.close()
 

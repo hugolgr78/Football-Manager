@@ -566,6 +566,19 @@ def generate_attributes(age, team_strength, depth, position):
         val = strength_adjust(val, team_strength)
         attrs[a] = val
 
+    if position == "goalkeeper":
+        if "jumping" in attrs:
+            jump = attrs["jumping"]
+
+            # aerial reach depends 80% on jumping + noise
+            reach = jump * 0.8 + random.uniform(-2, 2)
+
+            # apply clamp + strength adjust
+            reach = clamp(reach)
+            reach = strength_adjust(reach, team_strength)
+
+            attrs["aerial reach"] = reach
+
     return attrs
 
 def generate_CA(player_attributes, position):

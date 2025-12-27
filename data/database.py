@@ -1,4 +1,4 @@
-import re, datetime, os, shutil, time, gc, logging
+import re, datetime, os, shutil, time, gc, logging, copy, pickle, uuid, json, random
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
@@ -6,9 +6,7 @@ from sqlalchemy.orm import sessionmaker, aliased, scoped_session
 from sqlalchemy.types import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
-import uuid, json, random
 from faker import Faker
-import pickle
 from settings import *
 from utils.util_functions import *
 
@@ -686,6 +684,7 @@ class Players(Base):
                 }
 
                 numbers = []
+                available_numbers = copy.deepcopy(BASE_NUMBERS)
                 faker = Faker()
                 position_weights = [0.4, 0.3, 0.2, 0.1]
 
@@ -704,11 +703,6 @@ class Players(Base):
                         age = SEASON_START_DATE.year - date_of_birth.year
                         if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
                             age -= 1
-
-                        player_number = random.randint(1, 99)
-                        while player_number in numbers:
-                            player_number = random.randint(1, 99)
-                        numbers.append(player_number)
 
                         num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1), weights = position_weights[:min(len(specific_pos_list), 4)])[0]
                         new_player_positions = random.sample(specific_pos_list, k = num_positions)
@@ -736,7 +730,6 @@ class Players(Base):
                             "team_id": team_id,
                             "first_name": first_gen.make_name(),
                             "last_name": last_gen.make_name(),
-                            "number": player_number,
                             "position": overall_position,
                             "date_of_birth": date_of_birth,
                             "age": age,
@@ -822,11 +815,6 @@ class Players(Base):
                     else:
                         player["player_role"] = None
 
-                # Tie-break for Star Player limit
-                for i in range(4, len(team_players)):
-                    if team_players[i]["current_ability"] == team_players[3]["current_ability"]:
-                        team_players[i]["current_ability"] -= 5
-
                 # 2. First team and Rotation per position (Backup only for goalkeepers)
                 positions = ["goalkeeper", "defender", "midfielder", "forward"]
                 max_top_per_position = {"goalkeeper": 1, "defender": 4, "midfielder": 4, "forward": 4}
@@ -857,6 +845,40 @@ class Players(Base):
                             player["player_role"] = "Backup"
                         else:
                             player["player_role"] = "Rotation"
+
+                for player in team_players:
+
+                    positions = player["specific_positions"].split(',')
+
+                    # Find a position with available numbers
+                    available_position = None
+                    for pos in positions:
+                        if available_numbers[pos]:
+                            available_position = pos
+                            break
+
+                    # If no base numbers are left, pick a random number
+                    if available_position is None:
+                        available = [n for n in range(1, 100) if n not in numbers and n not in RESERVED_NUMBERS]
+                        number = random.choice(available)
+                        player["number"] = number
+                        numbers.append(number)
+                        continue
+
+                    # Otherwise, pick a number from the available base numbers
+                    available = [n for n in available_numbers[available_position] if n not in numbers]
+                    
+                    # If somehow no numbers left for this position, fallback to random
+                    if not available:
+                        available = [n for n in range(1, 100) if n not in numbers and n not in RESERVED_NUMBERS]
+
+                    number = random.choice(available)
+                    player["number"] = number
+                    numbers.append(number)
+
+                    # Remove the number from available numbers for that position
+                    if number in available_numbers[available_position]:
+                        available_numbers[available_position].remove(number)
 
                 # 1) Ensure at least one youth for each specific position
                 for overall_position, specific_pos_list in specific_positions.items():

@@ -1343,7 +1343,8 @@ class MatchDay(ctk.CTkFrame):
                                     self.substitutesFrame,
                                     self.swapLineupPositions,
                                     self.caStars[playerID],
-                                    xDisabled = True
+                                    xDisabled = True,
+                                    ingameFunction = self.showPlayerStats
                                 )
                 
                     # Check if there are any players available who can play in the injured player's position
@@ -1375,7 +1376,8 @@ class MatchDay(ctk.CTkFrame):
                                 self.substitutesFrame,
                                 self.swapLineupPositions,
                                 self.caStars[playerID],
-                                xDisabled = True
+                                xDisabled = True,
+                                ingameFunction = self.showPlayerStats
                             )
                 
                 if subbed_on:
@@ -1825,21 +1827,22 @@ class MatchDay(ctk.CTkFrame):
 
         # Create a frame for the player in the lineup pitch
         playerFrame = LineupPlayerFrame(self.lineupPitch, 
-                            POSITIONS_PITCH_POSITIONS[self.selected_position][0], 
-                            POSITIONS_PITCH_POSITIONS[self.selected_position][1], 
-                            "center", 
-                            color,
-                            65, 
-                            65, 
-                            playerData.id,
-                            POSITION_CODES[self.selected_position],
-                            self.selected_position,
-                            self.removePlayer,
-                            self.updateLineup,
-                            self.substitutesFrame,
-                            self.swapLineupPositions,
-                            self.caStars[playerData.id]
-                        )
+            POSITIONS_PITCH_POSITIONS[self.selected_position][0], 
+            POSITIONS_PITCH_POSITIONS[self.selected_position][1], 
+            "center", 
+            color,
+            65, 
+            65, 
+            playerData.id,
+            POSITION_CODES[self.selected_position],
+            self.selected_position,
+            self.removePlayer,
+            self.updateLineup,
+            self.substitutesFrame,
+            self.swapLineupPositions,
+            self.caStars[playerData.id],
+            ingameFunction = self.showPlayerStats
+        )
 
         if playerData.id in self.playersOn.values():
             playerFrame.showBorder()

@@ -2774,7 +2774,7 @@ class FootballPitchMatchDay(FootballPitchVertical):
         super().place_forget()
 
 class LineupPlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions, caStars, xDisabled = False):
+    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions, caStars, xDisabled = False, ingameFunction = None):
         """
         Frame representing a player in the lineup on the football pitch, with drag-and-drop functionality, found in FootballPitchLineup.
 
@@ -2809,6 +2809,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.swapLineupPositions = swapLineupPositions
         self.caStars = caStars
         self.additionalPositions = []
+        self.ingameFunction = ingameFunction
 
         self.parent.zone_occupancies[self.position] = 1  # Set the initial occupancy status
         self.current_zone = self.position
@@ -2828,8 +2829,12 @@ class LineupPlayerFrame(ctk.CTkFrame):
 
         self.firstName = ctk.CTkLabel(self, text = self.player.first_name, font = (APP_FONT, 10), height = 0, width = 0, fg_color = fgColor)
         self.firstName.place(relx = 0.5, rely = 0.35, anchor = "center")
-        self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 12), fg_color = fgColor, height = 0, width = 0)
-        self.lastName.place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        if self.ingameFunction:
+            PlayerProfileLink(self, self.player, self.player.last_name, "white", 0.5, 0.6, "center", fgColor, None, 12, APP_FONT_BOLD, ingame = True, ingameFunction = self.ingameFunction)
+        else:
+            self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 12), fg_color = fgColor, height = 0, width = 0)
+            self.lastName.place(relx = 0.5, rely = 0.6, anchor = "center")
 
         self.removeButton = ctk.CTkButton(self, text = "X", font = (APP_FONT, 10), width = 0, height = 0, fg_color = fgColor, hover_color = CLOSE_RED, corner_radius = 0, command = self.remove)
         self.removeButton.place(relx = 0.95, rely = 0.03, anchor = "ne")

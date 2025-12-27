@@ -8,6 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 import uuid, json, random
 from faker import Faker
+import pickle
 from settings import *
 from utils.util_functions import *
 
@@ -19,6 +20,12 @@ progressBar = None
 progressLabel = None
 progressFrame = None
 percentageLabel = None
+
+with open("data/models/first_name_generator.pkl", "rb") as f:
+    first_gen = pickle.load(f)
+
+with open("data/models/last_name_generator.pkl", "rb") as f:
+    last_gen = pickle.load(f)
 
 def _wrapped_commit(session, db_manager):
     if not db_manager.copy_active:
@@ -209,8 +216,8 @@ class Managers(Base):
                 managers_dicts.append(
                     {
                         "id": str(uuid.uuid4()),
-                        "first_name": Faker().first_name_male(),
-                        "last_name": Faker().first_name(),
+                        "first_name": first_gen.make_name(),
+                        "last_name": last_gen.make_name(),
                         "nationality": planet,
                         "flag": flags[planet],
                         "date_of_birth": date_of_birth,
@@ -563,6 +570,7 @@ class Players(Base):
 
     @classmethod
     def create_youth_player(cls, team_id, position, required_code, flags, numbers, league_planet, depth, team_strength, attributes_dict):
+
         if random.random() < 0.8:
             planet = league_planet
         else:
@@ -597,8 +605,8 @@ class Players(Base):
         dict_ = {
             "id": playerID,
             "team_id": team_id,
-            "first_name": faker.first_name_male(),
-            "last_name": faker.last_name(),
+            "first_name": first_gen.make_name(),
+            "last_name": last_gen.make_name(),
             "number": random.randint(1, 99),
             "position": position,
             "date_of_birth": date_of_birth,
@@ -726,8 +734,8 @@ class Players(Base):
                         team_players.append({
                             "id": playerID,
                             "team_id": team_id,
-                            "first_name": faker.first_name_male(),
-                            "last_name": faker.last_name(),
+                            "first_name": first_gen.make_name(),
+                            "last_name": last_gen.make_name(),
                             "number": player_number,
                             "position": overall_position,
                             "date_of_birth": date_of_birth,
@@ -780,8 +788,8 @@ class Players(Base):
                         team_players.append({
                             "id": playerID,
                             "team_id": team_id,
-                            "first_name": faker.first_name_male(),
-                            "last_name": faker.last_name(),
+                            "first_name": first_gen.make_name(),
+                            "last_name": last_gen.make_name(),
                             "number": player_number,
                             "position": overall_position,
                             "date_of_birth": date_of_birth,
@@ -3594,8 +3602,8 @@ class Referees(Base):
 
                     referees_dict.append({
                         "id": str(uuid.uuid4()),
-                        "first_name": faker.first_name_male(),
-                        "last_name": faker.last_name_male(),
+                        "first_name": first_gen.make_name(),
+                        "last_name": last_gen.make_name(),
                         "league_id": league.id,
                         "severity": random.choices(["low", "medium", "high"], k = 1)[0],
                         "flag": flags[league_planet],

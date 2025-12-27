@@ -509,12 +509,15 @@ class Attributes(ctk.CTkFrame):
         core.update({k: v for k, v in mental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
         sec.update({k: v for k, v in mental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
 
-
         self.corePoly = AttributesPolygon(self, core, 350, 400, TKINTER_BACKGROUND, "white")
         self.corePoly.place(relx = 0.335, rely = 0.95, anchor = "s")
 
+        ctk.CTkLabel(self, text = "Core", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.315, rely = 0.98, anchor = "s")
+
         self.secPoly = AttributesPolygon(self, sec, 350, 400, TKINTER_BACKGROUND, "white")
         self.secPoly.place(relx = 0.69, rely = 0.95, anchor = "s")
+
+        ctk.CTkLabel(self, text = "Secondary", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.675, rely = 0.98, anchor = "s")
 
 class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):

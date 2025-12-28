@@ -6230,7 +6230,7 @@ def setUpProgressBar(progressB, progressL, progressF, percentageL):
     progressFrame = progressF
     percentageLabel = percentageL
 
-def searchResults(search, search_limit = SEARCH_LIMIT, result_limit = RESULT_LIMIT, players_only = False, keeper = False):
+def searchResults(search, search_limit = SEARCH_LIMIT, result_limit = RESULT_LIMIT, players_only = False, position = None):
     session = DatabaseManager().get_session()
 
     try:
@@ -6358,11 +6358,7 @@ def searchResults(search, search_limit = SEARCH_LIMIT, result_limit = RESULT_LIM
 
         if players_only:
             player_results.sort(key = lambda x: x["sort_key"].lower())
-
-            if keeper:
-                player_results = [data for data in player_results if data["data"].position == "goalkeeper"]
-            else:
-                player_results = [data for data in player_results if data["data"].position != "goalkeeper"]
+            player_results = [data for data in player_results if data["data"].position == position]
 
             return player_results[:result_limit]
 

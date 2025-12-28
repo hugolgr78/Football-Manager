@@ -426,15 +426,15 @@ class Attributes(ctk.CTkFrame):
         ctk.CTkFrame(self, width = 7, height = 280, fg_color = GREY_BACKGROUND, corner_radius = 0).place(relx = 0.85, rely = 0.02, anchor = "nw")
 
         if player.position != "goalkeeper":
-            technical = PlayerAttributes.get_player_attributes(player.id)  
+            self.technical = PlayerAttributes.get_player_attributes(player.id)  
         else:
-            technical = PlayerAttributes.get_keeper_attributes(player.id)
+            self.technical = PlayerAttributes.get_keeper_attributes(player.id)
         
-        mental_physical = PlayerAttributes.get_mental_attributes(player.id)
+        self.mental_physical = PlayerAttributes.get_mental_attributes(player.id)
 
-        self.addAttributes(technical, self.technicalFrame)
-        self.addAttributes(mental_physical, self.otherFrame, type_ = "Mental & Physical")
-        self.addPolygons(technical, mental_physical)
+        self.addAttributes(self.technical, self.technicalFrame)
+        self.addAttributes(self.mental_physical, self.otherFrame, type_ = "Mental & Physical")
+        self.addPolygons()
 
         src = Image.open("Images/compare.png")
         src.thumbnail((30, 30))
@@ -501,7 +501,7 @@ class Attributes(ctk.CTkFrame):
             else:
                 row += 1    
 
-    def addPolygons(self, technical, mental_physical):
+    def addPolygons(self):
         """
         Add attribute polygons to visualize player's strengths.
         
@@ -510,11 +510,11 @@ class Attributes(ctk.CTkFrame):
             mental_physical (dict): Mental and physical attributes of the player.
         """
 
-        core = {k: v for k, v in technical.items() if k in CORE_ATTRIBUTES[self.player.position]}
-        sec = {k: v for k, v in technical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
+        core = {k: v for k, v in self.technical.items() if k in CORE_ATTRIBUTES[self.player.position]}
+        sec = {k: v for k, v in self.technical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
 
-        core.update({k: v for k, v in mental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
-        sec.update({k: v for k, v in mental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
+        core.update({k: v for k, v in self.mental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
+        sec.update({k: v for k, v in self.mental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
 
         self.corePoly = AttributesPolygon(self, core, 350, 400, TKINTER_BACKGROUND, "white")
         self.corePoly.place(relx = 0.335, rely = 0.95, anchor = "s")
@@ -547,6 +547,7 @@ class Attributes(ctk.CTkFrame):
         self.searchBox.place(relx = 0.5, rely = 0.15, anchor = "center")
 
         self.search_timer = None
+        self.searchBox.focus()
 
         self.resultsFrame = ctk.CTkFrame(self.searchFrame, fg_color = TKINTER_BACKGROUND, width = 380, height = 380, corner_radius = 0)
         self.resultsFrame.place(relx = 0.5, rely = 0.2, anchor = "n")
@@ -630,7 +631,37 @@ class Attributes(ctk.CTkFrame):
             widget.configure(fg_color = TKINTER_BACKGROUND)
 
     def openCompare(self, player):
-        print(player.id)
+        self.compareFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0)
+        self.compareFrame.place(relx = 0, rely = 0, anchor = "nw")
+
+        ctk.CTkLabel(self.compareFrame, text = f"Comparing {self.player.first_name} {self.player.last_name} and {player.first_name} {player.last_name}", font = (APP_FONT_BOLD, 35), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.03, anchor = "nw")
+
+        if player.position != "goalkeeper":
+            playerTechnical = PlayerAttributes.get_player_attributes(player.id)  
+        else:
+            playerTechnical = PlayerAttributes.get_keeper_attributes(player.id)
+        
+        playerMental_physical = PlayerAttributes.get_mental_attributes(player.id)
+
+        core = {k: v for k, v in self.technical.items() if k in CORE_ATTRIBUTES[self.player.position]}
+        sec = {k: v for k, v in self.technical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
+        core.update({k: v for k, v in self.mental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
+        sec.update({k: v for k, v in self.mental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
+
+        playerCore = {k: v for k, v in playerTechnical.items() if k in CORE_ATTRIBUTES[self.player.position]}
+        playerSec = {k: v for k, v in playerTechnical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
+        playerCore.update({k: v for k, v in playerMental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
+        playerSec.update({k: v for k, v in playerMental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
+
+        self.corePoly = AttributesPolygon(self.compareFrame, core, 350, 400, TKINTER_BACKGROUND, "white", extra = playerCore)
+        self.corePoly.place(relx = 0.2, rely = 0.35, anchor = "center")
+
+        # ctk.CTkLabel(self, text = "Core", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.55, anchor = "s")
+
+        self.secPoly = AttributesPolygon(self.compareFrame, sec, 350, 400, TKINTER_BACKGROUND, "white", extra = playerSec)
+        self.secPoly.place(relx = 0.2, rely = 0.75, anchor = "center")
+
+        # ctk.CTkLabel(self, text = "Secondary", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.95, anchor = "s")
 
 class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):

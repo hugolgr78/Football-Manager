@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from settings import *
-from data.database import Matches, PlayerAttributes, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players, Managers, League
+from data.database import Matches, PlayerAttributes, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players, Managers, League, searchResults
 from data.gamesDatabase import *
 from PIL import Image
 import io
@@ -436,6 +436,13 @@ class Attributes(ctk.CTkFrame):
         self.addAttributes(mental_physical, self.otherFrame, type_ = "Mental & Physical")
         self.addPolygons(technical, mental_physical)
 
+        src = Image.open("Images/compare.png")
+        src.thumbnail((30, 30))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        self.compareButton = ctk.CTkButton(self, text = "", image = img, fg_color = GREY_BACKGROUND, hover_color = GREY_BACKGROUND, corner_radius = 5, height = 40, width = 40, command = self.openComparePlayer)
+        self.compareButton.place(relx = 0.95, rely = 0.02, anchor = "ne")
+        self.searchFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 400, height = 500, corner_radius = 15, border_width = 2, border_color = APP_BLUE)
+
     def addAttributes(self, data, frame, type_ = "Technical"):
         """
         Add player attributes to the specified frame.
@@ -518,6 +525,112 @@ class Attributes(ctk.CTkFrame):
         self.secPoly.place(relx = 0.69, rely = 0.95, anchor = "s")
 
         ctk.CTkLabel(self, text = "Secondary", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.675, rely = 0.98, anchor = "s")
+
+    def openComparePlayer(self):
+        """
+        Opens the frame to search for a player to compare attributes with.
+        """
+        
+        self.searchFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        backButton = ctk.CTkButton(self.searchFrame, text = "X", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, corner_radius = 5, height = 0, width = 0, command = lambda: self.searchFrame.place_forget())
+        backButton.place(relx = 0.95, rely = 0.05, anchor = "e")
+
+        ctk.CTkLabel(self.searchFrame, text = "Search Player to Compare", font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        canvas = ctk.CTkCanvas(self.searchFrame, width = 390, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
+        canvas.place(relx = 0.5, rely = 0.1, anchor = "center")
+
+        self.searchVar = ctk.StringVar()
+        self.searchVar.trace_add("write", self.search)
+        self.searchBox = ctk.CTkEntry(self.searchFrame, width = 380, height = 40, border_color = GREY_BACKGROUND, border_width = 2, corner_radius = 10, textvariable = self.searchVar)
+        self.searchBox.place(relx = 0.5, rely = 0.15, anchor = "center")
+
+        self.search_timer = None
+
+        self.resultsFrame = ctk.CTkFrame(self.searchFrame, fg_color = TKINTER_BACKGROUND, width = 380, height = 380, corner_radius = 0)
+        self.resultsFrame.place(relx = 0.5, rely = 0.2, anchor = "n")
+
+    def search(self, *args):
+        """
+        Handle search input changes with a delay to optimize performance.
+        
+        Args:
+            *args: Additional arguments (not used).
+        """
+
+        currSearch = self.searchVar.get().strip()
+
+        if self.search_timer:
+            self.after_cancel(self.search_timer)
+            self.search_timer = None
+
+        if len(currSearch) == 0:
+            # Clear results immediately when search is empty
+            for widget in self.resultsFrame.winfo_children():
+                widget.destroy()
+            return
+
+        self.search_timer = self.after(200, lambda: self.performSearch(currSearch))
+
+    def performSearch(self, query):
+        """
+        Perform the search and update the results frame.
+        
+        :param query: The search query string.
+        """
+        
+        for widget in self.resultsFrame.winfo_children():
+            widget.destroy()
+
+        self.results = searchResults(query, result_limit = 7, search_limit = 100, players_only = True, keeper = True if self.player.position == "goalkeeper" else False)
+
+        startY = 0
+        gap = (50 / 380)
+
+        for i, result in enumerate(self.results):
+            resultFrame = ctk.CTkFrame(self.resultsFrame, fg_color = TKINTER_BACKGROUND, width = 380, height = 50, corner_radius = 0)
+            resultFrame.place(relx = 0, rely = startY + gap * i, anchor = "nw")
+
+            resultData = result["data"]
+            ctk.CTkLabel(resultFrame, text = f"{resultData.first_name} {resultData.last_name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+            resultFrame.bind("<Enter>", lambda e, f = resultFrame: self.onFrameHover(f))
+            resultFrame.bind("<Leave>", lambda e, f = resultFrame: self.onFrameLeave(f))
+            resultFrame.bind("<Button-1>", lambda e, cmd = self.openCompare, r = result: cmd(r["data"]))
+
+            for child in resultFrame.winfo_children():
+                child.bind("<Enter>", lambda e, f = resultFrame: self.onFrameHover(f))
+                child.bind("<Button-1>", lambda e, cmd = self.openCompare, r = result: cmd(r["data"]))
+
+    def onFrameHover(self, frame):
+        """
+        Handle hover effect on result frames.
+        
+        Args:
+            frame (ctk.CTkFrame): The frame being hovered over.
+        """
+        
+        frame.configure(fg_color = GREY_BACKGROUND)
+
+        for widget in frame.winfo_children():
+            widget.configure(fg_color = GREY_BACKGROUND)
+
+    def onFrameLeave(self, frame):
+        """
+        Handle hover leave effect on result frames.
+        
+        Args:
+            frame (ctk.CTkFrame): The frame being left.
+        """
+        
+        frame.configure(fg_color = TKINTER_BACKGROUND)
+
+        for widget in frame.winfo_children():
+            widget.configure(fg_color = TKINTER_BACKGROUND)
+
+    def openCompare(self, player):
+        print(player.id)
 
 class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):

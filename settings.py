@@ -461,7 +461,8 @@ PROMPT_REACTIONS = {
     "Dissapointed": {"win": -1, "draw": 0, "lose": 1}
 }
 
-SEARCH_LIMIT = 12
+SEARCH_LIMIT = 20
+RESULT_LIMIT = 12
 
 EVENTS_TO_ICONS = {
     "substitution": "Sub",

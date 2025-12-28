@@ -4898,14 +4898,15 @@ class TeamOTW(ctk.CTkFrame):
         self.pitch = FootballPitchTeamOTW(self, self.team, 300, 550, 0.5, 0.5, "center", GREY_BACKGROUND, "green")
 
 class AttributesPolygon(ctk.CTkCanvas):
-    def __init__(self, parent, attributes, height, width, bg_color, text_color):
+    def __init__(self, parent, data, height, width, bg_color, text_color, extra = None):
         """
         Class for drawing a radar chart of attributes with a polygon-gradient background.
         
         Args:
             parent (ctk.CTkFrame): The parent frame.
-            attributes (dict): A dictionary of attribute names and their values.
+            data (dict): A dictionary of attribute names and their values.
             size (int): The size of the canvas (width and height).
+            extra (int, Optional): An optional extra set of arguments to add to the polygon
         """
 
         super().__init__(parent, width = width, height = height, bg = bg_color, highlightthickness = 0)
@@ -4914,17 +4915,26 @@ class AttributesPolygon(ctk.CTkCanvas):
         self.center = min(width, height) / 2
         self.radius = self.poly_size * 0.40
         self.max_value = 20
-        self.attributes = list(attributes.keys())
-        self.values = list(attributes.values())
+        self.extra = extra
 
-        self.levels = 5         # grid lines
+        attributes = list(data.keys())
+        values = list(data.values())
+
+        self.numAttributes = len(attributes)
+
+        if self.extra:
+            extraAttributes = list(self.extra.keys())
+            extraValues = list(self.extra.values())
+
+        self.levels = 5 # grid lines
         self.gradient_steps = 6 # colored rings
         self.text_color = text_color
 
         self.draw_gradient_background()
-        self.draw_chart()
+        self.draw_chart(attributes, values, "#1E40AF")
 
-    # -------------------------------------------------------------------
+        if self.extra:
+            self.draw_chart(extraAttributes, extraValues, "#AF1E1E")
 
     def draw_gradient_background(self):
         """
@@ -4942,7 +4952,7 @@ class AttributesPolygon(ctk.CTkCanvas):
         ]
 
         steps = min(self.gradient_steps, len(colors))
-        n = len(self.attributes)
+        n = self.numAttributes
         angle_step = 2 * math.pi / n
         max_r = self.radius * 1.15
 
@@ -4960,12 +4970,12 @@ class AttributesPolygon(ctk.CTkCanvas):
 
             self.create_polygon(pts, fill = colors[ring], outline = "")
 
-    def draw_chart(self):
+    def draw_chart(self, attributes, values, outline):
         """
         Draw the radar chart grid, labels, and the data polygon.
         """
 
-        n = len(self.attributes)
+        n = len(attributes)
         angle_step = 2 * math.pi / n
 
         # --- Draw polygon grid rings
@@ -4983,7 +4993,7 @@ class AttributesPolygon(ctk.CTkCanvas):
 
         # --- Draw attribute labels (moved outward)
         LABEL_OFFSET = self.radius + 50
-        for i, label in enumerate(self.attributes):
+        for i, label in enumerate(attributes):
             angle = i * angle_step - math.pi / 2
             x = self.center + LABEL_OFFSET * math.cos(angle)
             y = self.center + LABEL_OFFSET * math.sin(angle)
@@ -5003,7 +5013,7 @@ class AttributesPolygon(ctk.CTkCanvas):
 
         # --- Draw data polygon
         data_pts = []
-        for i, value in enumerate(self.values):
+        for i, value in enumerate(values):
             ratio = max(0, min(value / self.max_value, 1))
             r = ratio * self.radius
 
@@ -5012,4 +5022,4 @@ class AttributesPolygon(ctk.CTkCanvas):
             y = self.center + r * math.sin(angle)
             data_pts.extend((x, y))
 
-        self.create_polygon(data_pts, fill = "", outline = "#1E40AF", width = 3)
+        self.create_polygon(data_pts, fill = "", outline = outline, width = 3)

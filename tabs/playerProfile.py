@@ -578,13 +578,14 @@ class Attributes(ctk.CTkFrame):
         """
         Perform the search and update the results frame.
         
-        :param query: The search query string.
+        Args:
+            query (str): The search query string.
         """
         
         for widget in self.resultsFrame.winfo_children():
             widget.destroy()
 
-        self.results = searchResults(query, result_limit = 7, search_limit = 100, players_only = True, keeper = True if self.player.position == "goalkeeper" else False)
+        self.results = searchResults(query, result_limit = 7, search_limit = 100, players_only = True, position = self.player.position)
 
         startY = 0
         gap = (50 / 380)
@@ -631,10 +632,20 @@ class Attributes(ctk.CTkFrame):
             widget.configure(fg_color = TKINTER_BACKGROUND)
 
     def openCompare(self, player):
+        """
+        Opens the frame showing the data of both players
+        
+        Args:
+            player (Player): the player object to compare to
+        """
+
         self.compareFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0)
         self.compareFrame.place(relx = 0, rely = 0, anchor = "nw")
 
-        ctk.CTkLabel(self.compareFrame, text = f"Comparing {self.player.first_name} {self.player.last_name} and {player.first_name} {player.last_name}", font = (APP_FONT_BOLD, 35), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.03, anchor = "nw")
+        backButton = ctk.CTkButton(self.compareFrame, text = "Return", font = (APP_FONT, 15), fg_color = APP_BLUE, hover_color = APP_BLUE, corner_radius = 10, width = 100, height = 40, command = lambda: self.compareFrame.place_forget())
+        backButton.place(relx = 0.95, rely = 0.03, anchor = "ne")
+
+        ctk.CTkLabel(self.compareFrame, text = f"Comparing with {player.first_name} {player.last_name}", font = (APP_FONT_BOLD, 35), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.03, anchor = "nw")
 
         if player.position != "goalkeeper":
             playerTechnical = PlayerAttributes.get_player_attributes(player.id)  
@@ -656,12 +667,8 @@ class Attributes(ctk.CTkFrame):
         self.corePoly = AttributesPolygon(self.compareFrame, core, 350, 400, TKINTER_BACKGROUND, "white", extra = playerCore)
         self.corePoly.place(relx = 0.2, rely = 0.35, anchor = "center")
 
-        # ctk.CTkLabel(self, text = "Core", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.55, anchor = "s")
-
         self.secPoly = AttributesPolygon(self.compareFrame, sec, 350, 400, TKINTER_BACKGROUND, "white", extra = playerSec)
-        self.secPoly.place(relx = 0.2, rely = 0.75, anchor = "center")
-
-        # ctk.CTkLabel(self, text = "Secondary", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.2, rely = 0.95, anchor = "s")
+        self.secPoly.place(relx = 0.2, rely = 0.78, anchor = "center")
 
 class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):

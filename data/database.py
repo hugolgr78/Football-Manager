@@ -6230,7 +6230,7 @@ def setUpProgressBar(progressB, progressL, progressF, percentageL):
     progressFrame = progressF
     percentageLabel = percentageL
 
-def searchResults(search, limit = SEARCH_LIMIT):
+def searchResults(search, search_limit = SEARCH_LIMIT, result_limit = RESULT_LIMIT, players_only = False, keeper = False):
     session = DatabaseManager().get_session()
 
     try:
@@ -6298,42 +6298,48 @@ def searchResults(search, limit = SEARCH_LIMIT):
         def query_players():
             return session.query(Players).filter(
                 build_name_filter(Players)
-            ).limit(limit).all()
+            ).limit(search_limit).all()
 
         def query_managers():
             return session.query(Managers).filter(
                 build_name_filter(Managers)
-            ).limit(limit).all()
+            ).limit(search_limit).all()
 
         def query_teams():
             return session.query(Teams).filter(
                 build_name_filter(Teams)
-            ).limit(limit).all()
+            ).limit(search_limit).all()
 
         def query_leagues():
             return session.query(League).filter(
                 build_name_filter(League)
-            ).limit(limit).all()
+            ).limit(search_limit).all()
 
         def query_referees():
             return session.query(Referees).filter(
                 build_name_filter(Referees)
-            ).limit(limit).all()
+            ).limit(search_limit).all()
         
         def query_matches():
             return session.query(Matches).filter(
                 build_name_filter(Matches)
-            ).limit(limit).all()
+            ).limit(search_limit).all()
 
         with ThreadPoolExecutor(max_workers = 5) as executor:
-            future_to_type = {
-                executor.submit(query_players): 'players',
-                executor.submit(query_managers): 'managers',
-                executor.submit(query_teams): 'teams',
-                executor.submit(query_leagues): 'leagues',
-                executor.submit(query_referees): 'referees',
-                executor.submit(query_matches): 'matches'
-            }
+            
+            if not players_only:
+                future_to_type = {
+                    executor.submit(query_players): 'players',
+                    executor.submit(query_managers): 'managers',
+                    executor.submit(query_teams): 'teams',
+                    executor.submit(query_leagues): 'leagues',
+                    executor.submit(query_referees): 'referees',
+                    executor.submit(query_matches): 'matches'
+                }
+            else:
+                future_to_type = {
+                    executor.submit(query_players): 'players'
+                }
 
             query_results = {}
             for future in as_completed(future_to_type):
@@ -6349,6 +6355,16 @@ def searchResults(search, limit = SEARCH_LIMIT):
             "data": p,
             "sort_key": f"{p.first_name or ''} {p.last_name or ''}".strip()
         } for p in query_results['players']]
+
+        if players_only:
+            player_results.sort(key = lambda x: x["sort_key"].lower())
+
+            if keeper:
+                player_results = [data for data in player_results if data["data"].position == "goalkeeper"]
+            else:
+                player_results = [data for data in player_results if data["data"].position != "goalkeeper"]
+
+            return player_results[:result_limit]
 
         manager_results = [{
             "type": "manager",
@@ -6392,7 +6408,7 @@ def searchResults(search, limit = SEARCH_LIMIT):
             league_results + referee_results + match_results
         )
         combined.sort(key = lambda x: x["sort_key"].lower())
-        return combined[:limit]
+        return combined[:result_limit]
 
     finally:
         session.close()

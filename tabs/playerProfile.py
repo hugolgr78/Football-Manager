@@ -1,3 +1,4 @@
+from ast import Match
 import customtkinter as ctk
 from settings import *
 from data.database import Matches, PlayerAttributes, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players, Managers, League, searchResults
@@ -306,7 +307,7 @@ class Profile(ctk.CTkFrame):
         played = TeamLineup.get_number_matches_by_player(self.player.id, self.parent.league.id)
         yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id, comp = self.parent.league.id)
         redCards = MatchEvents.get_red_cards_by_player(self.player.id, comp = self.parent.league.id)
-        averageRating = TeamLineup.get_player_average_rating(self.player.id, self.parent.league.id)
+        averageRating = TeamLineup.get_player_average_rating(self.player.id, comp = self.parent.league.id)
 
         if self.player.position != "goalkeeper":
             goals = MatchEvents.get_goals_and_pens_by_player(self.player.id, comp = self.parent.league.id)
@@ -645,7 +646,97 @@ class Attributes(ctk.CTkFrame):
         backButton = ctk.CTkButton(self.compareFrame, text = "Return", font = (APP_FONT, 15), fg_color = APP_BLUE, hover_color = APP_BLUE, corner_radius = 10, width = 100, height = 40, command = lambda: self.compareFrame.place_forget())
         backButton.place(relx = 0.95, rely = 0.03, anchor = "ne")
 
-        ctk.CTkLabel(self.compareFrame, text = f"Comparing with {player.first_name} {player.last_name}", font = (APP_FONT_BOLD, 35), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0.03, anchor = "nw")
+        ctk.CTkLabel(self.compareFrame, text = f"Comparing with {player.first_name} {player.last_name}", font = (APP_FONT_BOLD, 35), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0, anchor = "nw")
+
+        def divider(row): ctk.CTkFrame(dataFrame, height = 1, fg_color = GREY_BACKGROUND).grid(row = row, column = 0, columnspan = 3, sticky = "ew", padx = 15, pady = 6)
+
+        def stat_row(row, label, left, right, highlight = None, fontSize = 18):
+            ctk.CTkLabel(dataFrame, text = label.upper(), font = (APP_FONT_BOLD, 14), text_color = "#9CA3AF").grid(row = row, column = 0, padx = 15, sticky = "w")
+            ctk.CTkLabel(dataFrame, text = left, font = (APP_FONT_BOLD if highlight == "left" else APP_FONT, fontSize), text_color = "white").grid(row = row, column = 1)
+            ctk.CTkLabel(dataFrame, text = right, font = (APP_FONT_BOLD if highlight == "right" else APP_FONT, fontSize), text_color = "white").grid(row = row, column = 2)
+    
+        def star_row(row, label, leftStars, rightStars):
+            ctk.CTkLabel(dataFrame, text = label.upper(), font = (APP_FONT_BOLD, 14), text_color = "#9CA3AF").grid(row = row, column = 0, padx = 15, sticky = "w")
+
+            frame = ctk.CTkFrame(dataFrame, fg_color = GREY_BACKGROUND, width = 110, height = 30, corner_radius = 15)
+            frame.grid(row = row, column = 1, sticky = "w")
+            imageNames = star_images(leftStars)
+            for i, imageName in enumerate(imageNames):
+                src = Image.open(f"Images/{imageName}.png")
+                src.thumbnail((15, 15))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(frame, image = img, text = "").place(relx = 0.25 + i * 0.15, rely = 0.5, anchor = "center")
+
+            frame = ctk.CTkFrame(dataFrame, fg_color = GREY_BACKGROUND, width = 110, height = 30, corner_radius = 15)
+            frame.grid(row = row, column = 2, sticky = "w")
+            imageNames = star_images(rightStars)
+            for i, imageName in enumerate(imageNames):
+                src = Image.open(f"Images/{imageName}.png")
+                src.thumbnail((15, 15))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(frame, image = img, text = "").place(relx = 0.25 + i * 0.15, rely = 0.5, anchor = "center")
+
+        dataFrame = ctk.CTkFrame(self.compareFrame, fg_color = GREY_BACKGROUND, width = 400, height = 550, corner_radius = 15)
+        dataFrame.place(relx = 0.02, rely = 0.1, anchor = "nw")
+        dataFrame.grid_propagate(False)
+        dataFrame.grid_columnconfigure(0, weight = 0); dataFrame.grid_columnconfigure((1, 2), weight = 1)
+
+        ctk.CTkLabel(dataFrame, text = self.player.last_name, font = (APP_FONT_BOLD, 20), text_color = "white").grid(row = 0, column = 1, pady = (15, 8))
+        ctk.CTkLabel(dataFrame, text = player.last_name, font = (APP_FONT_BOLD, 20), text_color = "white").grid(row = 0, column = 2, pady = (15, 8))
+
+        divider(1)
+
+        left_caStars, = Players.get_players_star_ratings([self.player], self.parent.league.id).values()
+        left_paStars, = Players.get_players_star_ratings([self.player], self.parent.league.id, CA = False).values()
+
+        right_caStars, = Players.get_players_star_ratings([player], self.parent.league.id).values()
+        right_paStars, = Players.get_players_star_ratings([player], self.parent.league.id, CA = False).values()
+
+        stat_row(2, "Team", Teams.get_team_by_id(self.player.team_id).name, Teams.get_team_by_id(player.team_id).name, fontSize = 12)
+        stat_row(3, "Age", self.player.age, player.age)
+        star_row(4, "Current Ability", left_caStars, right_caStars)
+        star_row(5, "Potential Ability", left_paStars, right_paStars)
+        stat_row(6, "Market Value", "Value", "Value")
+        stat_row(7, "Wage", "Wage", "Wage")
+        stat_row(8, "Contract End", "Date", "Date")
+        stat_row(9, "Role", self.player.player_role, player.player_role)
+        divider(10)
+
+        ctk.CTkLabel(dataFrame, text = "SEASON STATS", font = (APP_FONT_BOLD, 22), text_color = "white").grid(row = 11, column = 0, columnspan = 3, pady = (8, 6))
+
+        row = 12
+        stat_row(row, "Matches", TeamLineup.get_number_matches_by_player_all_comps(self.player.id), TeamLineup.get_number_matches_by_player_all_comps(player.id)); row += 1
+
+        if player.position == "goalkeeper":
+            left_yellow, right_yellow = MatchEvents.get_yellow_cards_by_player(self.player.id), MatchEvents.get_yellow_cards_by_player(player.id)
+            left_red, right_red = MatchEvents.get_red_cards_by_player(self.player.id), MatchEvents.get_red_cards_by_player(player.id)
+            left_saved, right_saved = MatchEvents.get_penalty_saves_by_player(self.player.id), MatchEvents.get_penalty_saves_by_player(player.id)
+            left_clean, right_clean = MatchEvents.get_clean_sheets_by_player(self.player.id), MatchEvents.get_clean_sheets_by_player(player.id)
+
+            stat_row(row, "Yellow Cards", left_yellow, right_yellow, highlight = "left" if left_yellow < right_yellow else "right" if right_yellow < left_yellow else None); row += 1
+            stat_row(row, "Red Cards", left_red, right_red, highlight = "left" if left_red < right_red else "right" if right_red < left_red else None); row += 1
+            stat_row(row, "Saved Pens", left_saved, right_saved, highlight = "left" if left_saved > right_saved else "right" if right_saved > left_saved else None); row += 1
+            stat_row(row, "Clean Sheets", left_clean, right_clean, highlight = "left" if left_clean > right_clean else "right" if right_clean > left_clean else None)
+        else:
+            left_goal, right_goal = MatchEvents.get_goals_and_pens_by_player(self.player.id), MatchEvents.get_goals_and_pens_by_player(player.id)
+            left_assist, right_assist = MatchEvents.get_assists_by_player(self.player.id), MatchEvents.get_assists_by_player(player.id)
+            left_yellow, right_yellow = MatchEvents.get_yellow_cards_by_player(self.player.id), MatchEvents.get_yellow_cards_by_player(player.id)
+            left_red, right_red = MatchEvents.get_red_cards_by_player(self.player.id), MatchEvents.get_red_cards_by_player(player.id)
+
+            stat_row(row, "Goals", left_goal, right_goal, highlight = "left" if left_goal > right_goal else "right" if right_goal > left_goal else None); row += 1
+            stat_row(row, "Assists", left_assist, right_assist, highlight = "left" if left_assist > right_assist else "right" if right_assist > left_assist else None); row += 1
+            stat_row(row, "Yellow Cards", left_yellow, right_yellow, highlight = "left" if left_yellow < right_yellow else "right" if right_yellow < left_yellow else None); row += 1
+            stat_row(row, "Red Cards", left_red, right_red, highlight = "left" if left_red < right_red else "right" if right_red < left_red else None)
+
+        divider(row + 1)
+
+        left_rating = TeamLineup.get_player_average_rating(self.player.id)
+        right_rating = TeamLineup.get_player_average_rating(player.id)
+
+        if any(isinstance(r, str) for r in [left_rating, right_rating]):
+            stat_row(row + 2, "Avg Rating", left_rating, right_rating)
+        else:
+            stat_row(row + 2, "Avg Rating", left_rating, right_rating, highlight = "left" if left_rating > right_rating else "right" if right_rating > left_rating else None)
 
         if player.position != "goalkeeper":
             playerTechnical = PlayerAttributes.get_player_attributes(player.id)  
@@ -665,10 +756,10 @@ class Attributes(ctk.CTkFrame):
         playerSec.update({k: v for k, v in playerMental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
 
         self.corePoly = AttributesPolygon(self.compareFrame, core, 350, 400, TKINTER_BACKGROUND, "white", extra = playerCore)
-        self.corePoly.place(relx = 0.2, rely = 0.35, anchor = "center")
+        self.corePoly.place(relx = 0.58, rely = 0.78, anchor = "center")
 
         self.secPoly = AttributesPolygon(self.compareFrame, sec, 350, 400, TKINTER_BACKGROUND, "white", extra = playerSec)
-        self.secPoly.place(relx = 0.2, rely = 0.78, anchor = "center")
+        self.secPoly.place(relx = 0.87, rely = 0.78, anchor = "center")
 
 class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):

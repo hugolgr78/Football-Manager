@@ -2117,14 +2117,32 @@ class TeamLineup(Base):
             session.close()
 
     @classmethod
-    def get_player_average_rating(cls, player_id, league_id):
+    def get_number_matches_by_player_all_comps(cls, player_id):
         session = DatabaseManager().get_session()
         try:
-            rating = session.query(func.avg(TeamLineup.rating)).join(Matches).filter(
+            matches = session.query(TeamLineup).filter(
                 TeamLineup.player_id == player_id,
-                Matches.league_id == league_id,
                 TeamLineup.rating.isnot(None)
-            ).scalar()
+            ).count()
+            return matches
+        finally:
+            session.close()
+
+    @classmethod
+    def get_player_average_rating(cls, player_id, comp = None):
+        session = DatabaseManager().get_session()
+        try:
+            if comp:
+                rating = session.query(func.avg(TeamLineup.rating)).join(Matches).filter(
+                    TeamLineup.player_id == player_id,
+                    Matches.league_id == comp,
+                    TeamLineup.rating.isnot(None)
+                ).scalar()
+            else:
+                rating = session.query(func.avg(TeamLineup.rating)).filter(
+                    TeamLineup.player_id == player_id,
+                    TeamLineup.rating.isnot(None)
+                ).scalar()
             return rating if rating else "N/A"
         finally:
             session.close()

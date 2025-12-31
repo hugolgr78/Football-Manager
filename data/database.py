@@ -3367,6 +3367,7 @@ class LeagueTeams(Base):
             raise e
         finally:
             session.close()
+            
     @classmethod
     def add_team(cls, league_id, team_id, position):
         session = DatabaseManager().get_session()

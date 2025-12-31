@@ -761,6 +761,8 @@ class Attributes(ctk.CTkFrame):
         self.secPoly = AttributesPolygon(self.compareFrame, sec, 350, 400, TKINTER_BACKGROUND, "white", extra = playerSec)
         self.secPoly.place(relx = 0.87, rely = 0.78, anchor = "center")
 
+        ctk.CTkLabel(self.compareFrame, text = "Graph showing G/A (or clean sheets) history data as\nseasons go on", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.7, rely = 0.3, anchor = "center")
+
 class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):
         """

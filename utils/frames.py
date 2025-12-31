@@ -5023,3 +5023,172 @@ class AttributesPolygon(ctk.CTkCanvas):
             data_pts.extend((x, y))
 
         self.create_polygon(data_pts, fill = "", outline = outline, width = 3)
+
+class LiveTableFrame(ctk.CTkScrollableFrame):
+    def __init__(self, paremt, league_id, teamID, playingTeams, fgColor, width, height):
+        """
+        Class for displaying a live league table during a game.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            league_id (int): The league ID.
+            teamID (int): The team ID to highlight.
+            playingTeams (list): List of team IDs currently playing.
+            fg_color (str): The foreground color.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+        """
+
+        super().__init__(paremt, fg_color = fgColor, width = width, height = height, corner_radius = 15)
+        self.league_id = league_id
+        self.teamID = teamID
+        self.playingTeams = playingTeams
+        self.fgColor = fgColor
+        self.height = height
+
+        self.grid_columnconfigure(1, weight = 3)
+        self.grid_columnconfigure(2, weight = 10)
+        self.grid_columnconfigure((3, 4, 5), weight = 1)
+
+        ctk.CTkLabel(self, text = "GD", fg_color = self.fgColor, text_color = "white", font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 4, pady = (5, 0), padx = 5)
+        ctk.CTkLabel(self, text = "P", fg_color = self.fgColor, text_color = "white", font = (APP_FONT_BOLD, 12), height = 5, width = 5).grid(row = 0, column = 5, pady = (5, 0))
+
+        ctk.CTkLabel(self, text = "#", fg_color = self.fgColor, text_color = "white", height = 5).grid(row = 0, column = 0, sticky = "e", pady = (10, 5), padx = 5)
+        ctk.CTkLabel(self, text = "Team", fg_color = self.fgColor, text_color = "white", font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 2, sticky = "w", pady = (5, 0), padx = 5)
+        ctk.CTkLabel(self, text = "GP", fg_color = self.fgColor, text_color = "white", font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 3, pady = (5, 0), padx = 5)
+        
+        self.teamsData = LeagueTeams.get_teams_by_position(self.league_id)
+        self.startingData = copy.deepcopy(self.teamsData)
+        self.leagueData = League.get_league_by_id(self.league_id)
+
+        for team in self.teamsData:
+            if team.team_id in self.playingTeams:
+                team.games_drawn += 1
+                team.points += 1
+
+        self.teamsData.sort(key = lambda x: (x.points, x.goals_scored - x.goals_conceded, x.goals_scored, -x.goals_conceded), reverse = True)
+
+        # caches
+        self.teamDataCache = {}
+        self.imageCache = {}
+        self.rows = {}
+        
+        self.cache_team_data()
+        self.populate_table()
+
+    def cache_team_data(self):
+        """
+        Cache DB lookups and images
+        """
+
+        for team in self.teamsData:
+            data = Teams.get_team_by_id(team.team_id)
+            self.teamDataCache[team.team_id] = data
+
+            img = Image.open(io.BytesIO(data.logo))
+            img.thumbnail((15, 15))
+            self.imageCache[team.team_id] = ctk.CTkImage(img, None, (img.width, img.height))
+
+    def populate_table(self):
+        """
+        Populates the league table with team data.
+        """
+
+        for i, team in enumerate(self.teamsData):
+            teamData = self.teamDataCache[team.team_id]
+
+            if self.teamID == team.team_id:    
+                font = (APP_FONT_BOLD, 9)
+            else:
+                font = (APP_FONT, 9)
+
+            widgets = {}
+
+            widgets["pos"] = ctk.CTkLabel(self, text = i + 1, fg_color = self.fgColor, text_color = "white", font = font)
+            widgets["logo"] = ctk.CTkLabel(self, image = self.imageCache[team.team_id], text = "", fg_color = self.fgColor)
+            widgets["name"] = ctk.CTkLabel(self, text = teamData.name, fg_color = self.fgColor, text_color = "white", font = font)
+            widgets["gp"] = ctk.CTkLabel(self, text = team.games_won + team.games_lost + team.games_drawn, fg_color = self.fgColor, text_color = "white", font = font)
+            widgets["gd"] = ctk.CTkLabel(self,text = team.goals_scored - team.goals_conceded, fg_color = self.fgColor, text_color = "white", font = font)
+            widgets["pts"] = ctk.CTkLabel(self, text = team.points, fg_color = self.fgColor, text_color = "white", font = font)
+
+            widgets["pos"].grid(row = i + 1, column = 0, padx = 5, sticky = "e")
+            widgets["logo"].grid(row = i + 1, column = 1)
+            widgets["name"].grid(row = i + 1, column = 2, sticky = "w")
+            widgets["gp"].grid(row = i + 1, column = 3)
+            widgets["gd"].grid(row = i + 1, column = 4)
+            widgets["pts"].grid(row = i + 1, column = 5)
+
+            self.rows[team.team_id] = widgets
+
+            if i < self.leagueData.promotion:
+                canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
+                canvas.grid(row = i + 1, column = 0, sticky = "w")
+            elif i + 1 > 20 - self.leagueData.relegation:
+                canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = PIE_RED, bd = 0, highlightthickness = 0)
+                canvas.grid(row = i + 1, column = 0, sticky = "w")
+            elif (not self.leagueData.league_above is None) and i in [3, 4, 5, 6]:
+                canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
+                canvas.grid(row = i + 1, column = 0, sticky = "w")
+
+    def update_table(self, team_id1, team_id2, scorer, score):
+        """
+        Updates the league table with the latest team data.
+        
+        Args:
+            team_id1 (int): The ID of the first team.
+            team_id2 (int): The ID of the second team.
+            scorer (str): The ID of the team that scored.
+            score (str): The current score of the match.
+        """
+
+        score = [int(s) for s in score.split("-")]
+
+        if score[0] > score[1]:
+            winning_team_id = team_id1
+            losing_team_id = team_id2
+        elif score[1] > score[0]:
+            winning_team_id = team_id2
+            losing_team_id = team_id1
+        else:
+            winning_team_id = None
+            losing_team_id = None
+
+
+        for team in self.teamsData:
+            if team.team_id == team_id1 or team.team_id == team_id2:
+
+                startingData = [t for t in self.startingData if t.team_id == team.team_id][0]
+
+                if scorer == team.team_id:
+                    team.goals_scored += 1
+                else:
+                    team.goals_conceded += 1
+
+                if team.team_id == winning_team_id:
+                    team.points = startingData.points + 3
+                    team.games_won = startingData.games_won + 1
+                    team.games_lost = startingData.games_lost
+                    team.games_drawn = startingData.games_drawn
+                elif team.team_id == losing_team_id:
+                    team.points = startingData.points
+                    team.games_lost = startingData.games_lost + 1
+                    team.games_won = startingData.games_won
+                    team.games_drawn = startingData.games_drawn
+                else:
+                    team.points = startingData.points + 1
+                    team.games_drawn = startingData.games_drawn + 1
+                    team.games_won = startingData.games_won
+                    team.games_lost = startingData.games_lost
+        
+        self.teamsData.sort(key = lambda x: (x.points, x.goals_scored - x.goals_conceded, x.goals_scored, -x.goals_conceded), reverse = True)
+        
+        for i, team in enumerate(self.teamsData):
+            row = self.rows[team.team_id]
+
+            row["pos"].configure(text = i + 1)
+            row["gd"].configure(text = team.goals_scored - team.goals_conceded)
+            row["pts"].configure(text = team.points)
+            row["gp"].configure(text = team.games_won + team.games_drawn + team.games_lost)
+
+            for widget in row.values():
+                widget.grid_configure(row = i + 1)

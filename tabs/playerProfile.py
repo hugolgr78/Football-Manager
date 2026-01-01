@@ -6,7 +6,7 @@ from data.gamesDatabase import *
 from PIL import Image
 import io
 from utils.teamLogo import TeamLogo
-from utils.frames import FootballPitchPlayerPos, FormGraph, PlayerMatchFrame, AttributesPolygon
+from utils.frames import FootballPitchPlayerPos, FormGraph, PlayerMatchFrame, DataPolygon
 from utils.util_functions import *
 
 class PlayerProfile(ctk.CTkFrame):
@@ -511,18 +511,18 @@ class Attributes(ctk.CTkFrame):
             mental_physical (dict): Mental and physical attributes of the player.
         """
 
-        core = {k: v for k, v in self.technical.items() if k in CORE_ATTRIBUTES[self.player.position]}
-        sec = {k: v for k, v in self.technical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
+        core = {k: [v, 20] for k, v in self.technical.items() if k in CORE_ATTRIBUTES[self.player.position]}
+        sec = {k: [v, 20] for k, v in self.technical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
 
-        core.update({k: v for k, v in self.mental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
-        sec.update({k: v for k, v in self.mental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
+        core.update({k: [v, 20] for k, v in self.mental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
+        sec.update({k: [v, 20] for k, v in self.mental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
 
-        self.corePoly = AttributesPolygon(self, core, 350, 400, TKINTER_BACKGROUND, "white")
+        self.corePoly = DataPolygon(self, core, 350, 400, TKINTER_BACKGROUND, "white")
         self.corePoly.place(relx = 0.335, rely = 0.95, anchor = "s")
 
         ctk.CTkLabel(self, text = "Core", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.315, rely = 0.98, anchor = "s")
 
-        self.secPoly = AttributesPolygon(self, sec, 350, 400, TKINTER_BACKGROUND, "white")
+        self.secPoly = DataPolygon(self, sec, 350, 400, TKINTER_BACKGROUND, "white")
         self.secPoly.place(relx = 0.69, rely = 0.95, anchor = "s")
 
         ctk.CTkLabel(self, text = "Secondary", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.675, rely = 0.98, anchor = "s")
@@ -745,20 +745,20 @@ class Attributes(ctk.CTkFrame):
         
         playerMental_physical = PlayerAttributes.get_mental_attributes(player.id)
 
-        core = {k: v for k, v in self.technical.items() if k in CORE_ATTRIBUTES[self.player.position]}
-        sec = {k: v for k, v in self.technical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
-        core.update({k: v for k, v in self.mental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
-        sec.update({k: v for k, v in self.mental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
+        core = {k: [v, 20] for k, v in self.technical.items() if k in CORE_ATTRIBUTES[self.player.position]}
+        sec = {k: [v, 20] for k, v in self.technical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
+        core.update({k: [v, 20] for k, v in self.mental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
+        sec.update({k: [v, 20] for k, v in self.mental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
 
-        playerCore = {k: v for k, v in playerTechnical.items() if k in CORE_ATTRIBUTES[self.player.position]}
-        playerSec = {k: v for k, v in playerTechnical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
-        playerCore.update({k: v for k, v in playerMental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
-        playerSec.update({k: v for k, v in playerMental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
+        playerCore = {k: [v, 20] for k, v in playerTechnical.items() if k in CORE_ATTRIBUTES[self.player.position]}
+        playerSec = {k: [v, 20] for k, v in playerTechnical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
+        playerCore.update({k: [v, 20] for k, v in playerMental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
+        playerSec.update({k: [v, 20] for k, v in playerMental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
 
-        self.corePoly = AttributesPolygon(self.compareFrame, core, 350, 400, TKINTER_BACKGROUND, "white", extra = playerCore)
+        self.corePoly = DataPolygon(self.compareFrame, core, 350, 400, TKINTER_BACKGROUND, "white", extra = playerCore)
         self.corePoly.place(relx = 0.58, rely = 0.78, anchor = "center")
 
-        self.secPoly = AttributesPolygon(self.compareFrame, sec, 350, 400, TKINTER_BACKGROUND, "white", extra = playerSec)
+        self.secPoly = DataPolygon(self.compareFrame, sec, 350, 400, TKINTER_BACKGROUND, "white", extra = playerSec)
         self.secPoly.place(relx = 0.87, rely = 0.78, anchor = "center")
 
         ctk.CTkLabel(self.compareFrame, text = "Graph showing G/A (or clean sheets) history data as\nseasons go on", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.7, rely = 0.3, anchor = "center")

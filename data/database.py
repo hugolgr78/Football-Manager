@@ -2836,6 +2836,59 @@ class MatchEvents(Base):
             return clean_sheets
         finally:
             session.close()
+    
+    @classmethod
+    def get_team_clean_sheets(cls, team_id, comp_id):
+        session = DatabaseManager().get_session()
+        try:
+            clean_sheets = (
+                session.query(func.count(func.distinct(MatchEvents.match_id)))
+                .join(Players)
+                .join(Matches)
+                .filter(
+                    Players.team_id == team_id,
+                    MatchEvents.event_type == "clean_sheet",
+                    Matches.league_id == comp_id
+                )
+                .scalar()
+            )
+            return clean_sheets
+        finally:
+            session.close()
+
+    @classmethod
+    def get_max_clean_sheets(cls, comp_id):
+        session = DatabaseManager().get_session()
+        try:
+            TeamAlias = aliased(Teams)
+
+            result = (
+                session.query(
+                    Players.team_id,
+                    TeamAlias.name,
+                    func.count(func.distinct(MatchEvents.match_id)).label("clean_sheet_count")
+                )
+                .join(Players, MatchEvents.player_id == Players.id)
+                .join(TeamAlias, Players.team_id == TeamAlias.id)
+                .join(Matches, MatchEvents.match_id == Matches.id)
+                .filter(
+                    MatchEvents.event_type == "clean_sheet",
+                    Matches.league_id == comp_id
+                )
+                .group_by(
+                    Players.team_id,
+                    TeamAlias.name
+                )
+                .order_by(
+                    func.count(func.distinct(MatchEvents.match_id)).desc()
+                )
+                .first()
+            )
+
+            return result[2] if result else 0
+
+        finally:
+            session.close()
 
     @classmethod
     def get_player_game_time(cls, player_id, match_id):
@@ -3065,6 +3118,245 @@ class MatchStats(Base):
             return dict(totals)
         finally:
             session.close()
+
+    @classmethod
+    def get_team_stats_matches(cls, team_id, match_ids):
+        session = DatabaseManager().get_session()
+        try:
+            # ---- TEAM-LEVEL STATS (already aggregated) ----
+            team_rows = (
+                session.query(
+                    MatchStats.match_id,
+                    MatchStats.stat_type,
+                    MatchStats.value
+                )
+                .filter(
+                    MatchStats.team_id == team_id,
+                    MatchStats.player_id == None,
+                    MatchStats.match_id.in_(match_ids)
+                )
+                .all()
+            )
+
+            # ---- PLAYER-LEVEL STATS (aggregate per match + stat) ----
+            player_rows = (
+                session.query(
+                    MatchStats.match_id,
+                    MatchStats.stat_type,
+                    func.coalesce(func.sum(MatchStats.value), 0)
+                )
+                .join(Players, MatchStats.player_id == Players.id)
+                .join(TeamLineup, TeamLineup.player_id == MatchStats.player_id)
+                .filter(
+                    Players.team_id == team_id,
+                    MatchStats.player_id != None,
+                    MatchStats.match_id.in_(match_ids),
+                    TeamLineup.match_id == MatchStats.match_id
+                )
+                .group_by(
+                    MatchStats.match_id,
+                    MatchStats.stat_type
+                )
+                .all()
+            )
+
+            # ---- MERGE RESULTS ----
+            stats_by_match = defaultdict(lambda: defaultdict(int))
+
+            for match_id, stat_type, value in team_rows:
+                if stat_type == "xG":
+                    stats_by_match[match_id][stat_type] = round(float(value or 0.0), 2)
+                else:
+                    stats_by_match[match_id][stat_type] = int(value or 0)
+
+            for match_id, stat_type, total in player_rows:
+                stats_by_match[match_id][stat_type] += int(total or 0)
+
+            # ---- ENSURE ALL STATS EXIST ----
+            for match_id in match_ids:
+                for s in SAVED_STATS:
+                    if s == "xG":
+                        stats_by_match[match_id].setdefault(s, 0.0)
+                    else:
+                        stats_by_match[match_id].setdefault(s, 0)
+
+            return {mid: dict(stats) for mid, stats in stats_by_match.items()}
+
+        finally:
+            session.close()
+
+    @classmethod
+    def get_league_best_avg_stats(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            # ----------------------------------------------------
+            # 1) Player-level stats per team per match
+            # ----------------------------------------------------
+            player_stats = (
+                session.query(
+                    MatchStats.match_id.label("match_id"),
+                    Players.team_id.label("team_id"),
+                    MatchStats.stat_type.label("stat_type"),
+                    func.sum(MatchStats.value).label("value")
+                )
+                .join(Players, MatchStats.player_id == Players.id)
+                .join(TeamLineup, TeamLineup.player_id == Players.id)
+                .join(Matches, Matches.id == MatchStats.match_id)
+                .filter(
+                    Matches.league_id == league_id,
+                    MatchStats.player_id != None,
+                    TeamLineup.match_id == MatchStats.match_id
+                )
+                .group_by(
+                    MatchStats.match_id,
+                    Players.team_id,
+                    MatchStats.stat_type
+                )
+            )
+
+            # ----------------------------------------------------
+            # 2) Team-level stats per team per match
+            # ----------------------------------------------------
+            team_stats = (
+                session.query(
+                    MatchStats.match_id.label("match_id"),
+                    MatchStats.team_id.label("team_id"),
+                    MatchStats.stat_type.label("stat_type"),
+                    MatchStats.value.label("value")
+                )
+                .join(Matches, Matches.id == MatchStats.match_id)
+                .filter(
+                    Matches.league_id == league_id,
+                    MatchStats.player_id == None
+                )
+            )
+
+            # ----------------------------------------------------
+            # 3) Union player + team stats into one dataset
+            # ----------------------------------------------------
+            all_stats = player_stats.union_all(team_stats).subquery("all_stats")
+
+            # ----------------------------------------------------
+            # 4) Aggregate total per team per match per stat
+            # ----------------------------------------------------
+            combined = (
+                session.query(
+                    all_stats.c.match_id,
+                    all_stats.c.team_id,
+                    all_stats.c.stat_type,
+                    func.sum(all_stats.c.value).label("total_value")
+                )
+                .group_by(all_stats.c.match_id, all_stats.c.team_id, all_stats.c.stat_type)
+                .subquery("combined")
+            )
+
+            # ----------------------------------------------------
+            # 5) Average per team per stat
+            # ----------------------------------------------------
+            per_team_avg = (
+                session.query(
+                    combined.c.stat_type,
+                    combined.c.team_id,
+                    func.avg(combined.c.total_value).label("avg_value")
+                )
+                .group_by(combined.c.stat_type, combined.c.team_id)
+                .subquery("per_team_avg")
+            )
+
+            # ----------------------------------------------------
+            # 6) Max average per stat across teams
+            # ----------------------------------------------------
+            rows = (
+                session.query(
+                    per_team_avg.c.stat_type,
+                    func.max(per_team_avg.c.avg_value).label("max_avg")
+                )
+                .group_by(per_team_avg.c.stat_type)
+                .all()
+            )
+
+            return {stat_type: float(max_avg or 0) for stat_type, max_avg in rows}
+
+        finally:
+            session.close()
+
+    @classmethod
+    def get_team_xg_against(cls, team_id, match_ids):
+        session = DatabaseManager().get_session()
+        try:
+            sub = (
+                session.query(
+                    Matches.id.label("match_id"),
+                    case(
+                        [(Matches.home_id == team_id, Matches.away_id)],
+                        else_ = Matches.home_id
+                    ).label("opponent_id")
+                )
+                .filter(Matches.id.in_(match_ids))
+                .subquery()
+            )
+
+            total_xg = (
+                session.query(func.coalesce(func.sum(MatchStats.value), 0))
+                .join(sub, sub.c.match_id == MatchStats.match_id)
+                .filter(
+                    MatchStats.team_id == sub.c.opponent_id,
+                    MatchStats.stat_type == "xG",
+                    MatchStats.player_id == None
+                )
+                .scalar()
+            )
+
+            return float(total_xg or 0)
+        finally:
+            session.close()
+
+    @classmethod
+    def get_league_max_xg_against(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            # Step 1: figure out all match_id / team_id pairs
+            # For each match, get both home and away teams
+            match_teams = (
+                session.query(
+                    Matches.id.label("match_id"),
+                    Matches.home_id.label("team_id")
+                )
+                .filter(Matches.league_id == league_id)
+                .union_all(
+                    session.query(
+                        Matches.id.label("match_id"),
+                        Matches.away_id.label("team_id")
+                    ).filter(Matches.league_id == league_id)
+                )
+                .subquery()
+            )
+
+            # Step 2: join with MatchStats to get xG for each team in each match
+            team_xg = (
+                session.query(
+                    match_teams.c.team_id,
+                    func.max(MatchStats.value).label("xG_in_match")
+                )
+                .join(
+                    MatchStats,
+                    (MatchStats.match_id == match_teams.c.match_id) &
+                    (MatchStats.team_id == match_teams.c.team_id) &
+                    (MatchStats.stat_type == "xG") &
+                    (MatchStats.player_id == None)
+                )
+                .group_by(match_teams.c.team_id, match_teams.c.match_id)
+                .subquery()
+            )
+
+            # Step 3: take the max xG across all matches and teams
+            max_xg = session.query(func.max(team_xg.c.xG_in_match)).scalar()
+
+            return float(max_xg or 0)
+
+        finally:
+            session.close()
+
 
     @classmethod
     def get_all_players_for_stat(cls, league_id, stat_type):
@@ -3389,10 +3681,10 @@ class LeagueTeams(Base):
             session.close()
     
     @classmethod
-    def get_team_by_id(cls, id):
+    def get_team_by_id(cls, team_id):
         session = DatabaseManager().get_session()
         try:
-            team = session.query(LeagueTeams).filter(LeagueTeams.team_id == id).first()
+            team = session.query(LeagueTeams).filter(LeagueTeams.team_id == team_id).first()
             return team
         finally:
             session.close()
@@ -3452,6 +3744,24 @@ class LeagueTeams(Base):
             session.rollback()
             logger.exception("Error in update_team: %s", e)
             raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_max_goals_conceded(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            max_goals = session.query(func.max(LeagueTeams.goals_conceded)).filter(LeagueTeams.league_id == league_id).scalar()
+            return max_goals if max_goals else 0
+        finally:
+            session.close()
+    
+    @classmethod
+    def get_max_goals_scored(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            max_goals = session.query(func.max(LeagueTeams.goals_scored)).filter(LeagueTeams.league_id == league_id).scalar()
+            return max_goals if max_goals else 0
         finally:
             session.close()
 

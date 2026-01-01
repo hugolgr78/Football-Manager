@@ -1738,13 +1738,13 @@ class LeagueTable(ctk.CTkFrame):
                 ctk.CTkLabel(self, text = team.games_won + team.games_lost + team.games_drawn, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 3)
             else:
                 if i < self.leagueData.promotion:
-                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
+                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 20, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0)
                 elif i + 1 > 20 - self.leagueData.relegation:
-                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = PIE_RED, bd = 0, highlightthickness = 0)
+                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 20, bg = PIE_RED, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0)
                 elif not self.div1 and i in [3, 4, 5, 6]:
-                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
+                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 20, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0)
 
                 ctk.CTkLabel(self, text = i + 1, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 1, sticky = "w")
@@ -4897,10 +4897,10 @@ class TeamOTW(ctk.CTkFrame):
         self.team = League.team_of_the_week(self.league_id, self.matchday)[0]
         self.pitch = FootballPitchTeamOTW(self, self.team, 300, 550, 0.5, 0.5, "center", GREY_BACKGROUND, "green")
 
-class AttributesPolygon(ctk.CTkCanvas):
-    def __init__(self, parent, data, height, width, bg_color, text_color, extra = None):
+class DataPolygon(ctk.CTkCanvas):
+    def __init__(self, parent, data, height, width, bg_color, text_color, extra = None, format_ = 0, analysis = False):
         """
-        Class for drawing a radar chart of attributes with a polygon-gradient background.
+        Class for drawing a radar chart of data with a polygon-gradient background.
         
         Args:
             parent (ctk.CTkFrame): The parent frame.
@@ -4912,18 +4912,18 @@ class AttributesPolygon(ctk.CTkCanvas):
         super().__init__(parent, width = width, height = height, bg = bg_color, highlightthickness = 0)
 
         self.poly_size = min(width, height) - 100
-        self.center = min(width, height) / 2
+        self.center = min(width, height) / 2 + (10 if analysis else 0)
         self.radius = self.poly_size * 0.40
-        self.max_value = 20
         self.extra = extra
+        self.format = format_
 
-        attributes = list(data.keys())
+        labels = list(data.keys())
         values = list(data.values())
 
-        self.numAttributes = len(attributes)
+        self.numAttributes = len(labels)
 
         if self.extra:
-            extraAttributes = list(self.extra.keys())
+            extraLabels = list(self.extra.keys())
             extraValues = list(self.extra.values())
 
         self.levels = 5 # grid lines
@@ -4931,10 +4931,10 @@ class AttributesPolygon(ctk.CTkCanvas):
         self.text_color = text_color
 
         self.draw_gradient_background()
-        self.draw_chart(attributes, values, "#1E40AF")
+        self.draw_chart(labels, values, "#1E40AF")
 
         if self.extra:
-            self.draw_chart(extraAttributes, extraValues, "#AF1E1E")
+            self.draw_chart(extraLabels, extraValues, "#AF1E1E")
 
     def draw_gradient_background(self):
         """
@@ -4970,12 +4970,12 @@ class AttributesPolygon(ctk.CTkCanvas):
 
             self.create_polygon(pts, fill = colors[ring], outline = "")
 
-    def draw_chart(self, attributes, values, outline):
+    def draw_chart(self, labels, values, outline):
         """
         Draw the radar chart grid, labels, and the data polygon.
         """
 
-        n = len(attributes)
+        n = len(labels)
         angle_step = 2 * math.pi / n
 
         # --- Draw polygon grid rings
@@ -4993,28 +4993,46 @@ class AttributesPolygon(ctk.CTkCanvas):
 
         # --- Draw attribute labels (moved outward)
         LABEL_OFFSET = self.radius + 50
-        for i, label in enumerate(attributes):
+        for i, label in enumerate(labels):
             angle = i * angle_step - math.pi / 2
             x = self.center + LABEL_OFFSET * math.cos(angle)
             y = self.center + LABEL_OFFSET * math.sin(angle)
 
             # format label
-            formatted = label.capitalize().replace("_", " ")
+            if self.format == 0:
+                formatted = label.capitalize().replace("_", " ")
 
-            if formatted == "Acceleration":
-                formatted = "Acc."
+                if formatted == "Acceleration":
+                    formatted = "Acc."
 
-            # insert line break if two words
-            parts = formatted.split()
-            if len(parts) == 2:
-                formatted = parts[0] + "\n" + parts[1]
+                # insert line break if two words
+                parts = formatted.split()
+                if len(parts) == 2:
+                    formatted = parts[0] + "\n" + parts[1]
 
-            self.create_text(x, y,  text = formatted, fill = self.text_color, font = (APP_FONT_BOLD, 8))
+                self.create_text(x, y,  text = formatted, fill = self.text_color, font = (APP_FONT_BOLD, 8))
+            elif self.format == 1:
+                label_text = " ".join(label.split(" ")[0:-1])
+                value_text = label.split(" ")[-1]
+                
+                label_font = tkFont.Font(family = APP_FONT, size = 8, weight = "normal")
+                value_font = tkFont.Font(family = APP_FONT_BOLD, size = 10)
+
+                label_width = label_font.measure(label_text)
+                value_width = value_font.measure(value_text)
+                total_width = label_width + value_width
+
+                extra_spacing = 5  # pixels of extra space between label and value
+                self.create_text(x - (total_width + extra_spacing) / 2 + label_width / 2, y, text = label_text, fill = self.text_color, font = (APP_FONT, 8))
+                self.create_text(x + (total_width + extra_spacing) / 2 - value_width / 2, y, text = value_text, fill = self.text_color, font = (APP_FONT_BOLD, 10))
+            else:
+                formatted = label
+                self.create_text(x, y,  text = formatted, fill = self.text_color, font = (APP_FONT_BOLD, 8))
 
         # --- Draw data polygon
         data_pts = []
-        for i, value in enumerate(values):
-            ratio = max(0, min(value / self.max_value, 1))
+        for i, (value, maxValue) in enumerate(values):
+            ratio = max(0, min(value / maxValue, 1))
             r = ratio * self.radius
 
             angle = i * angle_step - math.pi / 2

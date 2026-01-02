@@ -4911,16 +4911,18 @@ class DataPolygon(ctk.CTkCanvas):
 
         super().__init__(parent, width = width, height = height, bg = bg_color, highlightthickness = 0)
 
-        self.poly_size = min(width, height) - 100
-        self.center = min(width, height) / 2 + (10 if analysis else 0)
-        self.radius = self.poly_size * 0.40
         self.extra = extra
         self.format = format_
+        self.analysis = analysis
 
-        labels = list(data.keys())
-        values = list(data.values())
+        self.poly_size = min(width, height) - 100
+        self.center = min(width, height) / 2 + (10 if self.analysis else 0)
+        self.radius = self.poly_size * 0.40
 
-        self.numAttributes = len(labels)
+        self.labels = list(data.keys())
+        self.values = list(data.values())
+
+        self.numAttributes = len(self.labels)
 
         if self.extra:
             extraLabels = list(self.extra.keys())
@@ -4931,9 +4933,9 @@ class DataPolygon(ctk.CTkCanvas):
         self.text_color = text_color
 
         self.draw_gradient_background()
-        self.draw_chart(labels, values, "#1E40AF")
+        self.draw_chart(self.labels, self.values, "#1E40AF")
 
-        if self.extra:
+        if self.extra and not self.analysis:
             self.draw_chart(extraLabels, extraValues, "#AF1E1E")
 
     def draw_gradient_background(self):
@@ -4970,7 +4972,7 @@ class DataPolygon(ctk.CTkCanvas):
 
             self.create_polygon(pts, fill = colors[ring], outline = "")
 
-    def draw_chart(self, labels, values, outline):
+    def draw_chart(self, labels, values, outline, add_labels = True):
         """
         Draw the radar chart grid, labels, and the data polygon.
         """
@@ -4991,49 +4993,53 @@ class DataPolygon(ctk.CTkCanvas):
 
             self.create_polygon(pts, outline = "", fill = "", width = 1)
 
-        # --- Draw attribute labels (moved outward)
-        LABEL_OFFSET = self.radius + 50
-        for i, label in enumerate(labels):
-            angle = i * angle_step - math.pi / 2
-            x = self.center + LABEL_OFFSET * math.cos(angle)
-            y = self.center + LABEL_OFFSET * math.sin(angle)
+        if add_labels:
+            # --- Draw attribute labels (moved outward)
+            LABEL_OFFSET = self.radius + 50
+            for i, label in enumerate(labels):
+                angle = i * angle_step - math.pi / 2
+                x = self.center + LABEL_OFFSET * math.cos(angle)
+                y = self.center + LABEL_OFFSET * math.sin(angle)
 
-            # format label
-            if self.format == 0:
-                formatted = label.capitalize().replace("_", " ")
+                # format label
+                if self.format == 0:
+                    formatted = label.capitalize().replace("_", " ")
 
-                if formatted == "Acceleration":
-                    formatted = "Acc."
+                    if formatted == "Acceleration":
+                        formatted = "Acc."
 
-                # insert line break if two words
-                parts = formatted.split()
-                if len(parts) == 2:
-                    formatted = parts[0] + "\n" + parts[1]
+                    # insert line break if two words
+                    parts = formatted.split()
+                    if len(parts) == 2:
+                        formatted = parts[0] + "\n" + parts[1]
 
-                self.create_text(x, y,  text = formatted, fill = self.text_color, font = (APP_FONT_BOLD, 8))
-            elif self.format == 1:
-                label_text = " ".join(label.split(" ")[0:-1])
-                value_text = label.split(" ")[-1]
-                
-                label_font = tkFont.Font(family = APP_FONT, size = 8, weight = "normal")
-                value_font = tkFont.Font(family = APP_FONT_BOLD, size = 10)
+                    self.create_text(x, y,  text = formatted, fill = self.text_color, font = (APP_FONT_BOLD, 8))
+                elif self.format == 1:
+                    label_text = " ".join(label.split(" ")[0:-1])
+                    value_text = round(float(label.split(" ")[-1]), 1)
+                    
+                    label_font = tkFont.Font(family = APP_FONT, size = 8, weight = "normal")
+                    value_font = tkFont.Font(family = APP_FONT_BOLD, size = 10)
 
-                label_width = label_font.measure(label_text)
-                value_width = value_font.measure(value_text)
-                total_width = label_width + value_width
+                    label_width = label_font.measure(label_text)
+                    value_width = value_font.measure(value_text)
+                    total_width = label_width + value_width
 
-                extra_spacing = 5  # pixels of extra space between label and value
-                self.create_text(x - (total_width + extra_spacing) / 2 + label_width / 2, y, text = label_text, fill = self.text_color, font = (APP_FONT, 8))
-                self.create_text(x + (total_width + extra_spacing) / 2 - value_width / 2, y, text = value_text, fill = self.text_color, font = (APP_FONT_BOLD, 10))
-            else:
-                formatted = label
-                self.create_text(x, y,  text = formatted, fill = self.text_color, font = (APP_FONT_BOLD, 8))
+                    extra_spacing = 5  # pixels of extra space between label and value
+                    self.create_text(x - (total_width + extra_spacing) / 2 + label_width / 2, y, text = label_text, fill = self.text_color, font = (APP_FONT, 8))
+                    self.create_text(x + (total_width + extra_spacing) / 2 - value_width / 2, y, text = value_text, fill = self.text_color, font = (APP_FONT_BOLD, 10))
+                else:
+                    formatted = label
+                    self.create_text(x, y,  text = formatted, fill = self.text_color, font = (APP_FONT_BOLD, 8))
 
         # --- Draw data polygon
         data_pts = []
-        for i, (value, maxValue) in enumerate(values):
+        for i, item in enumerate(values):
+            value, maxValue, *rest = item
+            invert = rest[0] if rest else False
+            
             ratio = max(0, min(value / maxValue, 1))
-            r = ratio * self.radius
+            r = ratio * self.radius if not invert else (1 - ratio) * self.radius
 
             angle = i * angle_step - math.pi / 2
             x = self.center + r * math.cos(angle)
@@ -5041,6 +5047,25 @@ class DataPolygon(ctk.CTkCanvas):
             data_pts.extend((x, y))
 
         self.create_polygon(data_pts, fill = "", outline = outline, width = 3)
+
+    def add_extra_data(self):
+        """
+        Add extra data to the radar chart.
+        """
+
+        extraLabels = list(self.extra.keys())
+        extraValues = list(self.extra.values())
+
+        self.draw_chart(extraLabels, extraValues, "#AF1E1E", add_labels = False)
+
+    def remove_extra_data(self):
+        """
+        Remove extra data from the radar chart.
+        """
+
+        self.delete("all")
+        self.draw_gradient_background()
+        self.draw_chart(self.labels, self.values, "#1E40AF")
 
 class LiveTableFrame(ctk.CTkScrollableFrame):
     def __init__(self, paremt, league_id, teamID, playingTeams, fgColor, width, height):

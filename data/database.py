@@ -2889,6 +2889,23 @@ class MatchEvents(Base):
 
         finally:
             session.close()
+    
+    @classmethod
+    def get_total_clean_sheets(cls, comp_id):
+        session = DatabaseManager().get_session()
+        try:
+            total_clean_sheets = (
+                session.query(func.count(MatchEvents.id))
+                .join(Matches)
+                .filter(
+                    MatchEvents.event_type == "clean_sheet",
+                    Matches.league_id == comp_id
+                )
+                .scalar()
+            )
+            return total_clean_sheets
+        finally:
+            session.close()
 
     @classmethod
     def get_player_game_time(cls, player_id, match_id):
@@ -3281,6 +3298,109 @@ class MatchStats(Base):
             session.close()
 
     @classmethod
+    def get_league_avg_stats(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            # ----------------------------------------------------
+            # 1) Player-level stats per team per match
+            # ----------------------------------------------------
+            player_stats = (
+                session.query(
+                    MatchStats.match_id.label("match_id"),
+                    Players.team_id.label("team_id"),
+                    MatchStats.stat_type.label("stat_type"),
+                    func.sum(MatchStats.value).label("value")
+                )
+                .join(Players, MatchStats.player_id == Players.id)
+                .join(TeamLineup, TeamLineup.player_id == Players.id)
+                .join(Matches, Matches.id == MatchStats.match_id)
+                .filter(
+                    Matches.league_id == league_id,
+                    MatchStats.player_id != None,
+                    TeamLineup.match_id == MatchStats.match_id
+                )
+                .group_by(
+                    MatchStats.match_id,
+                    Players.team_id,
+                    MatchStats.stat_type
+                )
+            )
+
+            # ----------------------------------------------------
+            # 2) Team-level stats per team per match
+            # ----------------------------------------------------
+            team_stats = (
+                session.query(
+                    MatchStats.match_id.label("match_id"),
+                    MatchStats.team_id.label("team_id"),
+                    MatchStats.stat_type.label("stat_type"),
+                    MatchStats.value.label("value")
+                )
+                .join(Matches, Matches.id == MatchStats.match_id)
+                .filter(
+                    Matches.league_id == league_id,
+                    MatchStats.player_id == None
+                )
+            )
+
+            # ----------------------------------------------------
+            # 3) Union player + team stats
+            # ----------------------------------------------------
+            all_stats = player_stats.union_all(team_stats).subquery("all_stats")
+
+            # ----------------------------------------------------
+            # 4) Total per team per match per stat
+            # ----------------------------------------------------
+            combined = (
+                session.query(
+                    all_stats.c.match_id,
+                    all_stats.c.team_id,
+                    all_stats.c.stat_type,
+                    func.sum(all_stats.c.value).label("total_value")
+                )
+                .group_by(
+                    all_stats.c.match_id,
+                    all_stats.c.team_id,
+                    all_stats.c.stat_type
+                )
+                .subquery("combined")
+            )
+
+            # ----------------------------------------------------
+            # 5) Avg per team per stat
+            # ----------------------------------------------------
+            per_team_avg = (
+                session.query(
+                    combined.c.stat_type,
+                    combined.c.team_id,
+                    func.avg(combined.c.total_value).label("avg_value")
+                )
+                .group_by(
+                    combined.c.stat_type,
+                    combined.c.team_id
+                )
+                .subquery("per_team_avg")
+            )
+
+            # ----------------------------------------------------
+            # 6) League average per stat (AVG of team avgs)
+            # ----------------------------------------------------
+            rows = (
+                session.query(
+                    per_team_avg.c.stat_type,
+                    func.avg(per_team_avg.c.avg_value).label("league_avg")
+                )
+                .group_by(per_team_avg.c.stat_type)
+                .all()
+            )
+
+            return {stat_type: float(league_avg or 0) for stat_type, league_avg in rows}
+
+        finally:
+            session.close()
+
+
+    @classmethod
     def get_team_xg_against(cls, team_id, match_ids):
         session = DatabaseManager().get_session()
         try:
@@ -3357,6 +3477,24 @@ class MatchStats(Base):
         finally:
             session.close()
 
+    @classmethod
+    def get_league_total_xg_against(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            total_xg = (
+                session.query(func.coalesce(func.sum(MatchStats.value), 0))
+                .join(Matches, MatchStats.match_id == Matches.id)
+                .filter(
+                    Matches.league_id == league_id,
+                    MatchStats.stat_type == "xG",
+                    MatchStats.player_id == None
+                )
+                .scalar()
+            )
+
+            return float(total_xg or 0)
+        finally:
+            session.close()
 
     @classmethod
     def get_all_players_for_stat(cls, league_id, stat_type):
@@ -3810,6 +3948,35 @@ class LeagueTeams(Base):
         try:
             num_teams = session.query(LeagueTeams).filter(LeagueTeams.league_id == league_id).count()
             return num_teams if num_teams else 0
+        finally:
+            session.close()
+
+    @classmethod
+    def get_total_goals_scored(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            total_goals = session.query(func.sum(LeagueTeams.goals_scored)).filter(LeagueTeams.league_id == league_id).scalar()
+            return total_goals if total_goals else 0
+        finally:
+            session.close()
+
+    @classmethod
+    def get_total_goals_conceded(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            total_goals = session.query(func.sum(LeagueTeams.goals_conceded)).filter(LeagueTeams.league_id == league_id).scalar()
+            return total_goals if total_goals else 0
+        finally:
+            session.close()
+
+    @classmethod
+    def get_total_of_matches_played(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            total_matches = session.query(
+                func.sum(LeagueTeams.games_won + LeagueTeams.games_drawn + LeagueTeams.games_lost)
+            ).filter(LeagueTeams.league_id == league_id).scalar()
+            return total_matches if total_matches else 0
         finally:
             session.close()
 

@@ -232,9 +232,13 @@ class Managers(Base):
             names_id_mapping = Teams.add_teams(chosenTeam, userManagerID)
             updateProgress(3)
             League.add_leagues(loadedLeagues)
+            Cup.add_cups()
 
             leagues = League.get_all_leagues()
             LeagueTeams.add_league_teams(names_id_mapping, leagues)
+
+            cups = Cup.get_all_cups()
+            CupTeams.add_cup_teams(names_id_mapping, cups)
             updateProgress(4)
             Referees.add_referees(leagues, flags)
             Matches.add_all_matches(leagues)
@@ -3823,6 +3827,7 @@ class Cup(Base):
     teams_per_group = Column(Integer, nullable = False)
     knockout_rounds = Column(Integer, nullable = False)
     games_per_knockout = Column(Integer, nullable = False)
+    planet = Column(String(64), nullable = False, default = "Earth")
 
     @classmethod
     def add_cups(cls):
@@ -3846,7 +3851,8 @@ class Cup(Base):
                     "groups": cup["groups"],
                     "teams_per_group": cup["teams_per_group"],
                     "knockout_rounds": cup["knockout_rounds"],
-                    "games_per_knockout": cup["games_per_knockout"]
+                    "games_per_knockout": cup["games_per_knockout"],
+                    "planet": cup["planet"]
                 })
 
             updateProgress(None)
@@ -3865,6 +3871,15 @@ class Cup(Base):
         try:
             cup = session.query(Cup).filter(Cup.id == cup_id).first()
             return cup
+        finally:
+            session.close()
+
+    @classmethod
+    def get_all_cups(cls):
+        session = DatabaseManager().get_session()
+        try:
+            cups = session.query(Cup).all()
+            return cups
         finally:
             session.close()
 
@@ -4113,15 +4128,16 @@ class CupTeams(Base):
                 data = json.load(file)
 
             for cup in cups:
-                teams = get_all_league_teams(data, cup.name)
+                teams = get_all_planet_teams(data, cup.planet)
                 teams.sort(key = lambda x: x["name"])
 
-                for i, team in enumerate(teams):
+                for team in teams:
                     cup_teams_dict.append({
                         "id": str(uuid.uuid4()),
                         "cup_id": cup.id,
                         "team_id": names_ids_mapping[team["name"]],
                     })
+
                 updateProgress(None)
 
             session.bulk_insert_mappings(CupTeams, cup_teams_dict)
@@ -6935,7 +6951,7 @@ def updateProgress(textIndex):
         "Creating Managers...",
         "Creating Teams...",
         "Creating Players...",
-        "Creating Leagues...",
+        "Creating Leagues and Cups...",
         "Creating Matches...",
         "Finishing up...",
     ]
@@ -7158,14 +7174,20 @@ def getDefaultLineup(players, youths):
 
     return bestLineup
 
-def getPredictedLineup(opponent_id, currDate):
+def getPredictedLineup(opponent_id, currDate, match_id = None, comp_id = None):
     session = DatabaseManager().get_session()
     team = Teams.get_team_by_id(opponent_id)
-    league = LeagueTeams.get_league_by_team(team.id)
-    matches = Matches.get_team_last_5_matches(team.id, currDate)
+    match = Matches.get_match_by_id(match_id)
 
-    available_players = PlayerBans.get_all_non_banned_players_for_comp(team.id, league.league_id)
-    youths = PlayerBans.get_all_non_banned_youth_players_for_comp(team.id, league.league_id)
+    if match_id:
+        if match.league_id:
+            comp_id = match.league_id
+        else:
+            comp_id = match.cup_id
+
+    matches = Matches.get_team_last_5_matches(team.id, currDate)
+    available_players = PlayerBans.get_all_non_banned_players_for_comp(team.id, comp_id)
+    youths = PlayerBans.get_all_non_banned_youth_players_for_comp(team.id, comp_id)
 
     if len(matches) == 0:
         bestLineup = getDefaultLineup(available_players, youths)
@@ -7237,7 +7259,7 @@ def getProposedLineup(team_id, opponent_id, comp_id, currDate, players = None, y
     if not youths:
         youths = PlayerBans.get_all_non_banned_youth_players_for_comp(team_id, comp_id)
 
-    predictedLineup = getPredictedLineup(opponent_id, currDate)
+    predictedLineup = getPredictedLineup(opponent_id, currDate, comp_id = comp_id)
 
     attackingScore = 0
     defendingScore = 0
@@ -7285,7 +7307,7 @@ def getProposedLineup(team_id, opponent_id, comp_id, currDate, players = None, y
     ordered_lineup = {pos: bestLineup[pos] for pos in lineupPositions if pos in bestLineup}
     return ordered_lineup
 
-def parse_formation_key(key: str):
+def parse_formation_key(key):
     # extract first 3 numbers (defenders-midfielders-attackers)
     nums = re.findall(r"\d+", key)
     if len(nums) >= 3:
@@ -7370,12 +7392,12 @@ def getYouthPlayer(position, players, youthPlayers):
     available_youths.sort(key = effective_ability, reverse = True)
     return available_youths[0].id if available_youths else None
 
-def getSubstitutes(teamID, lineup, compID, allPlayers, allYouths):
+def getSubstitutes(teamID, lineup, comp_id, allPlayers, allYouths):
     if not allPlayers:
-        allPlayers = PlayerBans.get_all_non_banned_players_for_comp(teamID, compID)
+        allPlayers = PlayerBans.get_all_non_banned_players_for_comp(teamID, comp_id)
 
     if not allYouths:
-        allYouths = PlayerBans.get_all_non_banned_youth_players_for_comp(teamID, compID)
+        allYouths = PlayerBans.get_all_non_banned_youth_players_for_comp(teamID, comp_id)
 
     usedPlayers = set(lineup.values())
     substitutes = []
@@ -7410,10 +7432,10 @@ def getSubstitutes(teamID, lineup, compID, allPlayers, allYouths):
     attackers   = [p for p in allPlayers if p.position == "forward"]
 
     # Order by effective ability
-    goalkeepers.sort(key=effective_ability, reverse=True)
-    defenders.sort(key=effective_ability, reverse=True)
-    midfielders.sort(key=effective_ability, reverse=True)
-    attackers.sort(key=effective_ability, reverse=True)
+    goalkeepers.sort(key = effective_ability, reverse = True)
+    defenders.sort(key = effective_ability, reverse = True)
+    midfielders.sort(key = effective_ability, reverse = True)
+    attackers.sort(key = effective_ability, reverse = True)
 
     # --- Pick subs as we go ---
     if pick_sub(goalkeepers, 1, DEFENSIVE_POSITIONS) < 1:

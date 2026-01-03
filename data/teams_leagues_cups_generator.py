@@ -20,14 +20,24 @@ import shutil
 
 planets_names = ["Cryon", "Vorlis", "Zephyra", "Tauron", "Nerath", "Ecliptis", "Lyra", "Solara"]
 league_names = {
-    "Cryonese Primera": ["Cryonese Primera", "Cryonese Segunda", "Cryonese Tercera", "Cryonese Cuarta"],
-    "Vorlis Liga": ["Vorlis Liga", "Vorlis National", "Vorlis Continental", "Vorlis Regional"],
-    "Zephyra Pro": ["Zephyra Pro", "Zephyra Challenge", "Zephyra Series", "Zephyra B"],
-    "Tauron Premier": ["Tauron Premier", "Tauron Elite", "Tauron Division 2", "Tauron Division 3"],
-    "Nerathoul": ["Nerathoul", "Nerathoul Prime", "Nerathoul Ascend", "Nerathoul Minor"],
-    "Ecliptus": ["Ecliptus", "Ecliptus B", "Ecliptus C", "Ecliptus D"],
-    "Lyraxis": ["Lyraxis", "Lyraxis Nova", "Lyraxis Minor", "Lyraxis Rising"],
-    "Solarion": ["Solarion", "Solarion 2", "Solarion 3", "Solarion 4"]
+    "Cryon": ["Cryonese Primera", "Cryonese Segunda", "Cryonese Tercera", "Cryonese Cuarta"],
+    "Vorlis": ["Vorlis Liga", "Vorlis National", "Vorlis Continental", "Vorlis Regional"],
+    "Zephyra": ["Zephyra Pro", "Zephyra Challenge", "Zephyra Series", "Zephyra B"],
+    "Tauron": ["Tauron Premier", "Tauron Elite", "Tauron Division 2", "Tauron Division 3"],
+    "Nerath": ["Nerathoul", "Nerathoul Prime", "Nerathoul Ascend", "Nerathoul Minor"],
+    "Ecliptis": ["Ecliptus", "Ecliptus B", "Ecliptus C", "Ecliptus D"],
+    "Lyra": ["Lyraxis", "Lyraxis Nova", "Lyraxis Minor", "Lyraxis Rising"],
+    "Solara": ["Solarion", "Solarion 2", "Solarion 3", "Solarion 4"]
+}
+cup_names = {
+    "Cryon": "Cryon Cup",
+    "Vorlis": "Vorlis Shield",
+    "Zephyra": "Zephyra Trophy",
+    "Tauron": "Tauron Cup",
+    "Nerath": "Nerathoul League Cup",
+    "Ecliptis": "Ecliptis Cup",
+    "Lyra": "Lyraxis Super Cup",
+    "Solara": "Solarion Challenge"
 }
 
 league_strengths = [
@@ -38,12 +48,15 @@ league_strengths = [
 logo_templates_path = "data/Logo Templates"
 team_logos_path = "Images/Teams"
 league_logos_path = "Images/Leagues"
+cups_logos_path = "Images/Cups"
 
 # --- CLEAN PREVIOUS FILES & IMAGES ---
 if os.path.exists("data/teams.json"):
     os.remove("data/teams.json")
 if os.path.exists("data/leagues.json"):
     os.remove("data/leagues.json")
+if os.path.exists("data/cups.json"):
+    os.remove("data/cups.json")
 
 if os.path.exists(team_logos_path):
     shutil.rmtree(team_logos_path)
@@ -712,7 +725,7 @@ def replace_color(img_path, new_color, save_path):
 
 # Create per-division strength lists
 league_strength_dict = {}
-for league, divisions in league_names.items():
+for _, divisions in league_names.items():
     for div in divisions:
         league_strength_dict[div] = league_strengths.copy()
 
@@ -772,6 +785,7 @@ division_index = 0
 for team_name, stadium in teams.items():
     # League assignment in order
     division = all_divisions_ordered[division_index % len(all_divisions_ordered)]
+    planet = next(p for p, ls in league_names.items() if division in ls)
     division_index += 1
     
     # Strength assignment
@@ -805,7 +819,8 @@ for team_name, stadium in teams.items():
         "logo": logo_save_path,
         "year_created": year_created,
         "stadium": stadium,
-        "league": division
+        "league": division,
+        "planet": planet
     }
     
     teams_json.append(team_entry)
@@ -840,6 +855,21 @@ for league, divisions in league_names.items():
         }
         leagues_json.append(league_entry)
 
+# --- CREATE CUPS JSON ---
+cups_json = []
+for planet, cup_name in cup_names.items():
+    cup_logo_path = os.path.join(cups_logos_path, f"{cup_name.replace(' ', '_')}.png")
+    entry = {
+        "name": cup_name,
+        "logo": cup_logo_path,
+        "groups": 10,
+        "teams_per_group": 4,
+        "knockout_rounds": 6,
+        "games_per_knockout": 1,
+        "planet": planet
+    }
+    cups_json.append(entry)
+
 # --- SAVE JSON FILES ---
 with open("data/teams.json", "w") as f:
     json.dump(teams_json, f, indent=4)
@@ -847,4 +877,7 @@ with open("data/teams.json", "w") as f:
 with open("data/leagues.json", "w") as f:
     json.dump(leagues_json, f, indent=4)
 
-print("✅ Generated teams.json and leagues.json with logos, cleaned old files and images.")
+with open("data/cups.json", "w") as f:
+    json.dump(cups_json, f, indent=4)
+
+print("✅ Generated teams.json, leagues.json with logos and cups.json, cleaned old files and images.")

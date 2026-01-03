@@ -1408,6 +1408,23 @@ def get_all_league_teams(jsonData, leagueName):
 
     return teamOBJs
 
+def get_all_planet_teams(jsonData, planetName):
+    """
+    Get all teams belonging to a specific planet from JSON data.
+    
+    Args:
+        jsonData (list): List of team data in JSON format.
+        planetName (str): The name of the planet to filter teams by.
+    """
+    
+    teamOBJs = []
+
+    for team in jsonData:
+        if team["planet"] == planetName:
+            teamOBJs.append(team)
+
+    return teamOBJs
+
 def run_match_simulation(interval, currDate, exclude_leagues = [], progress_callback = None):
     """
     Run match simulations in parallel for matches within a specified time frame.

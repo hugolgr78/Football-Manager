@@ -1028,7 +1028,7 @@ class Analysis(ctk.CTkFrame):
         ctk.CTkLabel(playersFrame, text = "Players", font = (APP_FONT_BOLD, 12), fg_color = GREY_BACKGROUND).pack(pady = 5, anchor = "center")
 
         lineupPitch = FootballPitchMatchDay(self.predictedLineupFrame, 340, 510, 0.99, 0.08, "ne", GREY_BACKGROUND, GREY_BACKGROUND)
-        lineup = getPredictedLineup(self.opponent.id, Game.get_game_date(self.manager_id))
+        lineup = getPredictedLineup(self.opponent.id, Game.get_game_date(self.manager_id), match_id = self.parent.nextmatch.id)
         
         for position, playerID in lineup.items():
             player = Players.get_player_by_id(playerID)

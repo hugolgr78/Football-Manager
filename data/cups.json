@@ -1,0 +1,74 @@
+[
+    {
+        "name": "Cryon Cup",
+        "logo": "Images/Cups\\Cryon_Cup.png",
+        "groups": 10,
+        "teams_per_group": 4,
+        "knockout_rounds": 6,
+        "games_per_knockout": 1,
+        "planet": "Cryon"
+    },
+    {
+        "name": "Vorlis Shield",
+        "logo": "Images/Cups\\Vorlis_Shield.png",
+        "groups": 10,
+        "teams_per_group": 4,
+        "knockout_rounds": 6,
+        "games_per_knockout": 1,
+        "planet": "Vorlis"
+    },
+    {
+        "name": "Zephyra Trophy",
+        "logo": "Images/Cups\\Zephyra_Trophy.png",
+        "groups": 10,
+        "teams_per_group": 4,
+        "knockout_rounds": 6,
+        "games_per_knockout": 1,
+        "planet": "Zephyra"
+    },
+    {
+        "name": "Tauron Cup",
+        "logo": "Images/Cups\\Tauron_Cup.png",
+        "groups": 10,
+        "teams_per_group": 4,
+        "knockout_rounds": 6,
+        "games_per_knockout": 1,
+        "planet": "Tauron"
+    },
+    {
+        "name": "Nerathoul League Cup",
+        "logo": "Images/Cups\\Nerathoul_League_Cup.png",
+        "groups": 10,
+        "teams_per_group": 4,
+        "knockout_rounds": 6,
+        "games_per_knockout": 1,
+        "planet": "Nerath"
+    },
+    {
+        "name": "Ecliptis Cup",
+        "logo": "Images/Cups\\Ecliptis_Cup.png",
+        "groups": 10,
+        "teams_per_group": 4,
+        "knockout_rounds": 6,
+        "games_per_knockout": 1,
+        "planet": "Ecliptis"
+    },
+    {
+        "name": "Lyraxis Super Cup",
+        "logo": "Images/Cups\\Lyraxis_Super_Cup.png",
+        "groups": 10,
+        "teams_per_group": 4,
+        "knockout_rounds": 6,
+        "games_per_knockout": 1,
+        "planet": "Lyra"
+    },
+    {
+        "name": "Solarion Challenge",
+        "logo": "Images/Cups\\Solarion_Challenge.png",
+        "groups": 10,
+        "teams_per_group": 4,
+        "knockout_rounds": 6,
+        "games_per_knockout": 1,
+        "planet": "Solara"
+    }
+]

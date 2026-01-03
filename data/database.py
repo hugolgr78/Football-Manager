@@ -1395,6 +1395,56 @@ class Matches(Base):
                 chosen_time = random.choice(time_slots)
                 yield game, chosen_time  
 
+        def enforce_max_streak(first_round, max_streak=3):
+            team_games = get_team_schedule(first_round)
+
+            for team, games in team_games.items():
+                streak_type = None
+                streak_len = 0
+
+                for i, (r, m, is_home) in enumerate(games):
+                    t = 'H' if is_home else 'A'
+
+                    if t == streak_type:
+                        streak_len += 1
+                    else:
+                        streak_type = t
+                        streak_len = 1
+
+                    if streak_len > max_streak:
+                        # only look forward
+                        for j in range(i + 1, len(games)):
+                            r2, m2, is_home2 = games[j]
+
+                            # must be opposite venue
+                            if is_home2 != is_home:
+                                # do NOT touch earlier rounds
+                                if r2 > r:
+                                    swap_match(first_round, r, m, r2, m2)
+                                    return True  # progress guaranteed
+
+                        # If we get here, it's mathematically impossible
+                        return False
+
+            return False
+
+        def get_team_schedule(schedule):
+            team_games = defaultdict(list)
+
+            for r, round_ in enumerate(schedule):
+                for m, (home, away) in enumerate(round_):
+                    team_games[home].append((r, m, True))
+                    team_games[away].append((r, m, False))
+
+            return team_games
+
+        def swap_match(schedule, r1, m1, r2, m2):
+            h1, a1 = schedule[r1][m1]
+            h2, a2 = schedule[r2][m2]
+
+            schedule[r1][m1] = (a1, h1)
+            schedule[r2][m2] = (a2, h2)
+
         session = DatabaseManager().get_session()
         try:
             matches_dict = []
@@ -1425,10 +1475,13 @@ class Matches(Base):
                     team_ids.insert(1, team_ids.pop())  # Rotate the list
 
                 random.shuffle(schedule)
+                
+                while enforce_max_streak(schedule):
+                    pass
 
                 # --- Second round (reverse fixtures) ---
-                second_round = [[(away, home) for home, away in round] for round in schedule]
-                random.shuffle(second_round)
+                second_round = [[(away, home) for home, away in round_] for round_ in schedule]
+                # random.shuffle(second_round)
                 schedule.extend(second_round)
 
                 # --- Generate weekend dates for 38 matchdays ---

@@ -1,4 +1,4 @@
-import re, datetime, os, shutil, time, gc, logging
+import re, datetime, os, shutil, time, gc, logging, copy, pickle, uuid, json, random
 from sqlalchemy import Column, Integer, String, BLOB, ForeignKey, Boolean, insert, or_, and_, Float, DateTime, Date, extract
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, func, or_, case
@@ -6,7 +6,6 @@ from sqlalchemy.orm import sessionmaker, aliased, scoped_session
 from sqlalchemy.types import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
-import uuid, json, random
 from faker import Faker
 from settings import *
 from utils.util_functions import *
@@ -19,6 +18,12 @@ progressBar = None
 progressLabel = None
 progressFrame = None
 percentageLabel = None
+
+with open("data/models/first_name_generator.pkl", "rb") as f:
+    first_gen = pickle.load(f)
+
+with open("data/models/last_name_generator.pkl", "rb") as f:
+    last_gen = pickle.load(f)
 
 def _wrapped_commit(session, db_manager):
     if not db_manager.copy_active:
@@ -209,8 +214,8 @@ class Managers(Base):
                 managers_dicts.append(
                     {
                         "id": str(uuid.uuid4()),
-                        "first_name": Faker().first_name_male(),
-                        "last_name": Faker().first_name(),
+                        "first_name": first_gen.make_name(),
+                        "last_name": last_gen.make_name(),
                         "nationality": planet,
                         "flag": flags[planet],
                         "date_of_birth": date_of_birth,
@@ -563,6 +568,7 @@ class Players(Base):
 
     @classmethod
     def create_youth_player(cls, team_id, position, required_code, flags, numbers, league_planet, depth, team_strength, attributes_dict):
+
         if random.random() < 0.8:
             planet = league_planet
         else:
@@ -597,8 +603,8 @@ class Players(Base):
         dict_ = {
             "id": playerID,
             "team_id": team_id,
-            "first_name": faker.first_name_male(),
-            "last_name": faker.last_name(),
+            "first_name": first_gen.make_name(),
+            "last_name": last_gen.make_name(),
             "number": random.randint(1, 99),
             "position": position,
             "date_of_birth": date_of_birth,
@@ -678,6 +684,7 @@ class Players(Base):
                 }
 
                 numbers = []
+                available_numbers = copy.deepcopy(BASE_NUMBERS)
                 faker = Faker()
                 position_weights = [0.4, 0.3, 0.2, 0.1]
 
@@ -696,11 +703,6 @@ class Players(Base):
                         age = SEASON_START_DATE.year - date_of_birth.year
                         if (SEASON_START_DATE.month, SEASON_START_DATE.day) < (date_of_birth.month, date_of_birth.day):
                             age -= 1
-
-                        player_number = random.randint(1, 99)
-                        while player_number in numbers:
-                            player_number = random.randint(1, 99)
-                        numbers.append(player_number)
 
                         num_positions = random.choices(range(1, min(len(specific_pos_list), 4) + 1), weights = position_weights[:min(len(specific_pos_list), 4)])[0]
                         new_player_positions = random.sample(specific_pos_list, k = num_positions)
@@ -726,9 +728,8 @@ class Players(Base):
                         team_players.append({
                             "id": playerID,
                             "team_id": team_id,
-                            "first_name": faker.first_name_male(),
-                            "last_name": faker.last_name(),
-                            "number": player_number,
+                            "first_name": first_gen.make_name(),
+                            "last_name": last_gen.make_name(),
                             "position": overall_position,
                             "date_of_birth": date_of_birth,
                             "age": age,
@@ -780,8 +781,8 @@ class Players(Base):
                         team_players.append({
                             "id": playerID,
                             "team_id": team_id,
-                            "first_name": faker.first_name_male(),
-                            "last_name": faker.last_name(),
+                            "first_name": first_gen.make_name(),
+                            "last_name": last_gen.make_name(),
                             "number": player_number,
                             "position": overall_position,
                             "date_of_birth": date_of_birth,
@@ -814,11 +815,6 @@ class Players(Base):
                     else:
                         player["player_role"] = None
 
-                # Tie-break for Star Player limit
-                for i in range(4, len(team_players)):
-                    if team_players[i]["current_ability"] == team_players[3]["current_ability"]:
-                        team_players[i]["current_ability"] -= 5
-
                 # 2. First team and Rotation per position (Backup only for goalkeepers)
                 positions = ["goalkeeper", "defender", "midfielder", "forward"]
                 max_top_per_position = {"goalkeeper": 1, "defender": 4, "midfielder": 4, "forward": 4}
@@ -849,6 +845,40 @@ class Players(Base):
                             player["player_role"] = "Backup"
                         else:
                             player["player_role"] = "Rotation"
+
+                for player in team_players:
+
+                    positions = player["specific_positions"].split(',')
+
+                    # Find a position with available numbers
+                    available_position = None
+                    for pos in positions:
+                        if available_numbers[pos]:
+                            available_position = pos
+                            break
+
+                    # If no base numbers are left, pick a random number
+                    if available_position is None:
+                        available = [n for n in range(1, 100) if n not in numbers and n not in RESERVED_NUMBERS]
+                        number = random.choice(available)
+                        player["number"] = number
+                        numbers.append(number)
+                        continue
+
+                    # Otherwise, pick a number from the available base numbers
+                    available = [n for n in available_numbers[available_position] if n not in numbers]
+                    
+                    # If somehow no numbers left for this position, fallback to random
+                    if not available:
+                        available = [n for n in range(1, 100) if n not in numbers and n not in RESERVED_NUMBERS]
+
+                    number = random.choice(available)
+                    player["number"] = number
+                    numbers.append(number)
+
+                    # Remove the number from available numbers for that position
+                    if number in available_numbers[available_position]:
+                        available_numbers[available_position].remove(number)
 
                 # 1) Ensure at least one youth for each specific position
                 for overall_position, specific_pos_list in specific_positions.items():
@@ -1365,6 +1395,56 @@ class Matches(Base):
                 chosen_time = random.choice(time_slots)
                 yield game, chosen_time  
 
+        def enforce_max_streak(first_round, max_streak=3):
+            team_games = get_team_schedule(first_round)
+
+            for team, games in team_games.items():
+                streak_type = None
+                streak_len = 0
+
+                for i, (r, m, is_home) in enumerate(games):
+                    t = 'H' if is_home else 'A'
+
+                    if t == streak_type:
+                        streak_len += 1
+                    else:
+                        streak_type = t
+                        streak_len = 1
+
+                    if streak_len > max_streak:
+                        # only look forward
+                        for j in range(i + 1, len(games)):
+                            r2, m2, is_home2 = games[j]
+
+                            # must be opposite venue
+                            if is_home2 != is_home:
+                                # do NOT touch earlier rounds
+                                if r2 > r:
+                                    swap_match(first_round, r, m, r2, m2)
+                                    return True  # progress guaranteed
+
+                        # If we get here, it's mathematically impossible
+                        return False
+
+            return False
+
+        def get_team_schedule(schedule):
+            team_games = defaultdict(list)
+
+            for r, round_ in enumerate(schedule):
+                for m, (home, away) in enumerate(round_):
+                    team_games[home].append((r, m, True))
+                    team_games[away].append((r, m, False))
+
+            return team_games
+
+        def swap_match(schedule, r1, m1, r2, m2):
+            h1, a1 = schedule[r1][m1]
+            h2, a2 = schedule[r2][m2]
+
+            schedule[r1][m1] = (a1, h1)
+            schedule[r2][m2] = (a2, h2)
+
         session = DatabaseManager().get_session()
         try:
             matches_dict = []
@@ -1395,10 +1475,13 @@ class Matches(Base):
                     team_ids.insert(1, team_ids.pop())  # Rotate the list
 
                 random.shuffle(schedule)
+                
+                while enforce_max_streak(schedule):
+                    pass
 
                 # --- Second round (reverse fixtures) ---
-                second_round = [[(away, home) for home, away in round] for round in schedule]
-                random.shuffle(second_round)
+                second_round = [[(away, home) for home, away in round_] for round_ in schedule]
+                # random.shuffle(second_round)
                 schedule.extend(second_round)
 
                 # --- Generate weekend dates for 38 matchdays ---
@@ -2087,14 +2170,32 @@ class TeamLineup(Base):
             session.close()
 
     @classmethod
-    def get_player_average_rating(cls, player_id, league_id):
+    def get_number_matches_by_player_all_comps(cls, player_id):
         session = DatabaseManager().get_session()
         try:
-            rating = session.query(func.avg(TeamLineup.rating)).join(Matches).filter(
+            matches = session.query(TeamLineup).filter(
                 TeamLineup.player_id == player_id,
-                Matches.league_id == league_id,
                 TeamLineup.rating.isnot(None)
-            ).scalar()
+            ).count()
+            return matches
+        finally:
+            session.close()
+
+    @classmethod
+    def get_player_average_rating(cls, player_id, comp = None):
+        session = DatabaseManager().get_session()
+        try:
+            if comp:
+                rating = session.query(func.avg(TeamLineup.rating)).join(Matches).filter(
+                    TeamLineup.player_id == player_id,
+                    Matches.league_id == comp,
+                    TeamLineup.rating.isnot(None)
+                ).scalar()
+            else:
+                rating = session.query(func.avg(TeamLineup.rating)).filter(
+                    TeamLineup.player_id == player_id,
+                    TeamLineup.rating.isnot(None)
+                ).scalar()
             return rating if rating else "N/A"
         finally:
             session.close()
@@ -2788,6 +2889,76 @@ class MatchEvents(Base):
             return clean_sheets
         finally:
             session.close()
+    
+    @classmethod
+    def get_team_clean_sheets(cls, team_id, comp_id):
+        session = DatabaseManager().get_session()
+        try:
+            clean_sheets = (
+                session.query(func.count(func.distinct(MatchEvents.match_id)))
+                .join(Players)
+                .join(Matches)
+                .filter(
+                    Players.team_id == team_id,
+                    MatchEvents.event_type == "clean_sheet",
+                    Matches.league_id == comp_id
+                )
+                .scalar()
+            )
+            return clean_sheets
+        finally:
+            session.close()
+
+    @classmethod
+    def get_max_clean_sheets(cls, comp_id):
+        session = DatabaseManager().get_session()
+        try:
+            TeamAlias = aliased(Teams)
+
+            result = (
+                session.query(
+                    Players.team_id,
+                    TeamAlias.name,
+                    func.count(func.distinct(MatchEvents.match_id)).label("clean_sheet_count")
+                )
+                .join(Players, MatchEvents.player_id == Players.id)
+                .join(TeamAlias, Players.team_id == TeamAlias.id)
+                .join(Matches, MatchEvents.match_id == Matches.id)
+                .filter(
+                    MatchEvents.event_type == "clean_sheet",
+                    Matches.league_id == comp_id
+                )
+                .group_by(
+                    Players.team_id,
+                    TeamAlias.name
+                )
+                .order_by(
+                    func.count(func.distinct(MatchEvents.match_id)).desc()
+                )
+                .first()
+            )
+
+            return result[2] if result else 0
+
+        finally:
+            session.close()
+    
+    @classmethod
+    def get_total_clean_sheets(cls, comp_id):
+        session = DatabaseManager().get_session()
+        try:
+            total_clean_sheets = (
+                session.query(func.count(MatchEvents.id))
+                .join(Matches)
+                .filter(
+                    MatchEvents.event_type == "clean_sheet",
+                    Matches.league_id == comp_id
+                )
+                .scalar()
+            )
+            return total_clean_sheets
+        finally:
+            session.close()
 
     @classmethod
     def get_player_game_time(cls, player_id, match_id):
@@ -3015,6 +3186,366 @@ class MatchStats(Base):
                     totals.setdefault(s, 0)
 
             return dict(totals)
+        finally:
+            session.close()
+
+    @classmethod
+    def get_team_stats_matches(cls, team_id, match_ids):
+        session = DatabaseManager().get_session()
+        try:
+            # ---- TEAM-LEVEL STATS (already aggregated) ----
+            team_rows = (
+                session.query(
+                    MatchStats.match_id,
+                    MatchStats.stat_type,
+                    MatchStats.value
+                )
+                .filter(
+                    MatchStats.team_id == team_id,
+                    MatchStats.player_id == None,
+                    MatchStats.match_id.in_(match_ids)
+                )
+                .all()
+            )
+
+            # ---- PLAYER-LEVEL STATS (aggregate per match + stat) ----
+            player_rows = (
+                session.query(
+                    MatchStats.match_id,
+                    MatchStats.stat_type,
+                    func.coalesce(func.sum(MatchStats.value), 0)
+                )
+                .join(Players, MatchStats.player_id == Players.id)
+                .join(TeamLineup, TeamLineup.player_id == MatchStats.player_id)
+                .filter(
+                    Players.team_id == team_id,
+                    MatchStats.player_id != None,
+                    MatchStats.match_id.in_(match_ids),
+                    TeamLineup.match_id == MatchStats.match_id
+                )
+                .group_by(
+                    MatchStats.match_id,
+                    MatchStats.stat_type
+                )
+                .all()
+            )
+
+            # ---- MERGE RESULTS ----
+            stats_by_match = defaultdict(lambda: defaultdict(int))
+
+            for match_id, stat_type, value in team_rows:
+                if stat_type == "xG":
+                    stats_by_match[match_id][stat_type] = round(float(value or 0.0), 2)
+                else:
+                    stats_by_match[match_id][stat_type] = int(value or 0)
+
+            for match_id, stat_type, total in player_rows:
+                stats_by_match[match_id][stat_type] += int(total or 0)
+
+            # ---- ENSURE ALL STATS EXIST ----
+            for match_id in match_ids:
+                for s in SAVED_STATS:
+                    if s == "xG":
+                        stats_by_match[match_id].setdefault(s, 0.0)
+                    else:
+                        stats_by_match[match_id].setdefault(s, 0)
+
+            return {mid: dict(stats) for mid, stats in stats_by_match.items()}
+
+        finally:
+            session.close()
+
+    @classmethod
+    def get_league_best_avg_stats(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            # ----------------------------------------------------
+            # 1) Player-level stats per team per match
+            # ----------------------------------------------------
+            player_stats = (
+                session.query(
+                    MatchStats.match_id.label("match_id"),
+                    Players.team_id.label("team_id"),
+                    MatchStats.stat_type.label("stat_type"),
+                    func.sum(MatchStats.value).label("value")
+                )
+                .join(Players, MatchStats.player_id == Players.id)
+                .join(TeamLineup, TeamLineup.player_id == Players.id)
+                .join(Matches, Matches.id == MatchStats.match_id)
+                .filter(
+                    Matches.league_id == league_id,
+                    MatchStats.player_id != None,
+                    TeamLineup.match_id == MatchStats.match_id
+                )
+                .group_by(
+                    MatchStats.match_id,
+                    Players.team_id,
+                    MatchStats.stat_type
+                )
+            )
+
+            # ----------------------------------------------------
+            # 2) Team-level stats per team per match
+            # ----------------------------------------------------
+            team_stats = (
+                session.query(
+                    MatchStats.match_id.label("match_id"),
+                    MatchStats.team_id.label("team_id"),
+                    MatchStats.stat_type.label("stat_type"),
+                    MatchStats.value.label("value")
+                )
+                .join(Matches, Matches.id == MatchStats.match_id)
+                .filter(
+                    Matches.league_id == league_id,
+                    MatchStats.player_id == None
+                )
+            )
+
+            # ----------------------------------------------------
+            # 3) Union player + team stats into one dataset
+            # ----------------------------------------------------
+            all_stats = player_stats.union_all(team_stats).subquery("all_stats")
+
+            # ----------------------------------------------------
+            # 4) Aggregate total per team per match per stat
+            # ----------------------------------------------------
+            combined = (
+                session.query(
+                    all_stats.c.match_id,
+                    all_stats.c.team_id,
+                    all_stats.c.stat_type,
+                    func.sum(all_stats.c.value).label("total_value")
+                )
+                .group_by(all_stats.c.match_id, all_stats.c.team_id, all_stats.c.stat_type)
+                .subquery("combined")
+            )
+
+            # ----------------------------------------------------
+            # 5) Average per team per stat
+            # ----------------------------------------------------
+            per_team_avg = (
+                session.query(
+                    combined.c.stat_type,
+                    combined.c.team_id,
+                    func.avg(combined.c.total_value).label("avg_value")
+                )
+                .group_by(combined.c.stat_type, combined.c.team_id)
+                .subquery("per_team_avg")
+            )
+
+            # ----------------------------------------------------
+            # 6) Max average per stat across teams
+            # ----------------------------------------------------
+            rows = (
+                session.query(
+                    per_team_avg.c.stat_type,
+                    func.max(per_team_avg.c.avg_value).label("max_avg")
+                )
+                .group_by(per_team_avg.c.stat_type)
+                .all()
+            )
+
+            return {stat_type: float(max_avg or 0) for stat_type, max_avg in rows}
+
+        finally:
+            session.close()
+
+    @classmethod
+    def get_league_avg_stats(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            # ----------------------------------------------------
+            # 1) Player-level stats per team per match
+            # ----------------------------------------------------
+            player_stats = (
+                session.query(
+                    MatchStats.match_id.label("match_id"),
+                    Players.team_id.label("team_id"),
+                    MatchStats.stat_type.label("stat_type"),
+                    func.sum(MatchStats.value).label("value")
+                )
+                .join(Players, MatchStats.player_id == Players.id)
+                .join(TeamLineup, TeamLineup.player_id == Players.id)
+                .join(Matches, Matches.id == MatchStats.match_id)
+                .filter(
+                    Matches.league_id == league_id,
+                    MatchStats.player_id != None,
+                    TeamLineup.match_id == MatchStats.match_id
+                )
+                .group_by(
+                    MatchStats.match_id,
+                    Players.team_id,
+                    MatchStats.stat_type
+                )
+            )
+
+            # ----------------------------------------------------
+            # 2) Team-level stats per team per match
+            # ----------------------------------------------------
+            team_stats = (
+                session.query(
+                    MatchStats.match_id.label("match_id"),
+                    MatchStats.team_id.label("team_id"),
+                    MatchStats.stat_type.label("stat_type"),
+                    MatchStats.value.label("value")
+                )
+                .join(Matches, Matches.id == MatchStats.match_id)
+                .filter(
+                    Matches.league_id == league_id,
+                    MatchStats.player_id == None
+                )
+            )
+
+            # ----------------------------------------------------
+            # 3) Union player + team stats
+            # ----------------------------------------------------
+            all_stats = player_stats.union_all(team_stats).subquery("all_stats")
+
+            # ----------------------------------------------------
+            # 4) Total per team per match per stat
+            # ----------------------------------------------------
+            combined = (
+                session.query(
+                    all_stats.c.match_id,
+                    all_stats.c.team_id,
+                    all_stats.c.stat_type,
+                    func.sum(all_stats.c.value).label("total_value")
+                )
+                .group_by(
+                    all_stats.c.match_id,
+                    all_stats.c.team_id,
+                    all_stats.c.stat_type
+                )
+                .subquery("combined")
+            )
+
+            # ----------------------------------------------------
+            # 5) Avg per team per stat
+            # ----------------------------------------------------
+            per_team_avg = (
+                session.query(
+                    combined.c.stat_type,
+                    combined.c.team_id,
+                    func.avg(combined.c.total_value).label("avg_value")
+                )
+                .group_by(
+                    combined.c.stat_type,
+                    combined.c.team_id
+                )
+                .subquery("per_team_avg")
+            )
+
+            # ----------------------------------------------------
+            # 6) League average per stat (AVG of team avgs)
+            # ----------------------------------------------------
+            rows = (
+                session.query(
+                    per_team_avg.c.stat_type,
+                    func.avg(per_team_avg.c.avg_value).label("league_avg")
+                )
+                .group_by(per_team_avg.c.stat_type)
+                .all()
+            )
+
+            return {stat_type: float(league_avg or 0) for stat_type, league_avg in rows}
+
+        finally:
+            session.close()
+
+
+    @classmethod
+    def get_team_xg_against(cls, team_id, match_ids):
+        session = DatabaseManager().get_session()
+        try:
+            sub = (
+                session.query(
+                    Matches.id.label("match_id"),
+                    case(
+                        [(Matches.home_id == team_id, Matches.away_id)],
+                        else_ = Matches.home_id
+                    ).label("opponent_id")
+                )
+                .filter(Matches.id.in_(match_ids))
+                .subquery()
+            )
+
+            total_xg = (
+                session.query(func.coalesce(func.sum(MatchStats.value), 0))
+                .join(sub, sub.c.match_id == MatchStats.match_id)
+                .filter(
+                    MatchStats.team_id == sub.c.opponent_id,
+                    MatchStats.stat_type == "xG",
+                    MatchStats.player_id == None
+                )
+                .scalar()
+            )
+
+            return float(total_xg or 0)
+        finally:
+            session.close()
+
+    @classmethod
+    def get_league_max_xg_against(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            # Step 1: figure out all match_id / team_id pairs
+            # For each match, get both home and away teams
+            match_teams = (
+                session.query(
+                    Matches.id.label("match_id"),
+                    Matches.home_id.label("team_id")
+                )
+                .filter(Matches.league_id == league_id)
+                .union_all(
+                    session.query(
+                        Matches.id.label("match_id"),
+                        Matches.away_id.label("team_id")
+                    ).filter(Matches.league_id == league_id)
+                )
+                .subquery()
+            )
+
+            # Step 2: join with MatchStats to get xG for each team in each match
+            team_xg = (
+                session.query(
+                    match_teams.c.team_id,
+                    func.max(MatchStats.value).label("xG_in_match")
+                )
+                .join(
+                    MatchStats,
+                    (MatchStats.match_id == match_teams.c.match_id) &
+                    (MatchStats.team_id == match_teams.c.team_id) &
+                    (MatchStats.stat_type == "xG") &
+                    (MatchStats.player_id == None)
+                )
+                .group_by(match_teams.c.team_id, match_teams.c.match_id)
+                .subquery()
+            )
+
+            # Step 3: take the max xG across all matches and teams
+            max_xg = session.query(func.max(team_xg.c.xG_in_match)).scalar()
+
+            return float(max_xg or 0)
+
+        finally:
+            session.close()
+
+    @classmethod
+    def get_league_total_xg_against(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            total_xg = (
+                session.query(func.coalesce(func.sum(MatchStats.value), 0))
+                .join(Matches, MatchStats.match_id == Matches.id)
+                .filter(
+                    Matches.league_id == league_id,
+                    MatchStats.stat_type == "xG",
+                    MatchStats.player_id == None
+                )
+                .scalar()
+            )
+
+            return float(total_xg or 0)
         finally:
             session.close()
 
@@ -3319,6 +3850,7 @@ class LeagueTeams(Base):
             raise e
         finally:
             session.close()
+            
     @classmethod
     def add_team(cls, league_id, team_id, position):
         session = DatabaseManager().get_session()
@@ -3340,10 +3872,10 @@ class LeagueTeams(Base):
             session.close()
     
     @classmethod
-    def get_team_by_id(cls, id):
+    def get_team_by_id(cls, team_id):
         session = DatabaseManager().get_session()
         try:
-            team = session.query(LeagueTeams).filter(LeagueTeams.team_id == id).first()
+            team = session.query(LeagueTeams).filter(LeagueTeams.team_id == team_id).first()
             return team
         finally:
             session.close()
@@ -3407,6 +3939,24 @@ class LeagueTeams(Base):
             session.close()
 
     @classmethod
+    def get_max_goals_conceded(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            max_goals = session.query(func.max(LeagueTeams.goals_conceded)).filter(LeagueTeams.league_id == league_id).scalar()
+            return max_goals if max_goals else 0
+        finally:
+            session.close()
+    
+    @classmethod
+    def get_max_goals_scored(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            max_goals = session.query(func.max(LeagueTeams.goals_scored)).filter(LeagueTeams.league_id == league_id).scalar()
+            return max_goals if max_goals else 0
+        finally:
+            session.close()
+
+    @classmethod
     def batch_update_teams(cls, updates):
         session = DatabaseManager().get_session()
         try:
@@ -3451,6 +4001,35 @@ class LeagueTeams(Base):
         try:
             num_teams = session.query(LeagueTeams).filter(LeagueTeams.league_id == league_id).count()
             return num_teams if num_teams else 0
+        finally:
+            session.close()
+
+    @classmethod
+    def get_total_goals_scored(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            total_goals = session.query(func.sum(LeagueTeams.goals_scored)).filter(LeagueTeams.league_id == league_id).scalar()
+            return total_goals if total_goals else 0
+        finally:
+            session.close()
+
+    @classmethod
+    def get_total_goals_conceded(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            total_goals = session.query(func.sum(LeagueTeams.goals_conceded)).filter(LeagueTeams.league_id == league_id).scalar()
+            return total_goals if total_goals else 0
+        finally:
+            session.close()
+
+    @classmethod
+    def get_total_of_matches_played(cls, league_id):
+        session = DatabaseManager().get_session()
+        try:
+            total_matches = session.query(
+                func.sum(LeagueTeams.games_won + LeagueTeams.games_drawn + LeagueTeams.games_lost)
+            ).filter(LeagueTeams.league_id == league_id).scalar()
+            return total_matches if total_matches else 0
         finally:
             session.close()
 
@@ -3594,8 +4173,8 @@ class Referees(Base):
 
                     referees_dict.append({
                         "id": str(uuid.uuid4()),
-                        "first_name": faker.first_name_male(),
-                        "last_name": faker.last_name_male(),
+                        "first_name": first_gen.make_name(),
+                        "last_name": last_gen.make_name(),
                         "league_id": league.id,
                         "severity": random.choices(["low", "medium", "high"], k = 1)[0],
                         "flag": flags[league_planet],
@@ -6200,7 +6779,7 @@ def setUpProgressBar(progressB, progressL, progressF, percentageL):
     progressFrame = progressF
     percentageLabel = percentageL
 
-def searchResults(search, limit = SEARCH_LIMIT):
+def searchResults(search, search_limit = SEARCH_LIMIT, result_limit = RESULT_LIMIT, players_only = False, position = None):
     session = DatabaseManager().get_session()
 
     try:
@@ -6268,42 +6847,48 @@ def searchResults(search, limit = SEARCH_LIMIT):
         def query_players():
             return session.query(Players).filter(
                 build_name_filter(Players)
-            ).limit(limit).all()
+            ).limit(search_limit).all()
 
         def query_managers():
             return session.query(Managers).filter(
                 build_name_filter(Managers)
-            ).limit(limit).all()
+            ).limit(search_limit).all()
 
         def query_teams():
             return session.query(Teams).filter(
                 build_name_filter(Teams)
-            ).limit(limit).all()
+            ).limit(search_limit).all()
 
         def query_leagues():
             return session.query(League).filter(
                 build_name_filter(League)
-            ).limit(limit).all()
+            ).limit(search_limit).all()
 
         def query_referees():
             return session.query(Referees).filter(
                 build_name_filter(Referees)
-            ).limit(limit).all()
+            ).limit(search_limit).all()
         
         def query_matches():
             return session.query(Matches).filter(
                 build_name_filter(Matches)
-            ).limit(limit).all()
+            ).limit(search_limit).all()
 
         with ThreadPoolExecutor(max_workers = 5) as executor:
-            future_to_type = {
-                executor.submit(query_players): 'players',
-                executor.submit(query_managers): 'managers',
-                executor.submit(query_teams): 'teams',
-                executor.submit(query_leagues): 'leagues',
-                executor.submit(query_referees): 'referees',
-                executor.submit(query_matches): 'matches'
-            }
+            
+            if not players_only:
+                future_to_type = {
+                    executor.submit(query_players): 'players',
+                    executor.submit(query_managers): 'managers',
+                    executor.submit(query_teams): 'teams',
+                    executor.submit(query_leagues): 'leagues',
+                    executor.submit(query_referees): 'referees',
+                    executor.submit(query_matches): 'matches'
+                }
+            else:
+                future_to_type = {
+                    executor.submit(query_players): 'players'
+                }
 
             query_results = {}
             for future in as_completed(future_to_type):
@@ -6319,6 +6904,12 @@ def searchResults(search, limit = SEARCH_LIMIT):
             "data": p,
             "sort_key": f"{p.first_name or ''} {p.last_name or ''}".strip()
         } for p in query_results['players']]
+
+        if players_only:
+            player_results.sort(key = lambda x: x["sort_key"].lower())
+            player_results = [data for data in player_results if data["data"].position == position]
+
+            return player_results[:result_limit]
 
         manager_results = [{
             "type": "manager",
@@ -6362,7 +6953,7 @@ def searchResults(search, limit = SEARCH_LIMIT):
             league_results + referee_results + match_results
         )
         combined.sort(key = lambda x: x["sort_key"].lower())
-        return combined[:limit]
+        return combined[:result_limit]
 
     finally:
         session.close()

@@ -1738,13 +1738,13 @@ class LeagueTable(ctk.CTkFrame):
                 ctk.CTkLabel(self, text = team.games_won + team.games_lost + team.games_drawn, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 3)
             else:
                 if i < self.leagueData.promotion:
-                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
+                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 20, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0)
                 elif i + 1 > 20 - self.leagueData.relegation:
-                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = PIE_RED, bd = 0, highlightthickness = 0)
+                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 20, bg = PIE_RED, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0)
                 elif not self.div1 and i in [3, 4, 5, 6]:
-                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
+                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 20, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0)
 
                 ctk.CTkLabel(self, text = i + 1, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 1, sticky = "w")
@@ -2774,7 +2774,7 @@ class FootballPitchMatchDay(FootballPitchVertical):
         super().place_forget()
 
 class LineupPlayerFrame(ctk.CTkFrame):
-    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions, caStars, xDisabled = False):
+    def __init__(self, parent, relx, rely, anchor, fgColor, height, width, playerID, positionCode, position, removePlayer, updateLineup, substitutesFrame, swapLineupPositions, caStars, xDisabled = False, ingameFunction = None):
         """
         Frame representing a player in the lineup on the football pitch, with drag-and-drop functionality, found in FootballPitchLineup.
 
@@ -2809,6 +2809,7 @@ class LineupPlayerFrame(ctk.CTkFrame):
         self.swapLineupPositions = swapLineupPositions
         self.caStars = caStars
         self.additionalPositions = []
+        self.ingameFunction = ingameFunction
 
         self.parent.zone_occupancies[self.position] = 1  # Set the initial occupancy status
         self.current_zone = self.position
@@ -2828,8 +2829,12 @@ class LineupPlayerFrame(ctk.CTkFrame):
 
         self.firstName = ctk.CTkLabel(self, text = self.player.first_name, font = (APP_FONT, 10), height = 0, width = 0, fg_color = fgColor)
         self.firstName.place(relx = 0.5, rely = 0.35, anchor = "center")
-        self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 12), fg_color = fgColor, height = 0, width = 0)
-        self.lastName.place(relx = 0.5, rely = 0.6, anchor = "center")
+
+        if self.ingameFunction:
+            PlayerProfileLink(self, self.player, self.player.last_name, "white", 0.5, 0.6, "center", fgColor, None, 12, APP_FONT_BOLD, ingame = True, ingameFunction = self.ingameFunction)
+        else:
+            self.lastName = ctk.CTkLabel(self, text = self.player.last_name, font = (APP_FONT_BOLD, 12), fg_color = fgColor, height = 0, width = 0)
+            self.lastName.place(relx = 0.5, rely = 0.6, anchor = "center")
 
         self.removeButton = ctk.CTkButton(self, text = "X", font = (APP_FONT, 10), width = 0, height = 0, fg_color = fgColor, hover_color = CLOSE_RED, corner_radius = 0, command = self.remove)
         self.removeButton.place(relx = 0.95, rely = 0.03, anchor = "ne")
@@ -4892,34 +4897,46 @@ class TeamOTW(ctk.CTkFrame):
         self.team = League.team_of_the_week(self.league_id, self.matchday)[0]
         self.pitch = FootballPitchTeamOTW(self, self.team, 300, 550, 0.5, 0.5, "center", GREY_BACKGROUND, "green")
 
-class AttributesPolygon(ctk.CTkCanvas):
-    def __init__(self, parent, attributes, height, width, bg_color, text_color):
+class DataPolygon(ctk.CTkCanvas):
+    def __init__(self, parent, data, height, width, bg_color, text_color, extra = None, format_ = 0, analysis = False):
         """
-        Class for drawing a radar chart of attributes with a polygon-gradient background.
+        Class for drawing a radar chart of data with a polygon-gradient background.
         
         Args:
             parent (ctk.CTkFrame): The parent frame.
-            attributes (dict): A dictionary of attribute names and their values.
+            data (dict): A dictionary of attribute names and their values.
             size (int): The size of the canvas (width and height).
+            extra (int, Optional): An optional extra set of arguments to add to the polygon
         """
 
         super().__init__(parent, width = width, height = height, bg = bg_color, highlightthickness = 0)
 
-        self.poly_size = min(width, height) - 100
-        self.center = min(width, height) / 2
-        self.radius = self.poly_size * 0.40
-        self.max_value = 20
-        self.attributes = list(attributes.keys())
-        self.values = list(attributes.values())
+        self.extra = extra
+        self.format = format_
+        self.analysis = analysis
 
-        self.levels = 5         # grid lines
+        self.poly_size = min(width, height) - 100
+        self.center = min(width, height) / 2 + (10 if self.analysis else 0)
+        self.radius = self.poly_size * 0.40
+
+        self.labels = list(data.keys())
+        self.values = list(data.values())
+
+        self.numAttributes = len(self.labels)
+
+        if self.extra:
+            extraLabels = list(self.extra.keys())
+            extraValues = list(self.extra.values())
+
+        self.levels = 5 # grid lines
         self.gradient_steps = 6 # colored rings
         self.text_color = text_color
 
         self.draw_gradient_background()
-        self.draw_chart()
+        self.draw_chart(self.labels, self.values, "#1E40AF")
 
-    # -------------------------------------------------------------------
+        if self.extra and not self.analysis:
+            self.draw_chart(extraLabels, extraValues, "#AF1E1E")
 
     def draw_gradient_background(self):
         """
@@ -4937,7 +4954,7 @@ class AttributesPolygon(ctk.CTkCanvas):
         ]
 
         steps = min(self.gradient_steps, len(colors))
-        n = len(self.attributes)
+        n = self.numAttributes
         angle_step = 2 * math.pi / n
         max_r = self.radius * 1.15
 
@@ -4955,12 +4972,12 @@ class AttributesPolygon(ctk.CTkCanvas):
 
             self.create_polygon(pts, fill = colors[ring], outline = "")
 
-    def draw_chart(self):
+    def draw_chart(self, labels, values, outline, add_labels = True):
         """
         Draw the radar chart grid, labels, and the data polygon.
         """
 
-        n = len(self.attributes)
+        n = len(labels)
         angle_step = 2 * math.pi / n
 
         # --- Draw polygon grid rings
@@ -4976,35 +4993,245 @@ class AttributesPolygon(ctk.CTkCanvas):
 
             self.create_polygon(pts, outline = "", fill = "", width = 1)
 
-        # --- Draw attribute labels (moved outward)
-        LABEL_OFFSET = self.radius + 50
-        for i, label in enumerate(self.attributes):
-            angle = i * angle_step - math.pi / 2
-            x = self.center + LABEL_OFFSET * math.cos(angle)
-            y = self.center + LABEL_OFFSET * math.sin(angle)
+        if add_labels:
+            # --- Draw attribute labels (moved outward)
+            LABEL_OFFSET = self.radius + 50
+            for i, label in enumerate(labels):
+                angle = i * angle_step - math.pi / 2
+                x = self.center + LABEL_OFFSET * math.cos(angle)
+                y = self.center + LABEL_OFFSET * math.sin(angle)
 
-            # format label
-            formatted = label.capitalize().replace("_", " ")
+                # format label
+                if self.format == 0:
+                    formatted = label.capitalize().replace("_", " ")
 
-            if formatted == "Acceleration":
-                formatted = "Acc."
+                    if formatted == "Acceleration":
+                        formatted = "Acc."
 
-            # insert line break if two words
-            parts = formatted.split()
-            if len(parts) == 2:
-                formatted = parts[0] + "\n" + parts[1]
+                    # insert line break if two words
+                    parts = formatted.split()
+                    if len(parts) == 2:
+                        formatted = parts[0] + "\n" + parts[1]
 
-            self.create_text(x, y,  text = formatted, fill = self.text_color, font = (APP_FONT_BOLD, 8))
+                    self.create_text(x, y,  text = formatted, fill = self.text_color, font = (APP_FONT_BOLD, 8))
+                elif self.format == 1:
+                    label_text = " ".join(label.split(" ")[0:-1])
+                    value_text = round(float(label.split(" ")[-1]), 1)
+                    
+                    label_font = tkFont.Font(family = APP_FONT, size = 8, weight = "normal")
+                    value_font = tkFont.Font(family = APP_FONT_BOLD, size = 10)
+
+                    label_width = label_font.measure(label_text)
+                    value_width = value_font.measure(value_text)
+                    total_width = label_width + value_width
+
+                    extra_spacing = 5  # pixels of extra space between label and value
+                    self.create_text(x - (total_width + extra_spacing) / 2 + label_width / 2, y, text = label_text, fill = self.text_color, font = (APP_FONT, 8))
+                    self.create_text(x + (total_width + extra_spacing) / 2 - value_width / 2, y, text = value_text, fill = self.text_color, font = (APP_FONT_BOLD, 10))
+                else:
+                    formatted = label
+                    self.create_text(x, y,  text = formatted, fill = self.text_color, font = (APP_FONT_BOLD, 8))
 
         # --- Draw data polygon
         data_pts = []
-        for i, value in enumerate(self.values):
-            ratio = max(0, min(value / self.max_value, 1))
-            r = ratio * self.radius
+        for i, item in enumerate(values):
+            value, maxValue, *rest = item
+            invert = rest[0] if rest else False
+            
+            ratio = max(0, min(value / maxValue, 1))
+            r = ratio * self.radius if not invert else (1 - ratio) * self.radius
 
             angle = i * angle_step - math.pi / 2
             x = self.center + r * math.cos(angle)
             y = self.center + r * math.sin(angle)
             data_pts.extend((x, y))
 
-        self.create_polygon(data_pts, fill = "", outline = "#1E40AF", width = 3)
+        self.create_polygon(data_pts, fill = "", outline = outline, width = 3)
+
+    def add_extra_data(self):
+        """
+        Add extra data to the radar chart.
+        """
+
+        extraLabels = list(self.extra.keys())
+        extraValues = list(self.extra.values())
+
+        self.draw_chart(extraLabels, extraValues, "#AF1E1E", add_labels = False)
+
+    def remove_extra_data(self):
+        """
+        Remove extra data from the radar chart.
+        """
+
+        self.delete("all")
+        self.draw_gradient_background()
+        self.draw_chart(self.labels, self.values, "#1E40AF")
+
+class LiveTableFrame(ctk.CTkScrollableFrame):
+    def __init__(self, paremt, league_id, teamID, playingTeams, fgColor, width, height):
+        """
+        Class for displaying a live league table during a game.
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            league_id (int): The league ID.
+            teamID (int): The team ID to highlight.
+            playingTeams (list): List of team IDs currently playing.
+            fg_color (str): The foreground color.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+        """
+
+        super().__init__(paremt, fg_color = fgColor, width = width, height = height, corner_radius = 15)
+        self.league_id = league_id
+        self.teamID = teamID
+        self.playingTeams = playingTeams
+        self.fgColor = fgColor
+        self.height = height
+
+        self.grid_columnconfigure(1, weight = 3)
+        self.grid_columnconfigure(2, weight = 10)
+        self.grid_columnconfigure((3, 4, 5), weight = 1)
+
+        ctk.CTkLabel(self, text = "GD", fg_color = self.fgColor, text_color = "white", font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 4, pady = (5, 0), padx = 5)
+        ctk.CTkLabel(self, text = "P", fg_color = self.fgColor, text_color = "white", font = (APP_FONT_BOLD, 12), height = 5, width = 5).grid(row = 0, column = 5, pady = (5, 0))
+
+        ctk.CTkLabel(self, text = "#", fg_color = self.fgColor, text_color = "white", height = 5).grid(row = 0, column = 0, sticky = "e", pady = (10, 5), padx = 5)
+        ctk.CTkLabel(self, text = "Team", fg_color = self.fgColor, text_color = "white", font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 2, sticky = "w", pady = (5, 0), padx = 5)
+        ctk.CTkLabel(self, text = "GP", fg_color = self.fgColor, text_color = "white", font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 3, pady = (5, 0), padx = 5)
+        
+        self.teamsData = LeagueTeams.get_teams_by_position(self.league_id)
+        self.startingData = copy.deepcopy(self.teamsData)
+        self.leagueData = League.get_league_by_id(self.league_id)
+
+        for team in self.teamsData:
+            if team.team_id in self.playingTeams:
+                team.games_drawn += 1
+                team.points += 1
+
+        self.teamsData.sort(key = lambda x: (x.points, x.goals_scored - x.goals_conceded, x.goals_scored, -x.goals_conceded), reverse = True)
+
+        # caches
+        self.teamDataCache = {}
+        self.imageCache = {}
+        self.rows = {}
+        
+        self.cache_team_data()
+        self.populate_table()
+
+    def cache_team_data(self):
+        """
+        Cache DB lookups and images
+        """
+
+        for team in self.teamsData:
+            data = Teams.get_team_by_id(team.team_id)
+            self.teamDataCache[team.team_id] = data
+
+            img = Image.open(io.BytesIO(data.logo))
+            img.thumbnail((15, 15))
+            self.imageCache[team.team_id] = ctk.CTkImage(img, None, (img.width, img.height))
+
+    def populate_table(self):
+        """
+        Populates the league table with team data.
+        """
+
+        for i, team in enumerate(self.teamsData):
+            teamData = self.teamDataCache[team.team_id]
+
+            if self.teamID == team.team_id:    
+                font = (APP_FONT_BOLD, 9)
+            else:
+                font = (APP_FONT, 9)
+
+            widgets = {}
+
+            widgets["pos"] = ctk.CTkLabel(self, text = i + 1, fg_color = self.fgColor, text_color = "white", font = font)
+            widgets["logo"] = ctk.CTkLabel(self, image = self.imageCache[team.team_id], text = "", fg_color = self.fgColor)
+            widgets["name"] = ctk.CTkLabel(self, text = teamData.name, fg_color = self.fgColor, text_color = "white", font = font)
+            widgets["gp"] = ctk.CTkLabel(self, text = team.games_won + team.games_lost + team.games_drawn, fg_color = self.fgColor, text_color = "white", font = font)
+            widgets["gd"] = ctk.CTkLabel(self,text = team.goals_scored - team.goals_conceded, fg_color = self.fgColor, text_color = "white", font = font)
+            widgets["pts"] = ctk.CTkLabel(self, text = team.points, fg_color = self.fgColor, text_color = "white", font = font)
+
+            widgets["pos"].grid(row = i + 1, column = 0, padx = 5, sticky = "e")
+            widgets["logo"].grid(row = i + 1, column = 1)
+            widgets["name"].grid(row = i + 1, column = 2, sticky = "w")
+            widgets["gp"].grid(row = i + 1, column = 3)
+            widgets["gd"].grid(row = i + 1, column = 4)
+            widgets["pts"].grid(row = i + 1, column = 5)
+
+            self.rows[team.team_id] = widgets
+
+            if i < self.leagueData.promotion:
+                canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
+                canvas.grid(row = i + 1, column = 0, sticky = "w")
+            elif i + 1 > 20 - self.leagueData.relegation:
+                canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = PIE_RED, bd = 0, highlightthickness = 0)
+                canvas.grid(row = i + 1, column = 0, sticky = "w")
+            elif (not self.leagueData.league_above is None) and i in [3, 4, 5, 6]:
+                canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 14.74, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
+                canvas.grid(row = i + 1, column = 0, sticky = "w")
+
+    def update_table(self, team_id1, team_id2, scorer, score):
+        """
+        Updates the league table with the latest team data.
+        
+        Args:
+            team_id1 (int): The ID of the first team.
+            team_id2 (int): The ID of the second team.
+            scorer (str): The ID of the team that scored.
+            score (str): The current score of the match.
+        """
+
+        score = [int(s) for s in score.split("-")]
+
+        if score[0] > score[1]:
+            winning_team_id = team_id1
+            losing_team_id = team_id2
+        elif score[1] > score[0]:
+            winning_team_id = team_id2
+            losing_team_id = team_id1
+        else:
+            winning_team_id = None
+            losing_team_id = None
+
+
+        for team in self.teamsData:
+            if team.team_id == team_id1 or team.team_id == team_id2:
+
+                startingData = [t for t in self.startingData if t.team_id == team.team_id][0]
+
+                if scorer == team.team_id:
+                    team.goals_scored += 1
+                else:
+                    team.goals_conceded += 1
+
+                if team.team_id == winning_team_id:
+                    team.points = startingData.points + 3
+                    team.games_won = startingData.games_won + 1
+                    team.games_lost = startingData.games_lost
+                    team.games_drawn = startingData.games_drawn
+                elif team.team_id == losing_team_id:
+                    team.points = startingData.points
+                    team.games_lost = startingData.games_lost + 1
+                    team.games_won = startingData.games_won
+                    team.games_drawn = startingData.games_drawn
+                else:
+                    team.points = startingData.points + 1
+                    team.games_drawn = startingData.games_drawn + 1
+                    team.games_won = startingData.games_won
+                    team.games_lost = startingData.games_lost
+        
+        self.teamsData.sort(key = lambda x: (x.points, x.goals_scored - x.goals_conceded, x.goals_scored, -x.goals_conceded), reverse = True)
+        
+        for i, team in enumerate(self.teamsData):
+            row = self.rows[team.team_id]
+
+            row["pos"].configure(text = i + 1)
+            row["gd"].configure(text = team.goals_scored - team.goals_conceded)
+            row["pts"].configure(text = team.points)
+            row["gp"].configure(text = team.games_won + team.games_drawn + team.games_lost)
+
+            for widget in row.values():
+                widget.grid_configure(row = i + 1)

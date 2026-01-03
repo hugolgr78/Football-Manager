@@ -4,7 +4,7 @@ from settings import *
 from data.database import *
 from CTkMessagebox import CTkMessagebox
 from data.gamesDatabase import *
-from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame, TeamLogo, FootballPitchMatchDay
+from utils.frames import FootballPitchLineup, SubstitutePlayer, LineupPlayerFrame, TeamLogo, FootballPitchMatchDay, DataPolygon
 from utils.playerProfileLink import PlayerProfileLink
 from utils.matchProfileLink import MatchProfileLink
 from utils.util_functions import *
@@ -845,6 +845,27 @@ class Analysis(ctk.CTkFrame):
         self.predictedLineupFrame.place(relx = 0.74, rely = 0.02, anchor = "n")
         self.predictedLineupFrame.pack_propagate(False)
 
+        self.polyDataFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 595, corner_radius = 10)
+
+        self.dropDown = ctk.CTkComboBox(
+            self,
+            font = (APP_FONT, 12),
+            fg_color = DARK_GREY,
+            border_color = DARK_GREY,
+            button_color = DARK_GREY,
+            button_hover_color = DARK_GREY,
+            corner_radius = 10,
+            dropdown_fg_color = DARK_GREY,
+            dropdown_hover_color = DARK_GREY,
+            width = 210,
+            height = 20,
+            state = "readonly",
+            values = ["Predicted Lineup & Last Meetings", "Polygraph Data"],
+            command = self.changeFrame,
+        )
+        self.dropDown.set("Predicted Lineup & Last Meetings")
+        self.dropDown.place(relx = 0.96, rely = 0, anchor = "ne")
+
         self.lastMeetingsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 460, height = 130, corner_radius = 10)
         self.lastMeetingsFrame.place(relx = 0.74, rely = 0.76, anchor = "n")
         self.lastMeetingsFrame.pack_propagate(False)
@@ -853,6 +874,7 @@ class Analysis(ctk.CTkFrame):
         self.last5Form()
         self.topStatPlayers()
         self.predictedLineup()
+        self.polyData()
         self.lastMeetings()
 
     def best5Players(self):
@@ -1019,6 +1041,263 @@ class Analysis(ctk.CTkFrame):
             ctk.CTkLabel(frame, text = "-", font = (APP_FONT, 12), text_color = "white", fg_color = GREY_BACKGROUND).place(relx = 0.18, rely = 0.5, anchor = "w")
             PlayerProfileLink(frame, player, f"{player.first_name} {player.last_name}", "white", 0.24, 0.5, "w", GREY_BACKGROUND, self.parent, 12)
 
+    def polyData(self):
+        """
+        Fetches data to create data polygons and displays them in the polyDataFrame.
+        """
+        
+        self.league_stats = MatchStats.get_league_best_avg_stats(self.league.id)
+        self.league_averages = MatchStats.get_league_avg_stats(self.league.id)
+
+        data1, data2, data3, overall_count, attacking_count, defending_count = self.get_poly_data(self.opponent.id)
+        team_data1, team_data2, team_data3, _, _, _ = self.get_poly_data(self.team.id)
+        
+        self.poly1 = DataPolygon(self.polyDataFrame, data1, 250, 400, GREY_BACKGROUND, "white", format_ = 1, analysis = True, extra = team_data1)
+        self.poly1.place(relx = 0.05, rely = 0.2, anchor = "w")
+
+        self.poly3 = DataPolygon(self.polyDataFrame, data3, 250, 350, GREY_BACKGROUND, "white", format_ = 1, analysis = True, extra = team_data3)
+        self.poly3.place(relx = 0.05, rely = 0.8, anchor = "w")
+
+        self.poly2 = DataPolygon(self.polyDataFrame, data2, 250, 320, GREY_BACKGROUND, "white", format_ = 1, analysis = True, extra = team_data2)
+        self.poly2.place(relx = 1, rely = 0.5, anchor = "e")
+
+        ctk.CTkLabel(self.polyDataFrame, text = "Overall, attacking and defensive\ndata per match compared to league", font = (APP_FONT, 10), fg_color = GREY_BACKGROUND, height = 0).place(relx = 0.98, rely = 0.98, anchor = "se")
+
+        src, text = self.text_src(overall_count)
+
+        img_src = Image.open(src)
+        img_src.thumbnail((60, 60))
+        img = ctk.CTkImage(img_src, None, (img_src.width, img_src.height))
+        ctk.CTkLabel(self.polyDataFrame, image = img, text = "", width = 50, height = 50, fg_color = GREY_BACKGROUND).place(relx = 0.67, rely = 0.2, anchor = "center")
+        ctk.CTkLabel(self.polyDataFrame, text = text, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.83, rely = 0.2, anchor = "center")
+
+        src, text = self.text_src(defending_count)
+
+        img_src = Image.open(src)
+        img_src.thumbnail((60, 60))
+        img = ctk.CTkImage(img_src, None, (img_src.width, img_src.height))
+        ctk.CTkLabel(self.polyDataFrame, image = img, text = "", width = 50, height = 50, fg_color = GREY_BACKGROUND).place(relx = 0.17, rely = 0.5, anchor = "center")
+        ctk.CTkLabel(self.polyDataFrame, text = text, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.33, rely = 0.5, anchor = "center")
+
+        src, text = self.text_src(attacking_count)
+
+        img_src = Image.open(src)
+        img_src.thumbnail((60, 60))
+        img = ctk.CTkImage(img_src, None, (img_src.width, img_src.height))
+        ctk.CTkLabel(self.polyDataFrame, image = img, text = "", width = 50, height = 50, fg_color = GREY_BACKGROUND).place(relx = 0.67, rely = 0.8, anchor = "center")
+        ctk.CTkLabel(self.polyDataFrame, text = text, font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.83, rely = 0.8, anchor = "center")
+
+        ctk.CTkLabel(self.polyDataFrame, text = "Compare with\nteam averages", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND, width = 0).place(relx = 0.8, rely = 0.05, anchor = "center")
+        self.checkBox = ctk.CTkCheckBox(self.polyDataFrame, text = "", fg_color = GREY_BACKGROUND, checkbox_height = 25, checkbox_width = 25, border_width = 2, border_color = "white", corner_radius = 5, command = self.checkBox)
+        self.checkBox.place(relx = 1, rely = 0.05, anchor = "center")
+
+    def get_poly_data(self, team_id):
+        """
+        Calculate overall, attacking, and defending counts based on team statistics compared to league averages.
+
+        Args:
+            team_id (str): The ID of the team to analyze.
+        """
+
+        overall_count = 0
+        attacking_count = 0
+        defending_count = 0
+
+        matches = Matches.get_all_played_matches_by_team_and_comp(team_id, self.league.id)
+        stats = MatchStats.get_team_stats_matches(team_id, [m.id for m in matches])
+
+        shots_per_match = [m["Shots"] for m in stats.values()]
+        avg_shots = sum(shots_per_match) / len(shots_per_match) if shots_per_match else 0
+
+        if avg_shots >= self.league_averages["Shots"]:
+            overall_count += 1
+            attacking_count += 1
+
+        possession_per_match = [m["Possession"] for m in stats.values()]
+        avg_possession = sum(possession_per_match) / len(possession_per_match) if possession_per_match else 0
+
+        if avg_possession >= self.league_averages["Possession"]:
+            overall_count += 1
+
+        xg_per_match = [m["xG"] for m in stats.values()]
+        avg_xg = sum(xg_per_match) / len(xg_per_match) if xg_per_match else 0
+
+        if avg_xg >= self.league_averages["xG"]:
+            attacking_count += 1
+
+        big_chances_created_per_match = [m["Big chances created"] for m in stats.values()]
+        avg_big_chances_created = sum(big_chances_created_per_match) / len(big_chances_created_per_match) if big_chances_created_per_match else 0
+
+        if avg_big_chances_created >= self.league_averages["Big chances created"]:
+            attacking_count += 1
+
+        # big_chances_missed_per_match = [m["Big chances missed"] for m in stats.values()]
+        # avg_big_chances_missed = sum(big_chances_missed_per_match) / len(big_chances_missed_per_match) if big_chances_missed_per_match else 0
+
+        fouls_per_match = [m["Fouls"] for m in stats.values()]
+        avg_fouls = sum(fouls_per_match) / len(fouls_per_match) if fouls_per_match else 0
+
+        if avg_fouls <= self.league_averages["Fouls"]:
+            defending_count += 1
+
+        interceptions_per_match = [m["Interceptions"] for m in stats.values()]
+        avg_interceptions = sum(interceptions_per_match) / len(interceptions_per_match) if interceptions_per_match else 0
+
+        if avg_interceptions >= self.league_averages["Interceptions"]:
+            defending_count += 1
+
+        passes_per_match = [m["Passes"] for m in stats.values()]
+        avg_passes = sum(passes_per_match) / len(passes_per_match) if passes_per_match else 0
+        
+        if avg_passes >= self.league_averages["Passes"]:
+            overall_count += 1
+            attacking_count += 1
+
+        saves_per_match = [m["Saves"] for m in stats.values()]
+        avg_saves = sum(saves_per_match) / len(saves_per_match) if saves_per_match else 0
+
+        if avg_saves >= self.league_averages["Saves"]:
+            defending_count += 1
+
+        shots_on_target_per_match = [m["Shots on target"] for m in stats.values()]
+        avg_shots_on_target = sum(shots_on_target_per_match) / len(shots_on_target_per_match) if shots_on_target_per_match else 0
+
+        if avg_shots_on_target >= self.league_averages["Shots on target"]:
+            attacking_count += 1
+
+        shots_in_box_per_match = [m["Shots in the box"] for m in stats.values()]
+        avg_shots_in_box = sum(shots_in_box_per_match) / len(shots_in_box_per_match) if shots_in_box_per_match else 0
+
+        if avg_shots_in_box >= self.league_averages["Shots in the box"]:
+            attacking_count += 1
+
+        shots_out_box_per_match = [m["Shots outside the box"] for m in stats.values()]
+        avg_shots_out_box = sum(shots_out_box_per_match) / len(shots_out_box_per_match) if shots_out_box_per_match else 0
+
+        if avg_shots_out_box >= self.league_averages["Shots outside the box"]:
+            attacking_count += 1
+
+        tackles_per_match = [m["Tackles"] for m in stats.values()]
+        avg_tackles = sum(tackles_per_match) / len(tackles_per_match) if tackles_per_match else 0
+
+        if avg_tackles >= self.league_averages["Tackles"]:
+            overall_count += 1
+            defending_count += 1
+
+        goals_scored = LeagueTeams.get_team_by_id(team_id).goals_scored
+        avg_goals_scored = goals_scored / len(matches) if matches else 0
+
+        max_scored = LeagueTeams.get_max_goals_scored(self.league.id)
+        avg_max_scored = max_scored / len(matches) if matches else 0
+
+        total_scored = LeagueTeams.get_total_goals_scored(self.league.id)
+        total_matches = LeagueTeams.get_total_of_matches_played(self.league.id)
+        league_avg_scored = total_scored / total_matches if total_matches > 0 else 0
+    
+        if avg_goals_scored >= league_avg_scored:
+            overall_count += 1
+            attacking_count += 1
+
+        goals_conceded = LeagueTeams.get_team_by_id(team_id).goals_conceded
+        avg_goals_conceded = goals_conceded / len(matches) if matches else 0
+
+        max_conceded = LeagueTeams.get_max_goals_conceded(self.league.id)
+        avg_max_conceded = max_conceded / len(matches) if matches else 0
+
+        total_conceded = LeagueTeams.get_total_goals_conceded(self.league.id)
+        league_avg_conceded = total_conceded / total_matches if total_matches > 0 else 0
+
+        if avg_goals_conceded <= league_avg_conceded:
+            overall_count += 1
+            defending_count += 1
+
+        clean_sheets = MatchEvents.get_team_clean_sheets(team_id, self.league.id)
+        avg_clean_sheets = clean_sheets / len(matches) if matches else 0
+
+        max_clean_sheets = MatchEvents.get_max_clean_sheets(self.league.id)
+        avg_max_clean_sheets = max_clean_sheets / len(matches) if matches else 0
+
+        total_clean_sheets = MatchEvents.get_total_clean_sheets(self.league.id)
+        league_avg_clean_sheets = total_clean_sheets / total_matches if total_matches > 0 else 0
+
+        if avg_clean_sheets >= league_avg_clean_sheets:
+            defending_count += 1
+
+        xg_against = MatchStats.get_team_xg_against(team_id, [m.id for m in matches])
+        avg_xg_against = xg_against / len(matches) if matches else 0
+
+        max_xg_against = MatchStats.get_league_max_xg_against(self.league.id)
+        avg_max_xg_against = max_xg_against / len(matches) if matches else 0    
+
+        total_xg_against = MatchStats.get_league_total_xg_against(self.league.id)
+        league_avg_xg_against = total_xg_against / total_matches if total_matches > 0 else 0
+
+        if avg_xg_against <= league_avg_xg_against:
+            overall_count += 1
+            defending_count += 1
+
+        data1 = {
+            f"Passes {avg_passes}" : [avg_passes, self.league_stats["Passes"]],
+            f"Possession {avg_possession}" : [avg_possession, self.league_stats["Possession"]],
+            f"Tackles {avg_tackles}" : [avg_tackles, self.league_stats["Tackles"]],
+            f"Goals {avg_goals_scored}": [avg_goals_scored, avg_max_scored],
+            f"Conceded {avg_goals_conceded}": [avg_goals_conceded, avg_max_conceded, True],
+            f"xGA {avg_xg_against}": [avg_xg_against, avg_max_xg_against, True],
+            f"Shots {avg_shots}": [avg_shots, self.league_stats["Shots"]],
+        }
+
+        data2 = {
+            f"Passes {avg_passes}" : [avg_passes, self.league_stats["Passes"]],
+            f"Goals {avg_goals_scored}": [avg_goals_scored, avg_max_scored],
+            f"In Box {avg_shots_in_box}": [avg_shots_in_box, self.league_stats["Shots in the box"]],
+            f"Shots {avg_shots}": [avg_shots, self.league_stats["Shots"]],
+            f"Chances Created {avg_big_chances_created}": [avg_big_chances_created, self.league_stats["Big chances created"]],
+            f"On Target {avg_shots_on_target}": [avg_shots_on_target, self.league_stats["Shots on target"]],
+            f"xG {avg_xg}": [avg_xg, self.league_stats["xG"]],
+            f"Out Box {avg_shots_out_box}": [avg_shots_out_box, self.league_stats["Shots outside the box"]],
+        }
+
+        data3 = {
+            f"Conceded {avg_goals_conceded}": [avg_goals_conceded, avg_max_conceded, True],
+            f"Interceptions {avg_interceptions}": [avg_interceptions, self.league_stats["Interceptions"]],
+            f"Saves {avg_saves}": [avg_saves, self.league_stats["Saves"]],
+            f"Tackles {avg_tackles}" : [avg_tackles, self.league_stats["Tackles"]],
+            f"Clean Sheets {avg_clean_sheets}": [avg_clean_sheets, avg_max_clean_sheets],
+            f"xGA {avg_xg_against}": [avg_xg_against, avg_max_xg_against, True],
+            f"Fouls {avg_fouls}": [avg_fouls, self.league_stats["Fouls"], True],
+        }
+
+        return data1, data2, data3, overall_count, attacking_count, defending_count
+
+    def text_src(self, count):
+        """
+        Helper function to create return text source based on count.
+
+        Args:
+            count (int): The count to be checked
+        """
+
+        if count >= 5:
+            return "Images/player_good.png", "Above\naverage"
+        elif count <= 2:
+            return "Images/player_bad.png", "Below\naverage"
+        else:
+            return "Images/player_mid.png", "Average"    
+
+    def checkBox(self):
+        """
+        Toggle to compare with team averages.
+        """
+
+        if self.checkBox.get() == 1:
+            self.poly1.add_extra_data()
+            self.poly2.add_extra_data()
+            self.poly3.add_extra_data()
+        else:
+            self.poly1.remove_extra_data()
+            self.poly2.remove_extra_data()
+            self.poly3.remove_extra_data()
+
     def lastMeetings(self):
         """
         Display the last meetings between the opponent team and the user's team.
@@ -1060,3 +1339,19 @@ class Analysis(ctk.CTkFrame):
                 for child in frame.winfo_children():
                     child.bind('<MouseWheel>', _on_mousewheel)
 
+    def changeFrame(self, selected):
+        """
+        Change the displayed frame between predicted lineup and polygraph data.
+
+        Args:
+            selected (str): The selected option from the dropdown.
+        """
+        
+        if selected == "Predicted Lineup & Last Meetings":
+            self.polyDataFrame.place_forget()
+            self.predictedLineupFrame.place(relx = 0.74, rely = 0.02, anchor = "n")
+            self.lastMeetingsFrame.place(relx = 0.74, rely = 0.76, anchor = "n")
+        else:
+            self.predictedLineupFrame.place_forget()
+            self.lastMeetingsFrame.place_forget()
+            self.polyDataFrame.place(relx = 0.74, rely = 0.02, anchor = "n")

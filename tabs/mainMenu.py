@@ -349,13 +349,12 @@ class MainMenu(ctk.CTkFrame):
         
         # Checking if we are going past a monday at 8.59am
         current_day = self.currDate
-        createEvents = False
+        createEvents = 0
         while current_day.date() <= stopDate.date():
             if current_day.weekday() == 0:
                 monday_moment = datetime.datetime(current_day.year, current_day.month, current_day.day, 8, 59)
                 if monday_moment > current_day and monday_moment <= stopDate:
-                    createEvents = True
-                    break
+                    createEvents += 1
             current_day += timedelta(days = 1)
 
         # ------------------- Counting total steps for progress bar -------------------
@@ -372,34 +371,37 @@ class MainMenu(ctk.CTkFrame):
 
         # ------------------- Creating calendar events for other teams -------------------
 
-        if createEvents:
-            team_list = teamIDs.copy()
-            self._logger.info("Creating calendar events for %d teams", len(team_list))
-            if not Settings.get_setting("events_delegated") and self.team.id in team_list:
-                team_list.remove(self.team.id)
+        if createEvents > 0:
+            for i in range(createEvents):
+                start_day = self.currDate + timedelta(days = i * 7)
 
-            max_workers = len(team_list)
-            all_events_to_add = []
-            with ThreadPoolExecutor(max_workers = max_workers) as ex:
-                self._logger.info("Preparing futures for creating calendar events (count=%d)", len(team_list))
-                futures = [ex.submit(create_events_for_other_teams, team_id, current_day, managing_team = team_id == self.team.id) for team_id in team_list]
-                self._logger.info("Prepared futures for creating calendar events")
+                team_list = teamIDs.copy()
+                self._logger.info("Creating calendar events for %d teams", len(team_list))
+                if not Settings.get_setting("events_delegated") and self.team.id in team_list:
+                    team_list.remove(self.team.id)
 
-                for fut in as_completed(futures):
-                    try:
-                        events = fut.result()
-                        if events:
-                            all_events_to_add.extend(events)
-                        self._logger.info("Finished creating events for a team (returned %d events)", len(events) if events else 0)
-                        self.updateProgressBar()
-                    except Exception:
-                        self._logger.exception("Calendar events worker raised an exception")
-            try:
-                if all_events_to_add:
-                    CalendarEvents.batch_add_events(all_events_to_add)
-                    self._logger.info("Batch-added %d calendar events", len(all_events_to_add))
-            except Exception:
-                self._logger.exception("Failed to batch-add calendar events")
+                max_workers = len(team_list)
+                all_events_to_add = []
+                with ThreadPoolExecutor(max_workers = max_workers) as ex:
+                    self._logger.info("Preparing futures for creating calendar events (count=%d)", len(team_list))
+                    futures = [ex.submit(create_events_for_other_teams, team_id, start_day, managing_team = team_id == self.team.id) for team_id in team_list]
+                    self._logger.info("Prepared futures for creating calendar events")
+
+                    for fut in as_completed(futures):
+                        try:
+                            events = fut.result()
+                            if events:
+                                all_events_to_add.extend(events)
+                            self._logger.info("Finished creating events for a team (returned %d events)", len(events) if events else 0)
+                            self.updateProgressBar()
+                        except Exception:
+                            self._logger.exception("Calendar events worker raised an exception")
+                try:
+                    if all_events_to_add:
+                        CalendarEvents.batch_add_events(all_events_to_add)
+                        self._logger.info("Batch-added %d calendar events", len(all_events_to_add))
+                except Exception:
+                    self._logger.exception("Failed to batch-add calendar events")
 
         self._logger.debug("Created/checked calendar events between %s and %s for %d teams", self.currDate, stopDate, len(teamIDs))
 

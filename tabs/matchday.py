@@ -2,7 +2,7 @@ import customtkinter as ctk
 from settings import *
 from data.database import *
 from data.gamesDatabase import *
-from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame, SubstitutePlayer, FormGraph, InGamePlayerFrame, InGameStatFrame
+from utils.frames import MatchDayMatchFrame, FootballPitchMatchDay, FootballPitchLineup, LineupPlayerFrame, SubstitutePlayer, FormGraph, InGamePlayerFrame, InGameStatFrame, LiveTableFrame
 from utils.shouts import ShoutFrame
 from utils.util_functions import *
 import threading, time, logging, math, io
@@ -32,6 +32,7 @@ class MatchDay(ctk.CTkFrame):
         self.players = players
         self.teamMatch = None
         self.home = True
+        self.playingTeams = []
 
         self.halfTime = False
         self.halfTimeEnded = False
@@ -88,7 +89,7 @@ class MatchDay(ctk.CTkFrame):
             height = 30,
             state = "readonly",
             command = lambda selection: self.changeData("home", selection),
-            values = ["Lineup", "Players", "Stats"]
+            values = ["Lineup", "Players", "Stats", "Table"]
         )
         self.homeDropDown.place(relx = 0.02, rely = 0.01, anchor = "nw")
         self.homeDropDown.set("Lineup")
@@ -97,6 +98,7 @@ class MatchDay(ctk.CTkFrame):
         self.homePlayersFrame.pack_propagate(False)
         self.homeStatsFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 460, fg_color = GREY_BACKGROUND)
         self.homeStatsFrame.pack_propagate(False)
+        self.homeTableFrame = LiveTableFrame(self.teamMatchFrame, self.league.id, self.team.id, self.playingTeams, GREY_BACKGROUND, 190, 430)
 
         self.awayDropDown = ctk.CTkComboBox(
             self.teamMatchFrame,
@@ -112,7 +114,7 @@ class MatchDay(ctk.CTkFrame):
             height = 30,
             state = "readonly",
             command = lambda selection: self.changeData("away", selection),
-            values = ["Lineup", "Players", "Stats"]
+            values = ["Lineup", "Players", "Stats", "Table"]
         )
         self.awayDropDown.place(relx = 0.98, rely = 0.01, anchor = "ne")
         self.awayDropDown.set("Lineup")
@@ -121,6 +123,7 @@ class MatchDay(ctk.CTkFrame):
         self.awayPlayersFrame.pack_propagate(False)
         self.awayStatsFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 460, fg_color = GREY_BACKGROUND)
         self.awayStatsFrame.pack_propagate(False)
+        self.awayTableFrame = LiveTableFrame(self.teamMatchFrame, self.league.id, self.team.id, self.playingTeams, GREY_BACKGROUND, 190, 430)
 
         self.homeSubstituteFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 180, fg_color = GREY_BACKGROUND)
         self.homeSubstituteFrame.place(relx = 0.02, rely = 0.73, anchor = "nw")
@@ -234,6 +237,9 @@ class MatchDay(ctk.CTkFrame):
             elif selection == "Stats":
                 self.homeCurrFrame = self.homeStatsFrame
                 self.homeStatsFrame.place(relx = 0.02, rely = 0.06, anchor = "nw")
+            else:
+                self.homeCurrFrame = self.homeTableFrame
+                self.homeTableFrame.place(relx = 0.02, rely = 0.06, anchor = "nw")
         
         else:
             self.awayCurrFrame.place_forget()
@@ -257,6 +263,9 @@ class MatchDay(ctk.CTkFrame):
             elif selection == "Stats":
                 self.awayCurrFrame = self.awayStatsFrame
                 self.awayStatsFrame.place(relx = 0.98, rely = 0.06, anchor = "ne")
+            else:
+                self.awayCurrFrame = self.awayTableFrame
+                self.awayTableFrame.place(relx = 0.98, rely = 0.06, anchor = "ne")
 
     def addMatches(self):
         """
@@ -265,6 +274,9 @@ class MatchDay(ctk.CTkFrame):
         
         for match in self.matchDay:
             if match.home_id == self.team.id or match.away_id == self.team.id:
+                self.playingTeams.append(match.home_id)
+                self.playingTeams.append(match.away_id)
+
                 # TEAM MATCH
                 self.teamMatch = match
                 self.matchFrame = MatchDayMatchFrame(self.teamMatchFrame, match, TKINTER_BACKGROUND, 150, 400, imageSize = 70, relx =  0.5, rely =  0.03, anchor = "n", border_width = 3, border_color = GREY_BACKGROUND, pack = False)
@@ -289,7 +301,10 @@ class MatchDay(ctk.CTkFrame):
                     self.matchFrame.matchInstance.homeFitness = {playerID: Players.get_player_by_id(playerID).fitness for playerID in list(self.teamLineup.values()) + self.teamSubstitutes}
             else:
                 # OTHER MATCHES
-                MatchDayMatchFrame(self.otherMatchesFrame, match, TKINTER_BACKGROUND, 60, 300)
+                frame = MatchDayMatchFrame(self.otherMatchesFrame, match, TKINTER_BACKGROUND, 60, 300)
+                if not frame.played and not frame.laterGame:
+                    self.playingTeams.append(match.home_id)
+                    self.playingTeams.append(match.away_id)
 
     def addTime(self):
         """
@@ -753,12 +768,16 @@ class MatchDay(ctk.CTkFrame):
                             if self.halfTime or self.fullTime:
                                 if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                     frame.updateScoreLabel()
+                                    self.homeTableFrame.update_table(frame.homeTeam.id, frame.awayTeam.id, frame.homeTeam.id, frame.score)
+                                    self.awayTableFrame.update_table(frame.homeTeam.id, frame.awayTeam.id, frame.homeTeam.id, frame.score)
                                 frame.matchInstance.getEventPlayer(event_details, True, event_time)
                                 frame.matchInstance.homeProcessedEvents[event_time] = event_details
                         else:
                             if not (self.halfTime or self.fullTime):
                                 if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                     frame.updateScoreLabel()
+                                    self.homeTableFrame.update_table(frame.homeTeam.id, frame.awayTeam.id, frame.homeTeam.id, frame.score)
+                                    self.awayTableFrame.update_table(frame.homeTeam.id, frame.awayTeam.id, frame.homeTeam.id, frame.score)
                                 frame.matchInstance.getEventPlayer(event_details, True, event_time)
                                 frame.matchInstance.homeProcessedEvents[event_time] = event_details
                 
@@ -768,12 +787,16 @@ class MatchDay(ctk.CTkFrame):
                             if self.halfTime or self.fullTime:
                                 if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                     frame.updateScoreLabel(home = False)
+                                    self.homeTableFrame.update_table(frame.homeTeam.id, frame.awayTeam.id, frame.awayTeam.id, frame.score)
+                                    self.awayTableFrame.update_table(frame.homeTeam.id, frame.awayTeam.id, frame.awayTeam.id, frame.score)
                                 frame.matchInstance.getEventPlayer(event_details, False, event_time)
                                 frame.matchInstance.awayProcessedEvents[event_time] = event_details
                         else:
                             if not (self.halfTime or self.fullTime):
                                 if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                     frame.updateScoreLabel(home = False)
+                                    self.homeTableFrame.update_table(frame.homeTeam.id, frame.awayTeam.id, frame.awayTeam.id, frame.score)
+                                    self.awayTableFrame.update_table(frame.homeTeam.id, frame.awayTeam.id, frame.awayTeam.id, frame.score)
 
                                 frame.matchInstance.getEventPlayer(event_details, False, event_time)
                                 frame.matchInstance.awayProcessedEvents[event_time] = event_details
@@ -882,6 +905,8 @@ class MatchDay(ctk.CTkFrame):
                         if self.halfTime or self.fullTime:
                             if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                 self.matchFrame.updateScoreLabel()
+                                self.homeTableFrame.update_table(self.matchFrame.homeTeam.id, self.matchFrame.awayTeam.id, self.matchFrame.homeTeam.id, self.matchFrame.score)
+                                self.awayTableFrame.update_table(self.matchFrame.homeTeam.id, self.matchFrame.awayTeam.id, self.matchFrame.homeTeam.id, self.matchFrame.score)
 
                             newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, True, event_time, teamMatch = self, managing_team = True if self.home else False)
                             self.matchFrame.matchInstance.homeProcessedEvents[event_time] = event_details
@@ -896,6 +921,9 @@ class MatchDay(ctk.CTkFrame):
                         if not (self.halfTime or self.fullTime):
                             if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                 self.matchFrame.updateScoreLabel()
+                                self.homeTableFrame.update_table(self.matchFrame.homeTeam.id, self.matchFrame.awayTeam.id, self.matchFrame.homeTeam.id, self.matchFrame.score)
+                                self.awayTableFrame.update_table(self.matchFrame.homeTeam.id, self.matchFrame.awayTeam.id, self.matchFrame.homeTeam.id, self.matchFrame.score)
+
                             newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, True, event_time, teamMatch = self, managing_team = True if self.home else False)
                             self.matchFrame.matchInstance.homeProcessedEvents[event_time] = event_details
 
@@ -921,6 +949,9 @@ class MatchDay(ctk.CTkFrame):
                         if self.halfTime or self.fullTime:
                             if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                 self.matchFrame.updateScoreLabel(home = False)
+                                self.homeTableFrame.update_table(self.matchFrame.homeTeam.id, self.matchFrame.awayTeam.id, self.matchFrame.awayTeam.id, self.matchFrame.score)
+                                self.awayTableFrame.update_table(self.matchFrame.homeTeam.id, self.matchFrame.awayTeam.id, self.matchFrame.awayTeam.id, self.matchFrame.score)
+
                             newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, False, event_time, teamMatch = self, managing_team = True if not self.home else False)
                             self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
 
@@ -934,6 +965,9 @@ class MatchDay(ctk.CTkFrame):
                         if not (self.halfTime or self.fullTime):
                             if event_details["type"] in ["own_goal", "goal", "penalty_goal"]:
                                 self.matchFrame.updateScoreLabel(home = False)
+                                self.homeTableFrame.update_table(self.matchFrame.homeTeam.id, self.matchFrame.awayTeam.id, self.matchFrame.awayTeam.id, self.matchFrame.score)
+                                self.awayTableFrame.update_table(self.matchFrame.homeTeam.id, self.matchFrame.awayTeam.id, self.matchFrame.awayTeam.id, self.matchFrame.score)
+
                             newEvent = self.matchFrame.matchInstance.getEventPlayer(event_details, False, event_time, teamMatch = self, managing_team = True if not self.home else False)
                             self.matchFrame.matchInstance.awayProcessedEvents[event_time] = event_details
 
@@ -1343,7 +1377,8 @@ class MatchDay(ctk.CTkFrame):
                                     self.substitutesFrame,
                                     self.swapLineupPositions,
                                     self.caStars[playerID],
-                                    xDisabled = True
+                                    xDisabled = True,
+                                    ingameFunction = self.showPlayerStats
                                 )
                 
                     # Check if there are any players available who can play in the injured player's position
@@ -1375,7 +1410,8 @@ class MatchDay(ctk.CTkFrame):
                                 self.substitutesFrame,
                                 self.swapLineupPositions,
                                 self.caStars[playerID],
-                                xDisabled = True
+                                xDisabled = True,
+                                ingameFunction = self.showPlayerStats
                             )
                 
                 if subbed_on:
@@ -1825,21 +1861,22 @@ class MatchDay(ctk.CTkFrame):
 
         # Create a frame for the player in the lineup pitch
         playerFrame = LineupPlayerFrame(self.lineupPitch, 
-                            POSITIONS_PITCH_POSITIONS[self.selected_position][0], 
-                            POSITIONS_PITCH_POSITIONS[self.selected_position][1], 
-                            "center", 
-                            color,
-                            65, 
-                            65, 
-                            playerData.id,
-                            POSITION_CODES[self.selected_position],
-                            self.selected_position,
-                            self.removePlayer,
-                            self.updateLineup,
-                            self.substitutesFrame,
-                            self.swapLineupPositions,
-                            self.caStars[playerData.id]
-                        )
+            POSITIONS_PITCH_POSITIONS[self.selected_position][0], 
+            POSITIONS_PITCH_POSITIONS[self.selected_position][1], 
+            "center", 
+            color,
+            65, 
+            65, 
+            playerData.id,
+            POSITION_CODES[self.selected_position],
+            self.selected_position,
+            self.removePlayer,
+            self.updateLineup,
+            self.substitutesFrame,
+            self.swapLineupPositions,
+            self.caStars[playerData.id],
+            ingameFunction = self.showPlayerStats
+        )
 
         if playerData.id in self.playersOn.values():
             playerFrame.showBorder()
@@ -2452,7 +2489,7 @@ class MatchDay(ctk.CTkFrame):
         logger.debug("Checking if all matches are complete for the matchday.")
         if League.check_all_matches_complete(self.league.id, currDate):
             logger.debug("All matches complete, creating team of the week and team history.")
-            _, email = League.team_of_the_week(self.league.id, self.matchFrame.matchInstance.matchday, team = self.homeTeam.id if self.home else self.awayTeam.id)
+            _, email = League.team_of_the_week(self.league.id, self.matchFrame.matchInstance.matchday, team = self.matchFrame.matchInstance.homeTeam.id if self.home else self.matchFrame.matchInstance.awayTeam.id)
             logger.debug("Team of the week created.")
             for team in LeagueTeams.get_teams_by_league(self.league.id):
                 matchday = League.get_current_matchday(self.league.id)

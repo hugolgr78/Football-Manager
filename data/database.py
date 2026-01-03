@@ -3812,6 +3812,62 @@ class League(Base):
         finally:
             session.close()
             
+class Cup(Base):
+    __tablename__ = 'cups'
+    
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    name = Column(String(128), nullable = False)
+    year = Column(Integer, nullable = False)
+    logo = Column(BLOB)
+    groups = Column(Integer, nullable = False)
+    teams_per_group = Column(Integer, nullable = False)
+    knockout_rounds = Column(Integer, nullable = False)
+    games_per_knockout = Column(Integer, nullable = False)
+
+    @classmethod
+    def add_cups(cls):
+        session = DatabaseManager().get_session()
+        try:
+            with open("data/cups.json", 'r') as file:
+                data = json.load(file)
+
+            cups_dict = []
+
+            for cup in data:
+
+                with open(cup["logo"], 'rb') as file:
+                    logo = file.read()
+
+                cups_dict.append({
+                    "id": str(uuid.uuid4()),
+                    "name": cup["name"],
+                    "year": 2024,
+                    "logo": logo,
+                    "groups": cup["groups"],
+                    "teams_per_group": cup["teams_per_group"],
+                    "knockout_rounds": cup["knockout_rounds"],
+                    "games_per_knockout": cup["games_per_knockout"]
+                })
+
+            updateProgress(None)
+
+            session.bulk_insert_mappings(Cup, cups_dict)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_cup_by_id(cls, cup_id):
+        session = DatabaseManager().get_session()
+        try:
+            cup = session.query(Cup).filter(Cup.id == cup_id).first()
+            return cup
+        finally:
+            session.close()
+
 class LeagueTeams(Base):
     __tablename__ = 'league_teams'
     
@@ -4035,6 +4091,81 @@ class LeagueTeams(Base):
                 func.sum(LeagueTeams.games_won + LeagueTeams.games_drawn + LeagueTeams.games_lost)
             ).filter(LeagueTeams.league_id == league_id).scalar()
             return total_matches if total_matches else 0
+        finally:
+            session.close()
+
+class CupTeams(Base):
+    __tablename__ = 'cup_teams'
+    
+    id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
+    cup_id = Column(String(128), ForeignKey('cups.id'))
+    team_id = Column(String(128), ForeignKey('teams.id'))
+    goals_scored = Column(Integer, nullable = False, default = 0)
+    goals_conceded = Column(Integer, nullable = False, default = 0)
+
+    @classmethod
+    def add_cup_teams(cls, names_ids_mapping, cups):
+        session = DatabaseManager().get_session()
+        try:
+            cup_teams_dict = []
+
+            with open("data/teams.json", 'r') as file:
+                data = json.load(file)
+
+            for cup in cups:
+                teams = get_all_league_teams(data, cup.name)
+                teams.sort(key = lambda x: x["name"])
+
+                for i, team in enumerate(teams):
+                    cup_teams_dict.append({
+                        "id": str(uuid.uuid4()),
+                        "cup_id": cup.id,
+                        "team_id": names_ids_mapping[team["name"]],
+                    })
+                updateProgress(None)
+
+            session.bulk_insert_mappings(CupTeams, cup_teams_dict)
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+            
+    @classmethod
+    def add_team(cls, cup_id, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            new_team = CupTeams(
+                cup_id = cup_id,
+                team_id = team_id
+            )
+
+            session.add(new_team)
+            session.commit()
+
+            return new_team
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+    
+    @classmethod
+    def get_team_by_id(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            team = session.query(CupTeams).filter(CupTeams.team_id == team_id).first()
+            return team
+        finally:
+            session.close()
+
+    @classmethod
+    def get_cup_by_team(cls, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            cup = session.query(CupTeams).filter(CupTeams.team_id == team_id).first()
+            return cup
         finally:
             session.close()
 

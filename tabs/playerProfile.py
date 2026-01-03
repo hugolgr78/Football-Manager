@@ -1,11 +1,12 @@
+from ast import Match
 import customtkinter as ctk
 from settings import *
-from data.database import Matches, PlayerAttributes, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players, Managers, League
+from data.database import Matches, PlayerAttributes, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players, Managers, League, searchResults
 from data.gamesDatabase import *
 from PIL import Image
 import io
 from utils.teamLogo import TeamLogo
-from utils.frames import FootballPitchPlayerPos, FormGraph, PlayerMatchFrame, AttributesPolygon
+from utils.frames import FootballPitchPlayerPos, FormGraph, PlayerMatchFrame, DataPolygon
 from utils.util_functions import *
 
 class PlayerProfile(ctk.CTkFrame):
@@ -306,7 +307,7 @@ class Profile(ctk.CTkFrame):
         played = TeamLineup.get_number_matches_by_player(self.player.id, self.parent.league.id)
         yellowCards = MatchEvents.get_yellow_cards_by_player(self.player.id, comp = self.parent.league.id)
         redCards = MatchEvents.get_red_cards_by_player(self.player.id, comp = self.parent.league.id)
-        averageRating = TeamLineup.get_player_average_rating(self.player.id, self.parent.league.id)
+        averageRating = TeamLineup.get_player_average_rating(self.player.id, comp = self.parent.league.id)
 
         if self.player.position != "goalkeeper":
             goals = MatchEvents.get_goals_and_pens_by_player(self.player.id, comp = self.parent.league.id)
@@ -426,15 +427,22 @@ class Attributes(ctk.CTkFrame):
         ctk.CTkFrame(self, width = 7, height = 280, fg_color = GREY_BACKGROUND, corner_radius = 0).place(relx = 0.85, rely = 0.02, anchor = "nw")
 
         if player.position != "goalkeeper":
-            technical = PlayerAttributes.get_player_attributes(player.id)  
+            self.technical = PlayerAttributes.get_player_attributes(player.id)  
         else:
-            technical = PlayerAttributes.get_keeper_attributes(player.id)
+            self.technical = PlayerAttributes.get_keeper_attributes(player.id)
         
-        mental_physical = PlayerAttributes.get_mental_attributes(player.id)
+        self.mental_physical = PlayerAttributes.get_mental_attributes(player.id)
 
-        self.addAttributes(technical, self.technicalFrame)
-        self.addAttributes(mental_physical, self.otherFrame, type_ = "Mental & Physical")
-        self.addPolygons(technical, mental_physical)
+        self.addAttributes(self.technical, self.technicalFrame)
+        self.addAttributes(self.mental_physical, self.otherFrame, type_ = "Mental & Physical")
+        self.addPolygons()
+
+        src = Image.open("Images/compare.png")
+        src.thumbnail((30, 30))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        self.compareButton = ctk.CTkButton(self, text = "", image = img, fg_color = GREY_BACKGROUND, hover_color = GREY_BACKGROUND, corner_radius = 5, height = 40, width = 40, command = self.openComparePlayer)
+        self.compareButton.place(relx = 0.95, rely = 0.02, anchor = "ne")
+        self.searchFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 400, height = 500, corner_radius = 15, border_width = 2, border_color = APP_BLUE)
 
     def addAttributes(self, data, frame, type_ = "Technical"):
         """
@@ -494,7 +502,7 @@ class Attributes(ctk.CTkFrame):
             else:
                 row += 1    
 
-    def addPolygons(self, technical, mental_physical):
+    def addPolygons(self):
         """
         Add attribute polygons to visualize player's strengths.
         
@@ -503,18 +511,257 @@ class Attributes(ctk.CTkFrame):
             mental_physical (dict): Mental and physical attributes of the player.
         """
 
-        core = {k: v for k, v in technical.items() if k in CORE_ATTRIBUTES[self.player.position]}
-        sec = {k: v for k, v in technical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
+        core = {k: [v, 20] for k, v in self.technical.items() if k in CORE_ATTRIBUTES[self.player.position]}
+        sec = {k: [v, 20] for k, v in self.technical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
 
-        core.update({k: v for k, v in mental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
-        sec.update({k: v for k, v in mental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
+        core.update({k: [v, 20] for k, v in self.mental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
+        sec.update({k: [v, 20] for k, v in self.mental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
 
-
-        self.corePoly = AttributesPolygon(self, core, 350, 400, TKINTER_BACKGROUND, "white")
+        self.corePoly = DataPolygon(self, core, 350, 400, TKINTER_BACKGROUND, "white")
         self.corePoly.place(relx = 0.335, rely = 0.95, anchor = "s")
 
-        self.secPoly = AttributesPolygon(self, sec, 350, 400, TKINTER_BACKGROUND, "white")
+        ctk.CTkLabel(self, text = "Core", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.315, rely = 0.98, anchor = "s")
+
+        self.secPoly = DataPolygon(self, sec, 350, 400, TKINTER_BACKGROUND, "white")
         self.secPoly.place(relx = 0.69, rely = 0.95, anchor = "s")
+
+        ctk.CTkLabel(self, text = "Secondary", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.675, rely = 0.98, anchor = "s")
+
+    def openComparePlayer(self):
+        """
+        Opens the frame to search for a player to compare attributes with.
+        """
+        
+        self.searchFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        backButton = ctk.CTkButton(self.searchFrame, text = "X", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, corner_radius = 5, height = 0, width = 0, command = lambda: self.searchFrame.place_forget())
+        backButton.place(relx = 0.95, rely = 0.05, anchor = "e")
+
+        ctk.CTkLabel(self.searchFrame, text = "Search Player to Compare", font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        canvas = ctk.CTkCanvas(self.searchFrame, width = 390, height = 5, bg = GREY_BACKGROUND, bd = 0, highlightthickness = 0)
+        canvas.place(relx = 0.5, rely = 0.1, anchor = "center")
+
+        self.searchVar = ctk.StringVar()
+        self.searchVar.trace_add("write", self.search)
+        self.searchBox = ctk.CTkEntry(self.searchFrame, width = 380, height = 40, border_color = GREY_BACKGROUND, border_width = 2, corner_radius = 10, textvariable = self.searchVar)
+        self.searchBox.place(relx = 0.5, rely = 0.15, anchor = "center")
+
+        self.search_timer = None
+        self.searchBox.focus()
+
+        self.resultsFrame = ctk.CTkFrame(self.searchFrame, fg_color = TKINTER_BACKGROUND, width = 380, height = 380, corner_radius = 0)
+        self.resultsFrame.place(relx = 0.5, rely = 0.2, anchor = "n")
+
+    def search(self, *args):
+        """
+        Handle search input changes with a delay to optimize performance.
+        
+        Args:
+            *args: Additional arguments (not used).
+        """
+
+        currSearch = self.searchVar.get().strip()
+
+        if self.search_timer:
+            self.after_cancel(self.search_timer)
+            self.search_timer = None
+
+        if len(currSearch) == 0:
+            # Clear results immediately when search is empty
+            for widget in self.resultsFrame.winfo_children():
+                widget.destroy()
+            return
+
+        self.search_timer = self.after(200, lambda: self.performSearch(currSearch))
+
+    def performSearch(self, query):
+        """
+        Perform the search and update the results frame.
+        
+        Args:
+            query (str): The search query string.
+        """
+        
+        for widget in self.resultsFrame.winfo_children():
+            widget.destroy()
+
+        self.results = searchResults(query, result_limit = 7, search_limit = 100, players_only = True, position = self.player.position)
+
+        startY = 0
+        gap = (50 / 380)
+
+        for i, result in enumerate(self.results):
+            resultFrame = ctk.CTkFrame(self.resultsFrame, fg_color = TKINTER_BACKGROUND, width = 380, height = 50, corner_radius = 0)
+            resultFrame.place(relx = 0, rely = startY + gap * i, anchor = "nw")
+
+            resultData = result["data"]
+            ctk.CTkLabel(resultFrame, text = f"{resultData.first_name} {resultData.last_name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+            resultFrame.bind("<Enter>", lambda e, f = resultFrame: self.onFrameHover(f))
+            resultFrame.bind("<Leave>", lambda e, f = resultFrame: self.onFrameLeave(f))
+            resultFrame.bind("<Button-1>", lambda e, cmd = self.openCompare, r = result: cmd(r["data"]))
+
+            for child in resultFrame.winfo_children():
+                child.bind("<Enter>", lambda e, f = resultFrame: self.onFrameHover(f))
+                child.bind("<Button-1>", lambda e, cmd = self.openCompare, r = result: cmd(r["data"]))
+
+    def onFrameHover(self, frame):
+        """
+        Handle hover effect on result frames.
+        
+        Args:
+            frame (ctk.CTkFrame): The frame being hovered over.
+        """
+        
+        frame.configure(fg_color = GREY_BACKGROUND)
+
+        for widget in frame.winfo_children():
+            widget.configure(fg_color = GREY_BACKGROUND)
+
+    def onFrameLeave(self, frame):
+        """
+        Handle hover leave effect on result frames.
+        
+        Args:
+            frame (ctk.CTkFrame): The frame being left.
+        """
+        
+        frame.configure(fg_color = TKINTER_BACKGROUND)
+
+        for widget in frame.winfo_children():
+            widget.configure(fg_color = TKINTER_BACKGROUND)
+
+    def openCompare(self, player):
+        """
+        Opens the frame showing the data of both players
+        
+        Args:
+            player (Player): the player object to compare to
+        """
+
+        self.compareFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0)
+        self.compareFrame.place(relx = 0, rely = 0, anchor = "nw")
+
+        backButton = ctk.CTkButton(self.compareFrame, text = "Return", font = (APP_FONT, 15), fg_color = APP_BLUE, hover_color = APP_BLUE, corner_radius = 10, width = 100, height = 40, command = lambda: self.compareFrame.place_forget())
+        backButton.place(relx = 0.95, rely = 0.03, anchor = "ne")
+
+        ctk.CTkLabel(self.compareFrame, text = f"Comparing with {player.first_name} {player.last_name}", font = (APP_FONT_BOLD, 35), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.02, rely = 0, anchor = "nw")
+
+        def divider(row): ctk.CTkFrame(dataFrame, height = 1, fg_color = GREY_BACKGROUND).grid(row = row, column = 0, columnspan = 3, sticky = "ew", padx = 15, pady = 6)
+
+        def stat_row(row, label, left, right, highlight = None, fontSize = 18):
+            ctk.CTkLabel(dataFrame, text = label.upper(), font = (APP_FONT_BOLD, 14), text_color = "#9CA3AF").grid(row = row, column = 0, padx = 15, sticky = "w")
+            ctk.CTkLabel(dataFrame, text = left, font = (APP_FONT_BOLD if highlight == "left" else APP_FONT, fontSize), text_color = "white").grid(row = row, column = 1)
+            ctk.CTkLabel(dataFrame, text = right, font = (APP_FONT_BOLD if highlight == "right" else APP_FONT, fontSize), text_color = "white").grid(row = row, column = 2)
+    
+        def star_row(row, label, leftStars, rightStars):
+            ctk.CTkLabel(dataFrame, text = label.upper(), font = (APP_FONT_BOLD, 14), text_color = "#9CA3AF").grid(row = row, column = 0, padx = 15, sticky = "w")
+
+            frame = ctk.CTkFrame(dataFrame, fg_color = GREY_BACKGROUND, width = 110, height = 30, corner_radius = 15)
+            frame.grid(row = row, column = 1, sticky = "w")
+            imageNames = star_images(leftStars)
+            for i, imageName in enumerate(imageNames):
+                src = Image.open(f"Images/{imageName}.png")
+                src.thumbnail((15, 15))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(frame, image = img, text = "").place(relx = 0.25 + i * 0.15, rely = 0.5, anchor = "center")
+
+            frame = ctk.CTkFrame(dataFrame, fg_color = GREY_BACKGROUND, width = 110, height = 30, corner_radius = 15)
+            frame.grid(row = row, column = 2, sticky = "w")
+            imageNames = star_images(rightStars)
+            for i, imageName in enumerate(imageNames):
+                src = Image.open(f"Images/{imageName}.png")
+                src.thumbnail((15, 15))
+                img = ctk.CTkImage(src, None, (src.width, src.height))
+                ctk.CTkLabel(frame, image = img, text = "").place(relx = 0.25 + i * 0.15, rely = 0.5, anchor = "center")
+
+        dataFrame = ctk.CTkFrame(self.compareFrame, fg_color = GREY_BACKGROUND, width = 400, height = 550, corner_radius = 15)
+        dataFrame.place(relx = 0.02, rely = 0.1, anchor = "nw")
+        dataFrame.grid_propagate(False)
+        dataFrame.grid_columnconfigure(0, weight = 0); dataFrame.grid_columnconfigure((1, 2), weight = 1)
+
+        ctk.CTkLabel(dataFrame, text = self.player.last_name, font = (APP_FONT_BOLD, 20), text_color = "white").grid(row = 0, column = 1, pady = (15, 8))
+        ctk.CTkLabel(dataFrame, text = player.last_name, font = (APP_FONT_BOLD, 20), text_color = "white").grid(row = 0, column = 2, pady = (15, 8))
+
+        divider(1)
+
+        left_caStars, = Players.get_players_star_ratings([self.player], self.parent.league.id).values()
+        left_paStars, = Players.get_players_star_ratings([self.player], self.parent.league.id, CA = False).values()
+
+        right_caStars, = Players.get_players_star_ratings([player], self.parent.league.id).values()
+        right_paStars, = Players.get_players_star_ratings([player], self.parent.league.id, CA = False).values()
+
+        stat_row(2, "Team", Teams.get_team_by_id(self.player.team_id).name, Teams.get_team_by_id(player.team_id).name, fontSize = 12)
+        stat_row(3, "Age", self.player.age, player.age)
+        star_row(4, "Current Ability", left_caStars, right_caStars)
+        star_row(5, "Potential Ability", left_paStars, right_paStars)
+        stat_row(6, "Market Value", "Value", "Value")
+        stat_row(7, "Wage", "Wage", "Wage")
+        stat_row(8, "Contract End", "Date", "Date")
+        stat_row(9, "Role", self.player.player_role, player.player_role)
+        divider(10)
+
+        ctk.CTkLabel(dataFrame, text = "SEASON STATS", font = (APP_FONT_BOLD, 22), text_color = "white").grid(row = 11, column = 0, columnspan = 3, pady = (8, 6))
+
+        row = 12
+        stat_row(row, "Matches", TeamLineup.get_number_matches_by_player_all_comps(self.player.id), TeamLineup.get_number_matches_by_player_all_comps(player.id)); row += 1
+
+        if player.position == "goalkeeper":
+            left_yellow, right_yellow = MatchEvents.get_yellow_cards_by_player(self.player.id), MatchEvents.get_yellow_cards_by_player(player.id)
+            left_red, right_red = MatchEvents.get_red_cards_by_player(self.player.id), MatchEvents.get_red_cards_by_player(player.id)
+            left_saved, right_saved = MatchEvents.get_penalty_saves_by_player(self.player.id), MatchEvents.get_penalty_saves_by_player(player.id)
+            left_clean, right_clean = MatchEvents.get_clean_sheets_by_player(self.player.id), MatchEvents.get_clean_sheets_by_player(player.id)
+
+            stat_row(row, "Yellow Cards", left_yellow, right_yellow, highlight = "left" if left_yellow < right_yellow else "right" if right_yellow < left_yellow else None); row += 1
+            stat_row(row, "Red Cards", left_red, right_red, highlight = "left" if left_red < right_red else "right" if right_red < left_red else None); row += 1
+            stat_row(row, "Saved Pens", left_saved, right_saved, highlight = "left" if left_saved > right_saved else "right" if right_saved > left_saved else None); row += 1
+            stat_row(row, "Clean Sheets", left_clean, right_clean, highlight = "left" if left_clean > right_clean else "right" if right_clean > left_clean else None)
+        else:
+            left_goal, right_goal = MatchEvents.get_goals_and_pens_by_player(self.player.id), MatchEvents.get_goals_and_pens_by_player(player.id)
+            left_assist, right_assist = MatchEvents.get_assists_by_player(self.player.id), MatchEvents.get_assists_by_player(player.id)
+            left_yellow, right_yellow = MatchEvents.get_yellow_cards_by_player(self.player.id), MatchEvents.get_yellow_cards_by_player(player.id)
+            left_red, right_red = MatchEvents.get_red_cards_by_player(self.player.id), MatchEvents.get_red_cards_by_player(player.id)
+
+            stat_row(row, "Goals", left_goal, right_goal, highlight = "left" if left_goal > right_goal else "right" if right_goal > left_goal else None); row += 1
+            stat_row(row, "Assists", left_assist, right_assist, highlight = "left" if left_assist > right_assist else "right" if right_assist > left_assist else None); row += 1
+            stat_row(row, "Yellow Cards", left_yellow, right_yellow, highlight = "left" if left_yellow < right_yellow else "right" if right_yellow < left_yellow else None); row += 1
+            stat_row(row, "Red Cards", left_red, right_red, highlight = "left" if left_red < right_red else "right" if right_red < left_red else None)
+
+        divider(row + 1)
+
+        left_rating = TeamLineup.get_player_average_rating(self.player.id)
+        right_rating = TeamLineup.get_player_average_rating(player.id)
+
+        if any(isinstance(r, str) for r in [left_rating, right_rating]):
+            stat_row(row + 2, "Avg Rating", left_rating, right_rating)
+        else:
+            stat_row(row + 2, "Avg Rating", left_rating, right_rating, highlight = "left" if left_rating > right_rating else "right" if right_rating > left_rating else None)
+
+        if player.position != "goalkeeper":
+            playerTechnical = PlayerAttributes.get_player_attributes(player.id)  
+        else:
+            playerTechnical = PlayerAttributes.get_keeper_attributes(player.id)
+        
+        playerMental_physical = PlayerAttributes.get_mental_attributes(player.id)
+
+        core = {k: [v, 20] for k, v in self.technical.items() if k in CORE_ATTRIBUTES[self.player.position]}
+        sec = {k: [v, 20] for k, v in self.technical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
+        core.update({k: [v, 20] for k, v in self.mental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
+        sec.update({k: [v, 20] for k, v in self.mental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
+
+        playerCore = {k: [v, 20] for k, v in playerTechnical.items() if k in CORE_ATTRIBUTES[self.player.position]}
+        playerSec = {k: [v, 20] for k, v in playerTechnical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]}
+        playerCore.update({k: [v, 20] for k, v in playerMental_physical.items() if k in CORE_ATTRIBUTES[self.player.position]})
+        playerSec.update({k: [v, 20] for k, v in playerMental_physical.items() if k in SECONDARY_ATTRIBUTES[self.player.position]})
+
+        self.corePoly = DataPolygon(self.compareFrame, core, 350, 400, TKINTER_BACKGROUND, "white", extra = playerCore)
+        self.corePoly.place(relx = 0.58, rely = 0.78, anchor = "center")
+
+        self.secPoly = DataPolygon(self.compareFrame, sec, 350, 400, TKINTER_BACKGROUND, "white", extra = playerSec)
+        self.secPoly.place(relx = 0.87, rely = 0.78, anchor = "center")
+
+        ctk.CTkLabel(self.compareFrame, text = "Graph showing G/A (or clean sheets) history data as\nseasons go on", font = (APP_FONT_BOLD, 20), fg_color = TKINTER_BACKGROUND).place(relx = 0.7, rely = 0.3, anchor = "center")
 
 class MatchesTab(ctk.CTkFrame):
     def __init__(self, parent, player):

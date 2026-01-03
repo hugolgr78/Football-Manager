@@ -216,6 +216,24 @@ MIDFIELD_POSITIONS = ["Defensive Midfielder", "Central Midfielder", "Central Mid
 FORWARD_POSITIONS = ["Left Winger", "Right Winger", "Striker Left", "Striker Right", "Center Forward"]
 ATTACKING_POSITIONS = FORWARD_POSITIONS + ["Attacking Midfielder"]
 
+BASE_NUMBERS = {
+    "GK": [1],
+    "LB": [2, 3],
+    "RB": [2, 3],
+    "CB": [4, 5],
+    "DM": [6, 8],
+    "LM": [15],
+    "CM": [8, 10, 16],
+    "RM": [12],
+    "LW": [11, 7],
+    "RW": [7, 11],
+    "AM": [10],
+    "CF": [9],
+}
+
+RESERVED_NUMBERS = [1, 2, 3, 4, 5, 6, 8, 7, 9, 10, 11, 16, 17, 19]
+
+
 SCORER_CHANCES = {
     'defender': 0.05,
     'midfielder': 0.25,
@@ -227,12 +245,6 @@ GOAL_TYPE_CHANCES = {
     "penalty": 0.15,
     "own_goal": 0.05
 }
-
-# GOAL_TYPE_CHANCES = {
-#     "goal": 0.05,
-#     "penalty": 0.15,
-#     "own_goal": 0.8
-# }
 
 BASE_SHOT = 0.2
 MAX_SHOT_PROB = BASE_SHOT + 0.1
@@ -449,7 +461,8 @@ PROMPT_REACTIONS = {
     "Dissapointed": {"win": -1, "draw": 0, "lose": 1}
 }
 
-SEARCH_LIMIT = 12
+SEARCH_LIMIT = 20
+RESULT_LIMIT = 12
 
 EVENTS_TO_ICONS = {
     "substitution": "Sub",

@@ -705,7 +705,7 @@ class Attributes(ctk.CTkFrame):
         ctk.CTkLabel(dataFrame, text = "SEASON STATS", font = (APP_FONT_BOLD, 22), text_color = "white").grid(row = 11, column = 0, columnspan = 3, pady = (8, 6))
 
         row = 12
-        stat_row(row, "Matches", TeamLineup.get_number_matches_by_player_all_comps(self.player.id), TeamLineup.get_number_matches_by_player_all_comps(player.id)); row += 1
+        stat_row(row, "Matches", TeamLineup.get_number_matches_by_player(self.player.id), TeamLineup.get_number_matches_by_player(player.id)); row += 1
 
         if player.position == "goalkeeper":
             left_yellow, right_yellow = MatchEvents.get_yellow_cards_by_player(self.player.id), MatchEvents.get_yellow_cards_by_player(player.id)

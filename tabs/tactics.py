@@ -1046,8 +1046,8 @@ class Analysis(ctk.CTkFrame):
         Fetches data to create data polygons and displays them in the polyDataFrame.
         """
         
-        self.league_stats = MatchStats.get_league_best_avg_stats(self.league.id)
-        self.league_averages = MatchStats.get_league_avg_stats(self.league.id)
+        self.league_stats = MatchStats.get_comp_best_avg_stats(self.league.id)
+        self.league_averages = MatchStats.get_comp_avg_stats(self.league.id)
 
         data1, data2, data3, overall_count, attacking_count, defending_count = self.get_poly_data(self.opponent.id)
         team_data1, team_data2, team_data3, _, _, _ = self.get_poly_data(self.team.id)
@@ -1226,10 +1226,10 @@ class Analysis(ctk.CTkFrame):
         xg_against = MatchStats.get_team_xg_against(team_id, [m.id for m in matches])
         avg_xg_against = xg_against / len(matches) if matches else 0
 
-        max_xg_against = MatchStats.get_league_max_xg_against(self.league.id)
+        max_xg_against = MatchStats.get_comp_max_xg_against(self.league.id)
         avg_max_xg_against = max_xg_against / len(matches) if matches else 0    
 
-        total_xg_against = MatchStats.get_league_total_xg_against(self.league.id)
+        total_xg_against = MatchStats.get_comp_total_xg_against(self.league.id)
         league_avg_xg_against = total_xg_against / total_matches if total_matches > 0 else 0
 
         if avg_xg_against <= league_avg_xg_against:

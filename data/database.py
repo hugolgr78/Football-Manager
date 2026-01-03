@@ -1071,7 +1071,6 @@ class Players(Base):
         finally:
             session.close()
 
-
     @classmethod
     def batch_update_morales(cls, morales):
         session = DatabaseManager().get_session()
@@ -1380,6 +1379,7 @@ class Matches(Base):
     
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     league_id = Column(String(128), ForeignKey('leagues.id'))
+    cup_id = Column(String(128), ForeignKey('cups.id'))
     home_id = Column(String(128), ForeignKey('teams.id'))
     away_id = Column(String(128), ForeignKey('teams.id'))
     referee_id = Column(String(128), ForeignKey('referees.id'))
@@ -1779,15 +1779,6 @@ class Matches(Base):
             session.close()
 
     @classmethod
-    def get_all_matches_by_matchday(cls, matchday):
-        session = DatabaseManager().get_session()
-        try:
-            matches = session.query(Matches).filter(Matches.matchday == matchday).all()
-            return matches
-        finally:
-            session.close()
-
-    @classmethod
     def get_all_matches_by_team(cls, team_id):
         session = DatabaseManager().get_session()
         try:
@@ -1802,7 +1793,7 @@ class Matches(Base):
         try:
             matches = session.query(Matches).filter(
                 ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
-                Matches.league_id == comp_id
+                (Matches.league_id == comp_id) | (Matches.cup_id == comp_id)
             ).all()
             return matches
         finally:
@@ -1814,7 +1805,7 @@ class Matches(Base):
         try:
             matches = session.query(Matches).join(TeamLineup, TeamLineup.match_id == Matches.id).filter(
                 ((Matches.home_id == team_id) | (Matches.away_id == team_id)),
-                Matches.league_id == comp_id
+                (Matches.league_id == comp_id) | (Matches.cup_id == comp_id)
             ).distinct().all()
             return matches
         finally:
@@ -1925,7 +1916,10 @@ class Matches(Base):
             matches = session.query(Matches).filter(
                 Matches.date >= start - timedelta(hours = 2), # Checks for any games that started within 2 hours before the start time
                 Matches.date <= end - timedelta(hours = 2), # Doesnt select games that start within 2 hours of the end time
-                Matches.league_id.notin_(exclude_leagues),
+                or_(
+                    Matches.league_id.is_(None),
+                    Matches.league_id.notin_(exclude_leagues)
+                ),
                 ~Matches.id.in_(subquery)
             ).order_by(Matches.date.asc()).all()
             return matches
@@ -1987,10 +1981,10 @@ class Matches(Base):
             session.close()
 
     @classmethod
-    def get_team_winless_streak(cls, team_id, league_id):
+    def get_team_winless_streak(cls, team_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team_id, league_id)
+            matches = Matches.get_all_played_matches_by_team_and_comp(team_id, comp_id)
             current_streak = 0
             for match in matches:
                 if match.score_home == match.score_away:
@@ -2006,10 +2000,10 @@ class Matches(Base):
             session.close()
     
     @classmethod
-    def get_team_unbeaten_streak(cls, team_id, league_id):
+    def get_team_unbeaten_streak(cls, team_id, comp_id):
         session = DatabaseManager().get_session()
         try:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team_id, league_id)
+            matches = Matches.get_all_played_matches_by_team_and_comp(team_id, comp_id)
             current_streak = 0
             for match in matches:
                 if match.score_home == match.score_away:
@@ -2157,38 +2151,32 @@ class TeamLineup(Base):
             session.close()
 
     @classmethod
-    def get_number_matches_by_player(cls, player_id, league_id):
+    def get_number_matches_by_player(cls, player_id, comp_id = None):
         session = DatabaseManager().get_session()
         try:
-            matches = session.query(TeamLineup).join(Matches).filter(
-                TeamLineup.player_id == player_id,
-                Matches.league_id == league_id,
-                TeamLineup.rating.isnot(None)
-            ).count()
+            if comp_id:
+                matches = session.query(TeamLineup).join(Matches).filter(
+                    TeamLineup.player_id == player_id,
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id)),
+                    TeamLineup.rating.isnot(None)
+                ).count()
+            else:
+                matches = session.query(TeamLineup).filter(
+                    TeamLineup.player_id == player_id,
+                    TeamLineup.rating.isnot(None)
+                ).count()
             return matches
         finally:
             session.close()
 
     @classmethod
-    def get_number_matches_by_player_all_comps(cls, player_id):
+    def get_player_average_rating(cls, player_id, comp_id = None):
         session = DatabaseManager().get_session()
         try:
-            matches = session.query(TeamLineup).filter(
-                TeamLineup.player_id == player_id,
-                TeamLineup.rating.isnot(None)
-            ).count()
-            return matches
-        finally:
-            session.close()
-
-    @classmethod
-    def get_player_average_rating(cls, player_id, comp = None):
-        session = DatabaseManager().get_session()
-        try:
-            if comp:
+            if comp_id:
                 rating = session.query(func.avg(TeamLineup.rating)).join(Matches).filter(
                     TeamLineup.player_id == player_id,
-                    Matches.league_id == comp,
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id)),
                     TeamLineup.rating.isnot(None)
                 ).scalar()
             else:
@@ -2217,7 +2205,7 @@ class TeamLineup(Base):
             session.close()
 
     @classmethod
-    def get_all_average_ratings(cls, league_id):
+    def get_all_average_ratings(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             PlayerAlias = aliased(Players)
@@ -2232,7 +2220,7 @@ class TeamLineup(Base):
             ).join(
                 MatchAlias, TeamLineup.match_id == MatchAlias.id
             ).filter(
-                MatchAlias.league_id == league_id,
+                ((MatchAlias.league_id == comp_id) | (MatchAlias.cup_id == comp_id)),
                 TeamLineup.rating.isnot(None)
             ).group_by(
                 TeamLineup.player_id,
@@ -2407,12 +2395,12 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_events_by_team(cls, team_id, league_id):
+    def get_events_by_team(cls, team_id, comp_id):
         session = DatabaseManager().get_session()
         try:
             matches = session.query(Matches).filter(
                 or_(Matches.home_id == team_id, Matches.away_id == team_id),
-                Matches.league_id == league_id
+                ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id)),
             ).all()
 
             all_events = []
@@ -2473,26 +2461,32 @@ class MatchEvents(Base):
             session.close()
     
     @classmethod
-    def get_goals_by_player(cls, player_id, comp_id):
+    def get_goals_by_player(cls, player_id, comp_id = None):
         session = DatabaseManager().get_session()
         try:
-            goals = session.query(MatchEvents).join(Matches).filter(
-                MatchEvents.player_id == player_id,
-                Matches.league_id == comp_id,
-                MatchEvents.event_type == "goal"
-            ).count()
+            if comp_id:
+                goals = session.query(MatchEvents).join(Matches).filter(
+                    MatchEvents.player_id == player_id,
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id)),
+                    MatchEvents.event_type == "goal"
+                ).count()
+            else:
+                goals = session.query(MatchEvents).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "goal"
+                ).count()
             return goals
         finally:
             session.close()
 
     @classmethod
-    def get_goals_and_pens_by_player(cls, player_id, comp = None):
+    def get_goals_and_pens_by_player(cls, player_id, comp_id = None):
         session = DatabaseManager().get_session()
         try:
-            if comp:
+            if comp_id:
                 goals = session.query(MatchEvents).join(Matches).filter(
                     MatchEvents.player_id == player_id,
-                    Matches.league_id == comp,
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id)),
                     or_(MatchEvents.event_type == "goal", MatchEvents.event_type == "penalty_goal")
                 ).count()
             else:
@@ -2514,7 +2508,7 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_all_goals(cls, league_id):
+    def get_all_goals(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             PlayerAlias = aliased(Players)
@@ -2530,7 +2524,7 @@ class MatchEvents(Base):
                 MatchAlias, MatchEvents.match_id == MatchAlias.id
             ).filter(
                 or_(MatchEvents.event_type == "goal", MatchEvents.event_type == "penalty_goal"),
-                MatchAlias.league_id == league_id
+                ((MatchAlias.league_id == comp_id) | (MatchAlias.cup_id == comp_id))
             ).group_by(
                 MatchEvents.player_id,
                 PlayerAlias.first_name,
@@ -2543,14 +2537,14 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_assists_by_player(cls, player_id, comp = None):
+    def get_assists_by_player(cls, player_id, comp_id = None):
         session = DatabaseManager().get_session()
         try:
-            if comp:
+            if comp_id:
                 assists = session.query(MatchEvents).join(Matches).filter(
                     MatchEvents.player_id == player_id,
                     MatchEvents.event_type == "assist",
-                    Matches.league_id == comp
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
                 ).count()
             else:
                 assists = session.query(MatchEvents).filter(
@@ -2562,7 +2556,7 @@ class MatchEvents(Base):
             session.close()
     
     @classmethod
-    def get_all_assists(cls, league_id):
+    def get_all_assists(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             PlayerAlias = aliased(Players)
@@ -2578,7 +2572,7 @@ class MatchEvents(Base):
                 MatchAlias, MatchEvents.match_id == MatchAlias.id
             ).filter(
                 MatchEvents.event_type == "assist",
-                MatchAlias.league_id == league_id
+                ((MatchAlias.league_id == comp_id) | (MatchAlias.cup_id == comp_id))
             ).group_by(
                 MatchEvents.player_id,
                 PlayerAlias.first_name,
@@ -2591,14 +2585,14 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_yellow_cards_by_player(cls, player_id, comp = None):
+    def get_yellow_cards_by_player(cls, player_id, comp_id = None):
         session = DatabaseManager().get_session()
         try:
-            if comp:
+            if comp_id:
                 yellow_cards = session.query(MatchEvents).join(Matches).filter(
                     MatchEvents.player_id == player_id,
                     MatchEvents.event_type == "yellow_card",
-                    Matches.league_id == comp
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
                 ).count()
             else:
                 yellow_cards = session.query(MatchEvents).filter(
@@ -2616,7 +2610,7 @@ class MatchEvents(Base):
             yellow_cards = session.query(MatchEvents).join(Matches).filter(
                 MatchEvents.player_id == player_id,
                 MatchEvents.event_type == "yellow_card",
-                Matches.league_id == comp_id
+                ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
             ).count()
 
             yellow_cards += 1
@@ -2634,7 +2628,7 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_all_yellow_cards(cls, league_id):
+    def get_all_yellow_cards(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             PlayerAlias = aliased(Players)
@@ -2650,7 +2644,7 @@ class MatchEvents(Base):
                 MatchAlias, MatchEvents.match_id == MatchAlias.id
             ).filter(
                 MatchEvents.event_type == "yellow_card",
-                MatchAlias.league_id == league_id
+                ((MatchAlias.league_id == comp_id) | (MatchAlias.cup_id == comp_id))
             ).group_by(
                 MatchEvents.player_id,
                 PlayerAlias.first_name,
@@ -2663,14 +2657,14 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_red_cards_by_player(cls, player_id, comp = None):
+    def get_red_cards_by_player(cls, player_id, comp_id = None):
         session = DatabaseManager().get_session()
         try:
-            if comp:
+            if comp_id:
                 red_cards = session.query(MatchEvents).join(Matches).filter(
                     MatchEvents.player_id == player_id,
                     MatchEvents.event_type == "red_card",
-                    Matches.league_id == comp
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
                 ).count()
             else:
                 red_cards = session.query(MatchEvents).filter(
@@ -2682,7 +2676,7 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_all_red_cards(cls, league_id):
+    def get_all_red_cards(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             PlayerAlias = aliased(Players)
@@ -2698,7 +2692,7 @@ class MatchEvents(Base):
                 MatchAlias, MatchEvents.match_id == MatchAlias.id
             ).filter(
                 MatchEvents.event_type == "red_card",
-                MatchAlias.league_id == league_id
+                ((MatchAlias.league_id == comp_id) | (MatchAlias.cup_id == comp_id))
             ).group_by(
                 MatchEvents.player_id,
                 PlayerAlias.first_name,
@@ -2711,20 +2705,26 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_own_goals_by_player(cls, player_id, comp_id):
+    def get_own_goals_by_player(cls, player_id, comp_id = None):
         session = DatabaseManager().get_session()
         try:
-            own_goals = session.query(MatchEvents).join(Matches).filter(
-                MatchEvents.player_id == player_id,
-                MatchEvents.event_type == "own_goal",
-                Matches.league_id == comp_id
-            ).count()
+            if comp_id:
+                own_goals = session.query(MatchEvents).join(Matches).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "own_goal",
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
+                ).count()
+            else:
+                own_goals = session.query(MatchEvents).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "own_goal"
+                ).count()
             return own_goals
         finally:
             session.close()
         
     @classmethod
-    def get_all_own_goals(cls, league_id):
+    def get_all_own_goals(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             PlayerAlias = aliased(Players)
@@ -2740,7 +2740,7 @@ class MatchEvents(Base):
                 MatchAlias, MatchEvents.match_id == MatchAlias.id
             ).filter(
                 MatchEvents.event_type == "own_goal",
-                MatchAlias.league_id == league_id
+                ((MatchAlias.league_id == comp_id) | (MatchAlias.cup_id == comp_id))
             ).group_by(
                 MatchEvents.player_id,
                 PlayerAlias.first_name,
@@ -2753,20 +2753,26 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_penalty_goals_by_player(cls, player_id, comp_id):
+    def get_penalty_goals_by_player(cls, player_id, comp_id = None):
         session = DatabaseManager().get_session()
         try:
-            penalty_goals = session.query(MatchEvents).join(Matches).filter(
-                MatchEvents.player_id == player_id,
-                MatchEvents.event_type == "penalty_goal",
-                Matches.league_id == comp_id
-            ).count()
+            if comp_id:
+                penalty_goals = session.query(MatchEvents).join(Matches).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "penalty_goal",
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
+                ).count()
+            else:
+                penalty_goals = session.query(MatchEvents).filter(
+                    MatchEvents.player_id == player_id,
+                    MatchEvents.event_type == "penalty_goal"
+                ).count()
             return penalty_goals
         finally:
             session.close()
         
     @classmethod
-    def get_all_penalty_goals(cls, league_id):
+    def get_all_penalty_goals(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             PlayerAlias = aliased(Players)
@@ -2782,7 +2788,7 @@ class MatchEvents(Base):
                 MatchAlias, MatchEvents.match_id == MatchAlias.id
             ).filter(
                 MatchEvents.event_type == "penalty_goal",
-                MatchAlias.league_id == league_id
+                ((MatchAlias.league_id == comp_id) | (MatchAlias.cup_id == comp_id))
             ).group_by(
                 MatchEvents.player_id,
                 PlayerAlias.first_name,
@@ -2795,14 +2801,14 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_penalty_saves_by_player(cls, player_id, comp = None):
+    def get_penalty_saves_by_player(cls, player_id, comp_id = None):
         session = DatabaseManager().get_session()
         try:
-            if comp:
+            if comp_id:
                 penalty_saves = session.query(MatchEvents).join(Matches).filter(
                     MatchEvents.player_id == player_id,
                     MatchEvents.event_type == "penalty_saved",
-                    Matches.league_id == comp
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
                 ).count()
             else:
                 penalty_saves = session.query(MatchEvents).filter(
@@ -2814,7 +2820,7 @@ class MatchEvents(Base):
             session.close()
         
     @classmethod
-    def get_all_penalty_saves(cls, league_id):
+    def get_all_penalty_saves(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             PlayerAlias = aliased(Players)
@@ -2830,7 +2836,7 @@ class MatchEvents(Base):
                 MatchAlias, MatchEvents.match_id == MatchAlias.id
             ).filter(
                 MatchEvents.event_type == "penalty_saved",
-                MatchAlias.league_id == league_id
+                ((MatchAlias.league_id == comp_id) | (MatchAlias.cup_id == comp_id))
             ).group_by(
                 MatchEvents.player_id,
                 PlayerAlias.first_name,
@@ -2843,14 +2849,14 @@ class MatchEvents(Base):
             session.close()
 
     @classmethod
-    def get_clean_sheets_by_player(cls, player_id, comp = None):
+    def get_clean_sheets_by_player(cls, player_id, comp_id = None):
         session = DatabaseManager().get_session()
         try:
-            if comp:
+            if comp_id:
                 clean_sheets = session.query(MatchEvents).join(Matches).filter(
                     MatchEvents.player_id == player_id,
                     MatchEvents.event_type == "clean_sheet",
-                    Matches.league_id == comp
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
                 ).count()
             else:
                 clean_sheets = session.query(MatchEvents).filter(
@@ -2862,7 +2868,7 @@ class MatchEvents(Base):
             session.close()
     
     @classmethod
-    def get_all_clean_sheets(cls, league_id):
+    def get_all_clean_sheets(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             PlayerAlias = aliased(Players)
@@ -2878,7 +2884,7 @@ class MatchEvents(Base):
                 MatchAlias, MatchEvents.match_id == MatchAlias.id
             ).filter(
                 MatchEvents.event_type == "clean_sheet",
-                MatchAlias.league_id == league_id
+                ((MatchAlias.league_id == comp_id) | (MatchAlias.cup_id == comp_id))
             ).group_by(
                 MatchEvents.player_id,
                 PlayerAlias.first_name,
@@ -2901,7 +2907,7 @@ class MatchEvents(Base):
                 .filter(
                     Players.team_id == team_id,
                     MatchEvents.event_type == "clean_sheet",
-                    Matches.league_id == comp_id
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
                 )
                 .scalar()
             )
@@ -2926,7 +2932,7 @@ class MatchEvents(Base):
                 .join(Matches, MatchEvents.match_id == Matches.id)
                 .filter(
                     MatchEvents.event_type == "clean_sheet",
-                    Matches.league_id == comp_id
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
                 )
                 .group_by(
                     Players.team_id,
@@ -2952,7 +2958,7 @@ class MatchEvents(Base):
                 .join(Matches)
                 .filter(
                     MatchEvents.event_type == "clean_sheet",
-                    Matches.league_id == comp_id
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
                 )
                 .scalar()
             )
@@ -3106,7 +3112,7 @@ class MatchStats(Base):
             session.close()
 
     @classmethod
-    def get_stat_by_players(cls, league_id, stat_type):
+    def get_stat_by_players(cls, comp_id, stat_type):
         session = DatabaseManager().get_session()
         try:
             MatchAlias = aliased(Matches)
@@ -3117,7 +3123,7 @@ class MatchStats(Base):
                 )
                 .join(MatchAlias, MatchStats.match_id == MatchAlias.id)
                 .filter(
-                    MatchAlias.league_id == league_id,
+                    ((MatchAlias.league_id == comp_id) | (MatchAlias.cup_id == comp_id)),
                     MatchStats.stat_type == stat_type
                 )
                 .group_by(MatchStats.player_id)
@@ -3256,7 +3262,7 @@ class MatchStats(Base):
             session.close()
 
     @classmethod
-    def get_league_best_avg_stats(cls, league_id):
+    def get_comp_best_avg_stats(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             # ----------------------------------------------------
@@ -3273,7 +3279,7 @@ class MatchStats(Base):
                 .join(TeamLineup, TeamLineup.player_id == Players.id)
                 .join(Matches, Matches.id == MatchStats.match_id)
                 .filter(
-                    Matches.league_id == league_id,
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id)),
                     MatchStats.player_id != None,
                     TeamLineup.match_id == MatchStats.match_id
                 )
@@ -3296,7 +3302,7 @@ class MatchStats(Base):
                 )
                 .join(Matches, Matches.id == MatchStats.match_id)
                 .filter(
-                    Matches.league_id == league_id,
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id)),
                     MatchStats.player_id == None
                 )
             )
@@ -3351,7 +3357,7 @@ class MatchStats(Base):
             session.close()
 
     @classmethod
-    def get_league_avg_stats(cls, league_id):
+    def get_comp_avg_stats(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             # ----------------------------------------------------
@@ -3368,7 +3374,7 @@ class MatchStats(Base):
                 .join(TeamLineup, TeamLineup.player_id == Players.id)
                 .join(Matches, Matches.id == MatchStats.match_id)
                 .filter(
-                    Matches.league_id == league_id,
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id)),
                     MatchStats.player_id != None,
                     TeamLineup.match_id == MatchStats.match_id
                 )
@@ -3391,7 +3397,7 @@ class MatchStats(Base):
                 )
                 .join(Matches, Matches.id == MatchStats.match_id)
                 .filter(
-                    Matches.league_id == league_id,
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id)),
                     MatchStats.player_id == None
                 )
             )
@@ -3452,7 +3458,6 @@ class MatchStats(Base):
         finally:
             session.close()
 
-
     @classmethod
     def get_team_xg_against(cls, team_id, match_ids):
         session = DatabaseManager().get_session()
@@ -3485,7 +3490,7 @@ class MatchStats(Base):
             session.close()
 
     @classmethod
-    def get_league_max_xg_against(cls, league_id):
+    def get_comp_max_xg_against(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             # Step 1: figure out all match_id / team_id pairs
@@ -3495,12 +3500,12 @@ class MatchStats(Base):
                     Matches.id.label("match_id"),
                     Matches.home_id.label("team_id")
                 )
-                .filter(Matches.league_id == league_id)
+                .filter((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
                 .union_all(
                     session.query(
                         Matches.id.label("match_id"),
                         Matches.away_id.label("team_id")
-                    ).filter(Matches.league_id == league_id)
+                    ).filter((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
                 )
                 .subquery()
             )
@@ -3531,14 +3536,14 @@ class MatchStats(Base):
             session.close()
 
     @classmethod
-    def get_league_total_xg_against(cls, league_id):
+    def get_comp_total_xg_against(cls, comp_id):
         session = DatabaseManager().get_session()
         try:
             total_xg = (
                 session.query(func.coalesce(func.sum(MatchStats.value), 0))
                 .join(Matches, MatchStats.match_id == Matches.id)
                 .filter(
-                    Matches.league_id == league_id,
+                    ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id)),
                     MatchStats.stat_type == "xG",
                     MatchStats.player_id == None
                 )
@@ -3550,7 +3555,7 @@ class MatchStats(Base):
             session.close()
 
     @classmethod
-    def get_all_players_for_stat(cls, league_id, stat_type):
+    def get_all_players_for_stat(cls, comp_id, stat_type):
         session = DatabaseManager().get_session()
         try:
             PlayerAlias = aliased(Players)
@@ -3567,7 +3572,7 @@ class MatchStats(Base):
                 MatchAlias, MatchStats.match_id == MatchAlias.id
             ).filter(
                 MatchStats.stat_type == stat_type,
-                MatchAlias.league_id == league_id
+                ((MatchAlias.league_id == comp_id) | (MatchAlias.cup_id == comp_id))
             ).group_by(
                 MatchStats.player_id,
                 PlayerAlias.first_name,
@@ -4821,7 +4826,6 @@ class PlayerBans(Base):
         finally:
             session.close()
 
-
     @classmethod
     def get_all_non_banned_players_for_comp(cls, team_id, competition_id):
         session = DatabaseManager().get_session()
@@ -4894,13 +4898,13 @@ class PlayerBans(Base):
             session.close()
 
     @classmethod
-    def get_injuries_league(cls, league_id):
+    def get_injuries_comp(cls, comp_id):
         # For each ban_type injury entry, check the player id is in a team whose league is the league id
         session = DatabaseManager().get_session()
         try:
             bans = session.query(PlayerBans).join(Players).join(LeagueTeams, LeagueTeams.team_id == Players.team_id).filter(
                 PlayerBans.ban_type == "injury",
-                LeagueTeams.league_id == league_id
+                ((LeagueTeams.league_id == comp_id) | (CupTeams.cup_id == comp_id))
             ).all()
             return bans
         finally:
@@ -5578,34 +5582,35 @@ class PlayerAttributes(Base):
             session.close()
 
 class StatsManager:
+
     @staticmethod
-    def get_goals_scored(leagueTeams, league_id):
+    def get_goals_scored(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            # Get all team IDs in this league
-            team_ids = [team.team_id for team in leagueTeams]
+            # Get all team IDs in this comp
+            team_ids = [team.team_id for team in compTeams]
             # Query LeagueTeams table for goals_scored
             results = session.query(
-                LeagueTeams.team_id,
-                LeagueTeams.goals_scored
+                ((LeagueTeams.team_id) | (CupTeams.team_id)),
+                ((LeagueTeams.goals_scored) | (CupTeams.goals_scored))
             ).filter(
-                LeagueTeams.league_id == league_id,
-                LeagueTeams.team_id.in_(team_ids)
+                ((LeagueTeams.league_id == comp_id) | (CupTeams.cup_id == comp_id)),
+                ((LeagueTeams.team_id.in_(team_ids)) | (CupTeams.team_id.in_(team_ids)))
             ).all()
             # Sort by goals scored descending
-            results = sorted(results, key=lambda x: x[1], reverse=True)
+            results = sorted(results, key = lambda x: x[1], reverse = True)
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_penalties_scored(leagueTeams, league_id):
+    def get_penalties_scored(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            # Get all matches in league
+            team_ids = [team.team_id for team in compTeams]
+            # Get all matches in comp
             matches = session.query(Matches.id, Matches.home_id, Matches.away_id).filter(
-                Matches.league_id == league_id
+                ((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))
             ).all()
             match_ids = [m.id for m in matches]
 
@@ -5621,7 +5626,7 @@ class StatsManager:
 
             # Count per team
             team_stats = {tid: {"scored": 0, "taken": 0} for tid in team_ids}
-            for match_id, event_type, team_id in events:
+            for _, event_type, team_id in events:
                 if team_id in team_stats:
                     team_stats[team_id]["taken"] += 1
                     if event_type == "penalty_goal":
@@ -5633,17 +5638,17 @@ class StatsManager:
                 taken = team_stats[tid]["taken"]
                 pct = scored / taken if taken > 0 else 0
                 results.append((tid, f"{scored}/{taken}", pct, taken))
-            results.sort(key=lambda x: (x[2], -x[3] if x[2] == 0 else x[3]), reverse=True)
+            results.sort(key=lambda x: (x[2], -x[3] if x[2] == 0 else x[3]), reverse = True)
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_goals_scored_in_first_15(leagueTeams, league_id):
+    def get_goals_scored_in_first_15(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_ids = [m.id for m in matches]
 
             # Get all goals in first 15 minutes
@@ -5658,7 +5663,7 @@ class StatsManager:
             ).all()
 
             team_goals = {tid: 0 for tid in team_ids}
-            for match_id, event_type, time, team_id in events:
+            for _, _, time, team_id in events:
                 try:
                     minute = int(time.split("+")[0])
                 except Exception:
@@ -5667,17 +5672,17 @@ class StatsManager:
                     team_goals[team_id] += 1
 
             results = [(tid, team_goals[tid]) for tid in team_ids]
-            results.sort(key=lambda x: x[1], reverse=True)
+            results.sort(key = lambda x: x[1], reverse = True)
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_goals_scored_in_last_15(leagueTeams, league_id):
+    def get_goals_scored_in_last_15(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_ids = [m.id for m in matches]
 
             # Get all goals in last 15 minutes
@@ -5692,7 +5697,7 @@ class StatsManager:
             ).all()
 
             team_goals = {tid: 0 for tid in team_ids}
-            for match_id, event_type, time, team_id in events:
+            for _, _, time, team_id in events:
                 try:
                     minute = int(time.split("+")[0])
                 except Exception:
@@ -5701,17 +5706,17 @@ class StatsManager:
                     team_goals[team_id] += 1
 
             results = [(tid, team_goals[tid]) for tid in team_ids]
-            results.sort(key=lambda x: x[1], reverse=True)
+            results.sort(key = lambda x: x[1], reverse = True)
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_goals_by_substitutes(leagueTeams, league_id):
+    def get_goals_by_substitutes(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_ids = [m.id for m in matches]
 
             # Find all sub_on events (subs) in league
@@ -5740,17 +5745,17 @@ class StatsManager:
                     team_sub_goals[team_id] += 1
 
             results = [(tid, team_sub_goals[tid]) for tid in team_ids]
-            results.sort(key=lambda x: x[1], reverse=True)
+            results.sort(key=lambda x: x[1], reverse = True)
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_fastest_goal_scored(leagueTeams, league_id):
+    def get_fastest_goal_scored(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_ids = [m.id for m in matches]
 
             # Get all goals in league
@@ -5778,17 +5783,17 @@ class StatsManager:
                 val = f"{team_fastest[tid]}'" if team_fastest[tid] is not None else "N/A"
                 results.append((tid, val))
             # Sort by fastest (lowest minute)
-            results.sort(key=lambda x: (999 if x[1] == "N/A" else int(x[1].replace("'", ""))))
+            results.sort(key = lambda x: (999 if x[1] == "N/A" else int(x[1].replace("'", ""))))
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_latest_goal_scored(leagueTeams, league_id):
+    def get_latest_goal_scored(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_ids = [m.id for m in matches]
 
             # Get all goals in league
@@ -5816,36 +5821,36 @@ class StatsManager:
                 val = f"{team_latest[tid]}'" if team_latest[tid] is not None else "N/A"
                 results.append((tid, val))
             # Sort by latest (highest minute)
-            results.sort(key=lambda x: (0 if x[1] == "N/A" else -int(x[1].replace("'", ""))))
+            results.sort(key = lambda x: (0 if x[1] == "N/A" else -int(x[1].replace("'", ""))))
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_goals_conceded(leagueTeams, league_id):
+    def get_goals_conceded(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
+            team_ids = [team.team_id for team in compTeams]
             # Query LeagueTeams table for goals_conceded
             results = session.query(
-                LeagueTeams.team_id,
-                LeagueTeams.goals_conceded
+                ((LeagueTeams.team_id) | (CupTeams.team_id)),
+                ((LeagueTeams.goals_conceded) | (CupTeams.goals_conceded))
             ).filter(
-                LeagueTeams.league_id == league_id,
-                LeagueTeams.team_id.in_(team_ids)
+                ((LeagueTeams.league_id == comp_id) | (CupTeams.cup_id == comp_id)),
+                ((LeagueTeams.team_id.in_(team_ids)) | (CupTeams.team_id.in_(team_ids)))
             ).all()
             # Sort by goals conceded ascending (fewest is best)
-            results = sorted(results, key=lambda x: x[1])
+            results = sorted(results, key = lambda x: x[1])
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_clean_sheets(leagueTeams, league_id):
+    def get_clean_sheets(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_ids = [m.id for m in matches]
 
             # Get all clean_sheet events in league
@@ -5858,22 +5863,22 @@ class StatsManager:
             ).all()
 
             team_clean_sheets = {tid: 0 for tid in team_ids}
-            for match_id, team_id in events:
+            for _, team_id in events:
                 if team_id in team_clean_sheets:
                     team_clean_sheets[team_id] += 1
 
             results = [(tid, team_clean_sheets[tid]) for tid in team_ids]
-            results.sort(key=lambda x: x[1], reverse=True)
+            results.sort(key = lambda x: x[1], reverse = True)
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_yellow_cards(leagueTeams, league_id):
+    def get_yellow_cards(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_ids = [m.id for m in matches]
 
             # Get all yellow card events in league
@@ -5890,17 +5895,17 @@ class StatsManager:
                     team_yellow_cards[team_id] += 1
 
             results = [(tid, team_yellow_cards[tid]) for tid in team_ids]
-            results.sort(key=lambda x: x[1], reverse=True)
+            results.sort(key = lambda x: x[1], reverse = True)
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_red_cards(leagueTeams, league_id):
+    def get_red_cards(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_ids = [m.id for m in matches]
 
             # Get all red card events in league
@@ -5917,17 +5922,17 @@ class StatsManager:
                     team_red_cards[team_id] += 1
 
             results = [(tid, team_red_cards[tid]) for tid in team_ids]
-            results.sort(key=lambda x: x[1], reverse=True)
+            results.sort(key = lambda x: x[1], reverse = True)
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_own_goals(leagueTeams, league_id):
+    def get_own_goals(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_ids = [m.id for m in matches]
 
             # Get all own goal events in league
@@ -5944,17 +5949,17 @@ class StatsManager:
                     team_own_goals[team_id] += 1
 
             results = [(tid, team_own_goals[tid]) for tid in team_ids]
-            results.sort(key=lambda x: x[1], reverse=True)
+            results.sort(key = lambda x: x[1], reverse = True)
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_penalties_saved(leagueTeams, league_id):
+    def get_penalties_saved(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_ids = [m.id for m in matches]
 
             # Get all penalty_saved events in league
@@ -5971,17 +5976,17 @@ class StatsManager:
                     team_pen_saves[team_id] += 1
 
             results = [(tid, team_pen_saves[tid]) for tid in team_ids]
-            results.sort(key=lambda x: x[1], reverse=True)
+            results.sort(key = lambda x: x[1], reverse = True)
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_goals_conceded_in_first_15(leagueTeams, league_id):
+    def get_goals_conceded_in_first_15(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_ids = [m.id for m in matches]
 
             # Get all goals in first 15 minutes (including own goals)
@@ -6018,17 +6023,17 @@ class StatsManager:
                             team_conceded[match.home_id] += 1
 
             results = [(tid, team_conceded[tid]) for tid in team_ids]
-            results.sort(key=lambda x: x[1], reverse=True)
+            results.sort(key = lambda x: x[1], reverse = True)
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_goals_conceded_in_last_15(leagueTeams, league_id):
+    def get_goals_conceded_in_last_15(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_ids = [m.id for m in matches]
 
             # Get all goals in last 15 minutes (including own goals)
@@ -6062,17 +6067,17 @@ class StatsManager:
                             team_conceded[match.home_id] += 1
 
             results = [(tid, team_conceded[tid]) for tid in team_ids]
-            results.sort(key=lambda x: x[1], reverse=True)
+            results.sort(key = lambda x: x[1], reverse = True)
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_fastest_goal_conceded(leagueTeams, league_id):
+    def get_fastest_goal_conceded(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id, Matches.home_id, Matches.away_id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id, Matches.home_id, Matches.away_id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_map = {m.id: (m.home_id, m.away_id) for m in matches}
             match_ids = list(match_map.keys())
 
@@ -6113,17 +6118,17 @@ class StatsManager:
             for tid in team_ids:
                 val = f"{team_fastest[tid]}'" if team_fastest[tid] is not None else "N/A"
                 results.append((tid, val))
-            results.sort(key=lambda x: (999 if x[1] == "N/A" else int(x[1].replace("'", ""))))
+            results.sort(key = lambda x: (999 if x[1] == "N/A" else int(x[1].replace("'", ""))))
             return results
         finally:
             session.close()
         
     @staticmethod
-    def get_latest_goal_conceded(leagueTeams, league_id):
+    def get_latest_goal_conceded(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
-            matches = session.query(Matches.id, Matches.home_id, Matches.away_id).filter(Matches.league_id == league_id).all()
+            team_ids = [team.team_id for team in compTeams]
+            matches = session.query(Matches.id, Matches.home_id, Matches.away_id).filter(((Matches.league_id == comp_id) | (Matches.cup_id == comp_id))).all()
             match_map = {m.id: (m.home_id, m.away_id) for m in matches}
             match_ids = list(match_map.keys())
 
@@ -6162,23 +6167,23 @@ class StatsManager:
             for tid in team_ids:
                 val = f"{team_latest[tid]}'" if team_latest[tid] is not None else "N/A"
                 results.append((tid, val))
-            results.sort(key=lambda x: (0 if x[1] == "N/A" else -int(x[1].replace("'", ""))))
+            results.sort(key = lambda x: (0 if x[1] == "N/A" else -int(x[1].replace("'", ""))))
             return results
         finally:
             session.close()
 
     @staticmethod
-    def get_goal_difference(leagueTeams, league_id):
+    def get_goal_difference(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            team_ids = [team.team_id for team in leagueTeams]
+            team_ids = [team.team_id for team in compTeams]
             # Query LeagueTeams table for goals_scored and goals_conceded, and compute difference in SQL
             results = session.query(
-                LeagueTeams.team_id,
-                (LeagueTeams.goals_scored - LeagueTeams.goals_conceded).label("goal_difference")
+                ((LeagueTeams.team_id) | (CupTeams.team_id)),
+                (((LeagueTeams.goals_scored - LeagueTeams.goals_conceded).label("goal_difference")) | ((CupTeams.goals_scored - CupTeams.goals_conceded).label("goal_difference")))
             ).filter(
-                LeagueTeams.league_id == league_id,
-                LeagueTeams.team_id.in_(team_ids)
+                ((LeagueTeams.league_id == comp_id) | (CupTeams.cup_id == comp_id)),
+                ((LeagueTeams.team_id.in_(team_ids)) | (CupTeams.team_id.in_(team_ids)))
             ).order_by(
                 (LeagueTeams.goals_scored - LeagueTeams.goals_conceded).desc()
             ).all()
@@ -6187,11 +6192,11 @@ class StatsManager:
             session.close()
 
     @staticmethod
-    def get_winning_from_losing_position(leagueTeams, league_id):
+    def get_winning_from_losing_position(compTeams, comp_id):
         """Fetch the number of wins from losing positions for each team using multithreading."""
         
         def fetch_team_wins_from_losing(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             wins = 0
             for match in matches:
                 events = MatchEvents.get_events_by_match(match.id)
@@ -6214,20 +6219,20 @@ class StatsManager:
             return team.team_id, wins
 
         results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_wins_from_losing, team): team for team in leagueTeams}
+        with ThreadPoolExecutor(max_workers = len(compTeams)) as executor:
+            futures = {executor.submit(fetch_team_wins_from_losing, team): team for team in compTeams}
             for future in futures:
                 results.append(future.result())
 
-        results.sort(key=lambda x: x[1], reverse=True)
+        results.sort(key = lambda x: x[1], reverse = True)
         return results
 
     @staticmethod
-    def get_losing_from_winning_position(leagueTeams, league_id):
+    def get_losing_from_winning_position(compTeams, comp_id):
         """Fetch the number of losses from winning positions for each team using multithreading."""
         
         def fetch_team_losses_from_winning(team):
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             losses = 0
             for match in matches:
                 events = MatchEvents.get_events_by_match(match.id)
@@ -6250,25 +6255,25 @@ class StatsManager:
             return team.team_id, losses
 
         results = []
-        with ThreadPoolExecutor(max_workers=len(leagueTeams)) as executor:
-            futures = {executor.submit(fetch_team_losses_from_winning, team): team for team in leagueTeams}
+        with ThreadPoolExecutor(max_workers = len(compTeams)) as executor:
+            futures = {executor.submit(fetch_team_losses_from_winning, team): team for team in compTeams}
             for future in futures:
                 results.append(future.result())
 
-        results.sort(key=lambda x: x[1], reverse=True)
+        results.sort(key = lambda x: x[1], reverse = True)
         return results
 
     @staticmethod
     def _get_comeback_win(team_goals, opp_goals):
         """Helper function to determine if a team won from a losing position."""
-        team_goals = sorted(team_goals, key=lambda x: parse_time(x.time))
-        opp_goals = sorted(opp_goals, key=lambda x: parse_time(x.time))
+        team_goals = sorted(team_goals, key = lambda x: parse_time(x.time))
+        opp_goals = sorted(opp_goals, key = lambda x: parse_time(x.time))
 
         team_score = 0
         opp_score = 0
         was_losing = False
 
-        all_events = sorted(team_goals + opp_goals, key=lambda x: parse_time(x.time))
+        all_events = sorted(team_goals + opp_goals, key = lambda x: parse_time(x.time))
         for event in all_events:
             if event in team_goals:
                 team_score += 1
@@ -6283,14 +6288,14 @@ class StatsManager:
     @staticmethod
     def _get_choke_loss(team_goals, opp_goals):
         """Helper function to determine if a team lost from a winning position."""
-        team_goals = sorted(team_goals, key=lambda x: parse_time(x.time))
-        opp_goals = sorted(opp_goals, key=lambda x: parse_time(x.time))
+        team_goals = sorted(team_goals, key = lambda x: parse_time(x.time))
+        opp_goals = sorted(opp_goals, key = lambda x: parse_time(x.time))
 
         team_score = 0
         opp_score = 0
         was_winning = False
 
-        all_events = sorted(team_goals + opp_goals, key=lambda x: parse_time(x.time))
+        all_events = sorted(team_goals + opp_goals, key = lambda x: parse_time(x.time))
         for event in all_events:
             if event in team_goals:
                 team_score += 1
@@ -6303,10 +6308,10 @@ class StatsManager:
         return was_winning and team_score < opp_score
         
     @staticmethod
-    def get_biggest_win(leagueTeams, league_id):
+    def get_biggest_win(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             biggest_win = 0
             match_result = "N/A"
             goals_scored = 0
@@ -6329,14 +6334,14 @@ class StatsManager:
             else:
                 results.append((team.team_id, match_result, biggest_win, goals_scored))
 
-        results.sort(key=lambda x: (x[2], x[3]), reverse=True)
+        results.sort(key = lambda x: (x[2], x[3]), reverse = True)
         return results
 
     @staticmethod
-    def get_biggest_loss(leagueTeams, league_id):
+    def get_biggest_loss(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             biggest_loss = 0
             match_result = "N/A"
             goals_conceded = 0
@@ -6359,14 +6364,14 @@ class StatsManager:
             else:
                 results.append((team.team_id, match_result, biggest_loss, goals_conceded))
 
-        results.sort(key=lambda x: (x[2], x[3]), reverse=True)
+        results.sort(key = lambda x: (x[2], x[3]), reverse = True)
         return results
 
     @staticmethod
-    def get_home_performance(leagueTeams, league_id):
+    def get_home_performance(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             points = 0
             available_points = 0
             for match in matches:
@@ -6379,14 +6384,14 @@ class StatsManager:
                 available_points += 3
             percentage = 0 if available_points == 0 else points / available_points
             results.append((team.team_id, f"{points}/{available_points}", percentage, available_points))
-        results.sort(key=lambda x: (x[2], -x[3] if x[2] == 0 else x[3]), reverse=True)
+        results.sort(key = lambda x: (x[2], -x[3] if x[2] == 0 else x[3]), reverse = True)
         return results
 
     @staticmethod
-    def get_away_performance(leagueTeams, league_id):
+    def get_away_performance(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             points = 0
             available_points = 0
             for match in matches:
@@ -6399,14 +6404,14 @@ class StatsManager:
                 available_points += 3
             percentage = 0 if available_points == 0 else points / available_points
             results.append((team.team_id, f"{points}/{available_points}", percentage, available_points))
-        results.sort(key=lambda x: (x[2], -x[3] if x[2] == 0 else x[3]), reverse=True)
+        results.sort(key = lambda x: (x[2], -x[3] if x[2] == 0 else x[3]), reverse = True)
         return results
 
     @staticmethod
-    def get_longest_unbeaten_run(leagueTeams, league_id):
+    def get_longest_unbeaten_run(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             unbeaten_run = 0
             current_run = 0
             for match in matches:
@@ -6423,14 +6428,14 @@ class StatsManager:
             if current_run > unbeaten_run:
                 unbeaten_run = current_run
             results.append((team.team_id, unbeaten_run))
-        results.sort(key=lambda x: x[1], reverse=True)
+        results.sort(key = lambda x: x[1], reverse = True)
         return results
 
     @staticmethod
-    def get_longest_winning_streak(leagueTeams, league_id):
+    def get_longest_winning_streak(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             winning_streak = 0
             current_streak = 0
             for match in matches:
@@ -6445,14 +6450,14 @@ class StatsManager:
             if current_streak > winning_streak:
                 winning_streak = current_streak
             results.append((team.team_id, winning_streak))
-        results.sort(key=lambda x: x[1], reverse=True)
+        results.sort(key = lambda x: x[1], reverse = True)
         return results
 
     @staticmethod
-    def get_longest_losing_streak(leagueTeams, league_id):
+    def get_longest_losing_streak(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             losing_streak = 0
             current_streak = 0
             for match in matches:
@@ -6467,14 +6472,14 @@ class StatsManager:
             if current_streak > losing_streak:
                 losing_streak = current_streak
             results.append((team.team_id, losing_streak))
-        results.sort(key=lambda x: x[1], reverse=True)
+        results.sort(key = lambda x: x[1], reverse = True)
         return results
 
     @staticmethod
-    def get_longest_winless_streak(leagueTeams, league_id):
+    def get_longest_winless_streak(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             winless_streak = 0
             current_streak = 0
             for match in matches:
@@ -6491,14 +6496,14 @@ class StatsManager:
             if current_streak > winless_streak:
                 winless_streak = current_streak
             results.append((team.team_id, winless_streak))
-        results.sort(key=lambda x: x[1], reverse=True)
+        results.sort(key = lambda x: x[1], reverse = True)
         return results
 
     @staticmethod
-    def get_longest_scoring_streak(leagueTeams, league_id):
+    def get_longest_scoring_streak(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             scoring_streak = 0
             current_streak = 0
             for match in matches:
@@ -6513,14 +6518,14 @@ class StatsManager:
             if current_streak > scoring_streak:
                 scoring_streak = current_streak
             results.append((team.team_id, scoring_streak))
-        results.sort(key=lambda x: x[1], reverse=True)
+        results.sort(key = lambda x: x[1], reverse = True)
         return results
 
     @staticmethod
-    def get_longest_scoreless_streak(leagueTeams, league_id):
+    def get_longest_scoreless_streak(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             scoreless_streak = 0
             current_streak = 0
             for match in matches:
@@ -6535,14 +6540,14 @@ class StatsManager:
             if current_streak > scoreless_streak:
                 scoreless_streak = current_streak
             results.append((team.team_id, scoreless_streak))
-        results.sort(key=lambda x: x[1], reverse=True)
+        results.sort(key = lambda x: x[1], reverse = True)
         return results
 
     @staticmethod
-    def get_highest_possession(leagueTeams, league_id):
+    def get_highest_possession(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             highest_possession = 0
             for match in matches:
                 possession_stat = (
@@ -6551,14 +6556,14 @@ class StatsManager:
                 if possession_stat:
                     highest_possession = max(highest_possession, possession_stat.value)
             results.append((team.team_id, highest_possession))
-        results.sort(key=lambda x: x[1], reverse=True)
+        results.sort(key = lambda x: x[1], reverse = True)
         return results
 
     @staticmethod
-    def get_lowest_possession(leagueTeams, league_id):
+    def get_lowest_possession(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             lowest_possession = 100
             for match in matches:
                 possession_stat = (
@@ -6569,14 +6574,14 @@ class StatsManager:
             if lowest_possession == 100:
                 lowest_possession = 0
             results.append((team.team_id, lowest_possession))
-        results.sort(key=lambda x: x[1])
+        results.sort(key = lambda x: x[1])
         return results
 
     @staticmethod
-    def get_highest_xg(leagueTeams, league_id):
+    def get_highest_xg(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             highest_xg = 0
             for match in matches:
                 xg_stat = (
@@ -6585,14 +6590,14 @@ class StatsManager:
                 if xg_stat:
                     highest_xg = max(highest_xg, xg_stat.value)
             results.append((team.team_id, highest_xg))
-        results.sort(key=lambda x: x[1], reverse=True)
+        results.sort(key = lambda x: x[1], reverse = True)
         return results
 
     @staticmethod
-    def get_lowest_xg(leagueTeams, league_id):
+    def get_lowest_xg(compTeams, comp_id):
         results = []
-        for team in leagueTeams:
-            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, league_id)
+        for team in compTeams:
+            matches = Matches.get_all_played_matches_by_team_and_comp(team.team_id, comp_id)
             lowest_xg = float('inf')
             for match in matches:
                 xg_stat = (
@@ -6603,11 +6608,11 @@ class StatsManager:
             if lowest_xg == float('inf'):
                 lowest_xg = 0
             results.append((team.team_id, lowest_xg))
-        results.sort(key=lambda x: x[1])
+        results.sort(key = lambda x: x[1])
         return results
 
     @staticmethod
-    def get_team_stats(teamID, league_id, leagueTeams, functions):
+    def get_team_stats(teamID, comp_id, compTeams, functions):
 
         def get_prefix(rank):
             if rank % 10 == 1 and rank % 100 != 11:
@@ -6630,7 +6635,7 @@ class StatsManager:
         try:
             with ThreadPoolExecutor() as executor:
                 future_to_stat = {
-                    executor.submit(stat_func, leagueTeams, league_id): stat_name
+                    executor.submit(stat_func, compTeams, comp_id): stat_name
                     for stat_name, stat_func in fast_items
                 }
                 stat_results = {}

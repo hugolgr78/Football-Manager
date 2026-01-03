@@ -4708,7 +4708,7 @@ class News(ctk.CTkFrame):
         backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
 
         if self.league_id:
-            injuries = PlayerBans.get_injuries_league(self.league_id)
+            injuries = PlayerBans.get_injuries_comp(self.league_id)
         else:
             injuries = PlayerBans.get_injuries_team(self.team_id)
 

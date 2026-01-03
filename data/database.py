@@ -5718,18 +5718,32 @@ class StatsManager:
     def get_goals_scored(compTeams, comp_id):
         session = DatabaseManager().get_session()
         try:
-            # Get all team IDs in this comp
             team_ids = [team.team_id for team in compTeams]
-            # Query LeagueTeams table for goals_scored
-            results = session.query(
-                ((LeagueTeams.team_id) | (CupTeams.team_id)),
-                ((LeagueTeams.goals_scored) | (CupTeams.goals_scored))
+
+            # League teams
+            league_results = session.query(
+                LeagueTeams.team_id,
+                LeagueTeams.goals_scored
             ).filter(
-                ((LeagueTeams.league_id == comp_id) | (CupTeams.cup_id == comp_id)),
-                ((LeagueTeams.team_id.in_(team_ids)) | (CupTeams.team_id.in_(team_ids)))
+                LeagueTeams.league_id == comp_id,
+                LeagueTeams.team_id.in_(team_ids)
             ).all()
-            # Sort by goals scored descending
+
+            # Cup teams
+            cup_results = session.query(
+                CupTeams.team_id,
+                CupTeams.goals_scored
+            ).filter(
+                CupTeams.cup_id == comp_id,
+                CupTeams.team_id.in_(team_ids)
+            ).all()
+
+            # Combine
+            results = league_results + cup_results
+
+            # Sort descending
             results = sorted(results, key = lambda x: x[1], reverse = True)
+
             return results
         finally:
             session.close()
@@ -5962,16 +5976,31 @@ class StatsManager:
         session = DatabaseManager().get_session()
         try:
             team_ids = [team.team_id for team in compTeams]
-            # Query LeagueTeams table for goals_conceded
-            results = session.query(
-                ((LeagueTeams.team_id) | (CupTeams.team_id)),
-                ((LeagueTeams.goals_conceded) | (CupTeams.goals_conceded))
+
+            # League teams
+            league_results = session.query(
+                LeagueTeams.team_id,
+                LeagueTeams.goals_conceded
             ).filter(
-                ((LeagueTeams.league_id == comp_id) | (CupTeams.cup_id == comp_id)),
-                ((LeagueTeams.team_id.in_(team_ids)) | (CupTeams.team_id.in_(team_ids)))
+                LeagueTeams.league_id == comp_id,
+                LeagueTeams.team_id.in_(team_ids)
             ).all()
-            # Sort by goals conceded ascending (fewest is best)
-            results = sorted(results, key = lambda x: x[1])
+
+            # Cup teams
+            cup_results = session.query(
+                CupTeams.team_id,
+                CupTeams.goals_conceded
+            ).filter(
+                CupTeams.cup_id == comp_id,
+                CupTeams.team_id.in_(team_ids)
+            ).all()
+
+            # Combine
+            results = league_results + cup_results
+
+            # Sort descending
+            results = sorted(results, key = lambda x: x[1], reverse = True)
+
             return results
         finally:
             session.close()
@@ -6308,16 +6337,36 @@ class StatsManager:
         session = DatabaseManager().get_session()
         try:
             team_ids = [team.team_id for team in compTeams]
-            # Query LeagueTeams table for goals_scored and goals_conceded, and compute difference in SQL
-            results = session.query(
-                ((LeagueTeams.team_id) | (CupTeams.team_id)),
-                (((LeagueTeams.goals_scored - LeagueTeams.goals_conceded).label("goal_difference")) | ((CupTeams.goals_scored - CupTeams.goals_conceded).label("goal_difference")))
+
+            # League teams
+            league_results = session.query(
+                LeagueTeams.team_id,
+                LeagueTeams.goals_scored,
+                LeagueTeams.goals_conceded
             ).filter(
-                ((LeagueTeams.league_id == comp_id) | (CupTeams.cup_id == comp_id)),
-                ((LeagueTeams.team_id.in_(team_ids)) | (CupTeams.team_id.in_(team_ids)))
-            ).order_by(
-                (LeagueTeams.goals_scored - LeagueTeams.goals_conceded).desc()
+                LeagueTeams.league_id == comp_id,
+                LeagueTeams.team_id.in_(team_ids)
             ).all()
+
+            # Cup teams
+            cup_results = session.query(
+                CupTeams.team_id,
+                CupTeams.goals_scored,
+                CupTeams.goals_conceded
+            ).filter(
+                CupTeams.cup_id == comp_id,
+                CupTeams.team_id.in_(team_ids)
+            ).all()
+
+            # Combine and calculate goal difference
+            results = []
+            for team_id, goals_scored, goals_conceded in league_results + cup_results:
+                goal_diff = goals_scored - goals_conceded
+                results.append((team_id, goal_diff))
+
+            # Sort descending
+            results = sorted(results, key = lambda x: x[1], reverse = True)
+
             return results
         finally:
             session.close()

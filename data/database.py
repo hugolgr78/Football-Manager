@@ -1627,6 +1627,13 @@ class Matches(Base):
 
     @classmethod
     def add_all_cup_matches(cls, cups):
+
+        def link_rounds(next_round_ids, prev_round_ids, links_dict):
+            assert len(prev_round_ids) == 2 * len(next_round_ids)
+
+            for i, next_id in enumerate(next_round_ids):
+                links_dict.append((next_id, prev_round_ids[2 * i]))
+                links_dict.append((next_id, prev_round_ids[2 * i + 1]))
         
         session = DatabaseManager().get_session()
         try:
@@ -1734,7 +1741,67 @@ class Matches(Base):
                                 "date": kickoff_datetime,
                             })
 
+                round_of_64_dates = [datetime.datetime(SEASON_START_DATE.year + 1, 1, 7), datetime.datetime(SEASON_START_DATE.year + 1, 1, 8)]
+                round_of_32_dates = [datetime.datetime(SEASON_START_DATE.year + 1, 2, 4), datetime.datetime(SEASON_START_DATE.year + 1, 3, 5)]
+                round_of_16_dates = [datetime.datetime(SEASON_START_DATE.year + 1, 3, 4), datetime.datetime(SEASON_START_DATE.year + 1, 3, 5)]
+                quarterfinal_dates = [datetime.datetime(SEASON_START_DATE.year + 1, 4, 8), datetime.datetime(SEASON_START_DATE.year + 1, 4, 9)]
+                semifinal_dates = [datetime.datetime(SEASON_START_DATE.year + 1, 4, 22), datetime.datetime(SEASON_START_DATE.year + 1, 4, 23)]
+                final_date = datetime.datetime(SEASON_START_DATE.year + 1, 5, 24)
 
+                knockout_matches = {
+                    "R64": [],
+                    "R32": [],
+                    "R16": [],
+                    "QF": [],
+                    "SF": [],
+                    "F": []
+                } 
+
+                matches_per_round = {
+                    "R64": 32,
+                    "R32": 16,
+                    "R16": 8,
+                    "QF": 4,
+                    "SF": 2,
+                    "F": 1
+                }
+
+                for round_name, dates in zip(["R64", "R32", "R16", "QF", "SF", "F"], [round_of_64_dates, round_of_32_dates, round_of_16_dates, quarterfinal_dates, semifinal_dates, [final_date]]):
+                    round_referees = referees.copy()
+                    num_matches = matches_per_round[round_name]
+
+                    for _ in range(num_matches):
+
+                        referee = random.choice(round_referees)
+                        round_referees.remove(referee)
+
+                        date = random.choice(dates)
+                        time = random.choice(["15:00", "18:00", "21:00"])
+                        kickoff_datetime = datetime.datetime.combine(date, datetime.datetime.strptime(time, "%H:%M").time())
+
+                        match_id = str(uuid.uuid4())
+                        matches_dict.append({
+                            "id": match_id,
+                            "cup_id": cup.id,
+                            "league_id": None,
+                            "home_id": None,
+                            "away_id": None,
+                            "referee_id": referee.id,
+                            "matchday": None,
+                            "group_num": None,
+                            "round_num": 2 + ["R64", "R32", "R16", "QF", "SF", "F"].index(round_name),
+                            "date": kickoff_datetime,
+                        })
+
+                        knockout_matches[round_name].append(match_id)
+
+                link_rounds(knockout_matches["R32"], knockout_matches["R64"], links_dict)
+                link_rounds(knockout_matches["R16"], knockout_matches["R32"], links_dict)
+                link_rounds(knockout_matches["QF"],  knockout_matches["R16"], links_dict)
+                link_rounds(knockout_matches["SF"],  knockout_matches["QF"],  links_dict)
+                link_rounds(knockout_matches["F"],   knockout_matches["SF"],  links_dict)
+ 
+            LinkedMatches.batch_add_links(links_dict)
             session.bulk_insert_mappings(Matches, matches_dict)
             session.commit()
 
@@ -3833,7 +3900,7 @@ class League(Base):
             session.close()
 
     @classmethod
-    def check_all_matches_complete(cls, league_id, currDate):
+    def check_all_matches_complete(cls, league_id):
         session = DatabaseManager().get_session()
         try:
             league = session.query(League).filter(League.id == league_id).first()
@@ -4002,6 +4069,26 @@ class Cup(Base):
         try:
             cups = session.query(Cup).all()
             return cups
+        finally:
+            session.close()
+
+    @classmethod
+    def check_cup_round_finished(cls, cup_id, round_num):
+        session = DatabaseManager().get_session()
+        try:
+            # Step 1: get all matches for this cup and round
+            matches = session.query(Matches).filter(
+                Matches.cup_id == cup_id,
+                Matches.matchday == round_num
+            ).all()
+
+            if not matches:
+                return False  # no matches found (shouldn't normally happen)
+
+            # Step 2: check if all match dates are before curr_date
+            all_complete = all(TeamLineup.check_game_played(match.id) for match in matches)
+
+            return all_complete
         finally:
             session.close()
 

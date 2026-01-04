@@ -279,7 +279,7 @@ class Schedule(ctk.CTkFrame):
         self.team = self.parent.team
 
         self.matches = Matches.get_all_matches_by_team(self.parent.team.id)
-        self.league = League.get_league_by_id(self.matches[0].league_id)
+        self.matches.sort(key = lambda match: match.date)
 
         self.matchesFrame = ctk.CTkScrollableFrame(self, fg_color = TKINTER_BACKGROUND, width = 650, height = 590, corner_radius = 0)
         self.matchesFrame.place(relx = 0.01, rely = 0.05, anchor = "nw")

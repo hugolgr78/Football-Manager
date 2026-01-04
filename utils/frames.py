@@ -73,10 +73,15 @@ class MatchFrame(ctk.CTkFrame):
         self.date.bind("<Enter>", lambda event: self.onFrameHover())
         self.date.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
-        self.leagueName = ctk.CTkLabel(self, text = self.parent.league.name, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
-        self.leagueName.place(relx = 0.45, rely = 0.5, anchor = "center")
-        self.leagueName.bind("<Enter>", lambda event: self.onFrameHover())
-        self.leagueName.bind("<Button-1>", lambda event: self.displayMatchInfo())
+        if self.match.league_id:
+            comp = League.get_league_by_id(self.match.league_id)
+        else:
+            comp = Cup.get_cup_by_id(self.match.cup_id)
+
+        self.compName = ctk.CTkLabel(self, text = comp.name, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
+        self.compName.place(relx = 0.4, rely = 0.5, anchor = "w")
+        self.compName.bind("<Enter>", lambda event: self.onFrameHover())
+        self.compName.bind("<Button-1>", lambda event: self.displayMatchInfo())
 
         self.time = ctk.CTkLabel(self, text = time, fg_color = TKINTER_BACKGROUND, font = (APP_FONT, 15))
         self.time.place(relx = 0.9, rely = 0.5, anchor = "e")
@@ -124,7 +129,7 @@ class MatchFrame(ctk.CTkFrame):
         self.configure(fg_color = DARK_GREY)
         self.logo.getImageLabel().configure(fg_color = DARK_GREY)
         self.oponent.configure(fg_color = DARK_GREY)
-        self.leagueName.configure(fg_color = DARK_GREY)
+        self.compName.configure(fg_color = DARK_GREY)
         self.time.configure(fg_color = DARK_GREY)
         self.location.configure(fg_color = DARK_GREY)
         self.date.configure(fg_color = DARK_GREY)
@@ -141,7 +146,7 @@ class MatchFrame(ctk.CTkFrame):
         self.configure(fg_color = TKINTER_BACKGROUND)
         self.logo.getImageLabel().configure(fg_color = TKINTER_BACKGROUND)
         self.oponent.configure(fg_color = TKINTER_BACKGROUND)
-        self.leagueName.configure(fg_color = TKINTER_BACKGROUND)
+        self.compName.configure(fg_color = TKINTER_BACKGROUND)
         self.time.configure(fg_color = TKINTER_BACKGROUND)
         self.location.configure(fg_color = TKINTER_BACKGROUND)
         self.date.configure(fg_color = TKINTER_BACKGROUND)

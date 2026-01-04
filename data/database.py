@@ -1649,15 +1649,17 @@ class Matches(Base):
                             bottom_2_leagues.append(league_below)
                             continue
 
-                teams = [t.team_id for league in bottom_2_leagues for t in LeagueTeams.get_teams_by_league(league.id)] 
+                league_teams = [[t.team_id for t in LeagueTeams.get_teams_by_league(league.id)] for league in bottom_2_leagues]
                 groups = []
 
                 for _ in range(cup.groups):
                     group_teams = []
-                    for _ in range(cup.teams_per_group):
-                        team = random.choice(teams)
-                        teams.remove(team)
-                        group_teams.append(team)
+
+                    for lt in league_teams:
+                        chosen = random.sample(lt, 2)
+                        for team in chosen:
+                            lt.remove(team)
+                        group_teams.extend(chosen)
 
                     groups.append(group_teams)
                 
@@ -1675,11 +1677,44 @@ class Matches(Base):
                         [(0, 3), (1, 2)],
                     ]
 
+                    home_count = {team_id: 0 for team_id in group}
                     for pairings, dates in zip(round_pairings, round_dates):
                         round_referees = referees.copy()
+                        earlier_date, later_date = dates
 
                         for (a, b), date in zip(pairings, dates):
-                            home, away = random.sample([group[a], group[b]], 2)
+                            team1, team2 = group[a], group[b]
+
+                            if home_count[team1] == 0 and home_count[team2] > 0:
+                                home, away = team1, team2
+                            elif home_count[team2] == 0 and home_count[team1] > 0:
+                                home, away = team2, team1
+                            else:
+                                home, away = random.sample([team1, team2], 2)
+
+                            home_count[home] += 1
+
+                            if date == later_date:
+                                away_matches = Matches.get_match_by_team_and_date_range(away, date, date + datetime.timedelta(days = 7))
+                                home_matches = Matches.get_match_by_team_and_date_range(home, date - datetime.timedelta(days = 7), date)
+                                
+                                home_change = False
+                                for m in home_matches:
+                                    rest_hours = (m.date - date).total_seconds() / 3600
+                                    if rest_hours < 48:
+                                        home_change = True
+                                        break
+
+                                away_change = False
+                                for m in away_matches:
+                                    rest_hours = (m.date - date).total_seconds() / 3600
+                                    if rest_hours < 48:
+                                        away_change = True
+                                        break
+
+                                if home_change or away_change:
+                                    date = earlier_date
+
                             referee = random.choice(round_referees)
                             round_referees.remove(referee)
 

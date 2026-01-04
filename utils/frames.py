@@ -533,8 +533,12 @@ class CalendarMatchFrame(ctk.CTkFrame):
         src.thumbnail((15, 15))
         ctk.CTkLabel(self, image = ctk.CTkImage(src, None, (src.width, src.height)), text = "", fg_color = TKINTER_BACKGROUND, height = 0).place(relx = 0.95, rely = 0.02, anchor = "ne")
 
-        league = League.get_league_by_id(self.match.league_id)
-        src = Image.open(io.BytesIO(league.logo))
+        if self.match.league_id:
+            comp = League.get_league_by_id(self.match.league_id)
+        else:
+            comp = Cup.get_cup_by_id(self.match.cup_id)
+
+        src = Image.open(io.BytesIO(comp.logo))
         src.thumbnail((15, 15))
         ctk.CTkLabel(self, image = ctk.CTkImage(src, None, (src.width, src.height)), text = "", fg_color = TKINTER_BACKGROUND, height = 0).place(relx = 0.95, rely = 0.2 if oppNameY == 0.5 else 0.25, anchor = "ne")
 

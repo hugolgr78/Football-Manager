@@ -241,7 +241,8 @@ class Managers(Base):
             CupTeams.add_cup_teams(names_id_mapping, cups)
             updateProgress(4)
             Referees.add_referees(leagues, flags)
-            Matches.add_all_matches(leagues)
+            Matches.add_all_league_matches(leagues)
+            Matches.add_all_cup_matches(cups)
 
             updateProgress(2)
             Players.add_players(flags)
@@ -1389,11 +1390,13 @@ class Matches(Base):
     referee_id = Column(String(128), ForeignKey('referees.id'))
     score_home = Column(Integer, nullable = False, default = 0)
     score_away = Column(Integer, nullable = False, default = 0)
-    matchday = Column(Integer, nullable = False)
+    matchday = Column(Integer)
+    group_num = Column(Integer)
+    round_num = Column(Integer)
     date = Column(DateTime, nullable = False)
 
     @classmethod
-    def add_all_matches(cls, leagues):
+    def add_all_league_matches(cls, leagues):
         def assign_times_for_day(games, time_slots):
             for game in games:
                 chosen_time = random.choice(time_slots)
@@ -1621,7 +1624,91 @@ class Matches(Base):
             raise e
         finally:
             session.close()
-    
+
+    @classmethod
+    def add_all_cup_matches(cls, cups):
+        
+        session = DatabaseManager().get_session()
+        try:
+            matches_dict = []
+            links_dict = []
+
+            for cup in cups:
+
+                referees = Referees.get_referees_by_nat(cup.planet)
+                leagues = set(ref.league_id for ref in referees)
+
+                bottom_2_leagues = []
+                for league in leagues:
+                    league = League.get_league_by_id(league)
+
+                    if league.league_below:
+                        league_below = League.get_league_by_id(league.league_below) 
+                        if not league_below.league_below:
+                            bottom_2_leagues.append(league)
+                            bottom_2_leagues.append(league_below)
+                            continue
+
+                teams = [t.team_id for league in bottom_2_leagues for t in LeagueTeams.get_teams_by_league(league.id)] 
+                groups = []
+
+                for _ in range(cup.groups):
+                    group_teams = []
+                    for _ in range(cup.teams_per_group):
+                        team = random.choice(teams)
+                        teams.remove(team)
+                        group_teams.append(team)
+
+                    groups.append(group_teams)
+                
+                for i, group in enumerate(groups):
+
+                    round_dates = [
+                        [datetime.datetime(SEASON_START_DATE.year, 10, 8), datetime.datetime(SEASON_START_DATE.year, 10, 9)],
+                        [datetime.datetime(SEASON_START_DATE.year, 10, 22), datetime.datetime(SEASON_START_DATE.year, 10, 23)],
+                        [datetime.datetime(SEASON_START_DATE.year, 11, 5), datetime.datetime(SEASON_START_DATE.year, 11, 6)],
+                    ]
+
+                    round_pairings = [
+                        [(0, 1), (2, 3)],
+                        [(0, 2), (1, 3)],
+                        [(0, 3), (1, 2)],
+                    ]
+
+                    for pairings, dates in zip(round_pairings, round_dates):
+                        round_referees = referees.copy()
+
+                        for (a, b), date in zip(pairings, dates):
+                            home, away = random.sample([group[a], group[b]], 2)
+                            referee = random.choice(round_referees)
+                            round_referees.remove(referee)
+
+                            time = random.choice(["15:00", "18:00", "21:00"])
+                            kickoff_datetime = datetime.datetime.combine(date, datetime.datetime.strptime(time, "%H:%M").time())
+
+                            matches_dict.append({
+                                "id": str(uuid.uuid4()),
+                                "cup_id": cup.id,
+                                "league_id": None,
+                                "home_id": home,
+                                "away_id": away,
+                                "referee_id": referee.id,
+                                "matchday": None,
+                                "group_num": i + 1,
+                                "round_num": 1,
+                                "date": kickoff_datetime,
+                            })
+
+
+            session.bulk_insert_mappings(Matches, matches_dict)
+            session.commit()
+
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
     @classmethod
     def get_match_by_id(cls, id):
         session = DatabaseManager().get_session()
@@ -4368,6 +4455,15 @@ class Referees(Base):
         try:
             referee = session.query(Referees).filter(Referees.first_name == first_name, Referees.last_name == last_name).first()
             return referee
+        finally:
+            session.close()
+
+    @classmethod
+    def get_referees_by_nat(cls, planet):
+        session = DatabaseManager().get_session()
+        try:
+            referees = session.query(Referees).filter(Referees.nationality == planet).all()
+            return referees
         finally:
             session.close()
 

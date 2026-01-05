@@ -4064,6 +4064,15 @@ class Cup(Base):
             session.close()
 
     @classmethod
+    def get_cup_by_name(cls, name):
+        session = DatabaseManager().get_session()
+        try:
+            cup = session.query(Cup).filter(Cup.name == name).first()
+            return cup
+        finally:
+            session.close()
+
+    @classmethod
     def get_all_cups(cls):
         session = DatabaseManager().get_session()
         try:
@@ -5717,7 +5726,8 @@ class LeagueNews(Base):
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     news_type = Column(Enum("milestone", "injury", "big_win", "big_score", "transfer", "disciplinary", "lead_change", "planetary_change", "playoff_change", "relegation_change", "overthrow", "player_goals", "winless_form", "unbeaten_form"), nullable = False)
     date = Column(DateTime, nullable = False)
-    league_id = Column(String(128), ForeignKey('leagues.id'), nullable = False)
+    league_id = Column(String(128), ForeignKey('leagues.id'))
+    cup_id = Column(String(128), ForeignKey('cups.id'))
     matchday = Column(Integer)
     player_id = Column(String(128), ForeignKey('players.id'))
     match_id = Column(String(128), ForeignKey('matches.id'))
@@ -5754,6 +5764,18 @@ class LeagueNews(Base):
         session = DatabaseManager().get_session()
         try:
             news_entries = session.query(LeagueNews).filter(LeagueNews.league_id == league_id).all()
+
+            # Sort by date and return latest 10
+            news_entries = sorted(news_entries, key = lambda x: x.date, reverse = True)[:7]
+            return news_entries
+        finally:
+            session.close()
+
+    @classmethod
+    def get_news_for_cup(cls, cup_id):
+        session = DatabaseManager().get_session()
+        try:
+            news_entries = session.query(LeagueNews).filter(LeagueNews.cup_id == cup_id).all()
 
             # Sort by date and return latest 10
             news_entries = sorted(news_entries, key = lambda x: x.date, reverse = True)[:7]
@@ -7282,6 +7304,11 @@ def searchResults(search, search_limit = SEARCH_LIMIT, result_limit = RESULT_LIM
             return session.query(League).filter(
                 build_name_filter(League)
             ).limit(search_limit).all()
+    
+        def query_cups():
+            return session.query(Cup).filter(
+                build_name_filter(Cup)
+            ).limit(search_limit).all()
 
         def query_referees():
             return session.query(Referees).filter(
@@ -7301,6 +7328,7 @@ def searchResults(search, search_limit = SEARCH_LIMIT, result_limit = RESULT_LIM
                     executor.submit(query_managers): 'managers',
                     executor.submit(query_teams): 'teams',
                     executor.submit(query_leagues): 'leagues',
+                    executor.submit(query_cups): 'cups',
                     executor.submit(query_referees): 'referees',
                     executor.submit(query_matches): 'matches'
                 }
@@ -7351,6 +7379,12 @@ def searchResults(search, search_limit = SEARCH_LIMIT, result_limit = RESULT_LIM
                     "sort_key": l.name or ""
                 })
 
+        cup_results = [{
+            "type": "cup",
+            "data": c,
+            "sort_key": c.name or ""
+        } for c in query_results['cups']]
+
         referee_results = [{
             "type": "referee",
             "data": r, 
@@ -7369,7 +7403,7 @@ def searchResults(search, search_limit = SEARCH_LIMIT, result_limit = RESULT_LIM
 
         combined = (
             player_results + manager_results + team_results +
-            league_results + referee_results + match_results
+            league_results + cup_results + referee_results + match_results
         )
         combined.sort(key = lambda x: x["sort_key"].lower())
         return combined[:result_limit]

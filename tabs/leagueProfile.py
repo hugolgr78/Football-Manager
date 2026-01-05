@@ -149,7 +149,7 @@ class LeagueProfile(ctk.CTkFrame):
             if self.titles[self.activeButton] != "News":
                 self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, self.league)
             else:
-                self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, league_id = self.league.id)
+                self.tabs[self.activeButton] = globals()[self.classNames[self.activeButton].__name__](self, comp_id = self.league.id)
 
         self.tabs[self.activeButton].pack()
 

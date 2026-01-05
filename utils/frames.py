@@ -4025,20 +4025,20 @@ class ChoosingLeagueFrame(ctk.CTkFrame):
             self.endFunction()
 
 class News(ctk.CTkFrame):
-    def __init__(self, parent, league_id = None, team_id = None):
+    def __init__(self, parent, comp_id = None, team_id = None):
         """
         Class for displaying news in the league profile or the teams profile.
 
         Args:
             parent (ctk.CTkFrame): The parent frame.
-            league_id (str, optional): The ID of the league. Defaults to None.
+            comp_id (str, optional): The ID of the competition. Defaults to None.
             team_id (str, optional): The ID of the team. Defaults to None.
         """
         
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0)  
 
         self.parent = parent
-        self.league_id = league_id
+        self.comp_id = comp_id
         self.team_id = team_id
         self.hovering = False
         self.buttons = []
@@ -4061,7 +4061,7 @@ class News(ctk.CTkFrame):
         self.suspensions()
         self.transfers()
 
-        if self.league_id:
+        if self.comp_id and self.is_league and self.comp.current_matchday > 1:
             self.teamOTWFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 350, height = 140, corner_radius = 15)
             self.teamOTWFrame.place(relx = 0.98, rely = 0.75, anchor = "ne")
             self.team_of_the_week() 
@@ -4098,9 +4098,16 @@ class News(ctk.CTkFrame):
         self.canvas.image = photo  # keep a reference
 
         # Get news
-        if self.league_id:
-            self.news = LeagueNews.get_news_for_league(self.league_id)
-            self.league = League.get_league_by_id(self.league_id)
+        if self.comp_id:
+            
+            if League.get_league_by_id(self.comp_id):
+                self.news = LeagueNews.get_news_for_league(self.comp_id)
+                self.comp = League.get_league_by_id(self.comp_id)
+                self.is_league = True
+            else:
+                self.news = LeagueNews.get_news_for_cup(self.comp_id)
+                self.comp = Cup.get_cup_by_id(self.comp_id)
+                self.is_league = False
         else:
             self.news = LeagueNews.get_news_for_team(self.team_id)
 
@@ -4597,8 +4604,10 @@ class News(ctk.CTkFrame):
         ctk.CTkLabel(self.recordsFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.02, rely = 0.1, anchor = "w")
         ctk.CTkLabel(self.recordsFrame, text = "Records", text_color = "white", font = (APP_FONT_BOLD, 25)).place(relx = 0.1, rely = 0.105, anchor = "w")
 
-        if self.league_id:
+        if self.comp_id and self.is_league:
             ctk.CTkLabel(self.recordsFrame, text = "Discover all records from the league.", font = (APP_FONT, 17), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.5, anchor = "center")
+        elif self.comp_id and not self.is_league:
+            ctk.CTkLabel(self.recordsFrame, text = "Discover all records from the cup.", font = (APP_FONT, 17), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.5, anchor = "center")
         else:
             ctk.CTkLabel(self.recordsFrame, text = "Discover all records from the team.", font = (APP_FONT, 17), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.5, anchor = "center")
 
@@ -4620,8 +4629,10 @@ class News(ctk.CTkFrame):
         ctk.CTkLabel(self.injuriesFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
         ctk.CTkLabel(self.injuriesFrame, text = "Injuries", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
 
-        if self.league_id:
+        if self.comp_id and self.is_league:
             ctk.CTkLabel(self.injuriesFrame, text = "Find out which players are currently injured in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+        elif self.comp_id and not self.is_league:
+            ctk.CTkLabel(self.injuriesFrame, text = "Find out which players are currently injured in the cup.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
         else:
             ctk.CTkLabel(self.injuriesFrame, text = "Find out which players are currently injured in the team.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
 
@@ -4643,8 +4654,10 @@ class News(ctk.CTkFrame):
         ctk.CTkLabel(self.suspensionsFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
         ctk.CTkLabel(self.suspensionsFrame, text = "Suspensions", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
 
-        if self.league_id:
+        if self.comp_id and self.is_league:
             ctk.CTkLabel(self.suspensionsFrame, text = "Discover which players are currently suspended in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+        elif self.comp_id and not self.is_league:
+            ctk.CTkLabel(self.suspensionsFrame, text = "Discover which players are currently suspended in the cup.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
         else:
             ctk.CTkLabel(self.suspensionsFrame, text = "Discover which players are currently suspended in the team.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
 
@@ -4666,8 +4679,10 @@ class News(ctk.CTkFrame):
         ctk.CTkLabel(self.transfersFrame, image = img, text = "", fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.2, anchor = "w")
         ctk.CTkLabel(self.transfersFrame, text = "Transfers", text_color = "white", font = (APP_FONT_BOLD, 22)).place(relx = 0.15, rely = 0.2, anchor = "w")
 
-        if self.league_id:
+        if self.comp_id and self.is_league:
             ctk.CTkLabel(self.transfersFrame, text = "Find out about the latest transfers in the league.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
+        elif self.comp_id and not self.is_league:
+            ctk.CTkLabel(self.transfersFrame, text = "Find out about the latest transfers in the cup.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
         else:
             ctk.CTkLabel(self.transfersFrame, text = "Find out about the latest transfers in the team.", font = (APP_FONT, 14), wraplength = 300, text_color = ("gray80", "gray70")).place(relx = 0.5, rely = 0.6, anchor = "center")
 
@@ -4716,8 +4731,8 @@ class News(ctk.CTkFrame):
         backButton = ctk.CTkButton(headerFrame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeFrame(frame))
         backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
 
-        if self.league_id:
-            injuries = PlayerBans.get_injuries_comp(self.league_id)
+        if self.comp_id:
+            injuries = PlayerBans.get_injuries_comp(self.comp_id)
         else:
             injuries = PlayerBans.get_injuries_team(self.team_id)
 
@@ -4780,8 +4795,8 @@ class News(ctk.CTkFrame):
         backButton = ctk.CTkButton(headerFrame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeFrame(frame))
         backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
 
-        if self.league_id:
-            suspensions = PlayerBans.get_suspensions_league(self.league_id)
+        if self.comp_id:
+            suspensions = PlayerBans.get_suspensions_league(self.comp_id)
         else:
             suspensions = PlayerBans.get_suspensions_team(self.team_id)
 
@@ -4825,7 +4840,7 @@ class News(ctk.CTkFrame):
         for button in self.buttons:
             button.configure(state = "disabled")
 
-        self.currentFrameIndex = self.league.current_matchday - 2
+        self.currentFrameIndex = self.comp.current_matchday - 2
         self.teamFrames = [None] * (self.currentFrameIndex + 1)
 
         frame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 320, height = 550, corner_radius = 15, background_corner_colors = [GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND], border_width = 3, border_color = APP_BLUE)
@@ -4846,7 +4861,7 @@ class News(ctk.CTkFrame):
         backButton = ctk.CTkButton(frame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeFrame(frame))
         backButton.place(relx = 0.5, rely = 0.98, anchor = "s")
 
-        self.teamFrames[self.currentFrameIndex] = TeamOTW(frame, self.league_id, self.currentFrameIndex + 1)
+        self.teamFrames[self.currentFrameIndex] = TeamOTW(frame, self.comp_id, self.currentFrameIndex + 1)
         self.teamFrames[self.currentFrameIndex].place(relx = 0.5, rely = 0.1, anchor = "n")
 
         frame.place(relx = 0.5, rely = 0.5, anchor = "center")
@@ -4868,7 +4883,7 @@ class News(ctk.CTkFrame):
         self.currentFrameIndex = nextIndex
 
         if not self.teamFrames[nextIndex]:
-            self.teamFrames[nextIndex] = TeamOTW(frame, self.league_id, nextIndex + 1)
+            self.teamFrames[nextIndex] = TeamOTW(frame, self.comp_id, nextIndex + 1)
         
         self.teamFrames[nextIndex].place(relx = 0.5, rely = 0.1, anchor = "n")
         self.matchdayLabel.configure(text = f"Matchday {nextIndex + 1}")
@@ -4903,7 +4918,7 @@ class TeamOTW(ctk.CTkFrame):
         self.league_id = league_id
         self.matchday = matchday
 
-        self.team = League.team_of_the_week(self.league_id, self.matchday)[0]
+        self.team = League.team_of_the_week(self.league_id, self.matchday)[0]    
         self.pitch = FootballPitchTeamOTW(self, self.team, 300, 550, 0.5, 0.5, "center", GREY_BACKGROUND, "green")
 
 class DataPolygon(ctk.CTkCanvas):

@@ -126,6 +126,11 @@ class Search(ctk.CTkFrame):
                     ctk.CTkLabel(resultFrame, text = "League", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
 
                     onClickCommand = self.openLeagueProfile
+                case "cup":
+                    ctk.CTkLabel(resultFrame, text = f"{resultData.name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = firstDataX, rely = 0.5, anchor = "w")
+                    ctk.CTkLabel(resultFrame, text = "Cup", font = (APP_FONT, 16), text_color = GREY, fg_color = TKINTER_BACKGROUND).place(relx = secondDataX, rely = 0.5, anchor = "w")
+
+                    onClickCommand = self.openCupProfile
                 case "referee":
                     league = League.get_league_by_id(resultData.league_id)
                     ctk.CTkLabel(resultFrame, text = f"{resultData.first_name} {resultData.last_name}", font = (APP_FONT_BOLD, 18), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = firstDataX, rely = 0.5, anchor = "w")
@@ -256,6 +261,20 @@ class Search(ctk.CTkFrame):
             append_overlapping_profile(self, self.profile)
         else:
             self.parent.changeTab(6)
+
+    def openCupProfile(self, cup_id):
+        """
+        Open the cup profile for the specified cup ID.
+        
+        Args:
+            cup_id (str): The ID of the cup to open the profile for.
+        """
+        
+        from tabs.cupProfile import CupProfile
+
+        self.profile = CupProfile(self, cup_id = cup_id, changeBackFunction = self.changeBack)
+        self.profile.place(x = 0, y = 0, anchor = "nw")
+        append_overlapping_profile(self, self.profile)
 
     def openRefereeProfile(self, referee_id):
         """

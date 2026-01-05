@@ -864,6 +864,8 @@ for planet, cup_name in cup_names.items():
         "logo": cup_logo_path,
         "groups": 10,
         "teams_per_group": 4,
+        "promoted_per_group": 2,
+        "next_best_playoff": 4,
         "knockout_rounds": 6,
         "games_per_knockout": 1,
         "planet": planet

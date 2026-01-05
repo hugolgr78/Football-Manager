@@ -1757,7 +1757,7 @@ class LeagueTable(ctk.CTkFrame):
                     canvas.grid(row = i + 1, column = 0)
 
                 ctk.CTkLabel(self, text = i + 1, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 1, sticky = "w")
-                ctk.CTkLabel(self, image = ctk_team_image, text = "", fg_color = self.fgColor).grid(row = i + 1, column = 2, sticky = "w")
+                ctk.CTkLabel(self, image = ctk_team_image, text = "", fg_color = self.fgColor).grid(row = i + 1, column = 2)
                 ctk.CTkLabel(self, text = teamData.name, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 3, sticky = "w")
                 
                 ctk.CTkLabel(self, text = team.games_won + team.games_lost + team.games_drawn, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 4)
@@ -3861,6 +3861,7 @@ class InGameStatFrame(ctk.CTkFrame):
             self.valueLabel.configure(fg_color = "white", text_color = "black")
         else:
             self.valueLabel.configure(fg_color = self.fgColor, text_color = "white")
+
 class ChoosingLeagueFrame(ctk.CTkFrame):
     def __init__(self, parent, fgColor, width, height, corner_radius, border_width, border_color, endFunction, settings = False):
         """
@@ -5092,7 +5093,7 @@ class DataPolygon(ctk.CTkCanvas):
         self.draw_chart(self.labels, self.values, "#1E40AF")
 
 class LiveTableFrame(ctk.CTkScrollableFrame):
-    def __init__(self, paremt, league_id, teamID, playingTeams, fgColor, width, height):
+    def __init__(self, parent, league_id, teamID, playingTeams, fgColor, width, height):
         """
         Class for displaying a live league table during a game.
         
@@ -5106,7 +5107,7 @@ class LiveTableFrame(ctk.CTkScrollableFrame):
             height (int): The height of the frame.
         """
 
-        super().__init__(paremt, fg_color = fgColor, width = width, height = height, corner_radius = 15)
+        super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 15)
         self.league_id = league_id
         self.teamID = teamID
         self.playingTeams = playingTeams
@@ -5259,3 +5260,233 @@ class LiveTableFrame(ctk.CTkScrollableFrame):
 
             for widget in row.values():
                 widget.grid_configure(row = i + 1)
+
+class StatsFrame(ctk.CTkFrame):
+    def __init__(self, parent, comp_id, width, height, fgColor, relx, rely, anchor):
+        """
+        Class for displaying the stats of a competition on its profile
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            comp_id (int): The competition ID.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            fg_color (str): The foreground color.
+            relx (float): The relative x position.
+            rely (float): The relative y position.
+            anchor (str): The anchor position.
+        """
+
+        super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 15)
+        self.place(relx = relx, rely = rely, anchor = anchor)
+        self.pack_propagate(False)
+        
+        self.parent = parent
+        self.comp_id = comp_id
+
+        titleFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 310, height = 30, corner_radius = 15)
+        titleFrame.pack(pady = 5, padx = 5)
+        ctk.CTkLabel(titleFrame, text = "Player Stats", font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.55, anchor = "center")
+
+        self.playerStatsFrame = ctk.CTkScrollableFrame(self, fg_color = GREY_BACKGROUND, width = 290, height = 400, corner_radius = 15)
+        self.playerStatsFrame.pack(pady = 5, padx = 5)
+
+        self.addStats()
+
+    def addStats(self):
+        """
+        Adds player statistics to the stats frame.
+        """
+        
+        self.topScorers = MatchEvents.get_all_goals(self.comp_id)
+        self.topAssisters = MatchEvents.get_all_assists(self.comp_id)
+        self.topCleanSheets = MatchEvents.get_all_clean_sheets(self.comp_id)
+        self.mostYellowCards = MatchEvents.get_all_yellow_cards(self.comp_id)
+        self.bestAverageRatings = TeamLineup.get_all_average_ratings(self.comp_id)
+    
+        self.stats = [self.topScorers, self.topAssisters, self.topCleanSheets, self.mostYellowCards, self.bestAverageRatings]
+        self.statNames = ["Top Scorer", "Top Assister", "Most Clean Sheets", "Most Yellow Cards", "Best Average Rating"] + PLAYER_STATS
+
+        for stat in PLAYER_STATS:
+            self.stats.append(MatchStats.get_all_players_for_stat(self.comp_id, stat))
+
+        expandedImage = Image.open("Images/expand.png")
+        expandedImage.thumbnail((30, 30))
+        self.expandEnabled = ctk.CTkImage(expandedImage, None, (expandedImage.width, expandedImage.height))
+
+        for stat, statName in zip(self.stats, self.statNames):
+
+            frame = ctk.CTkFrame(self.playerStatsFrame, fg_color = GREY_BACKGROUND, width = 280, height = 75, corner_radius = 15)
+            frame.pack(pady = 5, padx = 5)
+
+            expandButton = ctk.CTkButton(frame, text = "", image = self.expandEnabled, fg_color = GREY_BACKGROUND, corner_radius = 0, height = 30, width = 30, hover_color = GREY_BACKGROUND)
+            expandButton.place(relx = 0.98, rely = 0.7, anchor = "e")
+
+            if not stat:
+                stat = [(0, "N/A", "N/A", 0)]
+                expandButton.configure(image = None, state = "disabled")
+            else:
+                stat = [entry for entry in stat if entry[3] > 0][:20]
+                expandButton.configure(command = lambda stat = stat, statName = statName: self.expandStats(stat, statName)) 
+
+            ctk.CTkLabel(frame, text = statName, font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.15, anchor = "w")
+
+            if stat[0][0] == 0:
+                ctk.CTkLabel(frame, text = "N/A", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.7, anchor = "w")
+            else:
+                player = Players.get_player_by_id(stat[0][0])
+                PlayerProfileLink(frame, player, f"{stat[0][1]} {stat[0][2]}", "white", 0.05, 0.7, "w", GREY_BACKGROUND, self.parent)
+
+            ctk.CTkLabel(frame, text = round(stat[0][3], 2), font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.75, rely = 0.7, anchor = "center")
+
+    def expandStats(self, stats, statName):
+        """
+        Expands the statistics view to show detailed player stats.
+        
+        Args:
+            stats (list): List of player statistics to display.
+            statName (str): The name of the statistic being displayed.
+        """
+        
+        for frame in self.statsFrame.winfo_children(): 
+            for widget in frame.winfo_children():
+                if isinstance(widget, ctk.CTkButton):
+                    widget.configure(state = "disabled")
+
+        frame = ctk.CTkFrame(self.parent, fg_color = GREY_BACKGROUND, width = 500, height = 320, corner_radius = 15, background_corner_colors = [GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND], border_width = 3, border_color = APP_BLUE)
+
+        headerFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 485, height = 50, corner_radius = 15)
+        headerFrame.pack(pady = 10, padx = 5)
+
+        ctk.CTkLabel(headerFrame, text = statName, font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+        backButton = ctk.CTkButton(headerFrame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeStats(frame))
+        backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
+                         
+        if len(stats) <= 5:
+            statsFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
+            statsFrame.pack(pady = 10, padx = 5)
+
+            statsFrame.pack_propagate(False)
+        else:
+            statsFrame = ctk.CTkScrollableFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
+            statsFrame.pack(pady = 10, padx = 5)
+
+        for stat in stats:
+            player_id = stat[0]
+            player_name = f"{stat[1]} {stat[2]}"
+            stat_value = stat[3]
+
+            player_frame = ctk.CTkFrame(statsFrame, fg_color = GREY_BACKGROUND, width = 450, height = 40)
+            player_frame.pack(pady = 5, padx = 5)
+
+            src = Image.open("Images/default_user.png")
+            src.thumbnail((30, 30))
+            img = ctk.CTkImage(src, None, (src.width, src.height))
+            ctk.CTkLabel(player_frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
+
+            player = Players.get_player_by_id(player_id)
+            PlayerProfileLink(player_frame, player, player_name, "white", 0.2, 0.5, "w", GREY_BACKGROUND, self.parent)
+
+            ctk.CTkLabel(player_frame, text = round(stat_value, 2), font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
+
+        frame.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+    def closeStats(self, frame):
+        """
+        Closes the expanded statistics view.
+
+        Args:
+            frame (ctk.CTkFrame): The frame to close.  
+        """
+        
+        frame.destroy()
+
+        for frame in self.statsFrame.winfo_children():
+            for widget in frame.winfo_children():
+                if isinstance(widget, ctk.CTkButton):
+                    widget.configure(state = "enabled")
+
+class CupGroupFrame(ctk.CTkFrame):
+    def __init__(self, parent, cup, group_data, fgColor, width, height, user_manager, promoted = None):
+        """
+        Class for displaying the stats of a competition on its profile
+        
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            cup (Cup): The cup object.
+            group_data (list): The cup group data.
+            fg_color (str): The foreground color.
+            width (int): The width of the frame.
+            height (int): The height of the frame.
+            user_manager (str): The user manager ID.
+            promoted (int): Number of promoted teams.
+        """
+
+        super().__init__(parent, fg_color = fgColor, width = width, height = height, corner_radius = 10)
+        self.grid_propagate(False)
+
+        self.cup = cup
+        self.group_data = group_data
+        self.fgColor = fgColor
+        self.height = height
+        self.textColor = "white"
+
+        for i in range(self.cup.teams_per_group + 1):
+            self.grid_rowconfigure(i, weight = 1)
+
+        self.grid_columnconfigure((0, 3, 4, 5), weight = 1)
+        self.grid_columnconfigure(1, weight = 1)
+        self.grid_columnconfigure(2, weight = 1)
+        self.grid_columnconfigure(3, weight = 3)
+        self.grid_columnconfigure((4, 5, 6, 7, 8, 9, 10, 11), weight = 1)
+        self.grid_propagate(False)
+
+        ctk.CTkLabel(self, text = "W", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 5, pady = (5, 0))
+        ctk.CTkLabel(self, text = "D", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 6, pady = (5, 0))
+        ctk.CTkLabel(self, text = "L", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 7, pady = (5, 0))
+        ctk.CTkLabel(self, text = "GF", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 8, pady = (5, 0))
+        ctk.CTkLabel(self, text = "GA", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 9, pady = (5, 0))
+        ctk.CTkLabel(self, text = "GD", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 10, pady = (5, 0))
+        ctk.CTkLabel(self, text = "P", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5, width = 5).grid(row = 0, column = 11, pady = (5, 0))
+
+        ctk.CTkLabel(self, text = "#", fg_color = self.fgColor, text_color = self.textColor, height = 5).grid(row = 0, column = 1, sticky = "w", pady = (10, 5))
+        ctk.CTkLabel(self, text = "Team", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 3, sticky = "w", pady = (5, 0))
+        ctk.CTkLabel(self, text = "GP", fg_color = self.fgColor, text_color = self.textColor, font = (APP_FONT_BOLD, 12), height = 5).grid(row = 0, column = 4, pady = (5, 0))
+
+
+        for i, team in enumerate(self.group_data):
+            teamData = Teams.get_team_by_id(team.team_id)
+            team_image = Image.open(io.BytesIO(teamData.logo))
+            team_image.thumbnail((15, 15))
+            ctk_team_image = ctk.CTkImage(team_image, None, (team_image.width, team_image.height))
+
+            if teamData.manager_id == user_manager:
+                font = (APP_FONT_BOLD, 12)
+            else:
+                font = (APP_FONT, 12)
+
+            ctk.CTkLabel(self, text = i + 1, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 1, sticky = "w")
+            ctk.CTkLabel(self, image = ctk_team_image, text = "", fg_color = self.fgColor).grid(row = i + 1, column = 2)
+            ctk.CTkLabel(self, text = teamData.name, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 3, sticky = "w")
+            
+            ctk.CTkLabel(self, text = team.games_won + team.games_lost + team.games_drawn, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 4)
+            ctk.CTkLabel(self, text = team.games_won, fg_color = self.fgColor, text_color = self.textColor, height = 5, font = font).grid(row = i + 1, column = 5)
+            ctk.CTkLabel(self, text = team.games_drawn, fg_color = self.fgColor, text_color = self.textColor, height = 5, font = font).grid(row = i + 1, column = 6)
+            ctk.CTkLabel(self, text = team.games_lost, fg_color = self.fgColor, text_color = self.textColor, height = 5, font = font).grid(row = i + 1, column = 7)
+            ctk.CTkLabel(self, text = team.goals_scored, fg_color = self.fgColor, text_color = self.textColor, height = 5, font = font).grid(row = i + 1, column = 8)
+            ctk.CTkLabel(self, text = team.goals_conceded, fg_color = self.fgColor, text_color = self.textColor, height = 5, font = font).grid(row = i + 1, column = 9)
+            ctk.CTkLabel(self, text = team.goals_scored - team.goals_conceded, fg_color = self.fgColor, text_color = self.textColor, height = 5, font = font).grid(row = i + 1, column = 10)
+            ctk.CTkLabel(self, text = team.points, fg_color = self.fgColor, text_color = self.textColor, height = 5, font = font).grid(row = i + 1, column = 11)
+
+            if promoted is None:
+                if i < self.cup.promoted_per_group:
+                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 20, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
+                    canvas.grid(row = i + 1, column = 0, sticky = "w")
+                if i == self.cup.promoted_per_group and self.cup.next_best_playoff != 0:
+                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 20, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
+                    canvas.grid(row = i + 1, column = 0, sticky = "w")
+            else:
+                if i < promoted:
+                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 20, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
+                    canvas.grid(row = i + 1, column = 0, sticky = "w")

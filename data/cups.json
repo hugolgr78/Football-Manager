@@ -4,6 +4,8 @@
         "logo": "Images/Cups\\Cryon_Cup.png",
         "groups": 10,
         "teams_per_group": 4,
+        "promoted_per_group": 2,
+        "next_best_playoff": 4,
         "knockout_rounds": 6,
         "games_per_knockout": 1,
         "planet": "Cryon"
@@ -13,6 +15,8 @@
         "logo": "Images/Cups\\Vorlis_Shield.png",
         "groups": 10,
         "teams_per_group": 4,
+        "promoted_per_group": 2,
+        "next_best_playoff": 4,
         "knockout_rounds": 6,
         "games_per_knockout": 1,
         "planet": "Vorlis"
@@ -22,6 +26,8 @@
         "logo": "Images/Cups\\Zephyra_Trophy.png",
         "groups": 10,
         "teams_per_group": 4,
+        "promoted_per_group": 2,
+        "next_best_playoff": 4,
         "knockout_rounds": 6,
         "games_per_knockout": 1,
         "planet": "Zephyra"
@@ -31,6 +37,8 @@
         "logo": "Images/Cups\\Tauron_Cup.png",
         "groups": 10,
         "teams_per_group": 4,
+        "promoted_per_group": 2,
+        "next_best_playoff": 4,
         "knockout_rounds": 6,
         "games_per_knockout": 1,
         "planet": "Tauron"
@@ -40,6 +48,8 @@
         "logo": "Images/Cups\\Nerathoul_League_Cup.png",
         "groups": 10,
         "teams_per_group": 4,
+        "promoted_per_group": 2,
+        "next_best_playoff": 4,
         "knockout_rounds": 6,
         "games_per_knockout": 1,
         "planet": "Nerath"
@@ -49,6 +59,8 @@
         "logo": "Images/Cups\\Ecliptis_Cup.png",
         "groups": 10,
         "teams_per_group": 4,
+        "promoted_per_group": 2,
+        "next_best_playoff": 4,
         "knockout_rounds": 6,
         "games_per_knockout": 1,
         "planet": "Ecliptis"
@@ -58,6 +70,8 @@
         "logo": "Images/Cups\\Lyraxis_Super_Cup.png",
         "groups": 10,
         "teams_per_group": 4,
+        "promoted_per_group": 2,
+        "next_best_playoff": 4,
         "knockout_rounds": 6,
         "games_per_knockout": 1,
         "planet": "Lyra"
@@ -67,6 +81,8 @@
         "logo": "Images/Cups\\Solarion_Challenge.png",
         "groups": 10,
         "teams_per_group": 4,
+        "promoted_per_group": 2,
+        "next_best_playoff": 4,
         "knockout_rounds": 6,
         "games_per_knockout": 1,
         "planet": "Solara"

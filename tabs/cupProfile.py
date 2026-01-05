@@ -4,7 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 from PIL import Image, ImageDraw
 import io
-from utils.frames import LeagueTable, MatchdayFrame, News
+from utils.frames import LeagueTable, MatchdayFrame, News, StatsFrame, CupGroupFrame
 from utils.playerProfileLink import PlayerProfileLink
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
@@ -78,13 +78,13 @@ class CupProfile(ctk.CTkFrame):
 
         # self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 30, corner_radius = 0, background_corner_colors = [TKINTER_BACKGROUND, TKINTER_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND])
 
-        src = Image.open("Images/information.png")
-        src.thumbnail((20, 20))
-        img = ctk.CTkImage(src, None, (src.width, src.height))
-        self.helpButton = ctk.CTkButton(self.tabsFrame, text = "", image = img, fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, corner_radius = 5, height = 30, width = 30)
-        self.helpButton.place(relx = 0.975, rely = 0, anchor = "ne")
-        self.helpButton.bind("<Enter>", lambda e: self.showLegend(e))
-        self.helpButton.bind("<Leave>", lambda e: self.legendFrame.place_forget())
+        # src = Image.open("Images/information.png")
+        # src.thumbnail((20, 20))
+        # img = ctk.CTkImage(src, None, (src.width, src.height))
+        # self.helpButton = ctk.CTkButton(self.tabsFrame, text = "", image = img, fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, corner_radius = 5, height = 30, width = 30)
+        # self.helpButton.place(relx = 0.975, rely = 0, anchor = "ne")
+        # self.helpButton.bind("<Enter>", lambda e: self.showLegend(e))
+        # self.helpButton.bind("<Leave>", lambda e: self.legendFrame.place_forget())
 
         # self.legend()
 
@@ -137,11 +137,11 @@ class CupProfile(ctk.CTkFrame):
 class Profile(ctk.CTkFrame):
     def __init__(self, parent, cup):
         """
-        Class for displaying league history in the league profile.
+        Class for displaying the cup profile information.
 
         Args:
             parent (ctk.CTk): The parent widget (leagueProfile).
-            league (League): The league object containing history information.
+            cup (Cup): The cup object.
         """
         
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
@@ -149,14 +149,36 @@ class Profile(ctk.CTkFrame):
         self.parent = parent
         self.cup = cup
 
+        src = Image.open(io.BytesIO(self.cup.logo))
+        src.thumbnail((100, 100))
+        self.logo = ctk.CTkImage(src, None, (src.width, src.height))
+        ctk.CTkLabel(self, image = self.logo, text = "", fg_color = TKINTER_BACKGROUND).place(relx = 0.08, rely = 0.1, anchor = "center")
+
+        ctk.CTkLabel(self, text = f"{self.cup.name} - {self.cup.year}", font = (APP_FONT_BOLD, 30), fg_color = TKINTER_BACKGROUND).place(relx = 0.15, rely = 0.1, anchor = "w")
+
+        self.statsFrame = StatsFrame(self, self.cup.id, 310, 480, GREY_BACKGROUND, 0.64, 0.2, "nw")
+
+        self.groupsFrame = ctk.CTkScrollableFrame(self, fg_color = GREY_BACKGROUND, width = 580, height = 450, corner_radius = 15)
+        self.groupsFrame.place(relx = 0.03, rely = 0.2, anchor = "nw")
+        self.groupData = CupTeams.get_group_data_cup(self.cup.id, next_best = True)
+
+        for group_key, group_teams in self.groupData.items():
+
+            if group_key == "next_best":
+                groupFrame = CupGroupFrame(self.groupsFrame, self.cup, group_teams, GREY_BACKGROUND, 550, 200, Managers.get_all_user_managers()[0].id, promoted = self.cup.next_best_playoff)
+            else:
+                groupFrame = CupGroupFrame(self.groupsFrame, self.cup, group_teams, GREY_BACKGROUND, 550, 100, Managers.get_all_user_managers()[0].id)
+    
+            groupFrame.pack(pady = 10, padx = 10)
+
 class Matchdays(ctk.CTkFrame):
     def __init__(self, parent, cup):
         """
-        Class for displaying league history in the league profile.
+        Class for displaying matchdays in the cup profile.
 
         Args:
             parent (ctk.CTk): The parent widget (leagueProfile).
-            league (League): The league object containing history information.
+            cup (Cup): The cup object.
         """
         
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
@@ -167,11 +189,11 @@ class Matchdays(ctk.CTkFrame):
 class Stages(ctk.CTkFrame):
     def __init__(self, parent, cup):
         """
-        Class for displaying league history in the league profile.
+        Class for displaying the cup stages in the cup profile.
 
         Args:
-            parent (ctk.CTk): The parent widget (leagueProfile).
-            league (League): The league object containing history information.
+            parent (ctk.CTk): The parent widget (cupProfile).
+            cup (Cup): The cup object.
         """
         
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
@@ -182,11 +204,11 @@ class Stages(ctk.CTkFrame):
 class Stats(ctk.CTkFrame):
     def __init__(self, parent, cup):
         """
-        Class for displaying league history in the league profile.
+        Class for displaying statistics in the cup profile.
 
         Args:
             parent (ctk.CTk): The parent widget (leagueProfile).
-            league (League): The league object containing history information.
+            cup (Cup): The cup object.
         """
         
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
@@ -197,11 +219,11 @@ class Stats(ctk.CTkFrame):
 class History(ctk.CTkScrollableFrame):
     def __init__(self, parent, cup):
         """
-        Class for displaying league history in the league profile.
+        Class for displaying cup history in the cup profile.
 
         Args:
-            parent (ctk.CTk): The parent widget (leagueProfile).
-            league (League): The league object containing history information.
+            parent (ctk.CTk): The parent widget (cupProfile).
+            cup (Cup): The cup object.
         """
         
         super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 965, height = 630, corner_radius = 0) 

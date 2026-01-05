@@ -4,7 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 from PIL import Image, ImageDraw
 import io
-from utils.frames import LeagueTable, MatchdayFrame, News
+from utils.frames import LeagueTable, MatchdayFrame, News, StatsFrame
 from utils.playerProfileLink import PlayerProfileLink
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
@@ -219,16 +219,7 @@ class Profile(ctk.CTkFrame):
 
         self.tableFrame.addLeagueTable()
 
-        self.statsFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 310, height = 480, corner_radius = 15)
-        self.statsFrame.place(relx = 0.64, rely = 0.2, anchor = "nw")
-        self.pack_propagate(False)
-
-        titleFrame = ctk.CTkFrame(self.statsFrame, fg_color = GREY_BACKGROUND, width = 310, height = 30, corner_radius = 15)
-        titleFrame.pack(pady = 5, padx = 5)
-        ctk.CTkLabel(titleFrame, text = "Player Stats", font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.5, rely = 0.55, anchor = "center")
-
-        self.playerStatsFrame = ctk.CTkScrollableFrame(self.statsFrame, fg_color = GREY_BACKGROUND, width = 290, height = 400, corner_radius = 15)
-        self.playerStatsFrame.pack(pady = 5, padx = 5)
+        self.statsFrame = StatsFrame(self, self.league.id, 310, 480, GREY_BACKGROUND, 0.64, 0.2, "nw")
 
         if self.parent.leagueAbove or self.parent.leagueBelow and League.get_league_state(self.league.league_below):
             self.upLeagueButton = ctk.CTkButton(self, width = 50, height = 50, text = "⯅", text_color = "white", font = (APP_FONT_BOLD, 30), fg_color = GREY_BACKGROUND, command = lambda: self.loadleague(self.league.league_above))
@@ -243,8 +234,6 @@ class Profile(ctk.CTkFrame):
             if not self.parent.leagueBelow or not League.get_league_state(self.league.league_below):
                 self.downLeagueButton.configure(state = "disabled")
 
-        self.addStats()
-
     def loadleague(self, league_id):
         """
         Loads the league profile for the specified league ID.
@@ -256,120 +245,6 @@ class Profile(ctk.CTkFrame):
         profile = LeagueProfile(self.parent, league_id, getattr(self.parent, 'changeBackFunction', None), getattr(self.parent, 'userLeagueProfile', None))
         profile.place(relx = 0, rely = 0, anchor = "nw")
         append_overlapping_profile(self.parent, profile)
-
-    def addStats(self):
-        """
-        Adds player statistics to the stats frame.
-        """
-        
-        self.topScorers = MatchEvents.get_all_goals(self.league.id)
-        self.topAssisters = MatchEvents.get_all_assists(self.league.id)
-        self.topCleanSheets = MatchEvents.get_all_clean_sheets(self.league.id)
-        self.mostYellowCards = MatchEvents.get_all_yellow_cards(self.league.id)
-        self.bestAverageRatings = TeamLineup.get_all_average_ratings(self.league.id)
-    
-        self.stats = [self.topScorers, self.topAssisters, self.topCleanSheets, self.mostYellowCards, self.bestAverageRatings]
-        self.statNames = ["Top Scorer", "Top Assister", "Most Clean Sheets", "Most Yellow Cards", "Best Average Rating"] + PLAYER_STATS
-
-        for stat in PLAYER_STATS:
-            self.stats.append(MatchStats.get_all_players_for_stat(self.league.id, stat))
-
-        expandedImage = Image.open("Images/expand.png")
-        expandedImage.thumbnail((30, 30))
-        self.expandEnabled = ctk.CTkImage(expandedImage, None, (expandedImage.width, expandedImage.height))
-
-        for stat, statName in zip(self.stats, self.statNames):
-
-            frame = ctk.CTkFrame(self.playerStatsFrame, fg_color = GREY_BACKGROUND, width = 280, height = 75, corner_radius = 15)
-            frame.pack(pady = 5, padx = 5)
-
-            expandButton = ctk.CTkButton(frame, text = "", image = self.expandEnabled, fg_color = GREY_BACKGROUND, corner_radius = 0, height = 30, width = 30, hover_color = GREY_BACKGROUND)
-            expandButton.place(relx = 0.98, rely = 0.7, anchor = "e")
-
-            if not stat:
-                stat = [(0, "N/A", "N/A", 0)]
-                expandButton.configure(image = None, state = "disabled")
-            else:
-                stat = [entry for entry in stat if entry[3] > 0][:20]
-                expandButton.configure(command = lambda stat = stat, statName = statName: self.expandStats(stat, statName)) 
-
-            ctk.CTkLabel(frame, text = statName, font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.15, anchor = "w")
-
-            if stat[0][0] == 0:
-                ctk.CTkLabel(frame, text = "N/A", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.7, anchor = "w")
-            else:
-                player = Players.get_player_by_id(stat[0][0])
-                PlayerProfileLink(frame, player, f"{stat[0][1]} {stat[0][2]}", "white", 0.05, 0.7, "w", GREY_BACKGROUND, self.parent)
-
-            ctk.CTkLabel(frame, text = round(stat[0][3], 2), font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.75, rely = 0.7, anchor = "center")
-
-    def expandStats(self, stats, statName):
-        """
-        Expands the statistics view to show detailed player stats.
-        
-        Args:
-            stats (list): List of player statistics to display.
-            statName (str): The name of the statistic being displayed.
-        """
-        
-        for frame in self.statsFrame.winfo_children(): 
-            for widget in frame.winfo_children():
-                if isinstance(widget, ctk.CTkButton):
-                    widget.configure(state = "disabled")
-
-        frame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 500, height = 320, corner_radius = 15, background_corner_colors = [GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND], border_width = 3, border_color = APP_BLUE)
-
-        headerFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 485, height = 50, corner_radius = 15)
-        headerFrame.pack(pady = 10, padx = 5)
-
-        ctk.CTkLabel(headerFrame, text = statName, font = (APP_FONT_BOLD, 25), fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
-
-        backButton = ctk.CTkButton(headerFrame, text = "Back", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, hover_color = CLOSE_RED, corner_radius = 5, height = 20, width = 20, command = lambda: self.closeStats(frame))
-        backButton.place(relx = 0.95, rely = 0.5, anchor = "e")
-                         
-        if len(stats) <= 5:
-            statsFrame = ctk.CTkFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
-            statsFrame.pack(pady = 10, padx = 5)
-
-            statsFrame.pack_propagate(False)
-        else:
-            statsFrame = ctk.CTkScrollableFrame(frame, fg_color = GREY_BACKGROUND, width = 475, height = 240, corner_radius = 15)
-            statsFrame.pack(pady = 10, padx = 5)
-
-        for stat in stats:
-            player_id = stat[0]
-            player_name = f"{stat[1]} {stat[2]}"
-            stat_value = stat[3]
-
-            player_frame = ctk.CTkFrame(statsFrame, fg_color = GREY_BACKGROUND, width = 450, height = 40)
-            player_frame.pack(pady = 5, padx = 5)
-
-            src = Image.open("Images/default_user.png")
-            src.thumbnail((30, 30))
-            img = ctk.CTkImage(src, None, (src.width, src.height))
-            ctk.CTkLabel(player_frame, text = "", image = img, fg_color = GREY_BACKGROUND).place(relx = 0.05, rely = 0.5, anchor = "w")
-
-            player = Players.get_player_by_id(player_id)
-            PlayerProfileLink(player_frame, player, player_name, "white", 0.2, 0.5, "w", GREY_BACKGROUND, self.parent)
-
-            ctk.CTkLabel(player_frame, text = round(stat_value, 2), font = (APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.9, rely = 0.5, anchor = "center")
-
-        frame.place(relx = 0.5, rely = 0.5, anchor = "center")
-
-    def closeStats(self, frame):
-        """
-        Closes the expanded statistics view.
-
-        Args:
-            frame (ctk.CTkFrame): The frame to close.  
-        """
-        
-        frame.destroy()
-
-        for frame in self.statsFrame.winfo_children():
-            for widget in frame.winfo_children():
-                if isinstance(widget, ctk.CTkButton):
-                    widget.configure(state = "enabled")
 
 class Matchdays(ctk.CTkFrame):
     def __init__(self, parent, league):

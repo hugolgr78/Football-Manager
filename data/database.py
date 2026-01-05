@@ -238,11 +238,11 @@ class Managers(Base):
             LeagueTeams.add_league_teams(names_id_mapping, leagues)
 
             cups = Cup.get_all_cups()
-            CupTeams.add_cup_teams(names_id_mapping, cups)
             updateProgress(4)
             Referees.add_referees(leagues, flags)
             Matches.add_all_league_matches(leagues)
             Matches.add_all_cup_matches(cups)
+            CupTeams.add_cup_teams(names_id_mapping, cups)
 
             updateProgress(2)
             Players.add_players(flags)
@@ -4014,6 +4014,8 @@ class Cup(Base):
     logo = Column(BLOB)
     groups = Column(Integer, nullable = False)
     teams_per_group = Column(Integer, nullable = False)
+    promoted_per_group = Column(Integer, nullable = False, default = 0)
+    next_best_playoff = Column(Integer, nullable = False, default = 0)
     knockout_rounds = Column(Integer, nullable = False)
     games_per_knockout = Column(Integer, nullable = False)
     planet = Column(String(64), nullable = False, default = "Earth")
@@ -4039,6 +4041,8 @@ class Cup(Base):
                     "logo": logo,
                     "groups": cup["groups"],
                     "teams_per_group": cup["teams_per_group"],
+                    "promoted_per_group": cup["promoted_per_group"],
+                    "next_best_playoff": cup["next_best_playoff"],
                     "knockout_rounds": cup["knockout_rounds"],
                     "games_per_knockout": cup["games_per_knockout"],
                     "planet": cup["planet"]
@@ -4333,8 +4337,14 @@ class CupTeams(Base):
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
     cup_id = Column(String(128), ForeignKey('cups.id'))
     team_id = Column(String(128), ForeignKey('teams.id'))
+    position = Column(Integer)
+    points = Column(Integer, nullable = False, default = 0)
+    games_won = Column(Integer, nullable = False, default = 0)
+    games_drawn = Column(Integer, nullable = False, default = 0)
+    games_lost = Column(Integer, nullable = False, default = 0)
     goals_scored = Column(Integer, nullable = False, default = 0)
     goals_conceded = Column(Integer, nullable = False, default = 0)
+    group_num = Column(Integer)
 
     @classmethod
     def add_cup_teams(cls, names_ids_mapping, cups):
@@ -4349,12 +4359,31 @@ class CupTeams(Base):
                 teams = get_all_planet_teams(data, cup.planet)
                 teams.sort(key = lambda x: x["name"])
 
+                group_positions = {1: 1, 2:1, 3:1, 4:1, 5:1, 6:1, 7:1, 8:1, 9:1, 10:1}
+
                 for team in teams:
-                    cup_teams_dict.append({
-                        "id": str(uuid.uuid4()),
-                        "cup_id": cup.id,
-                        "team_id": names_ids_mapping[team["name"]],
-                    })
+                    matches = Matches.get_all_matches_by_team_and_comp(names_ids_mapping[team["name"]], cup.id)
+
+                    if not matches:
+                        cup_teams_dict.append({
+                            "id": str(uuid.uuid4()),
+                            "cup_id": cup.id,
+                            "team_id": names_ids_mapping[team["name"]],
+                            "group_num": None,
+                            "position": None,
+                        })
+                    else:
+                        group_num = matches[0].group_num
+                        position = group_positions[group_num]
+                        group_positions[group_num] += 1
+
+                        cup_teams_dict.append({
+                            "id": str(uuid.uuid4()),
+                            "cup_id": cup.id,
+                            "team_id": names_ids_mapping[team["name"]],
+                            "group_num": group_num,
+                            "position": position,
+                        })
 
                 updateProgress(None)
 
@@ -4400,6 +4429,85 @@ class CupTeams(Base):
         try:
             cup = session.query(CupTeams).filter(CupTeams.team_id == team_id).first()
             return cup
+        finally:
+            session.close()
+
+    @classmethod
+    def get_group_data_cup(cls, cup_id, next_best = False):
+        session = DatabaseManager().get_session()
+        try:
+            teams = (
+                session.query(CupTeams)
+                .filter(
+                    CupTeams.cup_id == cup_id,
+                    CupTeams.group_num.isnot(None),
+                    CupTeams.position.isnot(None)
+                )
+                .all()
+            )
+
+            group_data = {}
+
+            for team in teams:
+                if team.group_num not in group_data:
+                    group_data[team.group_num] = []
+                group_data[team.group_num].append(team)
+
+            # sort each group using your ordering
+            for _, teams in group_data.items():
+                teams.sort(key = lambda x: (x.points, x.goals_scored - x.goals_conceded, x.goals_scored, -x.goals_conceded), reverse = True)
+
+            if not next_best:
+                return group_data
+
+            # ---- NEXT BEST TEAMS LOGIC ----
+            cup = session.query(Cup).filter(Cup.id == cup_id).first()
+            target_position = 1 + cup.promoted_per_group
+
+            next_best_teams = []
+
+            for group_teams in group_data.values():
+                if len(group_teams) >= target_position:
+                    next_best_teams.append(group_teams[target_position - 1])
+
+            # add as final entry
+            group_data["next_best"] = next_best_teams
+
+            return group_data
+
+        finally:
+            session.close()
+    
+    @classmethod
+    def update_cup_group_positions(cls, cup_id):
+        session = DatabaseManager().get_session()
+        try:
+            teams = (
+                session.query(CupTeams)
+                .filter(
+                    CupTeams.cup_id == cup_id,
+                    CupTeams.group_num.isnot(None)
+                )
+                .all()
+            )
+
+            if not teams:
+                return None
+
+            # group teams by group_num
+            group_data = {}
+            for team in teams:
+                group_data.setdefault(team.group_num, []).append(team)
+
+            # sort + assign positions per group
+            for _, group_teams in group_data.items():
+                group_teams.sort(key = lambda x: (x.points, x.goals_scored - x.goals_conceded, x.goals_scored, -x.goals_conceded), reverse = True)
+
+                for index, team in enumerate(group_teams):
+                    team.position = index + 1
+
+            session.commit()
+
         finally:
             session.close()
 

@@ -1392,7 +1392,7 @@ class Matches(Base):
     score_away = Column(Integer, nullable = False, default = 0)
     matchday = Column(Integer)
     group_num = Column(Integer)
-    round_num = Column(Integer)
+    round_str = Column(String(128))
     date = Column(DateTime, nullable = False)
 
     @classmethod
@@ -1685,7 +1685,7 @@ class Matches(Base):
                     ]
 
                     home_count = {team_id: 0 for team_id in group}
-                    for pairings, dates in zip(round_pairings, round_dates):
+                    for j, pairings, dates in zip(range(1, 4), round_pairings, round_dates):
                         round_referees = referees.copy()
                         earlier_date, later_date = dates
 
@@ -1737,7 +1737,7 @@ class Matches(Base):
                                 "referee_id": referee.id,
                                 "matchday": None,
                                 "group_num": i + 1,
-                                "round_num": 1,
+                                "round_str": str(j),
                                 "date": kickoff_datetime,
                             })
 
@@ -1749,24 +1749,24 @@ class Matches(Base):
                 final_date = datetime.datetime(SEASON_START_DATE.year + 1, 5, 24)
 
                 knockout_matches = {
-                    "R64": [],
-                    "R32": [],
-                    "R16": [],
-                    "QF": [],
-                    "SF": [],
-                    "F": []
+                    "Round of 64": [],
+                    "Round of 32": [],
+                    "Round of 16": [],
+                    "Quarterfinals": [],
+                    "Semifinals": [],
+                    "Final": []
                 } 
 
                 matches_per_round = {
-                    "R64": 32,
-                    "R32": 16,
-                    "R16": 8,
-                    "QF": 4,
-                    "SF": 2,
-                    "F": 1
+                    "Round of 64": 32,
+                    "Round of 32": 16,
+                    "Round of 16": 8,
+                    "Quarterfinals": 4,
+                    "Semifinals": 2,
+                    "Final": 1
                 }
 
-                for round_name, dates in zip(["R64", "R32", "R16", "QF", "SF", "F"], [round_of_64_dates, round_of_32_dates, round_of_16_dates, quarterfinal_dates, semifinal_dates, [final_date]]):
+                for round_name, dates in zip(["Round of 64", "Round of 32", "Round of 16", "Quarterfinals", "Semifinals", "Final"], [round_of_64_dates, round_of_32_dates, round_of_16_dates, quarterfinal_dates, semifinal_dates, [final_date]]):
                     round_referees = referees.copy()
                     num_matches = matches_per_round[round_name]
 
@@ -1776,7 +1776,13 @@ class Matches(Base):
                         round_referees.remove(referee)
 
                         date = random.choice(dates)
-                        time = random.choice(["15:00", "18:00", "21:00"])
+                        if round_name == "Final":
+                            time = "21:00"
+                        elif round_name in ["Semifinals", "Quarterfinals"]:
+                            time = random.choice(["18:00", "21:00"])
+                        else:
+                            time = random.choice(["15:00", "16:00", "17:00", "18:00"])
+
                         kickoff_datetime = datetime.datetime.combine(date, datetime.datetime.strptime(time, "%H:%M").time())
 
                         match_id = str(uuid.uuid4())
@@ -1789,17 +1795,17 @@ class Matches(Base):
                             "referee_id": referee.id,
                             "matchday": None,
                             "group_num": None,
-                            "round_num": 2 + ["R64", "R32", "R16", "QF", "SF", "F"].index(round_name),
+                            "round_str": round_name,
                             "date": kickoff_datetime,
                         })
 
                         knockout_matches[round_name].append(match_id)
 
-                link_rounds(knockout_matches["R32"], knockout_matches["R64"], links_dict)
-                link_rounds(knockout_matches["R16"], knockout_matches["R32"], links_dict)
-                link_rounds(knockout_matches["QF"],  knockout_matches["R16"], links_dict)
-                link_rounds(knockout_matches["SF"],  knockout_matches["QF"],  links_dict)
-                link_rounds(knockout_matches["F"],   knockout_matches["SF"],  links_dict)
+                link_rounds(knockout_matches["Round of 32"], knockout_matches["Round of 64"], links_dict)
+                link_rounds(knockout_matches["Round of 16"], knockout_matches["Round of 32"], links_dict)
+                link_rounds(knockout_matches["Quarterfinals"],  knockout_matches["Round of 16"], links_dict)
+                link_rounds(knockout_matches["Semifinals"],  knockout_matches["Quarterfinals"],  links_dict)
+                link_rounds(knockout_matches["Final"],   knockout_matches["Semifinals"],  links_dict)
  
             LinkedMatches.batch_add_links(links_dict)
             session.bulk_insert_mappings(Matches, matches_dict)
@@ -2211,6 +2217,40 @@ class Matches(Base):
         finally:
             session.close()
 
+    @classmethod
+    def get_cup_matches_by_round(cls, cup_id, round_str):
+        session = DatabaseManager().get_session()
+        try:
+            matches = session.query(Matches).filter(
+                Matches.cup_id == cup_id,
+                Matches.round_str == round_str
+            ).all()
+            return matches.sorted(key = lambda m: m.date)
+        finally:
+            session.close()
+
+    @classmethod
+    def get_num_rounds(cls, cup_id):
+        session = DatabaseManager().get_session()
+        try:
+            num_rounds = session.query(func.count(func.distinct(Matches.round_str))).filter(
+                Matches.cup_id == cup_id
+            ).scalar()
+            return num_rounds
+        finally:
+            session.close()
+
+    @classmethod
+    def get_all_cup_rounds(cls, cup_id):
+        session = DatabaseManager().get_session()
+        try:
+            rounds = session.query(func.distinct(Matches.round_str)).filter(
+                Matches.cup_id == cup_id
+            ).all()
+            return [r[0] for r in rounds]
+        finally:
+            session.close()
+            
 class LinkedMatches(Base):
     __tablename__ = 'linked_matches'
 
@@ -3834,7 +3874,7 @@ class League(Base):
                 leagues_dict.append({
                     "id": leagueID,
                     "name": league["name"],
-                    "year": 2024,
+                    "year": SEASON_START_DATE.year,
                     "logo": logo,
                     "promotion": league["promotion"],
                     "relegation": league["relegation"],
@@ -4012,6 +4052,7 @@ class Cup(Base):
     name = Column(String(128), nullable = False)
     year = Column(Integer, nullable = False)
     logo = Column(BLOB)
+    current_round = Column(String(128), nullable = False, default = "1")
     groups = Column(Integer, nullable = False)
     teams_per_group = Column(Integer, nullable = False)
     promoted_per_group = Column(Integer, nullable = False, default = 0)
@@ -4037,7 +4078,7 @@ class Cup(Base):
                 cups_dict.append({
                     "id": str(uuid.uuid4()),
                     "name": cup["name"],
-                    "year": 2024,
+                    "year": SEASON_START_DATE.year,
                     "logo": logo,
                     "groups": cup["groups"],
                     "teams_per_group": cup["teams_per_group"],
@@ -4086,13 +4127,13 @@ class Cup(Base):
             session.close()
 
     @classmethod
-    def check_cup_round_finished(cls, cup_id, round_num):
+    def check_cup_round_finished(cls, cup_id, round_str):
         session = DatabaseManager().get_session()
         try:
             # Step 1: get all matches for this cup and round
             matches = session.query(Matches).filter(
                 Matches.cup_id == cup_id,
-                Matches.matchday == round_num
+                Matches.round_str == round_str
             ).all()
 
             if not matches:
@@ -4456,6 +4497,8 @@ class CupTeams(Base):
             # sort each group using your ordering
             for _, teams in group_data.items():
                 teams.sort(key = lambda x: (x.points, x.goals_scored - x.goals_conceded, x.goals_scored, -x.goals_conceded), reverse = True)
+
+            group_data = dict(sorted(group_data.items()))
 
             if not next_best:
                 return group_data

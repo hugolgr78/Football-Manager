@@ -4,7 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 from PIL import Image, ImageDraw
 import io
-from utils.frames import LeagueTable, MatchdayFrame, News, StatsFrame, CupGroupFrame
+from utils.frames import CupRoundFrame, News, StatsFrame, CupGroupFrame
 from utils.playerProfileLink import PlayerProfileLink
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
@@ -29,14 +29,14 @@ class CupProfile(ctk.CTkFrame):
         ctk.CTkLabel(self, text = "Cup profile").place(relx = 0.5, rely = 0.5, anchor = "center")
 
         self.profile = Profile(self, self.cup)
-        self.matchdays = None
-        self.stages = None
+        self.rounds = None
+        self.knockout = None
         self.stats = None
         self.history = None
         self.news = None
-        self.titles = ["Profile", "Matchdays", "Stages", "Stats", "News", "History"]
-        self.tabs = [self.profile, self.matchdays, self.stages, self.stats, self.news, self.history]
-        self.classNames = [Profile, Matchdays, Stages, Stats, News, History]
+        self.titles = ["Profile", "Rounds", "Knockout", "Stats", "News", "History"]
+        self.tabs = [self.profile, self.rounds, self.knockout, self.stats, self.news, self.history]
+        self.classNames = [Profile, Rounds, Knockout, Stats, News, History]
 
         self.activeButton = 0
         self.buttons = []
@@ -76,17 +76,17 @@ class CupProfile(ctk.CTkFrame):
             backButton = ctk.CTkButton(self.tabsFrame, text = "Back", font = (APP_FONT, 20), fg_color = TKINTER_BACKGROUND, corner_radius = 5, height = self.buttonHeight - 10, width = 80, hover_color = CLOSE_RED, command = lambda: self.changeBackFunction())
             backButton.place(relx = 0.94, rely = 0, anchor = "ne")
 
-        # self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 30, corner_radius = 0, background_corner_colors = [TKINTER_BACKGROUND, TKINTER_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND])
+        self.legendFrame = ctk.CTkFrame(self, fg_color = GREY_BACKGROUND, width = 225, height = 90, corner_radius = 0, background_corner_colors = [TKINTER_BACKGROUND, TKINTER_BACKGROUND, GREY_BACKGROUND, GREY_BACKGROUND])
 
-        # src = Image.open("Images/information.png")
-        # src.thumbnail((20, 20))
-        # img = ctk.CTkImage(src, None, (src.width, src.height))
-        # self.helpButton = ctk.CTkButton(self.tabsFrame, text = "", image = img, fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, corner_radius = 5, height = 30, width = 30)
-        # self.helpButton.place(relx = 0.975, rely = 0, anchor = "ne")
-        # self.helpButton.bind("<Enter>", lambda e: self.showLegend(e))
-        # self.helpButton.bind("<Leave>", lambda e: self.legendFrame.place_forget())
+        src = Image.open("Images/information.png")
+        src.thumbnail((20, 20))
+        img = ctk.CTkImage(src, None, (src.width, src.height))
+        self.helpButton = ctk.CTkButton(self.tabsFrame, text = "", image = img, fg_color = TKINTER_BACKGROUND, hover_color = TKINTER_BACKGROUND, corner_radius = 5, height = 30, width = 30)
+        self.helpButton.place(relx = 0.975, rely = 0, anchor = "ne")
+        self.helpButton.bind("<Enter>", lambda e: self.showLegend(e))
+        self.helpButton.bind("<Leave>", lambda e: self.legendFrame.place_forget())
 
-        # self.legend()
+        self.legend()
 
     def showLegend(self, event):
         """
@@ -134,6 +134,26 @@ class CupProfile(ctk.CTkFrame):
 
         self.tabs[self.activeButton].pack()
 
+    def legend(self):
+        """
+        Creates the legend frame for the league profile tab.
+        """
+
+        self.legendFrame.grid_rowconfigure((0, 1, 2), weight = 0)
+        self.legendFrame.grid_columnconfigure((0), weight = 0)
+        self.legendFrame.grid_columnconfigure((1), weight = 1)
+        self.legendFrame.grid_propagate(False)
+
+        ctk.CTkLabel(self.legendFrame, text = "Legend", font = (APP_FONT_BOLD, 18), fg_color = GREY_BACKGROUND).grid(row = 0, column = 0, columnspan = 2, pady = (5, 0))
+
+        canvas = ctk.CTkCanvas(self.legendFrame, width = 5, height = 200 / 14.74, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
+        canvas.grid(row = 1, column = 0, sticky = "w", padx = (8, 0), pady = (0, 2))
+        ctk.CTkLabel(self.legendFrame, text = "Next Stage", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = 1, column = 1, sticky = "w", padx = (8, 0), pady = (0, 2))
+
+        canvas = ctk.CTkCanvas(self.legendFrame, width = 5, height = 200 / 14.74, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
+        canvas.grid(row = 2, column = 0, sticky = "w", padx = (8, 0), pady = (0, 5))
+        ctk.CTkLabel(self.legendFrame, text = "Potential Qualification", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).grid(row = 2, column = 1, sticky = "w", padx = (8, 0), pady = (0, 5))
+
 class Profile(ctk.CTkFrame):
     def __init__(self, parent, cup):
         """
@@ -158,23 +178,25 @@ class Profile(ctk.CTkFrame):
 
         self.statsFrame = StatsFrame(self, self.cup.id, 310, 480, GREY_BACKGROUND, 0.64, 0.2, "nw")
 
-        self.groupsFrame = ctk.CTkScrollableFrame(self, fg_color = GREY_BACKGROUND, width = 580, height = 450, corner_radius = 15)
+        self.groupsFrame = ctk.CTkScrollableFrame(self, fg_color = GREY_BACKGROUND, width = 560, height = 450, corner_radius = 15)
         self.groupsFrame.place(relx = 0.03, rely = 0.2, anchor = "nw")
-        self.groupData = CupTeams.get_group_data_cup(self.cup.id, next_best = True)
+        self.groupData = CupTeams.get_group_data_cup(self.cup.id, next_best = True if self.cup.next_best_playoff > 0 else False)
 
         for group_key, group_teams in self.groupData.items():
 
             if group_key == "next_best":
-                groupFrame = CupGroupFrame(self.groupsFrame, self.cup, group_teams, GREY_BACKGROUND, 550, 200, Managers.get_all_user_managers()[0].id, promoted = self.cup.next_best_playoff)
+                ctk.CTkLabel(self.groupsFrame, text = f"Best {self.cup.promoted_per_group + 1}{getSuffix(self.cup.promoted_per_group + 1)} place teams", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).pack(pady = 5)
+                groupFrame = CupGroupFrame(self.groupsFrame, self.cup, group_teams, GREY_BACKGROUND, 550, 264, Managers.get_all_user_managers()[0].id, promoted = self.cup.next_best_playoff)
             else:
-                groupFrame = CupGroupFrame(self.groupsFrame, self.cup, group_teams, GREY_BACKGROUND, 550, 100, Managers.get_all_user_managers()[0].id)
+                ctk.CTkLabel(self.groupsFrame, text = f"Group {group_key}", font = (APP_FONT_BOLD, 20), fg_color = GREY_BACKGROUND).pack(pady = 5)
+                groupFrame = CupGroupFrame(self.groupsFrame, self.cup, group_teams, GREY_BACKGROUND, 550, 120, Managers.get_all_user_managers()[0].id)
     
             groupFrame.pack(pady = 10, padx = 10)
 
-class Matchdays(ctk.CTkFrame):
+class Rounds(ctk.CTkFrame):
     def __init__(self, parent, cup):
         """
-        Class for displaying matchdays in the cup profile.
+        Class for displaying rounds in the cup profile.
 
         Args:
             parent (ctk.CTk): The parent widget (leagueProfile).
@@ -185,11 +207,161 @@ class Matchdays(ctk.CTkFrame):
 
         self.parent = parent
         self.cup = cup
+        self.currentRound = self.cup.current_round
+        self.parentTab = self.parent.parent
 
-class Stages(ctk.CTkFrame):
+        self.roundNames = Matches.get_all_cup_rounds(self.cup.id)
+        self.countFrames()    
+
+        self.buttonsFrame = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND, width = 980, height = 60, corner_radius = 15)
+        self.buttonsFrame.place(relx = 0, rely = 0.98, anchor = "sw")
+
+        self.createFrames()
+        self.addButtons()
+
+    def countFrames(self):
+        """
+        Counts the number of frames needed for the rounds.
+        """
+        
+        self.frames = []
+
+        # groups = self.cup.groups
+        # teamsPerGroup = self.cup.teams_per_group
+
+        # groupRoundMatches = ((teamsPerGroup / 2) * groups) * (teamsPerGroup - 1)
+        # totalRows = 2 + groupRoundMatches
+        # self.framesPerRound = (totalRows // 12) + (1 if totalRows % 12 != 0 else 0)
+        
+        # knockoutRounds = self.cup.knockout_rounds
+        # knockoutFrames = 0
+
+        # for i in range(knockoutRounds):
+        #     matchesInRound = 2 ** i
+        #     rowsInRound = 2 + matchesInRound if i != 0 else matchesInRound
+        #     framesInRound = (rowsInRound // 12) + (1 if rowsInRound % 12 != 0 else 0)
+        #     knockoutFrames += framesInRound
+        
+        # totalFrames = knockoutFrames + (self.framesPerRound * (teamsPerGroup - 1))
+
+        totalFrames = 0
+        self.roundStrToFrameMax = {}
+        for round_ in self.roundNames:
+            totalFrames += self.framesPerRoundForRound(round_)
+            self.roundStrToFrameMax[round_] = totalFrames - 1
+
+        for _ in range(totalFrames):
+            self.frames.append(None)
+
+    def framesPerRoundForRound(self, roundName):
+        """
+        Returns the number of frames needed for a specific round.
+
+        Args:
+            roundName (str): The name of the round.
+        """
+
+        matches = Matches.get_cup_matches_by_round(self.cup.id, roundName)
+        totalRows = 2 + len(matches)
+        return (totalRows // 12) + (1 if totalRows % 12 != 0 else 0)
+
+    def createFrames(self):
+        """
+        Creates frames for each round in the league.
+        """
+        
+        frameIndex = 0
+        for round_ in self.roundNames:
+            if round_ == self.currentRound:
+                matches = Matches.get_cup_matches_by_round(self.cup.id, round_)
+                frames = CupRoundFrame(self, matches, self.currentRound, self.parentTab, frameIndex, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
+                self.activeFrame = frameIndex
+                self.currentRoundFrame = frameIndex
+            
+            for frame in frames:
+                self.frames[frame.index] = frame
+                frameIndex += 1
+
+            else:
+                frameIndex += self.framesPerRoundForRound(round_)
+            
+    def addButtons(self):
+        """
+        Adds navigation buttons for rounds.
+        """
+        
+        self.back5Button = ctk.CTkButton(self.buttonsFrame, text = "<<", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 90, hover_color = GREY_BACKGROUND, command = lambda: self.changeFrame(-5))
+        self.back5Button.place(relx = 0.05, rely = 0.5, anchor = "center")
+
+        self.back1Button = ctk.CTkButton(self.buttonsFrame, text = "<", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 90, hover_color = GREY_BACKGROUND, command = lambda: self.changeFrame(-1))
+        self.back1Button.place(relx = 0.15, rely = 0.5, anchor = "center")
+
+        self.currentRoundButton = ctk.CTkButton(self.buttonsFrame, text = "Current Round", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 580, hover_color = GREY_BACKGROUND, state = "disabled", command = self.goCurrentMatchday)
+        self.currentRoundButton.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+        self.forward1Button = ctk.CTkButton(self.buttonsFrame, text = ">", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 90, hover_color = GREY_BACKGROUND, command = lambda: self.changeFrame(1))
+        self.forward1Button.place(relx = 0.85, rely = 0.5, anchor = "center")
+
+        self.forward5Button = ctk.CTkButton(self.buttonsFrame, text = ">>", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 90, hover_color = GREY_BACKGROUND, command = lambda: self.changeFrame(5))
+        self.forward5Button.place(relx = 0.95, rely = 0.5, anchor = "center")
+
+    def frameIndexToRound(self, frameIndex):
+        """
+        Converts a frame index to its corresponding round string.
+
+        Args:
+            frameIndex (int): The index of the frame.
+        """
+        
+        for roundStr, maxIndex in self.roundStrToFrameMax.items():
+            if frameIndex <= maxIndex:
+                return roundStr
+
+    def changeFrame(self, direction):
+        """
+        Changes the active rounds frame based on the direction.
+        
+        Args:
+            direction (int): The direction to change the frame. Positive values move forward, negative values move backward.
+        """
+        
+        if self.frames[self.activeFrame] is not None:
+            self.frames[self.activeFrame].place_forget()
+
+        self.activeFrame = (self.activeFrame + direction) % self.numFrames
+
+        if self.activeFrame == self.currentRoundFrame:
+            self.currentRoundButton.configure(state = "disabled")
+        else:
+            self.currentRoundButton.configure(state = "normal")
+
+        if self.frames[self.activeFrame] is None:
+            round_number = self.frameIndexToRound(self.activeFrame)
+
+            matches = Matches.get_cup_matches_by_round(self.cup.id, round_number)
+            frames = CupRoundFrame(self, matches, round_number, self.parentTab, self.activeFrame, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
+
+            for frame in frames:
+                self.frames[frame.index] = frame
+
+        self.frames[self.activeFrame].placeFrame()
+
+    def goCurrentRound(self):
+        """
+        Navigates to the current round frame.
+        """
+        
+        self.frames[self.activeFrame].place_forget()
+
+        self.frames[self.currentRound - 1].placeFrame()
+        self.activeFrame = self.currentRound - 1
+
+        self.currentRoundButton.configure(state = "disabled")
+
+class Knockout(ctk.CTkFrame):
     def __init__(self, parent, cup):
         """
-        Class for displaying the cup stages in the cup profile.
+        Class for displaying the cup knockout in the cup profile.
 
         Args:
             parent (ctk.CTk): The parent widget (cupProfile).

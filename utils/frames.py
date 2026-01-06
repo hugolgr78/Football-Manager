@@ -1236,6 +1236,97 @@ class MatchdayFrame(ctk.CTkFrame):
         
         self.place(relx = self.relx, rely = self.rely, anchor = self.anchor)
 
+class CupRoundFrame(ctk.CTkFrame):
+    def __init__(self, parent, matches, roundStr, parentTab, index, width, heigth, fgColor, relx, rely, anchor):
+        """
+        Matchday frame displaying all matches for a specific matchday for a league, found in league profiles
+
+        Args:
+            parent (ctk.CTkFrame): The parent frame.
+            matches (list): List of Match objects for the round.
+            roundStr (str): The round string.
+            parentTab (ctk.CTkFrame): The tab where this matchday frame is located.
+            index (int): The index of the frame in the list of frames.
+            width (int): The width of the frame.
+            heigth (int): The height of the frame.
+            fgColor (str): The foreground color of the frame.
+            relx (float): The relative x position for placing the frame.
+            rely (float): The relative y position for placing the frame.
+            anchor (str): The anchor position for placing the frame.
+        """
+
+        super().__init__(parent, fg_color = fgColor, width = width, height = heigth, corner_radius = 15)
+        self.place(relx = relx, rely = rely, anchor = anchor)
+
+        self.frames = [self]
+        self.startIndex = index
+        currentFrame = self
+
+        ctk.CTkLabel(currentFrame, text = f"Round {roundStr}", fg_color = fgColor, font = (APP_FONT_BOLD, 30)).place(relx = 0.5, rely = 0.05, anchor = "center")
+
+        startY = 0.17
+        gap = 0.075
+
+        day, text, _ = format_datetime_split(self.matches[0].date)
+        currDay = day
+        ctk.CTkLabel(currentFrame, text = f"{day} {text}", fg_color = fgColor, font = (APP_FONT_BOLD, 20)).place(relx = 0.02, rely = 0.1, anchor = "w")
+
+        newDay = False
+        rowsCount = 1
+        for i, match in enumerate(matches):
+
+            if rowsCount % 12 == 0:
+                currentFrame = ctk.CTkFrame(self.parent, fg_color = fgColor, width = width, height = heigth, corner_radius = 15)
+                currentFrame.index = self.startIndex + len(self.frames)
+                self.frames.append(currentFrame)
+
+            day, text, _ = format_datetime_split(match.date)
+
+            if day != currDay:
+                ctk.CTkLabel(currentFrame, text = f"{day} {text}", fg_color = fgColor, font = (APP_FONT_BOLD, 20)).place(relx = 0.02, rely = startY + gap * i, anchor = "w")
+                currDay = day
+                newDay = True
+                rowsCount += 1
+            
+            if newDay:
+                index = i + 1
+            else:
+                index = i
+
+            homeTeam = Teams.get_team_by_id(match.home_id)
+            awayTeam = Teams.get_team_by_id(match.away_id) 
+
+            if homeTeam:
+                homeSrc = Image.open(io.BytesIO(homeTeam.logo))
+                homeSrc.thumbnail((35, 35))
+                TeamLogo(currentFrame, homeSrc, homeTeam, fgColor, 0.4, startY + gap * index, "center", self.parentTab)
+                ctk.CTkLabel(currentFrame, text = homeTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
+            elif awayTeam:
+                awaySrc = Image.open(io.BytesIO(awayTeam.logo))
+                awaySrc.thumbnail((35, 35))
+                TeamLogo(currentFrame, awaySrc, awayTeam, fgColor, 0.6, startY + gap * index, "center", self.parentTab)
+                ctk.CTkLabel(currentFrame, text = awayTeam.name, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
+            else:
+                ctk.CTkLabel(currentFrame, text = "TBD", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.35, rely = startY + gap * index, anchor = "e")
+                ctk.CTkLabel(currentFrame, text = "TBD", fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.65, rely = startY + gap * index, anchor = "w")
+
+            if Matches.check_game_played(match, Game.get_game_date(Managers.get_all_user_managers()[0].id)):
+                MatchProfileLink(currentFrame, match, f"{match.score_home} - {match.score_away}", "white", 0.5, startY + gap * index, "center", fgColor, parentTab, 20, APP_FONT_BOLD)
+            else:
+                _, _, time = format_datetime_split(match.date)
+                ctk.CTkLabel(currentFrame, text = time, fg_color = fgColor, font = (APP_FONT, 20)).place(relx = 0.5, rely = startY + gap * index, anchor = "center")
+
+            rowsCount += 1
+
+        return self.frames
+
+    def placeFrame(self):
+        """
+        Places the matchday frame at its specified position.
+        """
+        
+        self.place(relx = self.relx, rely = self.rely, anchor = self.anchor)
+
 class PlayerFrame(ctk.CTkFrame):
     def __init__(self, parent, manager_id, player, parentFrame, caStars, paStars, teamSquad = True, talkFunction = None):
         """
@@ -1729,7 +1820,7 @@ class LeagueTable(ctk.CTkFrame):
         for i, team in enumerate(teamsData):
             teamData = Teams.get_team_by_id(team.team_id)
             team_image = Image.open(io.BytesIO(teamData.logo))
-            team_image.thumbnail((20, 20))
+            team_image.thumbnail((18, 18))
             ctk_team_image = ctk.CTkImage(team_image, None, (team_image.width, team_image.height))
 
             if self.highlightManaged and self.team.name == teamData.name:    
@@ -5432,13 +5523,14 @@ class CupGroupFrame(ctk.CTkFrame):
         self.height = height
         self.textColor = "white"
 
-        for i in range(self.cup.teams_per_group + 1):
+        for i in range(len(self.group_data) + 1):
             self.grid_rowconfigure(i, weight = 1)
 
-        self.grid_columnconfigure((0, 3, 4, 5), weight = 1)
+        self.grid_columnconfigure(0, weight = 1)
+        self.grid_columnconfigure((3, 4, 5), weight = 2)
         self.grid_columnconfigure(1, weight = 1)
         self.grid_columnconfigure(2, weight = 1)
-        self.grid_columnconfigure(3, weight = 3)
+        self.grid_columnconfigure(3, weight = 4)
         self.grid_columnconfigure((4, 5, 6, 7, 8, 9, 10, 11), weight = 1)
         self.grid_propagate(False)
 
@@ -5468,7 +5560,7 @@ class CupGroupFrame(ctk.CTkFrame):
 
             ctk.CTkLabel(self, text = i + 1, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 1, sticky = "w")
             ctk.CTkLabel(self, image = ctk_team_image, text = "", fg_color = self.fgColor).grid(row = i + 1, column = 2)
-            ctk.CTkLabel(self, text = teamData.name, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 3, sticky = "w")
+            ctk.CTkLabel(self, text = teamData.name, fg_color = self.fgColor, text_color = self.textColor, font = font, width = 0).grid(row = i + 1, column = 3, sticky = "w")
             
             ctk.CTkLabel(self, text = team.games_won + team.games_lost + team.games_drawn, fg_color = self.fgColor, text_color = self.textColor, font = font).grid(row = i + 1, column = 4)
             ctk.CTkLabel(self, text = team.games_won, fg_color = self.fgColor, text_color = self.textColor, height = 5, font = font).grid(row = i + 1, column = 5)
@@ -5481,12 +5573,12 @@ class CupGroupFrame(ctk.CTkFrame):
 
             if promoted is None:
                 if i < self.cup.promoted_per_group:
-                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 20, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
+                    canvas = ctk.CTkCanvas(self, width = 5, height = 24, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0, sticky = "w")
                 if i == self.cup.promoted_per_group and self.cup.next_best_playoff != 0:
-                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 20, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
+                    canvas = ctk.CTkCanvas(self, width = 5, height = 24, bg = FRUSTRATED_COLOR, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0, sticky = "w")
             else:
                 if i < promoted:
-                    canvas = ctk.CTkCanvas(self, width = 5, height = self.height / 20, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
+                    canvas = ctk.CTkCanvas(self, width = 5, height = 24, bg = PIE_GREEN, bd = 0, highlightthickness = 0)
                     canvas.grid(row = i + 1, column = 0, sticky = "w")

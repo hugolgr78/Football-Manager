@@ -261,7 +261,7 @@ class Rounds(ctk.CTkFrame):
             roundName (str): The name of the round.
         """
 
-        matches = Matches.get_cup_matches_by_round(self.cup.id, roundName)
+        matches = Matches.get_cup_matches_by_round(self.cup.id, str(roundName))
         totalRows = 2 + len(matches)
         return (totalRows // 12) + (1 if totalRows % 12 != 0 else 0)
 
@@ -274,9 +274,11 @@ class Rounds(ctk.CTkFrame):
         for round_ in self.roundNames:
             if round_ == self.currentRound:
                 matches = Matches.get_cup_matches_by_round(self.cup.id, round_)
-                frames = CupRoundFrame(self, matches, self.currentRound, self.parentTab, frameIndex, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
+                roundFrames = CupRoundFrame(self, matches, self.currentRound, self.parentTab, frameIndex, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
                 self.activeFrame = frameIndex
                 self.currentRoundFrame = frameIndex
+
+                frames = roundFrames.getFrames()
             
             for frame in frames:
                 self.frames[frame.index] = frame
@@ -296,7 +298,7 @@ class Rounds(ctk.CTkFrame):
         self.back1Button = ctk.CTkButton(self.buttonsFrame, text = "<", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 90, hover_color = GREY_BACKGROUND, command = lambda: self.changeFrame(-1))
         self.back1Button.place(relx = 0.15, rely = 0.5, anchor = "center")
 
-        self.currentRoundButton = ctk.CTkButton(self.buttonsFrame, text = "Current Round", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 580, hover_color = GREY_BACKGROUND, state = "disabled", command = self.goCurrentMatchday)
+        self.currentRoundButton = ctk.CTkButton(self.buttonsFrame, text = "Current Round", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 580, hover_color = GREY_BACKGROUND, state = "disabled", command = self.goCurrentRound)
         self.currentRoundButton.place(relx = 0.5, rely = 0.5, anchor = "center")
 
         self.forward1Button = ctk.CTkButton(self.buttonsFrame, text = ">", font = (APP_FONT, 20), fg_color = GREY_BACKGROUND, corner_radius = 10, height = 55, width = 90, hover_color = GREY_BACKGROUND, command = lambda: self.changeFrame(1))
@@ -328,7 +330,7 @@ class Rounds(ctk.CTkFrame):
         if self.frames[self.activeFrame] is not None:
             self.frames[self.activeFrame].place_forget()
 
-        self.activeFrame = (self.activeFrame + direction) % self.numFrames
+        self.activeFrame = (self.activeFrame + direction) % len(self.frames)
 
         if self.activeFrame == self.currentRoundFrame:
             self.currentRoundButton.configure(state = "disabled")
@@ -339,24 +341,26 @@ class Rounds(ctk.CTkFrame):
             round_number = self.frameIndexToRound(self.activeFrame)
 
             matches = Matches.get_cup_matches_by_round(self.cup.id, round_number)
-            frames = CupRoundFrame(self, matches, round_number, self.parentTab, self.activeFrame, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
+            roundFrames = CupRoundFrame(self, matches, round_number, self.parentTab, self.activeFrame, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
+
+            frames = roundFrames.getFrames()
 
             for frame in frames:
                 self.frames[frame.index] = frame
 
-        self.frames[self.activeFrame].placeFrame()
+        self.frames[self.activeFrame].place(relx = 0, rely = 0, anchor = "nw")
 
     def goCurrentRound(self):
         """
         Navigates to the current round frame.
         """
         
-        self.frames[self.activeFrame].place_forget()
+        if self.frames[self.activeFrame] is not None:
+            self.frames[self.activeFrame].place_forget()
 
-        self.frames[self.currentRound - 1].placeFrame()
-        self.activeFrame = self.currentRound - 1
-
+        self.activeFrame = self.currentRoundFrame
         self.currentRoundButton.configure(state = "disabled")
+        self.frames[self.activeFrame].place(relx = 0, rely = 0, anchor = "nw")
 
 class Knockout(ctk.CTkFrame):
     def __init__(self, parent, cup):

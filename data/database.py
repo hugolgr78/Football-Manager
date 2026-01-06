@@ -1703,14 +1703,6 @@ class Matches(Base):
 
                             if date == later_date:
                                 away_matches = Matches.get_match_by_team_and_date_range(away, date, date + datetime.timedelta(days = 7))
-                                home_matches = Matches.get_match_by_team_and_date_range(home, date - datetime.timedelta(days = 7), date)
-                                
-                                home_change = False
-                                for m in home_matches:
-                                    rest_hours = (m.date - date).total_seconds() / 3600
-                                    if rest_hours < 48:
-                                        home_change = True
-                                        break
 
                                 away_change = False
                                 for m in away_matches:
@@ -1719,7 +1711,7 @@ class Matches(Base):
                                         away_change = True
                                         break
 
-                                if home_change or away_change:
+                                if away_change:
                                     date = earlier_date
 
                             referee = random.choice(round_referees)
@@ -2142,7 +2134,7 @@ class Matches(Base):
         session = DatabaseManager().get_session()
         try:
             saturday = curr_date - timedelta(days = (curr_date.weekday() - 5) % 7 + 2)  # last Sat
-            sunday   = saturday + timedelta(days = 1)
+            sunday = saturday + timedelta(days = 1)
 
             # Query matches that happened on Sat or Sun for this league
             finished = session.query(Matches).filter(
@@ -2224,8 +2216,8 @@ class Matches(Base):
             matches = session.query(Matches).filter(
                 Matches.cup_id == cup_id,
                 Matches.round_str == round_str
-            ).all()
-            return matches.sorted(key = lambda m: m.date)
+            ).order_by(Matches.date.asc()).all()
+            return matches
         finally:
             session.close()
 

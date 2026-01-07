@@ -2256,6 +2256,18 @@ class Matches(Base):
             return [r[0] for r in rounds]
         finally:
             session.close()
+    
+    @classmethod
+    def get_cup_knockout_rounds(cls, cup_id):
+        session = DatabaseManager().get_session()
+        try:
+            rounds = session.query(func.distinct(Matches.round_str)).filter(
+                Matches.cup_id == cup_id,
+                Matches.group_num.is_(None)
+            ).all()
+            return [r[0] for r in rounds]
+        finally:
+            session.close()
             
 class LinkedMatches(Base):
     __tablename__ = 'linked_matches'

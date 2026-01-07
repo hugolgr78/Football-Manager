@@ -344,21 +344,65 @@ class Rounds(ctk.CTkFrame):
         self.currentRoundButton.configure(state = "disabled")
         self.frames[self.activeFrame].place(relx = 0, rely = 0, anchor = "nw")
 
-class Knockout(ctk.CTkFrame):
+class Knockout(ctk.CTkScrollableFrame):
     def __init__(self, parent, cup):
-        """
-        Class for displaying the cup knockout in the cup profile.
-
-        Args:
-            parent (ctk.CTk): The parent widget (CupProfile).
-            cup (Cup): The cup object.
-        """
-        
-        super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
+        super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 965, height = 630, corner_radius = 0)
 
         self.parent = parent
         self.cup = cup
 
+        self.parent = parent
+        self.cup = cup
+
+        knockoutRounds = Matches.get_cup_knockout_rounds(self.cup.id)
+
+        # Main horizontal container
+        container = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND)
+        container.pack(fill = "both", expand = True, padx = 10, pady = 10)
+
+        # Layout constants
+        MATCH_HEIGHT = 70
+        HALF_HEIGHT = MATCH_HEIGHT // 2
+
+        for round_index, knockoutRound in enumerate(knockoutRounds):
+            round_frame = ctk.CTkFrame(container, fg_color = TKINTER_BACKGROUND, width = 150)
+            round_frame.pack(side = "left", padx = 12, anchor = "n")
+
+            title = ctk.CTkLabel(round_frame, text = knockoutRound,font = ("Arial", 12, "bold"))
+            title.pack(anchor = "n", pady = (0, 10))
+
+            matches = Matches.get_cup_matches_by_round(self.cup.id, knockoutRound)
+
+            # Spacer sizes grow each round
+            space_before = 0 if round_index == 0 else HALF_HEIGHT * (2 ** (round_index - 1))
+            space_between = 0 if round_index == 0 else MATCH_HEIGHT * (2 ** (round_index - 1))
+
+            print(f"Round: {knockoutRound}, Space Before: {space_before}, Space Between: {space_between}")
+
+            # Top spacer for rounds after first
+            if space_before > 0:
+                ctk.CTkFrame(round_frame, fg_color = TKINTER_BACKGROUND, height = space_before, width = 140).pack(pady = 5)
+
+            # ----- MATCHES -----
+            for i, match in enumerate(matches):
+                match_frame = self._create_match_frame(round_frame, match)
+                match_frame.pack(pady = 5)
+
+                if i < len(matches) - 1 and space_between > 0:
+                    ctk.CTkFrame(round_frame, fg_color = TKINTER_BACKGROUND, height = space_between, width = 140).pack(pady = 5)
+
+    def _create_match_frame(self, parent, match):
+        matchFrame = ctk.CTkFrame(
+            parent,
+            fg_color = GREY_BACKGROUND,
+            height = 70,
+            width = 140,
+            corner_radius = 10
+        )
+        matchFrame.pack_propagate(False)
+
+        return matchFrame
+    
 class History(ctk.CTkScrollableFrame):
     def __init__(self, parent, cup):
         """

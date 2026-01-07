@@ -1758,6 +1758,15 @@ class Matches(Base):
                     "Final": 1
                 }
 
+                first_date_games = {
+                    "Round of 64": 0,
+                    "Round of 32": 0,
+                    "Round of 16": 0,
+                    "Quarterfinals": 0,
+                    "Semifinals": 0,
+                    "Final": 0
+                }
+
                 for round_name, dates in zip(["Round of 64", "Round of 32", "Round of 16", "Quarterfinals", "Semifinals", "Final"], [round_of_64_dates, round_of_32_dates, round_of_16_dates, quarterfinal_dates, semifinal_dates, [final_date]]):
                     round_referees = referees.copy()
                     num_matches = matches_per_round[round_name]
@@ -1767,7 +1776,12 @@ class Matches(Base):
                         referee = random.choice(round_referees)
                         round_referees.remove(referee)
 
-                        date = random.choice(dates)
+                        if first_date_games[round_name] == num_matches // 2:
+                            date = dates[-1]
+                        else:
+                            date = dates[0]
+                            first_date_games[round_name] += 1
+
                         if round_name == "Final":
                             time = "21:00"
                         elif round_name in ["Semifinals", "Quarterfinals"]:
@@ -4462,6 +4476,15 @@ class CupTeams(Base):
         try:
             cup = session.query(CupTeams).filter(CupTeams.team_id == team_id).first()
             return cup
+        finally:
+            session.close()
+
+    @classmethod
+    def get_teams_by_cup(cls, cup_id):
+        session = DatabaseManager().get_session()
+        try:
+            teams = session.query(CupTeams).filter(CupTeams.cup_id == cup_id).all()
+            return teams
         finally:
             session.close()
 

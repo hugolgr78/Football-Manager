@@ -4,8 +4,7 @@ from data.database import *
 from data.gamesDatabase import *
 from PIL import Image, ImageDraw
 import io
-from utils.frames import CupRoundFrame, News, StatsFrame, CupGroupFrame
-from utils.playerProfileLink import PlayerProfileLink
+from utils.frames import CupRoundFrame, News, StatsFrame, CupGroupFrame, CompStats
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 
@@ -36,7 +35,7 @@ class CupProfile(ctk.CTkFrame):
         self.news = None
         self.titles = ["Profile", "Rounds", "Knockout", "Stats", "News", "History"]
         self.tabs = [self.profile, self.rounds, self.knockout, self.stats, self.news, self.history]
-        self.classNames = [Profile, Rounds, Knockout, Stats, News, History]
+        self.classNames = [Profile, Rounds, Knockout, CompStats, News, History]
 
         self.activeButton = 0
         self.buttons = []
@@ -49,7 +48,7 @@ class CupProfile(ctk.CTkFrame):
 
     def createTabs(self):
         """
-        Creates the tab buttons for the League Profile tab.
+        Creates the tab buttons for the cup Profile tab.
         """
 
         self.buttonHeight = 40
@@ -136,7 +135,7 @@ class CupProfile(ctk.CTkFrame):
 
     def legend(self):
         """
-        Creates the legend frame for the league profile tab.
+        Creates the legend frame for the cup profile tab.
         """
 
         self.legendFrame.grid_rowconfigure((0, 1, 2), weight = 0)
@@ -160,7 +159,7 @@ class Profile(ctk.CTkFrame):
         Class for displaying the cup profile information.
 
         Args:
-            parent (ctk.CTk): The parent widget (leagueProfile).
+            parent (ctk.CTk): The parent widget (cupProfile).
             cup (Cup): The cup object.
         """
         
@@ -199,7 +198,7 @@ class Rounds(ctk.CTkFrame):
         Class for displaying rounds in the cup profile.
 
         Args:
-            parent (ctk.CTk): The parent widget (leagueProfile).
+            parent (ctk.CTk): The parent widget (CupProfile).
             cup (Cup): The cup object.
         """
         
@@ -226,29 +225,13 @@ class Rounds(ctk.CTkFrame):
         
         self.frames = []
 
-        # groups = self.cup.groups
-        # teamsPerGroup = self.cup.teams_per_group
-
-        # groupRoundMatches = ((teamsPerGroup / 2) * groups) * (teamsPerGroup - 1)
-        # totalRows = 2 + groupRoundMatches
-        # self.framesPerRound = (totalRows // 12) + (1 if totalRows % 12 != 0 else 0)
-        
-        # knockoutRounds = self.cup.knockout_rounds
-        # knockoutFrames = 0
-
-        # for i in range(knockoutRounds):
-        #     matchesInRound = 2 ** i
-        #     rowsInRound = 2 + matchesInRound if i != 0 else matchesInRound
-        #     framesInRound = (rowsInRound // 12) + (1 if rowsInRound % 12 != 0 else 0)
-        #     knockoutFrames += framesInRound
-        
-        # totalFrames = knockoutFrames + (self.framesPerRound * (teamsPerGroup - 1))
-
         totalFrames = 0
-        self.roundStrToFrameMax = {}
+        previousMax = -1
+        self.roundStrToFrameRange = {}
         for round_ in self.roundNames:
             totalFrames += self.framesPerRoundForRound(round_)
-            self.roundStrToFrameMax[round_] = totalFrames - 1
+            self.roundStrToFrameRange[round_] = (previousMax + 1, totalFrames - 1)
+            previousMax = totalFrames - 1
 
         for _ in range(totalFrames):
             self.frames.append(None)
@@ -267,7 +250,7 @@ class Rounds(ctk.CTkFrame):
 
     def createFrames(self):
         """
-        Creates frames for each round in the league.
+        Creates frames for each round in the cup.
         """
         
         frameIndex = 0
@@ -279,6 +262,7 @@ class Rounds(ctk.CTkFrame):
                 self.currentRoundFrame = frameIndex
 
                 frames = roundFrames.getFrames()
+                frames[0].place(relx = 0, rely = 0, anchor = "nw")
             
             for frame in frames:
                 self.frames[frame.index] = frame
@@ -315,8 +299,8 @@ class Rounds(ctk.CTkFrame):
             frameIndex (int): The index of the frame.
         """
         
-        for roundStr, maxIndex in self.roundStrToFrameMax.items():
-            if frameIndex <= maxIndex:
+        for roundStr, (minIndex, maxIndex) in self.roundStrToFrameRange.items():
+            if frameIndex <= maxIndex and frameIndex >= minIndex:
                 return roundStr
 
     def changeFrame(self, direction):
@@ -327,9 +311,7 @@ class Rounds(ctk.CTkFrame):
             direction (int): The direction to change the frame. Positive values move forward, negative values move backward.
         """
         
-        if self.frames[self.activeFrame] is not None:
-            self.frames[self.activeFrame].place_forget()
-
+        self.frames[self.activeFrame].place_forget()
         self.activeFrame = (self.activeFrame + direction) % len(self.frames)
 
         if self.activeFrame == self.currentRoundFrame:
@@ -338,10 +320,10 @@ class Rounds(ctk.CTkFrame):
             self.currentRoundButton.configure(state = "normal")
 
         if self.frames[self.activeFrame] is None:
-            round_number = self.frameIndexToRound(self.activeFrame)
+            round_str = self.frameIndexToRound(self.activeFrame)
 
-            matches = Matches.get_cup_matches_by_round(self.cup.id, round_number)
-            roundFrames = CupRoundFrame(self, matches, round_number, self.parentTab, self.activeFrame, 980, 550, GREY_BACKGROUND, 0, 0, "nw")
+            matches = Matches.get_cup_matches_by_round(self.cup.id, round_str)
+            roundFrames = CupRoundFrame(self, matches, round_str, self.parentTab, self.roundStrToFrameRange[round_str][0], 980, 550, GREY_BACKGROUND, 0, 0, "nw")
 
             frames = roundFrames.getFrames()
 
@@ -368,22 +350,7 @@ class Knockout(ctk.CTkFrame):
         Class for displaying the cup knockout in the cup profile.
 
         Args:
-            parent (ctk.CTk): The parent widget (cupProfile).
-            cup (Cup): The cup object.
-        """
-        
-        super().__init__(parent, fg_color = TKINTER_BACKGROUND, width = 1000, height = 630, corner_radius = 0) 
-
-        self.parent = parent
-        self.cup = cup
-
-class Stats(ctk.CTkFrame):
-    def __init__(self, parent, cup):
-        """
-        Class for displaying statistics in the cup profile.
-
-        Args:
-            parent (ctk.CTk): The parent widget (leagueProfile).
+            parent (ctk.CTk): The parent widget (CupProfile).
             cup (Cup): The cup object.
         """
         
@@ -398,7 +365,7 @@ class History(ctk.CTkScrollableFrame):
         Class for displaying cup history in the cup profile.
 
         Args:
-            parent (ctk.CTk): The parent widget (cupProfile).
+            parent (ctk.CTk): The parent widget (CupProfile).
             cup (Cup): The cup object.
         """
         

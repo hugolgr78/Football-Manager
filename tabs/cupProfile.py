@@ -358,15 +358,18 @@ class Knockout(ctk.CTkScrollableFrame):
 
         # Main horizontal container
         container = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND)
-        container.pack(fill = "both", expand = True, padx = 10, pady = 10)
+        container.pack(fill = "both", expand = True)
 
         # Layout constants
         MATCH_HEIGHT = 70
         HALF_HEIGHT = MATCH_HEIGHT // 2
+        PADY = 10
+        UNIT_HEIGHT = MATCH_HEIGHT + PADY
 
         for round_index, knockoutRound in enumerate(knockoutRounds):
-            round_frame = ctk.CTkFrame(container, fg_color = TKINTER_BACKGROUND, width = 150)
-            round_frame.pack(side = "left", padx = 12, anchor = "n")
+            frame_width = 965 // len(knockoutRounds)
+            round_frame = ctk.CTkFrame(container, fg_color = TKINTER_BACKGROUND, width = frame_width)
+            round_frame.pack(side = "left", padx = 5, anchor = "n")
 
             title = ctk.CTkLabel(round_frame, text = knockoutRound,font = ("Arial", 12, "bold"))
             title.pack(anchor = "n", pady = (0, 10))
@@ -374,29 +377,32 @@ class Knockout(ctk.CTkScrollableFrame):
             matches = Matches.get_cup_matches_by_round(self.cup.id, knockoutRound)
 
             # Spacer sizes grow each round
-            space_before = 0 if round_index == 0 else HALF_HEIGHT * (2 ** (round_index - 1))
-            space_between = 0 if round_index == 0 else MATCH_HEIGHT * (2 ** (round_index - 1))
-
-            print(f"Round: {knockoutRound}, Space Before: {space_before}, Space Between: {space_between}")
+            if round_index == 0:
+                space_before = 0
+                space_between = 0
+            else:
+                unit_height = MATCH_HEIGHT + PADY + 1 if round_index == 1 else MATCH_HEIGHT + PADY + 0.5
+                space_before = HALF_HEIGHT + ((2 ** (round_index - 1) - 1) * unit_height)
+                space_between = (2 ** round_index - 1) * unit_height
 
             # Top spacer for rounds after first
             if space_before > 0:
-                ctk.CTkFrame(round_frame, fg_color = TKINTER_BACKGROUND, height = space_before, width = 140).pack(pady = 5)
+                ctk.CTkFrame(round_frame, fg_color = TKINTER_BACKGROUND, height = space_before, width = frame_width - 10).pack()
 
             # ----- MATCHES -----
             for i, match in enumerate(matches):
-                match_frame = self._create_match_frame(round_frame, match)
-                match_frame.pack(pady = 5)
+                match_frame = self._create_match_frame(round_frame, match, frame_width - 10, height = MATCH_HEIGHT if round_index == 0 else UNIT_HEIGHT)
+                match_frame.pack(pady = (0, 10) if round_index == 0 else 0)
 
                 if i < len(matches) - 1 and space_between > 0:
-                    ctk.CTkFrame(round_frame, fg_color = TKINTER_BACKGROUND, height = space_between, width = 140).pack(pady = 5)
+                    ctk.CTkFrame(round_frame, fg_color = TKINTER_BACKGROUND, height = space_between, width = frame_width - 10).pack()
 
-    def _create_match_frame(self, parent, match):
+    def _create_match_frame(self, parent, match, width, height):
         matchFrame = ctk.CTkFrame(
             parent,
             fg_color = GREY_BACKGROUND,
-            height = 70,
-            width = 140,
+            height = height,
+            width = width,
             corner_radius = 10
         )
         matchFrame.pack_propagate(False)

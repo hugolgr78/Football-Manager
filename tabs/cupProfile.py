@@ -355,6 +355,7 @@ class Knockout(ctk.CTkScrollableFrame):
         self.cup = cup
 
         knockoutRounds = Matches.get_cup_knockout_rounds(self.cup.id)
+        matches_per_round = Matches.get_cup_knockout_matches_by_round(self.cup.id)
 
         # Main horizontal container
         container = ctk.CTkFrame(self, fg_color = TKINTER_BACKGROUND)
@@ -374,7 +375,7 @@ class Knockout(ctk.CTkScrollableFrame):
             title = ctk.CTkLabel(round_frame, text = knockoutRound,font = ("Arial", 12, "bold"))
             title.pack(anchor = "n", pady = (0, 10))
 
-            matches = Matches.get_cup_matches_by_round(self.cup.id, knockoutRound)
+            matches = matches_per_round[knockoutRound]
 
             # Spacer sizes grow each round
             if round_index == 0:
@@ -398,14 +399,32 @@ class Knockout(ctk.CTkScrollableFrame):
                     ctk.CTkFrame(round_frame, fg_color = TKINTER_BACKGROUND, height = space_between, width = frame_width - 10).pack()
 
     def _create_match_frame(self, parent, match, width, height):
-        matchFrame = ctk.CTkFrame(
-            parent,
-            fg_color = GREY_BACKGROUND,
-            height = height,
-            width = width,
-            corner_radius = 10
-        )
-        matchFrame.pack_propagate(False)
+        matchFrame = ctk.CTkFrame(parent, fg_color = GREY_BACKGROUND, height = height, width = width, corner_radius = 10)
+
+        if match.home_id:
+            homeTeam = Teams.get_team_by_id(match.home_id)
+            homeSrc = Image.open(io.BytesIO(homeTeam.logo))
+            homeSrc.thumbnail((20, 20))
+            TeamLogo(matchFrame, homeSrc, homeTeam, GREY_BACKGROUND, 0.1, 0.25, "w", self.parent.parent)
+            ctk.CTkLabel(matchFrame, text = homeTeam.name, fg_color = GREY_BACKGROUND, font = (APP_FONT, 12)).place(relx = 0.35, rely = 0.25, anchor = "w")
+        else:
+            ctk.CTkLabel(matchFrame, text = "TBD", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.1, rely = 0.25, anchor = "w")
+
+        if match.away_id:
+            awayTeam = Teams.get_team_by_id(match.away_id)
+            awaySrc = Image.open(io.BytesIO(awayTeam.logo))
+            awaySrc.thumbnail((20, 20))
+            TeamLogo(matchFrame, awaySrc, awayTeam, GREY_BACKGROUND, 0.1, 0.75, "w", self.parent.parent)
+            ctk.CTkLabel(matchFrame, text = awayTeam.name, fg_color = GREY_BACKGROUND, font = (APP_FONT, 12)).place(relx = 0.35, rely = 0.75, anchor = "w")
+        else:
+            ctk.CTkLabel(matchFrame, text = "TBD", font = (APP_FONT, 12), fg_color = GREY_BACKGROUND).place(relx = 0.1, rely = 0.75, anchor = "w")
+
+        if Matches.check_game_played(match, Game.get_game_date(Managers.get_all_user_managers()[0].id)):
+            winner = "home" if match.score_home > match.score_away else "away" if match.score_away > match.score_home else "error"
+            ctk.CTkLabel(matchFrame, text = match.score_home, font = (APP_FONT_BOLD if winner == "home" else APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.8, rely = 0.25, anchor = "e")
+            ctk.CTkLabel(matchFrame, text = match.score_away, font = (APP_FONT_BOLD if winner == "away" else APP_FONT, 20), fg_color = GREY_BACKGROUND).place(relx = 0.8, rely = 0.75, anchor = "e")
+        else:
+            ctk.CTkLabel(matchFrame, text = match.date.strftime("%Y-%m-%d"), font = (APP_FONT, 10), fg_color = GREY_BACKGROUND).place(relx = 0.7, rely = 0.5, anchor = "center")
 
         return matchFrame
     

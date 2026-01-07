@@ -2234,6 +2234,70 @@ class Matches(Base):
             return matches
         finally:
             session.close()
+    
+    @classmethod
+    def get_cup_knockout_matches_by_round(cls, cup_id):
+        session = DatabaseManager().get_session()
+        try:
+            # All knockout matches
+            matches = session.query(Matches).filter(
+                Matches.cup_id == cup_id,
+                Matches.group_num.is_(None)
+            ).all()
+
+            round_names = cls.get_cup_knockout_rounds(cup_id)
+
+            matches_by_id = {m.id: m for m in matches}
+
+            # Build parent → child lookup
+            links = LinkedMatches.get_links_by_cup(cup_id)
+
+            next_to_prev = {}
+            for link in links:
+                next_to_prev.setdefault(link.next_match_id, []).append(link.prev_match_id)
+
+            # Find final = match that never appears as prev
+            all_prev_ids = {link.prev_match_id for link in links}
+            final_match = next(
+                m for m in matches if m.id not in all_prev_ids
+            )
+
+            rounds = [[final_match]]
+
+            # Walk backwards
+            while True:
+                current_round = rounds[-1]
+                prev_round = []
+
+                for match in current_round:
+                    prev_ids = next_to_prev.get(match.id)
+                    if not prev_ids:
+                        break
+
+                    if len(prev_ids) != 2:
+                        raise ValueError(f"Match {match.id} does not have exactly 2 parents")
+
+                    # IMPORTANT: keep order stable
+                    prev_matches = [matches_by_id[pid] for pid in prev_ids]
+                    prev_matches.sort(key=lambda m: m.date)
+
+                    prev_round.extend(prev_matches)
+
+                if not prev_round:
+                    break
+
+                rounds.append(prev_round)
+
+            rounds.reverse()
+
+            # Map rounds to names
+            return {
+                round_names[i]: rounds[i]
+                for i in range(len(rounds))
+            }
+
+        finally:
+            session.close()
 
     @classmethod
     def get_num_rounds(cls, cup_id):
@@ -2294,6 +2358,17 @@ class LinkedMatches(Base):
             session.rollback()
             logger.exception("Error in batch_add_links: %s", e)
             raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_links_by_cup(cls, cup_id):
+        session = DatabaseManager().get_session()
+        try:
+            links = session.query(LinkedMatches).join(Matches, LinkedMatches.next_match_id == Matches.id).filter(
+                Matches.cup_id == cup_id
+            ).all()
+            return links
         finally:
             session.close()
 

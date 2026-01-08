@@ -331,6 +331,10 @@ class MainMenu(ctk.CTkFrame):
         self.currDate = Game.get_game_date(self.manager_id)
         self._logger.debug("moveDate start - manager_id=%s currDate=%s", self.manager_id, self.currDate)
 
+        if not Emails.check_date_move(self.currDate):
+            # If an unskippable email requires action, do not move date
+            return
+
         # Filter teams to only those in loaded leagues
         leagues = League.get_all_leagues()
         loaded_leagues = [league.id for league in leagues if league.loaded]

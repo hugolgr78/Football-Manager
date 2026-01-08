@@ -2364,6 +2364,7 @@ class Matches(Base):
                     match.home_id = winner_1
                     match.away_id = winner_2
 
+            session.commit()
         except Exception as e:
             session.rollback()
             raise e
@@ -4306,8 +4307,6 @@ class Cup(Base):
     def get_next_round_str(cls, cup_id, current_round):
         session = DatabaseManager().get_session()
         try:
-            cup = session.query(Cup).filter(Cup.id == cup_id).first()
-            
             rounds = Matches.get_all_cup_rounds(cup_id)
             current_index = rounds.index(current_round)
             
@@ -4960,7 +4959,7 @@ class Emails(Base):
     __tablename__ = 'emails'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday", "calendar_events", "team_of_the_week"), nullable = False)
+    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday", "calendar_events", "team_of_the_week", "cup_draw"), nullable = False)
     matchday = Column(Integer)
     date = Column(DateTime, nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))
@@ -4971,6 +4970,7 @@ class Emails(Base):
     send = Column(Boolean, default = True)
     read = Column(Boolean, default = False)
     important = Column(Boolean, default = False)
+    skippable = Column(Boolean, default = True)
 
     @classmethod
     def add_emails(cls, manager_id):
@@ -4983,10 +4983,12 @@ class Emails(Base):
             emails.append(("welcome", None, None, None, None, welcome_email_date))
 
             team = session.query(Teams).filter(Teams.manager_id == manager_id).first()
+            cup = CupTeams.get_cup_by_team(team.id)
             matches = Matches.get_all_matches_by_team(team.id)
 
             league = LeagueTeams.get_league_by_team(team.id)
 
+            # ------------------- MATCHDAY EMAILS -------------------
             for match in matches:
                 # Create preview email (2 days before at 8am)
                 preview_email_date = (match.date - datetime.timedelta(days = 2)).replace(hour = 8, minute = 0, second = 0, microsecond = 0)
@@ -5002,6 +5004,7 @@ class Emails(Base):
             # curr_year = Game.get_game_date(Managers.get_all_user_managers()[0].id).year
             curr_year = SEASON_START_DATE.year
 
+            # ------------------- BIRTHDAY EMAILS -------------------
             for player in players:
                 dob = player.date_of_birth
 
@@ -5022,7 +5025,7 @@ class Emails(Base):
                     birthday_email = ("player_birthday", None, player.id, None, None, email_date)
                     emails.append(birthday_email)
 
-            # Create calendar events email (every monday at 8am)
+            # ------------------- CALENDAR EVENTS EMAILS -------------------
             calendar_date = SEASON_START_DATE
             while calendar_date.weekday() != 0:
                 calendar_date += datetime.timedelta(days = 1)
@@ -5033,6 +5036,10 @@ class Emails(Base):
                 calendar_email = ("calendar_events", None, None, None, None, calendar_date.replace(hour = 8, minute = 0, second = 0, microsecond = 0))
                 emails.append(calendar_email)
                 calendar_date += datetime.timedelta(weeks = 1)
+
+            # ------------------- CUP DRAW EMAIL -------------------
+            email = ("cup_draw", None, None, None, cup.cup_id, datetime.datetime(SEASON_START_DATE.year, 12, 14, 8))
+            emails.append(email)
 
             cls.batch_add_emails(emails)
         finally:
@@ -5091,6 +5098,7 @@ class Emails(Base):
                     "date": date,
                     "suspension": ban_length if email_type == "player_ban" else None,
                     "injury": ban_length if email_type == "player_injury" else None,
+                    "skippable": False if email_type == "cup_draw" else True
                 }
 
                 email_dicts.append(email_dict)
@@ -5246,6 +5254,28 @@ class Emails(Base):
         except Exception as e:
             session.rollback()
             raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def check_email_action_complete(cls, email_type, matchday):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.email_type == email_type, Emails.matchday == matchday).first()
+            return email.action_complete if email else False
+        finally:
+            session.close()
+
+    @classmethod
+    def check_date_move(cls, curr_date):
+        session = DatabaseManager().get_session()
+        try:
+            # Check all emails with skippable 0 have action_complete True up to curr_date
+            emails = session.query(Emails).filter(Emails.date <= curr_date, Emails.skippable == False).all()
+            for email in emails:
+                if not email.action_complete:
+                    return False
+            return True
         finally:
             session.close()
 

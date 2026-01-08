@@ -297,17 +297,21 @@ class MainMenu(ctk.CTkFrame):
         self.timeLabel.place(relx = 0.03, rely = 0.89, anchor = "w")
 
         gameTime = Matches.check_if_game_time(self.team.id, self.currDate)
+        moveDate = Emails.check_date_move(self.currDate)
 
         # Set the continue or matchday button based on whether it's game time
-        if not gameTime:
+        if not gameTime and moveDate:
             self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Continue >>", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = APP_BLUE, corner_radius = 10, height = 50, width = 127, hover_color = APP_BLUE, command = self.showProgressBar)
             self.continueButton.place(relx = 0.32, rely = 0.99, anchor = "sw")
-        else:
+        elif gameTime:
             self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Matchday >>", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = PIE_RED, corner_radius = 10, height = 50, width = 127, hover_color = PIE_RED, command = lambda: self.changeTab(4))
             self.continueButton.place(relx = 0.32, rely = 0.99, anchor = "sw")
 
             if self.tabs[4]:
                 self.tabs[4].turnSubsOn()
+        elif not moveDate:
+            self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Response Needed >>", font = (APP_FONT_BOLD, 10), text_color = "white", fg_color = PIE_RED, corner_radius = 10, height = 50, width = 127, hover_color = PIE_RED, command = lambda: self.changeTab(1))
+            self.continueButton.place(relx = 0.32, rely = 0.99, anchor = "sw")
 
     def showProgressBar(self):
         """
@@ -333,6 +337,7 @@ class MainMenu(ctk.CTkFrame):
 
         if not Emails.check_date_move(self.currDate):
             # If an unskippable email requires action, do not move date
+            # Safe-guard check, this function should not be called in this case
             return
 
         # Filter teams to only those in loaded leagues

@@ -5271,9 +5271,9 @@ class Emails(Base):
         session = DatabaseManager().get_session()
         try:
             # Check all emails with skippable 0 have action_complete True up to curr_date
-            emails = session.query(Emails).filter(Emails.date <= curr_date, Emails.skippable == False).all()
+            emails = session.query(Emails).filter(Emails.date <= curr_date, Emails.skippable == 0).all()
             for email in emails:
-                if not email.action_complete:
+                if email.action_complete == 0:
                     return False
             return True
         finally:

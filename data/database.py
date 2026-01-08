@@ -1843,7 +1843,7 @@ class Matches(Base):
             return match
         finally:
             session.close()
-        
+    
     @classmethod
     def get_team_next_match(cls, team_id, curr_date):
         session = DatabaseManager().get_session()
@@ -2333,6 +2333,43 @@ class Matches(Base):
         finally:
             session.close()
             
+    @classmethod
+    def add_teams_to_matches(cls, comp_id, comp_round):
+        session = DatabaseManager().get_session()
+        try:
+            if League.get_league_by_id(comp_id):
+                # Will need to get the playoff teams here
+                pass
+            elif Cup.get_cup_by_id(comp_id):
+                next_round = Cup.get_next_round_str(comp_id, comp_round)
+
+                if not next_round:
+                    # Final, no next round
+                    return
+                
+                next_round_matches = cls.get_cup_matches_by_round(comp_id, next_round)
+
+                for match in next_round_matches:
+                    linked_matches = LinkedMatches.get_linked_matches(match.id)
+                    match_1 = linked_matches[0].prev_match_id
+                    match_2 = linked_matches[1].prev_match_id
+
+                    match_1_data = cls.get_match_by_id(match_1)
+                    match_2_data = cls.get_match_by_id(match_2)
+
+                    winner_1 = match_1_data.home_id if match_1_data.score_home > match_1_data.score_away else match_1_data.away_id
+                    winner_2 = match_2_data.home_id if match_2_data.score_home > match_2_data.score_away else match_2_data.away_id
+
+                    # When changing the winner logic, figure out whos at home/away here
+                    match.home_id = winner_1
+                    match.away_id = winner_2
+
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
 class LinkedMatches(Base):
     __tablename__ = 'linked_matches'
 
@@ -2367,6 +2404,17 @@ class LinkedMatches(Base):
         try:
             links = session.query(LinkedMatches).join(Matches, LinkedMatches.next_match_id == Matches.id).filter(
                 Matches.cup_id == cup_id
+            ).all()
+            return links
+        finally:
+            session.close()
+    
+    @classmethod
+    def get_linked_matches(cls, match_id):
+        session = DatabaseManager().get_session()
+        try:
+            links = session.query(LinkedMatches).filter(
+                LinkedMatches.next_match_id == match_id
             ).all()
             return links
         finally:
@@ -4236,6 +4284,36 @@ class Cup(Base):
             all_complete = all(TeamLineup.check_game_played(match.id) for match in matches)
 
             return all_complete
+        finally:
+            session.close()
+
+    @classmethod
+    def update_cup_next_round(cls, cup_id):
+        session = DatabaseManager().get_session()
+        try:
+            cup = session.query(Cup).filter(Cup.id == cup_id).first()
+
+            rounds = Matches.get_all_cup_rounds(cup_id)
+            current_index = rounds.index(cup.current_round)
+
+            if current_index + 1 < len(rounds):
+                cup.current_round = rounds[current_index + 1]
+                session.commit()    
+        finally:
+            session.close()
+    
+    @classmethod
+    def get_next_round_str(cls, cup_id, current_round):
+        session = DatabaseManager().get_session()
+        try:
+            cup = session.query(Cup).filter(Cup.id == cup_id).first()
+            
+            rounds = Matches.get_all_cup_rounds(cup_id)
+            current_index = rounds.index(current_round)
+            
+            if current_index + 1 < len(rounds):
+                return rounds[current_index + 1]
+            return None
         finally:
             session.close()
 

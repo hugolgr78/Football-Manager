@@ -1436,7 +1436,7 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
         progress_callback (function, optional): A callback function to report progress. Defaults to None.
     """
     
-    from data.database import Matches, Managers, Teams, League, Emails, LeagueTeams, PlayerBans, TeamHistory, LeagueNews, process_payload, check_player_games_happy
+    from data.database import Matches, Managers, Teams, League, Emails, LeagueTeams, PlayerBans, TeamHistory, Cup, CupTeams, process_payload, check_player_games_happy
     from data.gamesDatabase import Game
     from concurrent.futures import ProcessPoolExecutor, as_completed
     import os, time, logging, glob, traceback
@@ -1570,7 +1570,8 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
         process_payload(pooled_payload)
         _logger.debug("Processed pooled payload")
 
-        leagueIDs = list({match.league_id for match in matches})
+        leagueIDs = [match.league_id for match in matches if match.league_id]
+        cupIDs = [match.cup_id for match in matches if match.cup_id]
         for id_ in leagueIDs:
             LeagueTeams.update_team_positions(id_)
             if League.check_all_matches_complete(id_, currDate):
@@ -1591,6 +1592,22 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
 
                 League.update_current_matchday(id_)
             _logger.debug(f"Updated league standings and matchdays for league {id_}")
+
+        for id_ in cupIDs:
+            cup = Cup.get_cup_by_id(id_)
+            if cup.current_round.isdigit():
+                # group stage
+                CupTeams.update_cup_group_positions(id_)
+
+                if Cup.check_cup_round_finished(id_, cup.current_round):
+                    # group stage over, add team ids to the next round
+                    Cup.update_cup_next_round(id_)
+
+            elif Cup.check_cup_round_finished(id_, cup.current_round):
+                # knockout stage over, add team ids to the next round
+
+                Matches.add_teams_to_matches(id_, cup.current_round)
+                Cup.update_cup_next_round(id_)
 
         _logger.debug("Starting suspension reductions for %d leagues", len(teams))
         PlayerBans.reduce_suspensions_for_teams(teams)

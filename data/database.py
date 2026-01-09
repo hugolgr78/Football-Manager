@@ -4289,6 +4289,23 @@ class Cup(Base):
             session.close()
 
     @classmethod
+    def check_group_stage_over(cls, cup_id):
+        session = DatabaseManager().get_session()
+        try:
+            matches = session.query(Matches).filter(
+                Matches.cup_id == cup_id,
+                Matches.round_str.isdigit()
+            ).all()
+
+            if not matches:
+                return False
+            
+            all_complete = all(TeamLineup.check_game_played(match.id) for match in matches)
+            return all_complete
+        finally:
+            session.close()
+
+    @classmethod
     def update_cup_next_round(cls, cup_id):
         session = DatabaseManager().get_session()
         try:
@@ -4673,7 +4690,6 @@ class CupTeams(Base):
                     group_data[team.group_num] = []
                 group_data[team.group_num].append(team)
 
-            # sort each group using your ordering
             for _, teams in group_data.items():
                 teams.sort(key = lambda x: (x.points, x.goals_scored - x.goals_conceded, x.goals_scored, -x.goals_conceded), reverse = True)
 
@@ -4691,6 +4707,8 @@ class CupTeams(Base):
             for group_teams in group_data.values():
                 if len(group_teams) >= target_position:
                     next_best_teams.append(group_teams[target_position - 1])
+
+            next_best_teams.sort(key = lambda x: (x.points, x.goals_scored - x.goals_conceded, x.goals_scored, -x.goals_conceded), reverse = True)
 
             # add as final entry
             group_data["next_best"] = next_best_teams
@@ -4730,6 +4748,33 @@ class CupTeams(Base):
 
             session.commit()
 
+        finally:
+            session.close()
+
+    @classmethod
+    def check_team_passed_group(cls, cup_id, team_id):
+        session = DatabaseManager().get_session()
+        try:
+            team = session.query(CupTeams).filter(CupTeams.team_id == team_id).first()
+            cup = session.query(Cup).filter(Cup.id == cup_id).first()
+            group = session.query(CupTeams).filter(CupTeams.cup_id == cup_id, CupTeams.group_num == team.group_num).all()
+
+            # Ensure positions are updated
+            cls.update_cup_group_positions(cup_id)
+
+            if group.index(team) < cup.promoted_per_group:
+                return True
+            elif cup.next_best_playoff > 0 and group.index(team) == cup.promoted_per_group:
+                playoff_teams = session.query(CupTeams).filter(
+                    CupTeams.cup_id == cup_id,
+                    CupTeams.position == cup.promoted_per_group + 1
+                ).all()
+
+                playoff_teams.sort(key = lambda x: (x.points, x.goals_scored - x.goals_conceded, x.goals_scored, -x.goals_conceded), reverse = True)   
+                if playoff_teams.index(team) < cup.next_best_playoff:
+                    return True
+        
+            return False
         finally:
             session.close()
 
@@ -4959,7 +5004,7 @@ class Emails(Base):
     __tablename__ = 'emails'
 
     id = Column(String(256), primary_key = True, default = lambda: str(uuid.uuid4()))
-    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday", "calendar_events", "team_of_the_week", "cup_draw"), nullable = False)
+    email_type = Column(Enum("welcome", "matchday_review", "matchday_preview", "player_games_issue", "season_review", "season_preview", "player_injury", "player_ban", "player_birthday", "calendar_events", "team_of_the_week", "cup_draw", "cup_draw_result"), nullable = False)
     matchday = Column(Integer)
     date = Column(DateTime, nullable = False)
     player_id = Column(String(128), ForeignKey('players.id'))
@@ -5039,6 +5084,7 @@ class Emails(Base):
 
             # ------------------- CUP DRAW EMAIL -------------------
             email = ("cup_draw", None, None, None, cup.cup_id, datetime.datetime(SEASON_START_DATE.year, 12, 14, 8))
+            email = ("cup_draw_result", None, None, None, cup.cup_id, datetime.datetime(SEASON_START_DATE.year, 12, 14, 9))
             emails.append(email)
 
             cls.batch_add_emails(emails)
@@ -5276,6 +5322,20 @@ class Emails(Base):
                 if email.action_complete == 0:
                     return False
             return True
+        finally:
+            session.close() 
+
+    @classmethod
+    def toggle_send(cls, email_type):
+        session = DatabaseManager().get_session()
+        try:
+            current_setting = session.query(Emails).filter(Emails.email_type == email_type).first()
+            if current_setting:
+                current_setting.send = not current_setting.send
+                session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
             session.close()
 

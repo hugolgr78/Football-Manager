@@ -9,7 +9,7 @@ import threading, time, logging, math, io
 from PIL import Image, ImageTk
 
 class MatchDay(ctk.CTkFrame):
-    def __init__(self, parent, teamLineup, teamSubstitutes, team, players):
+    def __init__(self, parent, teamLineup, teamSubstitutes, team, players, match):
         """
         A tab to display the matchday view for a team.
         
@@ -30,6 +30,7 @@ class MatchDay(ctk.CTkFrame):
         self.startSubs = teamSubstitutes.copy()
         self.team = team
         self.players = players
+        self.match = match
         self.teamMatch = None
         self.home = True
         self.playingTeams = []
@@ -48,11 +49,19 @@ class MatchDay(ctk.CTkFrame):
 
         self.lastShout = 0
 
-        self.leagueTeams = LeagueTeams.get_league_by_team(self.team.id)
-        self.league = League.get_league_by_id(self.leagueTeams.league_id)
-        self.currentMatchDay = self.league.current_matchday
-        self.matchDay = Matches.get_matchday_for_league(self.league.id, self.currentMatchDay)
-        self.caStars = Players.get_players_star_ratings(self.players, self.league.id)
+        if self.match.league_id:
+            self.compTeams = LeagueTeams.get_league_by_team(self.team.id)
+            self.comp = League.get_league_by_id(self.compTeams.league_id)
+            self.currentMatchDay = self.comp.current_matchday
+            self.matchDay = Matches.get_matchday_for_league(self.comp.id, self.currentMatchDay)
+        else:
+            self.compTeams = CupTeams.get_cup_by_team(self.team.id)
+            self.comp = Cup.get_cup_by_id(self.compTeams.cup_id)
+            self.currentMatchDay = self.comp.current_round
+            self.matchDay = Matches.get_cup_matches_by_round(self.comp.id, self.currentMatchDay)
+
+        teamLeague = LeagueTeams.get_league_by_team(self.team.id)
+        self.caStars = Players.get_players_star_ratings(self.players, teamLeague.league_id)
 
         self.teamMatchFrame = ctk.CTkFrame(self, width = APP_SIZE[0] - 300, height = APP_SIZE[1], fg_color = TKINTER_BACKGROUND)
         self.teamMatchFrame.place(relx = 0, rely = 0.5, anchor = "w")
@@ -98,7 +107,7 @@ class MatchDay(ctk.CTkFrame):
         self.homePlayersFrame.pack_propagate(False)
         self.homeStatsFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 460, fg_color = GREY_BACKGROUND)
         self.homeStatsFrame.pack_propagate(False)
-        self.homeTableFrame = LiveTableFrame(self.teamMatchFrame, self.league.id, self.team.id, self.playingTeams, GREY_BACKGROUND, 190, 430)
+        # self.homeTableFrame = LiveTableFrame(self.teamMatchFrame, self.comp.id, self.team.id, self.playingTeams, GREY_BACKGROUND, 190, 430)
 
         self.awayDropDown = ctk.CTkComboBox(
             self.teamMatchFrame,
@@ -123,7 +132,7 @@ class MatchDay(ctk.CTkFrame):
         self.awayPlayersFrame.pack_propagate(False)
         self.awayStatsFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 460, fg_color = GREY_BACKGROUND)
         self.awayStatsFrame.pack_propagate(False)
-        self.awayTableFrame = LiveTableFrame(self.teamMatchFrame, self.league.id, self.team.id, self.playingTeams, GREY_BACKGROUND, 190, 430)
+        # self.awayTableFrame = LiveTableFrame(self.teamMatchFrame, self.comp.id, self.team.id, self.playingTeams, GREY_BACKGROUND, 190, 430)
 
         self.homeSubstituteFrame = ctk.CTkFrame(self.teamMatchFrame, width = 220, height = 180, fg_color = GREY_BACKGROUND)
         self.homeSubstituteFrame.place(relx = 0.02, rely = 0.73, anchor = "nw")
@@ -2483,26 +2492,47 @@ class MatchDay(ctk.CTkFrame):
 
         ## Post match updates
         logger.debug("Updating team positions.")
-        LeagueTeams.update_team_positions(self.league.id)
-        currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
 
-        logger.debug("Checking if all matches are complete for the matchday.")
-        if League.check_all_matches_complete(self.league.id, currDate):
-            logger.debug("All matches complete, creating team of the week and team history.")
-            _, email = League.team_of_the_week(self.league.id, self.matchFrame.matchInstance.matchday, team = self.matchFrame.matchInstance.homeTeam.id if self.home else self.matchFrame.matchInstance.awayTeam.id)
-            logger.debug("Team of the week created.")
-            for team in LeagueTeams.get_teams_by_league(self.league.id):
-                matchday = League.get_current_matchday(self.league.id)
-                TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
-            
-            if email:
-                Emails.add_email("team_of_the_week", self.matchFrame.matchInstance.matchday, None, None, self.league.id, (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0))
+        if League.get_league_by_id(self.comp.id):
+            LeagueTeams.update_team_positions(self.league.id)
+            currDate = Game.get_game_date(Managers.get_all_user_managers()[0].id)
 
-            # Check for lead changes, relegation changes here
-            if matchday > 20:
-                check_league_changes(self.league.id, matchday, currDate)
+            logger.debug("Checking if all matches are complete for the matchday.")
+            if League.check_all_matches_complete(self.league.id, currDate):
+                logger.debug("All matches complete, creating team of the week and team history.")
+                _, email = League.team_of_the_week(self.league.id, self.matchFrame.matchInstance.matchday, team = self.matchFrame.matchInstance.homeTeam.id if self.home else self.matchFrame.matchInstance.awayTeam.id)
+                logger.debug("Team of the week created.")
+                for team in LeagueTeams.get_teams_by_league(self.league.id):
+                    matchday = League.get_current_matchday(self.league.id)
+                    TeamHistory.add_team(matchday, team.team_id, team.position, team.points)
+                
+                if email:
+                    Emails.add_email("team_of_the_week", self.matchFrame.matchInstance.matchday, None, None, self.league.id, (currDate + timedelta(days = 1)).replace(hour = 8, minute = 0, second = 0, microsecond = 0))
 
-            League.update_current_matchday(self.league.id)
+                # Check for lead changes, relegation changes here
+                if matchday > 20:
+                    check_league_changes(self.league.id, matchday, currDate)
+
+                League.update_current_matchday(self.league.id)
+        else:
+            if self.cup.current_round.isdigit():
+                # group stage
+                CupTeams.update_cup_group_positions(self.cup.id)
+
+                if Cup.check_cup_round_finished(self.cup.id, self.cup.current_round):
+                    # group stage round over, add team ids to the next round
+                    Cup.update_cup_next_round(self.cup.id)
+
+                    if Cup.check_group_stage_over(self.cup.id) and not CupTeams.check_team_passed_group(self.cup.id, self.matchFrame.matchInstance.homeTeam.id if self.home else self.matchFrame.matchInstance.awayTeam.id):
+                        # Remove the emails for cup draw and cup draw result if the manager's team has been eliminated
+                        Emails.toggle_send("cup_draw")
+                        Emails.toggle_send("cup_draw_result")
+
+            elif Cup.check_cup_round_finished(self.cup.id, self.cup.current_round):
+                # knockout stage over, add team ids to the next round
+
+                Matches.add_teams_to_matches(self.cup.id, self.cup.current_round)
+                Cup.update_cup_next_round(self.cup.id)
 
         logger.debug("Checking player game happiness.")
         check_player_games_happy(self.matchFrame.matchInstance.homeTeam.id, currDate)

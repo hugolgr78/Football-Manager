@@ -32,7 +32,9 @@ class EmailFrame(ctk.CTkFrame):
         self.suspension = email.suspension if hasattr(email, 'suspension') else None
         self.injury = email.injury if hasattr(email, 'injury') else None
         self.comp_id = email.comp_id if hasattr(email, 'comp_id') else None
+        self.cup_id = email.cup_id if hasattr(email, 'cup_id') else None
         self.actioned = email.action_complete
+        self.skippable = email.skippable
         self.fullDate = email.date
         self.read = email.read
         self.important = email.important
@@ -1325,6 +1327,103 @@ class TeamOfTheWeek():
     def goToNews(self):
         self.parent.mainMenu.changeTab(6)
 
+class CupDraw():
+    def __init__(self, parent):
+
+        self.parent = parent
+        self.frame = self.parent.emailFrame
+
+        self.cup = Cup.get_cup_by_id(self.parent.cup_id)
+        self.subject = f"{self.cup.name} knockout draw"
+        self.sender = "Name, Assistant Manager"
+        self.subjectFontSize = 15
+
+    def openEmail(self):
+        for widget in self.frame.winfo_children():
+            widget.place_forget()
+
+        self.setUpEmail()
+
+        self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
+        self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.12, anchor = "w")
+
+        self.automaticButton = ctk.CTkButton(self.frame, text = "Automatic draw", font = (APP_FONT_BOLD, 15), command = lambda: self.action(self.cup, automatic = True), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
+        self.automaticButton.place(relx = 0.95, rely = 0.88, anchor = "se")
+
+        self.startDraw = ctk.CTkButton(self.frame, text = "Start draw", font = (APP_FONT_BOLD, 15), command = lambda: self.action(self.cup), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
+        self.startDraw.place(relx = 0.95, rely = 0.95, anchor = "se")
+
+        if self.parent.actioned:
+            self.automaticButton.configure(state = "disabled")
+            self.startDraw.configure(state = "disabled")
+
+    def setUpEmail(self):
+        self.emailText_1 = (
+            f"Hey Boss, it's time to conduct the knockout draw for the {self.cup.name}.\n"
+            f"You can choose to attend the draw in person or skip it.\n"
+        )
+
+    def action(self, cup, automatic = False):
+        self.automaticButton.configure(state = "disabled")
+        self.startDraw.configure(state = "disabled")
+
+        Emails.update_action(self.parent.email_id)
+        knockout_draw(cup.id, automatic = automatic)
+
+class CupDrawResult():
+    def __init__(self, parent):
+
+        self.parent = parent
+        self.frame = self.parent.emailFrame
+
+        self.cup = Cup.get_cup_by_id(self.parent.cup_id)   
+        self.subject = f"{self.cup.name} knockout draw result"
+        self.sender = "Name, Assistant Manager"
+        self.subjectFontSize = 15
+
+    def openEmail(self):
+        for widget in self.frame.winfo_children():
+            widget.place_forget()
+
+        self.setUpEmail()
+
+        self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
+        self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.12, anchor = "w")
+
+        self.matchFrame.place(relx = 0.5, rely = 0.5, anchor = "center")
+
+    def setUpEmail(self):
+        matches = Matches.get_cup_knockout_matches_by_round(self.cup.id, self.cup.current_round)
+        for match in matches:
+            if match.home_id == self.parent.team.id or match.away_id == self.parent.team.id:
+                opponentID = match.away_id if match.home_id == self.parent.team.id else match.home_id
+                opponent = Teams.get_team_by_id(opponentID)
+
+                homeTeam = Teams.get_team_by_id(match.home_id)
+                awayTeam = Teams.get_team_by_id(match.away_id)
+                break
+        
+        self.emailText_1 = (
+            f"Hey Boss, the knockout draw for the {self.cup.name} has been completed.\n"
+            f"Our team will be facing {opponent.name} in the next round.\n"
+        )
+
+        self.matchFrame = ctk.CTkFrame(self.frame, fg_color = TKINTER_BACKGROUND, width = 600, height = 100, border_width = 2, border_color = GREY_BACKGROUND)
+        
+        src = Image.open(io.BytesIO(homeTeam.logo))
+        src.thumbnail((75,  75))
+        TeamLogo(self.matchFrame, src, homeTeam, TKINTER_BACKGROUND, 0.25, 0.5, "center", self.parent.parentTab)
+
+        src = Image.open(io.BytesIO(awayTeam.logo))
+        src.thumbnail((75,  75))
+        TeamLogo(self.matchFrame, src, awayTeam, TKINTER_BACKGROUND, 0.75, 0.5, "center", self.parent.parentTab)
+
+        ctk.CTkLabel(self.matchFrame, text = "vs", font = (APP_FONT_BOLD, 20), text_color = "white", fg_color = TKINTER_BACKGROUND).place(relx = 0.5, rely = 0.5, anchor = "center")
+
 EMAIL_CLASSES = {
     "welcome": Welcome,
     "matchday_review": MatchdayReview,
@@ -1337,4 +1436,6 @@ EMAIL_CLASSES = {
     "player_birthday": PlayerBirthday,
     "calendar_events": CalendarEventsEmail,
     "team_of_the_week": TeamOfTheWeek,
+    "cup_draw": CupDraw,
+    "cup_draw_result": CupDrawResult,
 }

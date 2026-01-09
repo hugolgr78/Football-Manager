@@ -1600,12 +1600,17 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
                 CupTeams.update_cup_group_positions(id_)
 
                 if Cup.check_cup_round_finished(id_, cup.current_round):
-                    # group stage over, add team ids to the next round
+                    # group stage round over, add team ids to the next round
                     Cup.update_cup_next_round(id_)
+
+                    # if Cup.check_group_stage_over(id_) and not CupTeams.check_team_passed_group(id_, managerTeam.id):
+                    #     # Remove the emails for cup draw and cup draw result if the manager's team has been eliminated
+                    #     Emails.toggle_send("cup_draw")
+                    #     Emails.toggle_send("cup_draw_result")
 
             elif Cup.check_cup_round_finished(id_, cup.current_round):
                 # knockout stage over, add team ids to the next round
-
+    
                 Matches.add_teams_to_matches(id_, cup.current_round)
                 Cup.update_cup_next_round(id_)
 
@@ -1814,3 +1819,6 @@ def get_overthrow_threshold(league_id):
     overthrow_threshold = 0.55 * league_spread
 
     return overthrow_threshold
+
+def knockout_draw(cup_id, automatic = False):
+    pass

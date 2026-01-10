@@ -5084,6 +5084,7 @@ class Emails(Base):
 
             # ------------------- CUP DRAW EMAIL -------------------
             email = ("cup_draw", None, None, None, cup.cup_id, datetime.datetime(SEASON_START_DATE.year, 12, 14, 8))
+            emails.append(email)
             email = ("cup_draw_result", None, None, None, cup.cup_id, datetime.datetime(SEASON_START_DATE.year, 12, 14, 9))
             emails.append(email)
 
@@ -5144,7 +5145,8 @@ class Emails(Base):
                     "date": date,
                     "suspension": ban_length if email_type == "player_ban" else None,
                     "injury": ban_length if email_type == "player_injury" else None,
-                    "skippable": False if email_type == "cup_draw" else True
+                    "skippable": False if email_type == "cup_draw" else True,
+                    "important": True if email_type == "cup_draw" else False
                 }
 
                 email_dicts.append(email_dict)
@@ -5336,6 +5338,15 @@ class Emails(Base):
         except Exception as e:
             session.rollback()
             raise e
+        finally:
+            session.close()
+
+    @classmethod
+    def get_email_actioned(cls, email_id):
+        session = DatabaseManager().get_session()
+        try:
+            email = session.query(Emails).filter(Emails.id == email_id).first()
+            return email.action_complete if email else None
         finally:
             session.close()
 

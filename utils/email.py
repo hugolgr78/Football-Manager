@@ -6,6 +6,7 @@ from data.gamesDatabase import *
 from utils.teamProfileLink import *
 from utils.leagueProfileLink import LeagueProfileLabel
 from utils.playerProfileLink import *
+from utils.cupProfileLink import CupProfileLabel
 from utils.teamLogo import TeamLogo
 from utils.util_functions import *
 from utils.matchProfileLink import MatchProfileLink
@@ -32,7 +33,6 @@ class EmailFrame(ctk.CTkFrame):
         self.suspension = email.suspension if hasattr(email, 'suspension') else None
         self.injury = email.injury if hasattr(email, 'injury') else None
         self.comp_id = email.comp_id if hasattr(email, 'comp_id') else None
-        self.cup_id = email.cup_id if hasattr(email, 'cup_id') else None
         self.actioned = email.action_complete
         self.skippable = email.skippable
         self.fullDate = email.date
@@ -59,7 +59,12 @@ class EmailFrame(ctk.CTkFrame):
 
         self.addEmailSubject()
 
-        self.canvas = ctk.CTkCanvas(self, width = 300, height = 5, bg = DARK_GREY, bd = 0, highlightthickness = 0)
+        if self.important:
+            bg_color = PIE_RED
+        else:
+            bg_color = DARK_GREY
+
+        self.canvas = ctk.CTkCanvas(self, width = 300, height = 5, bg = bg_color, bd = 0, highlightthickness = 0)
         self.canvas.place(relx = 0.5, rely = 0.9, anchor = "center")
         self.canvas.bind("<Enter>", lambda e: self.onFrameHover())
         self.canvas.bind("<Button-1>", lambda e: self.displayEmailInfo())
@@ -1160,7 +1165,7 @@ class PlayerBirthday():
         _, currDate, _ = format_datetime_split(Game.get_game_date(self.parent.manager.id))
         today = True if currDate == self.parent.date else False
 
-        if self.parent.actioned or not today:
+        if Emails.get_email_actioned(self.parent.email_id) or not today:
             self.button.configure(state = "disabled")
 
     def setUpEmail(self):
@@ -1333,7 +1338,7 @@ class CupDraw():
         self.parent = parent
         self.frame = self.parent.emailFrame
 
-        self.cup = Cup.get_cup_by_id(self.parent.cup_id)
+        self.cup = Cup.get_cup_by_id(self.parent.comp_id)
         self.subject = f"{self.cup.name} knockout draw"
         self.sender = "Name, Assistant Manager"
         self.subjectFontSize = 15
@@ -1347,7 +1352,10 @@ class CupDraw():
         self.emailTitle = ctk.CTkLabel(self.frame, text = self.subject, font = (APP_FONT_BOLD, 30))
         self.emailTitle.place(relx = 0.05, rely = 0.05, anchor = "w")
 
-        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.12, anchor = "w")
+        self.emailFrame_1.place(relx = 0.05, rely = 0.1, anchor = "w")
+        ctk.CTkLabel(self.frame, text = self.emailText_1, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.14, anchor = "w")
+
+        ctk.CTkLabel(self.frame, text = self.emailText_2, font = (APP_FONT, 15), justify = "left", text_color = "white").place(relx = 0.05, rely = 0.18, anchor = "w")
 
         self.automaticButton = ctk.CTkButton(self.frame, text = "Automatic draw", font = (APP_FONT_BOLD, 15), command = lambda: self.action(self.cup, automatic = True), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
         self.automaticButton.place(relx = 0.95, rely = 0.88, anchor = "se")
@@ -1355,15 +1363,24 @@ class CupDraw():
         self.startDraw = ctk.CTkButton(self.frame, text = "Start draw", font = (APP_FONT_BOLD, 15), command = lambda: self.action(self.cup), width = 200, height = 40, corner_radius = 8, fg_color = DARK_GREY, hover_color = GREY_BACKGROUND)
         self.startDraw.place(relx = 0.95, rely = 0.95, anchor = "se")
 
-        if self.parent.actioned:
+        if Emails.get_email_actioned(self.parent.email_id):
             self.automaticButton.configure(state = "disabled")
             self.startDraw.configure(state = "disabled")
 
     def setUpEmail(self):
-        self.emailText_1 = (
-            f"Hey Boss, it's time to conduct the knockout draw for the {self.cup.name}.\n"
-            f"You can choose to attend the draw in person or skip it.\n"
+        self.emailFrame_1 = CupProfileLabel(
+            self.frame, 
+            self.cup.name, 
+            f"Hey Boss, it's time to conduct the knockout draw for the ", 
+            ".", 
+            240,
+            30, 
+            self.parent.parentTab, 
+            fontSize = 15
         )
+        
+        self.emailText_1 = f"I need you to choose whether to conduct the draw manually or automatically.\n"
+        self.emailText_2 = "Name, Assistant Manager"
 
     def action(self, cup, automatic = False):
         self.automaticButton.configure(state = "disabled")
@@ -1378,7 +1395,7 @@ class CupDrawResult():
         self.parent = parent
         self.frame = self.parent.emailFrame
 
-        self.cup = Cup.get_cup_by_id(self.parent.cup_id)   
+        self.cup = Cup.get_cup_by_id(self.parent.comp_id)   
         self.subject = f"{self.cup.name} knockout draw result"
         self.sender = "Name, Assistant Manager"
         self.subjectFontSize = 15

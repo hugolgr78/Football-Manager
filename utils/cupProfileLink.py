@@ -82,7 +82,7 @@ class CupProfileLink(ctk.CTkLabel):
         self.bind("<Enter>", self.on_enter)
         self.bind("<Leave>", self.on_leave)
 
-        self.bind("<Button-1>", self.opencupProfile)
+        self.bind("<Button-1>", self.openCupProfile)
 
     def on_enter(self, event):
         """

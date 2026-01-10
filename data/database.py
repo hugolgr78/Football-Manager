@@ -2370,6 +2370,24 @@ class Matches(Base):
             raise e
         finally:
             session.close()
+    
+    @classmethod
+    def add_teams_to_match(cls, match_id, team_id1, team_id2):
+        session = DatabaseManager().get_session()
+        try:
+            match = session.query(Matches).filter(Matches.id == match_id).first()
+            if match:
+                match.home_id = team_id1
+                match.away_id = team_id2
+                session.commit()
+            else:
+                return None
+        except Exception as e:
+            session.rollback()
+            logger.exception("[DB ERROR] Add teams to match failed")
+            raise e
+        finally:
+            session.close()
 
 class LinkedMatches(Base):
     __tablename__ = 'linked_matches'

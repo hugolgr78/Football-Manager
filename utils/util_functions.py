@@ -1820,7 +1820,7 @@ def get_overthrow_threshold(league_id):
 
     return overthrow_threshold
 
-def knockout_draw(cup_id, automatic = False, other = False):
+def knockout_draw(parent, cup_id, automatic = False, other = False):
     """
     Perform a knockout draw for the given cup.
     
@@ -1830,12 +1830,15 @@ def knockout_draw(cup_id, automatic = False, other = False):
         other (bool): Used to recursively draw for other cups.
     """
 
+    from data.database import CupTeams, Matches, Cup, LeagueTeams, League
+    from utils.cupDraw import CupDraw
+    import random
+
     if not automatic and not other:
-        pass
+
+        cup_draw_frame = CupDraw(parent, cup_id)
 
     if automatic or other:
-        from data.database import CupTeams, Matches, Cup, LeagueTeams, League
-        import random
 
         cup = Cup.get_cup_by_id(cup_id)
         teams = CupTeams.get_teams_by_cup(cup_id)
@@ -1850,7 +1853,6 @@ def knockout_draw(cup_id, automatic = False, other = False):
         qualified.extend(CupTeams.get_qualified_from_groups(cup))
 
         random.shuffle(qualified)
-        print(len(qualified), "teams qualified for knockout draw in cup", cup.name)
 
         for match in matches:
             if len(qualified) >= 2:
@@ -1862,4 +1864,4 @@ def knockout_draw(cup_id, automatic = False, other = False):
         other_cups = Cup.get_all_cups()
         for other_cup in other_cups:
             if other_cup.id != cup_id:
-                knockout_draw(other_cup.id, other = True)
+                knockout_draw(parent, other_cup.id, other = True)

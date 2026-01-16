@@ -59,7 +59,7 @@ class EmailFrame(ctk.CTkFrame):
 
         self.addEmailSubject()
 
-        if self.important:
+        if not self.skippable:
             bg_color = PIE_RED
         else:
             bg_color = DARK_GREY
@@ -1387,7 +1387,7 @@ class CupDraw():
         self.startDraw.configure(state = "disabled")
 
         Emails.update_action(self.parent.email_id)
-        knockout_draw(cup.id, automatic = automatic)
+        knockout_draw(self.parent.parentTab, cup.id, automatic = automatic)
 
 class CupDrawResult():
     def __init__(self, parent):

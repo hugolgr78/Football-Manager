@@ -2523,7 +2523,7 @@ class MatchDay(ctk.CTkFrame):
                     # group stage round over, add team ids to the next round
                     Cup.update_cup_next_round(self.cup.id)
 
-                    if Cup.check_group_stage_over(self.cup.id) and not CupTeams.check_team_passed_group(self.cup.id, self.matchFrame.matchInstance.homeTeam.id if self.home else self.matchFrame.matchInstance.awayTeam.id):
+                    if Cup.check_group_stage_over(self.cup.id) and not CupTeams.check_team_passed_group(self.cup, self.matchFrame.matchInstance.homeTeam.id if self.home else self.matchFrame.matchInstance.awayTeam.id):
                         # Remove the emails for cup draw and cup draw result if the manager's team has been eliminated
                         Emails.toggle_send("cup_draw")
                         Emails.toggle_send("cup_draw_result")

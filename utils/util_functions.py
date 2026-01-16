@@ -1603,7 +1603,7 @@ def run_match_simulation(interval, currDate, exclude_leagues = [], progress_call
                     # group stage round over, add team ids to the next round
                     Cup.update_cup_next_round(id_)
 
-                    # if Cup.check_group_stage_over(id_) and not CupTeams.check_team_passed_group(id_, managerTeam.id):
+                    # if Cup.check_group_stage_over(id_) and not CupTeams.check_team_passed_group(cup, managerTeam.id):
                     #     # Remove the emails for cup draw and cup draw result if the manager's team has been eliminated
                     #     Emails.toggle_send("cup_draw")
                     #     Emails.toggle_send("cup_draw_result")
@@ -1838,7 +1838,7 @@ def knockout_draw(cup_id, automatic = False, other = False):
         import random
 
         cup = Cup.get_cup_by_id(cup_id)
-        teams = CupTeams.get_teams_in_cup_round(cup_id, cup.current_round)
+        teams = CupTeams.get_teams_by_cup(cup_id)
         matches = Matches.get_cup_matches_by_round(cup_id, cup.current_round)
         qualified = []
         
@@ -1846,19 +1846,16 @@ def knockout_draw(cup_id, automatic = False, other = False):
             league = LeagueTeams.get_league_by_team(team.team_id).league_id
             if League.calculate_league_depth(league) < 2:
                 qualified.append(team.team_id)
-            else:
-                CupTeams.check_team_passed_group(cup_id, team.team_id)
-                if team.passed_group:
-                    qualified.append(team.team_id)
+
+        qualified.extend(CupTeams.get_qualified_from_groups(cup))
 
         random.shuffle(qualified)
+        print(len(qualified), "teams qualified for knockout draw in cup", cup.name)
 
         for match in matches:
             if len(qualified) >= 2:
                 home_id = qualified.pop()
                 away_id = qualified.pop()
-                match.home_id = home_id
-                match.away_id = away_id
                 Matches.add_teams_to_match(match.id, home_id, away_id)
         
     if not other:

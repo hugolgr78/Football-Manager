@@ -4770,29 +4770,65 @@ class CupTeams(Base):
             session.close()
 
     @classmethod
-    def check_team_passed_group(cls, cup_id, team_id):
+    def check_team_passed_group(cls, cup, team):
         session = DatabaseManager().get_session()
         try:
-            team = session.query(CupTeams).filter(CupTeams.team_id == team_id).first()
-            cup = session.query(Cup).filter(Cup.id == cup_id).first()
-            group = session.query(CupTeams).filter(CupTeams.cup_id == cup_id, CupTeams.group_num == team.group_num).all()
-
             # Ensure positions are updated
-            cls.update_cup_group_positions(cup_id)
+            cls.update_cup_group_positions(cup.id)
 
-            if group.index(team) < cup.promoted_per_group:
+            if team.position is None:
+                return False
+            elif team.position <= cup.promoted_per_group:
                 return True
-            elif cup.next_best_playoff > 0 and group.index(team) == cup.promoted_per_group:
+
+            if cup.next_best_playoff > 0 and team.position == cup.promoted_per_group + 1:
                 playoff_teams = session.query(CupTeams).filter(
-                    CupTeams.cup_id == cup_id,
+                    CupTeams.cup_id == cup.id,
                     CupTeams.position == cup.promoted_per_group + 1
                 ).all()
 
                 playoff_teams.sort(key = lambda x: (x.points, x.goals_scored - x.goals_conceded, x.goals_scored, -x.goals_conceded), reverse = True)   
-                if playoff_teams.index(team) < cup.next_best_playoff:
+                if team.id in [t.id for t in playoff_teams[:cup.next_best_playoff]]:
                     return True
-        
-            return False
+            else:
+                return False
+            
+        finally:
+            session.close()
+
+    @classmethod
+    def get_qualified_from_groups(cls, cup):
+        session = DatabaseManager().get_session()
+        try:
+            cls.update_cup_group_positions(cup.id)
+
+            teams = (
+                session.query(CupTeams)
+                .filter(
+                    CupTeams.cup_id == cup.id,
+                    CupTeams.position.isnot(None),
+                    CupTeams.position <= cup.promoted_per_group
+                )
+                .all()
+            )
+
+            if cup.next_best_playoff > 0:
+                playoff_teams = (
+                    session.query(CupTeams)
+                    .filter(
+                        CupTeams.cup_id == cup.id,
+                        CupTeams.position == cup.promoted_per_group + 1
+                    )
+                    .all()
+                )
+
+                playoff_teams.sort(key = lambda x: (x.points, x.goals_scored - x.goals_conceded, x.goals_scored, -x.goals_conceded), reverse = True)
+                teams.extend(playoff_teams[:cup.next_best_playoff])
+                
+            return [t.team_id for t in teams]
+        except Exception as e:
+            session.rollback()
+            raise e
         finally:
             session.close()
 

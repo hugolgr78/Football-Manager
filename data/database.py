@@ -1618,7 +1618,7 @@ class Matches(Base):
             LinkedMatches.batch_add_links(links_dict)
             session.bulk_insert_mappings(Matches, matches_dict)
             session.commit()
-
+    
         except Exception as e:
             session.rollback()
             raise e

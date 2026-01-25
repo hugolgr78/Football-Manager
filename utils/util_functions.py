@@ -1830,19 +1830,20 @@ def knockout_draw(parent, cup_id, automatic = False, other = False):
         other (bool): Used to recursively draw for other cups.
     """
 
-    from data.database import CupTeams, Matches, Cup, LeagueTeams, League
+    from data.database import CupTeams, Matches, Cup, LeagueTeams, League, Managers
+    from data.gamesDatabase import Game
     from utils.cupDraw import CupDraw
     import random
 
     if not automatic and not other:
-
-        cup_draw_frame = CupDraw(parent, cup_id)
+        CupDraw(parent, cup_id)
 
     if automatic or other:
 
         cup = Cup.get_cup_by_id(cup_id)
         teams = CupTeams.get_teams_by_cup(cup_id)
         matches = Matches.get_cup_matches_by_round(cup_id, cup.current_round)
+        # matches = Matches.get_cup_matches_by_round(cup_id, "Round of 64")
         qualified = []
         
         for team in teams:
@@ -1865,3 +1866,13 @@ def knockout_draw(parent, cup_id, automatic = False, other = False):
         for other_cup in other_cups:
             if other_cup.id != cup_id:
                 knockout_draw(parent, other_cup.id, other = True)
+
+        # Once all other cups are drawn, update the time to one hour later
+        manager_id = Managers.get_all_user_managers()[0].id
+        currDate = Game.get_game_date(manager_id)
+        currDate += datetime.timedelta(hours = 1)
+        Game.set_game_date(manager_id, currDate)
+
+        # Reset the moving button and Schedule tab
+        parent.parent.setDateButton()
+        parent.parent.resetTabs(3)

@@ -59,7 +59,7 @@ class EmailFrame(ctk.CTkFrame):
 
         self.addEmailSubject()
 
-        if not self.skippable:
+        if not self.skippable and not self.read:
             bg_color = PIE_RED
         else:
             bg_color = DARK_GREY

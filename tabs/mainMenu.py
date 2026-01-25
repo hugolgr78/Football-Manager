@@ -296,10 +296,16 @@ class MainMenu(ctk.CTkFrame):
         self.timeLabel = ctk.CTkLabel(self.tabsFrame, text = f"{text} {time}", font = (APP_FONT_BOLD, 13), text_color = "white", fg_color = TKINTER_BACKGROUND)
         self.timeLabel.place(relx = 0.03, rely = 0.89, anchor = "w")
 
+        self.setDateButton()
+
+    def setDateButton(self):
+        """
+        Changes the continue/matchday based on the current game state.
+        """
+
         gameTime = Matches.check_if_game_time(self.team.id, self.currDate)
         moveDate = Emails.check_date_move(self.currDate)
 
-        # Set the continue or matchday button based on whether it's game time
         if not gameTime and moveDate:
             self.continueButton = ctk.CTkButton(self.tabsFrame, text = "Continue >>", font = (APP_FONT_BOLD, 15), text_color = "white", fg_color = APP_BLUE, corner_radius = 10, height = 50, width = 127, hover_color = APP_BLUE, command = self.showProgressBar)
             self.continueButton.place(relx = 0.32, rely = 0.99, anchor = "sw")

@@ -22,6 +22,7 @@ class CupDraw(ctk.CTkFrame):
         self.update_idletasks()
         
         self.startDraw()
+        self.finishDraw()
 
     def startDraw(self):
         """
@@ -43,12 +44,7 @@ class CupDraw(ctk.CTkFrame):
 
     def finishDraw(self):
         """
-        Finalizes the cup draw and carries out the knockout draw for other cups.
+        Finalizes the cup draw.
         """
         
-        self.place_forget()
-
-        other_cups = Cup.get_all_cups()
-        for other_cup in other_cups:
-            if other_cup.id != self.cup.id:
-                knockout_draw(self.parent, other_cup.id, other = True)
+        self.pack_forget()

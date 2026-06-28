@@ -85,43 +85,43 @@ SOFIFA_HEADERS = {
     "Referer": "https://sofifa.com/",
 }
 
-ATTR_MAP = {
-    "Crossing":          "Crossing",
-    "Finishing":         "Finishing",
-    "Heading accuracy":  "Heading accuracy",
-    "Short passing":     "Short passing",
-    "Volleys":           "Volleys",
-    "Dribbling":         "Dribbling",
-    "Curve":             "Curve",
-    "FK Accuracy":       "Free kick accuracy",
-    "Long passing":      "Long passing",
-    "Ball control":      "Ball control",
-    "Acceleration":      "Acceleration",
-    "Sprint speed":      "Sprint speed",
-    "Agility":           "Agility",
-    "Reactions":         "Reactions",
-    "Balance":           "Balance",
-    "Shot power":        "Shot power",
-    "Jumping":           "Jumping",
-    "Stamina":           "Stamina",
-    "Strength":          "Strength",
-    "Long shots":        "Long shots",
-    "Aggression":        "Aggression",
-    "Interceptions":     "Interceptions",
-    "Attack position":   "Positioning",
-    "Vision":            "Vision",
-    "Penalties":         "Penalties",
-    "Composure":         "Composure",
-    "Marking":           "Marking",
-    "Standing tackle":   "Standing tackle",
-    "Sliding tackle":    "Sliding tackle",
-    "GK Diving":         "GK diving",
-    "GK Handling":       "GK handling",
-    "GK Kicking":        "GK kicking",
-    "GK Positioning":    "GK positioning",
-    "GK Reflexes":       "GK reflexes",
-}
-
+COLUMNS = [
+    "Crossing",
+    "Finishing",
+    "Heading accuracy",
+    "Short passing",
+    "Volleys",
+    "Dribbling",
+    "Curve",
+    "FK Accuracy",
+    "Long passing",
+    "Ball control",
+    "Acceleration",
+    "Sprint speed",
+    "Agility",
+    "Reactions",
+    "Balance",
+    "Shot power",
+    "Jumping",
+    "Stamina",
+    "Strength",
+    "Long shots",
+    "Aggression",
+    "Interceptions",
+    "Attack position",
+    "Vision",
+    "Penalties"
+    "Composure",
+    "Marking",
+    "Standing tackle",
+    "Sliding tackle",
+    "GK Diving",
+    "GK Handling",
+    "GK Kicking",
+    "GK Positioning",
+    "GK Reflexes"
+]
+INDEX_COLUMN = COLUMNS[0]
 
 def load_columns(csv_path):
     path = Path(csv_path)
@@ -145,13 +145,89 @@ class DatasetBuilder:
         self.rows_to_add = []
         self.rows_added = 0
         self.delay = 1.5
+        self.error_game_ids = []          # game IDs that failed during processing
+        self.processed_game_ids = set()   # game IDs successfully completed
+        self.headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/124.0.0.0 Safari/537.36"
+            ),
+            "Accept-Language": "en-GB,en;q=0.9",
+        }
 
     def process_games(self):
-        # For each row in the games dataset, get the season and the URL. 
+        # For each row in the games dataset, get the season and the URL.
         # Then call scrape_lineup with the URL.
         # Lineup returned -> call build_match_row
         # Row finished -> Add to self.rows_to_add and update progress
-        pass
+
+        with open(self.games_path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            all_rows = list(reader)
+
+        # Filter out national-team games upfront (~0.7% of the dataset)
+        club_rows = [r for r in all_rows if r.get("competition_type", "").strip() != "national_team_competition"]
+        total = len(club_rows)
+
+        print(f"Processing {total} club games (national-team games skipped).")
+
+        try:
+            for idx, row in enumerate(club_rows, start=1):
+                game_id   = row["game_id"].strip()
+                season    = row["season"].strip()
+                url       = row["url"].strip()
+                home_team = row["home_club_name"].strip()
+                away_team = row["away_club_name"].strip()
+                score     = f"{row['home_club_goals'].strip()}:{row['away_club_goals'].strip()}"
+
+                self.print_progress(idx, total, prefix="Games", suffix=f"{home_team} vs {away_team}")
+
+                lineup = self.scrape_lineup(url)
+                if lineup is None:
+                    log_error(f"[{game_id}] Failed to scrape lineup: {url}")
+                    self.error_game_ids.append(game_id)
+                    continue
+
+                match_row = self.build_match_row(
+                    lineup["home"], lineup["away"],
+                    home_team, away_team,
+                    score, season,
+                )
+                if match_row is None:
+                    log_error(f"[{game_id}] Failed to build match row: {home_team} vs {away_team}")
+                    self.error_game_ids.append(game_id)
+                    continue
+
+                self.rows_to_add.append(match_row)
+                self.processed_game_ids.add(game_id)
+                self.rows_added += 1
+
+                # Flush to disk periodically (every 10 games) to reduce data loss on crash
+                if self.rows_added % 10 == 0:
+                    self._flush_output()
+
+        except KeyboardInterrupt:
+            print("\nInterrupted — saving progress…")
+            self.exit_()
+            sys.exit(0)
+
+        # Final flush
+        self._flush_output()
+        self.exit_()
+        print(f"\nDone. {self.rows_added} games added; {len(self.error_game_ids)} errors.")
+    def _flush_output(self):
+        """Append any pending rows to the output CSV."""
+        if not self.rows_to_add:
+            return
+        path = Path(self.output_path)
+        write_header = not path.exists() or path.stat().st_size == 0
+        with open(path, "a", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            if write_header:
+                writer.writerow(["score"])   # extend with real column names if needed
+            writer.writerows(self.rows_to_add)
+        self.rows_to_add = []
 
     def scrape_lineup(self, game_url):
         try:
@@ -235,41 +311,138 @@ class DatasetBuilder:
         row.append(score)
         return row
     
-    def get_player_attributes(self, player_name, team_name, season, is_keeper = False):
-        # Call find_player to attempt to find the player in the players.csv by finding a row with the exact name, club and season.
-        # If none, call find_sofifa_link
+    def get_player_attributes(self, player_name, team_name, season, is_keeper=False):
+        # Call find_player to attempt to find the player in the players.csv by finding a row
+        # with the exact name, club and season.
+        # If none, call find_sofifa_link.
         # Use the returned attributes to return the correct ones using the MAPS.
-        pass
 
-    def find_player(self):
-        # Attempt to find the player in the players.csv by finding a row with the exact name, club and season.
-        # Return the attributes.
-        pass
+        raw = self.find_player(player_name, team_name, season)
+
+        if raw is None:
+            raw = self.find_sofifa_link(player_name, team_name, season)
+
+        if raw is None:
+            log_error(f"Could not find attributes for {player_name} ({team_name}, {season})")
+            return None
+
+        # Determine whether this player is a keeper from the scraped/found data.
+        # The caller passes is_keeper=False by default; we refine via Preferred Positions.
+        preferred_pos = str(raw.get("Preferred Positions", "")).upper()
+        player_is_keeper = "GK" in preferred_pos or is_keeper
+
+        attrs = {"is_keeper": player_is_keeper}
+
+        # Always add mental/physical attributes
+        for key, col in MENTAL_MAP.items():
+            attrs[key] = raw.get(col, "")
+
+        if player_is_keeper:
+            for key, col in KEEPER_MAP.items():
+                attrs[key] = raw.get(col, "")
+        else:
+            for key, col in OUTFIELD_MAP.items():
+                attrs[key] = raw.get(col, "")
+
+        return attrs
+
+    def find_player(self, player_name, team_name, season):
+        # Attempt to find the player in the players.csv by finding a row with the exact
+        # name, club and season. Return the attributes as a dict, or None if not found.
+        path = Path(self.players_path)
+        if not path.exists() or path.stat().st_size == 0:
+            return None
+
+        player_name_lower = player_name.strip().lower()
+        team_name_lower   = team_name.strip().lower()
+        season_str        = str(season).strip()
+
+        with open(path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                row_name   = row.get("Name",   "").strip().lower()
+                row_club   = row.get("Club",   "").strip().lower()
+                row_season = row.get("Season", row.get("season", "")).strip()
+
+                if (row_name == player_name_lower
+                        and row_club == team_name_lower
+                        and row_season == season_str):
+                    return dict(row)
+
+        return None
 
     def find_sofifa_link(self, player_name, team_name, season):
         # Use google to search player_name + team_name + "sofifa" + season.
-        # Check the first link is sofifa, is in english, it the correct player, season and is on the attributes page.
-        # If not, either update the link or find the correct one.
+        # Check the first link is sofifa, is in English, is the correct player/season,
+        # and is on the attributes page. Adjust the URL if necessary.
         # Call scrape_sofifa with the url.
         # Call add_player_to_csv to add the player to the csv.
-        # Return the attributes scraped by sofifa, no need to filter based on keeper or not.
-        pass
+        # Return the raw attributes dict (unfiltered by keeper/outfield).
+
+        query = f"{player_name} {team_name} sofifa {season}"
+
+        try:
+            results = list(search(query, num=5, stop=5, pause=2.0))
+        except Exception as exc:
+            log_error(f"Google search failed for '{query}': {exc}")
+            return None
+
+        sofifa_url = None
+        for url in results:
+            if "sofifa.com" not in url:
+                continue
+
+            # Ensure English version: sofifa.com/player/... (no /xx/ locale prefix)
+            # e.g. https://sofifa.com/player/158023/... is English
+            # e.g. https://sofifa.com/fr/player/... is French — strip locale
+            url = re.sub(r"sofifa\.com/[a-z]{2}/", "sofifa.com/", url)
+
+            # Must be a player page, not a team/search page
+            if not re.search(r"sofifa\.com/player/\d+", url):
+                continue
+
+            # Enforce English and the specific season version in the query string
+            # SoFIFA uses ?v=XXYYYY for the version (e.g. ?v=190001 for FIFA 19)
+            # We keep whatever version the search returned as a starting point.
+            if "?" not in url:
+                url += "?"
+            if "lang=" not in url:
+                url += "&lang=en-US"
+
+            sofifa_url = url
+            break
+
+        if sofifa_url is None:
+            log_error(f"No valid SoFIFA URL found for {player_name} ({team_name}, {season})")
+            return None
+
+        time.sleep(self.delay)
+        data = self.scrape_sofifa(sofifa_url)
+
+        if data is None:
+            return None
+
+        # Sanity-check: scraped name should roughly match the searched name
+        scraped_name = data.get("Name", "").lower()
+        if player_name.split()[-1].lower() not in scraped_name:
+            log_error(
+                f"Name mismatch for {player_name}: got '{data.get('Name')}' from {sofifa_url}"
+            )
+            return None
+
+        # Persist so we don't need to scrape again
+        self.add_player_to_csv(data)
+
+        return data
 
     def scrape_sofifa(self, player_url):
         def fetch_page(url):
             resp = requests.get(url, headers = SOFIFA_HEADERS, timeout=20)
             resp.raise_for_status()
             return BeautifulSoup(resp.text, "html.parser")
-
-
+        
         def t(tag):
             return tag.get_text(strip=True) if tag else ""
-
-
-        def extract_player_id(url):
-            m = re.search(r"/player/(\d+)/", url)
-            return m.group(1) if m else ""
-
 
         def extract_attribute_value(block):
             value_tag = block.find("em")
@@ -285,34 +458,10 @@ class DatasetBuilder:
             label_tag = block.find("span", attrs={"data-tippy-right-start": True})
             label_text = t(label_tag)
             return value_text, label_text
-
-
-        def next_row_number(csv_path):
-            path = Path(csv_path)
-            if not path.exists():
-                return 0
-
-            last_row = None
-            with open(path, newline="", encoding="utf-8") as f:
-                reader = csv.reader(f)
-                next(reader, None)
-                for row in reader:
-                    if row:
-                        last_row = row
-
-            if not last_row:
-                return 0
-
-            try:
-                return int(last_row[0]) + 1
-            except (ValueError, IndexError):
-                return 0
         
         def scrape(url):
             soup = fetch_page(url)
             data = {col: "" for col in COLUMNS}
-
-            player_id = extract_player_id(url)
             data[INDEX_COLUMN] = ""
 
             # ── Name ──────────────────────────────────────────────────────────────────
@@ -383,11 +532,11 @@ class DatasetBuilder:
             attrs = {}
             for block in soup.select("div.grid.attribute p"):
                 val_text, label = extract_attribute_value(block)
-                if not val_text or label not in ATTR_MAP:
+                if not val_text or label not in COLUMNS:
                     continue
-                attrs[ATTR_MAP[label]] = val_text
+                attrs[label] = val_text
 
-            for col_name in ATTR_MAP.values():
+            for col_name in COLUMNS:
                 data[col_name] = attrs.get(col_name, "")
 
             total = sum(int(v) for v in attrs.values() if v.isdigit())
@@ -395,17 +544,44 @@ class DatasetBuilder:
 
             return data
         
-        
         try:
-            data = scrape(URL)
+            data = scrape(player_url)
         except requests.HTTPError as e:
             print(f"HTTP error: {e}", file=sys.stderr)
             sys.exit(1)
-        pass
+
+        return data
 
     def add_player_to_csv(self, data):
+        def next_row_number(csv_path):
+            path = Path(csv_path)
+            if not path.exists():
+                return 0
+
+            last_row = None
+            with open(path, newline="", encoding="utf-8") as f:
+                reader = csv.reader(f)
+                next(reader, None)
+                for row in reader:
+                    if row:
+                        last_row = row
+
+            if not last_row:
+                return 0
+
+            try:
+                return int(last_row[0]) + 1
+            except (ValueError, IndexError):
+                return 0
+
         # Add the data to the players.csv file as a new entry, incrementing the id by 1 everytime.
-        pass
+        path = Path(self.players_path)
+        data[INDEX_COLUMN] = str(next_row_number(path))
+        with open(path, "a", newline = "", encoding = "utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames = COLUMNS, extrasaction = "ignore")
+            writer.writerow(data)
+
+        # CLOSE WRITER SO CSV CAN BE READ LATER DURING EXECUTION.
 
     def print_progress(self, current, total, prefix = '', suffix = '', length = 50, fill = '█'):
         percent = ("{0:.1f}").format(100 * (current / float(total)))
@@ -416,11 +592,44 @@ class DatasetBuilder:
         if current == total: sys.stdout.write('\n')
 
     def exit_(self):
-        pass
+        # Call this function if Control+C is pressed and reset the games_csv_path to include
+        # the games that were not processed or gave an error.
+
+        # Flush any pending successfully-built rows first
+        self._flush_output()
+
+        path = Path(self.games_path)
+        if not path.exists():
+            return
+
+        # Read all original rows preserving the header
+        with open(path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            fieldnames = reader.fieldnames
+            all_rows = list(reader)
+
+        # Keep rows that were never processed OR that produced an error,
+        # i.e. remove only the rows that were successfully completed.
+        remaining = [
+            row for row in all_rows
+            if row.get("game_id", "").strip() not in self.processed_game_ids
+               or row.get("game_id", "").strip() in self.error_game_ids
+        ]
+
+        # Overwrite the games CSV with the remaining work (header preserved)
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(remaining)
+
+        print(
+            f"Games CSV updated: {len(remaining)} rows remaining "
+            f"({len(self.error_game_ids)} errors re-queued)."
+        )
 
 if __name__ == "__main__":
     games_csv_path = os.path.join(".", "machine_learning", "games-test.csv")
-    players_csv_path = os.join(".", "machine_learning", "players.csv")
+    players_csv_path = os.path.join(".", "machine_learning", "players.csv")
     output_path = os.path.join(".", "machine_learning", "final_dataset.csv")
     
     output_dir = os.path.dirname(output_path)

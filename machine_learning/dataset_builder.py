@@ -10,7 +10,7 @@
 
 import os, time, requests, re, sys, csv
 from bs4 import BeautifulSoup
-from google import search 
+from googlesearch import search 
 from pathlib import Path
 
 KEEPER_MAP = {
@@ -162,7 +162,7 @@ class DatasetBuilder:
         # Lineup returned -> call build_match_row
         # Row finished -> Add to self.rows_to_add and update progress
 
-        with open(self.games_path, newline="", encoding="utf-8") as f:
+        with open(self.games_path, newline = "", encoding = "utf-8") as f:
             reader = csv.DictReader(f)
             all_rows = list(reader)
 
@@ -181,7 +181,7 @@ class DatasetBuilder:
                 away_team = row["away_club_name"].strip()
                 score     = f"{row['home_club_goals'].strip()}:{row['away_club_goals'].strip()}"
 
-                self.print_progress(idx, total, prefix="Games", suffix=f"{home_team} vs {away_team}")
+                self.print_progress(idx, total, prefix = "Games", suffix = f"{home_team} vs {away_team}")
 
                 lineup = self.scrape_lineup(url)
                 if lineup is None:
@@ -216,8 +216,10 @@ class DatasetBuilder:
         self._flush_output()
         self.exit_()
         print(f"\nDone. {self.rows_added} games added; {len(self.error_game_ids)} errors.")
+
     def _flush_output(self):
-        """Append any pending rows to the output CSV."""
+        # Append any pending rows to the output CSV.
+
         if not self.rows_to_add:
             return
         path = Path(self.output_path)
@@ -287,9 +289,9 @@ class DatasetBuilder:
 
     def build_match_row(self, home_lineup, away_lineup, home_team, away_team, score, season):
         row = []
-        for side_lineup, team_name in [(home_lineup, home_team), (away_lineup, away_team)]:
+        for lineup, team_name in [(home_lineup, home_team), (away_lineup, away_team)]:
             players_data = []
-            for p_name in side_lineup:
+            for p_name in lineup:
                 p_attr = self.get_player_attributes(p_name, team_name, season)
                 if not p_attr: return None
                 players_data.append(p_attr)
@@ -380,36 +382,43 @@ class DatasetBuilder:
         # Return the raw attributes dict (unfiltered by keeper/outfield).
 
         query = f"{player_name} {team_name} sofifa {season}"
+        print(query)
 
         try:
-            results = list(search(query, num=5, stop=5, pause=2.0))
+            results = list(search(query, num_results=5))
         except Exception as exc:
             log_error(f"Google search failed for '{query}': {exc}")
             return None
+
+        # SoFIFA encodes the FIFA edition in a path version segment like /120001/
+        # where the first two digits = FIFA year (e.g. 12 -> FIFA 12 -> season 2012)
+        # and the last four digits are always 0001 for the base roster.
+        # season value from the games CSV is the *start* year of the season
+        # (e.g. 2012 for the 2012/13 season), which maps to FIFA 13 (season+1).
+        fifa_year = (int(season) + 1) % 100  # e.g. 2012 -> 13
+        version   = f"{fifa_year:02d}0001"   # e.g. '130001'
 
         sofifa_url = None
         for url in results:
             if "sofifa.com" not in url:
                 continue
 
-            # Ensure English version: sofifa.com/player/... (no /xx/ locale prefix)
-            # e.g. https://sofifa.com/player/158023/... is English
-            # e.g. https://sofifa.com/fr/player/... is French — strip locale
+            # Strip non-English locale prefix (e.g. /fr/, /de/)
             url = re.sub(r"sofifa\.com/[a-z]{2}/", "sofifa.com/", url)
 
-            # Must be a player page, not a team/search page
-            if not re.search(r"sofifa\.com/player/\d+", url):
+            # Must be a player page
+            m = re.search(r"sofifa\.com/player/(\d+)", url)
+            if not m:
                 continue
 
-            # Enforce English and the specific season version in the query string
-            # SoFIFA uses ?v=XXYYYY for the version (e.g. ?v=190001 for FIFA 19)
-            # We keep whatever version the search returned as a starting point.
-            if "?" not in url:
-                url += "?"
-            if "lang=" not in url:
-                url += "&lang=en-US"
+            player_id = m.group(1)
 
-            sofifa_url = url
+            # Extract player name slug from the URL if present, otherwise leave blank
+            slug_match = re.search(rf"player/{player_id}/([^/?#]+)", url)
+            slug = slug_match.group(1).rstrip('/') if slug_match else player_name.lower().replace(' ', '-')
+
+            # Build canonical URL with the correct version path segment
+            sofifa_url = f"https://sofifa.com/player/{player_id}/{slug}/{version}/"
             break
 
         if sofifa_url is None:
@@ -580,8 +589,6 @@ class DatasetBuilder:
         with open(path, "a", newline = "", encoding = "utf-8") as f:
             writer = csv.DictWriter(f, fieldnames = COLUMNS, extrasaction = "ignore")
             writer.writerow(data)
-
-        # CLOSE WRITER SO CSV CAN BE READ LATER DURING EXECUTION.
 
     def print_progress(self, current, total, prefix = '', suffix = '', length = 50, fill = '█'):
         percent = ("{0:.1f}").format(100 * (current / float(total)))

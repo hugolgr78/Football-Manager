@@ -10,8 +10,11 @@
 
 import os, time, requests, re, sys, csv
 from bs4 import BeautifulSoup
-from googlesearch import search 
+# import googlesearch
+# from googlesearch import search 
 from pathlib import Path
+from duckduckgo_search import DDGS
+from difflib import SequenceMatcher
 
 KEEPER_MAP = {
     "gk_diving": "GK diving",
@@ -382,20 +385,15 @@ class DatasetBuilder:
         # Return the raw attributes dict (unfiltered by keeper/outfield).
 
         query = f"{player_name} {team_name} sofifa {season}"
-        print(query)
-
-        try:
-            results = list(search(query, num_results=5))
-        except Exception as exc:
-            log_error(f"Google search failed for '{query}': {exc}")
-            return None
+        with DDGS() as ddgs:
+            results = [r["href"] for r in ddgs.text(query, max_results=5)]
 
         # SoFIFA encodes the FIFA edition in a path version segment like /120001/
         # where the first two digits = FIFA year (e.g. 12 -> FIFA 12 -> season 2012)
         # and the last four digits are always 0001 for the base roster.
         # season value from the games CSV is the *start* year of the season
         # (e.g. 2012 for the 2012/13 season), which maps to FIFA 13 (season+1).
-        fifa_year = (int(season) + 1) % 100  # e.g. 2012 -> 13
+        fifa_year = (int(season)) % 100  # e.g. 2012 -> 13
         version   = f"{fifa_year:02d}0001"   # e.g. '130001'
 
         sofifa_url = None
@@ -433,7 +431,7 @@ class DatasetBuilder:
 
         # Sanity-check: scraped name should roughly match the searched name
         scraped_name = data.get("Name", "").lower()
-        if player_name.split()[-1].lower() not in scraped_name:
+        if SequenceMatcher(None, scraped_name, player_name.lower()) < 0.8:
             log_error(
                 f"Name mismatch for {player_name}: got '{data.get('Name')}' from {sofifa_url}"
             )

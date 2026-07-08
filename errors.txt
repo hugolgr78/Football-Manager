@@ -1,0 +1,12 @@
+Failed to fetch listing page during discovery: https://sofifa.com/?r=120002&set=true&offset=14520
+Failed to fetch listing page during discovery: https://sofifa.com/?r=130001&set=true&offset=14820
+Failed to fetch listing page during discovery: https://sofifa.com/?r=140001&set=true&offset=16320
+Failed to fetch listing page during discovery: https://sofifa.com/?r=150001&set=true&offset=16140
+Failed to fetch listing page during discovery: https://sofifa.com/?r=160001&set=true&offset=16920
+Failed to fetch listing page during discovery: https://sofifa.com/?r=170001&set=true&offset=17580
+Failed to fetch listing page during discovery: https://sofifa.com/?r=180001&set=true&offset=17940
+Failed to fetch listing page during discovery: https://sofifa.com/?r=190001&set=true&offset=18120
+Failed to fetch listing page during discovery: https://sofifa.com/?r=200001&set=true&offset=18540
+Failed to fetch listing page during discovery: https://sofifa.com/?r=210001&set=true&offset=18540
+Failed to fetch listing page during discovery: https://sofifa.com/?r=220001&set=true&offset=19140
+Failed to fetch listing page during discovery: https://sofifa.com/?r=230001&set=true&offset=18420

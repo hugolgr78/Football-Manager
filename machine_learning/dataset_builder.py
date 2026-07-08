@@ -1,19 +1,19 @@
 # Plan:
-# For each game in the games-transfermarkt csv (SKIP NATIONAL TEAM GAMES, THEY MAKE UP .7% OF THE CSV), get the url and scrape transfermartk for the lineups as before
-# For each player, mark if they are a keeper (first position in returned lineup per side) and check if they exist in the players csv for the current season.
-# If yes, find them and add attributes
-# If no, use google search library to search the player name + club + sofifa + season
-# Check: first URL is Sofifa, and in English and on the correct page (with the attributes)
-# Scrape the first url for the attributes as before and add them to the dataset (id, name, club, season and attributes)
-# Add new game to the final_dataset.
-# All games that are added should be removed from the dataset and when pressing Control+C, the games dataset should be replaced by the new one, made up of all games not done yet with the ones that gave an error.
+# Loop through every game in the games-transfermarkt.csv, and for each game, scrape the lineup on transfermartk.
+# = Do not use the game if either team does not have their formations (i.e. if either formation is blank, skip)
+# = If lineup cannot be scraped, skip and add the match to the errors.txt
+# For each player, find them in players.csv based on season, name, club and nat  (all except season will not be exact matches, use fuzzy or sequence matcher)
+# = If player cannot be found, skip and add the match and player name to the errors.txt
+# For all skipped games (except formation skip), add the row to a list.
+# Then add the repesctive attr (keeper or not) to the list
+# Repeat for each player
+# Add the formaqtion home, formation away, score home and score away at the end (score is observed data)
+# Row should be keeper_1 attr, outfield_attrs, keeper_2 attr, outfield_attrs, formation_H, formation_A, score_H, score_A
+# Once finished, update the csv with the skipped rows so that all that remains is the skipped games in the new csv.
 
 import os, time, requests, re, sys, csv
 from bs4 import BeautifulSoup
-# import googlesearch
-# from googlesearch import search 
 from pathlib import Path
-from duckduckgo_search import DDGS
 from difflib import SequenceMatcher
 
 KEEPER_MAP = {

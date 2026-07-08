@@ -1,39 +1,3 @@
-"""
-scrape_sofifa_players.py
-
-Bulk-scrape ALL players for one or more sofifa versions (e.g.
-https://sofifa.com/?r=120002&set=true for FIFA 12) instead of relying on a
-downloaded Kaggle dataset or doing a live search per player. This gives you
-a complete, canonical player table per season that you can match
-transfermarkt lineup names against locally, with no external search needed.
-
-Output: one CSV at OUTPUT_DIR/players.csv, with:
-    - identity columns: sofifa_id, player_url, season_version, name,
-        normalized_name, club, age, nationality, preferred_positions, overall,
-        potential  (for fast matching later)
-  - canonical attribute columns matching the keys already used elsewhere in
-    your pipeline: gk_diving, gk_handling, gk_kicking, gk_reflexes,
-    composure, stamina, pace, jumping, strength, aggression, acceleration,
-    balance, crossing, dribbling, finishing, free_kick, heading, long_shots,
-    marking, passing, penalty, positioning, tackling_stand, tackling_slide,
-    vision, is_keeper
-
-Rather than filtering scraped labels against a fixed list (which is where
-dataset_builder.py's COLUMNS/KEEPER_MAP/OUTFIELD_MAP mismatch bugs came
-from - see chat), this scrapes EVERY label/value pair on the page and maps
-them via ATTRIBUTE_ALIASES (lowercased, tolerant of several known label
-spellings). If sofifa's exact wording differs from the aliases below, the
-attribute will just come back blank rather than silently mismatching - check
-one player's output against the live page and extend ATTRIBUTE_ALIASES if
-you spot a gap.
-
-Resumable: re-running appends into OUTPUT_DIR/players.csv and skips rows
-already present for the same season_version/sofifa_id pair.
-
-Usage:
-    python scrape_sofifa_players.py
-"""
-
 import os
 import re
 import csv
@@ -42,6 +6,8 @@ import logging
 import unicodedata
 import argparse
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from pathlib import Path
 
@@ -53,7 +19,7 @@ from bs4 import BeautifulSoup
 # ---------------------------------------------------------------------------
 OUTPUT_DIR = Path("machine_learning")
 OUTPUT_FILE = OUTPUT_DIR / "players.csv"
-SOFIFA_LISTING_URL = "https://sofifa.com/?r=120002&set=true&offset=0"
+SOFIFA_LISTING_URL = "https://sofifa.com/?r=230001&set=true&offset=0"
 
 # sofifa version code = 2-digit FIFA year + 4-digit roster-set number.
 # Your example (r=120002) uses set "0002", matching the Kaggle sample URLs
@@ -69,6 +35,7 @@ SEASON_YEAR_SUFFIXES = list(range(12, 27))  # FIFA12 .. FIFA26 - EDIT AS NEEDED
 PLAYERS_PER_PAGE = 60
 REQUEST_DELAY = 1.5
 MAX_PAGES_SAFETY = 500  # hard stop in case total-count parsing fails
+DEFAULT_THREADS = 22
 
 SOFIFA_HEADERS = {
     "User-Agent": (
@@ -192,6 +159,16 @@ def update_query_param(url, key, value):
     params = parse_qs(parsed.query)
     params[key] = [str(value)]
     return urlunparse(parsed._replace(query=urlencode(params, doseq=True)))
+
+
+def chunk_list(lst, n):
+    """Split lst into n contiguous, near-equal chunks (last chunks may get
+    one extra item). E.g. chunk_list(list(range(50)), 10) -> 10 chunks of 5."""
+    n = max(1, min(n, len(lst))) if lst else 0
+    if n == 0:
+        return []
+    k, m = divmod(len(lst), n)
+    return [lst[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n)]
 
 
 def extract_version_from_url(url):
@@ -328,7 +305,68 @@ def load_existing_ids(path):
         }
 
 
-def scrape_players_from_listing_url(listing_url, delay=REQUEST_DELAY, max_players=None):
+def scrape_page_range(version, season_suffix, page_offsets, existing_ids, ids_lock,
+                       output_path, delay, max_players, counter_state, counter_lock, stop_event):
+    """Worker: sequentially scrape a contiguous set of listing pages (given as
+    a list of offsets) and every player found on them. Safe to run in
+    parallel with other calls of this function against the SAME shared
+    existing_ids/counter_state, as long as each call gets a disjoint set of
+    page_offsets (which is how scrape_players_from_listing_url splits them)."""
+    for offset in page_offsets:
+        if stop_event.is_set():
+            return
+
+        page_url = f"https://sofifa.com/?r={version}&set=true&offset={offset}"
+        soup = fetch(page_url)
+        if soup is None:
+            log_error(f"Failed to fetch listing page: {page_url}")
+            continue
+
+        player_links = extract_player_links(soup)
+
+        for pid, slug in player_links:
+            if stop_event.is_set():
+                return
+
+            row_key = f"{season_suffix}:{pid}"
+            with ids_lock:
+                if row_key in existing_ids:
+                    continue
+                existing_ids.add(row_key)  # reserve now so no other thread re-scrapes it
+
+            profile_url = f"https://sofifa.com/player/{pid}/{slug}/{version}/"
+            time.sleep(delay)
+            data = scrape_player_profile(profile_url)
+
+            if data is None:
+                log_error(f"Failed to scrape player {pid} ({profile_url})")
+                continue
+
+            data["sofifa_id"] = pid
+            data["player_url"] = profile_url
+            data["season_version"] = season_suffix
+
+            with ids_lock:
+                append_row(output_path, data)
+
+            with counter_lock:
+                counter_state["count"] += 1
+                render_counter(counter_state["count"], max_players)
+                if max_players is not None and counter_state["count"] >= max_players:
+                    stop_event.set()
+                    return
+
+
+def scrape_players_from_listing_url(listing_url, delay=REQUEST_DELAY, max_players=None, threads=DEFAULT_THREADS):
+    """
+    NOTE on max_players + threads: with threads > 1, max_players is an
+    approximate/soft cap, not exact. Several threads can already be
+    mid-request when the shared counter hits the limit, so you may end up
+    with a handful more rows than requested (up to roughly `threads` extra).
+    For an exact small test run (e.g. "just scrape 5 players"), use
+    threads=1; use threads>1 once you're scraping for real and an
+    approximate cap doesn't matter.
+    """
     version = extract_version_from_url(listing_url)
     if not version:
         raise ValueError(f"Could not detect a SoFIFA version from URL: {listing_url}")
@@ -342,79 +380,78 @@ def scrape_players_from_listing_url(listing_url, delay=REQUEST_DELAY, max_player
 
     parsed = urlparse(listing_url)
     params = parse_qs(parsed.query)
-    offset = int(params.get("offset", [0])[0] or 0)
-    total = None
+    start_offset = int(params.get("offset", [0])[0] or 0)
+
+    # Discover how many listing pages exist by paging through them (cheap -
+    # these are just the 60-per-page listing pages, no profile scraping yet)
+    # until an empty page shows up. This avoids relying on parsing sofifa's
+    # "Showing X of Y" text, which may not match the page's actual wording.
+    log.info(f"[season {season_suffix}] discovering pages, starting at offset {start_offset}...")
+    page_offsets = []
+    offset = start_offset
     page_num = 0
-    scraped_this_run = 0
+    while page_num < MAX_PAGES_SAFETY:
+        page_url = f"https://sofifa.com/?r={version}&set=true&offset={offset}"
+        soup = fetch(page_url)
+        if soup is None:
+            log_error(f"Failed to fetch listing page during discovery: {page_url}")
+            break
+        if not extract_player_links(soup):
+            break
+        page_offsets.append(offset)
+        offset += PLAYERS_PER_PAGE
+        page_num += 1
+        time.sleep(delay)
+
+    if not page_offsets:
+        log.warning(f"[season {season_suffix}] no player pages found starting at offset {start_offset}")
+        return
+
+    log.info(f"[season {season_suffix}] found {len(page_offsets)} pages "
+              f"(offsets {page_offsets[0]}-{page_offsets[-1]})")
+
+    ids_lock = threading.Lock()
+    counter_lock = threading.Lock()
+    stop_event = threading.Event()
+    counter_state = {"count": 0}
 
     render_counter(0, max_players)
 
     try:
-        while page_num < MAX_PAGES_SAFETY:
-            page_url = update_query_param(listing_url, "offset", offset)
-            soup = fetch(page_url)
-            if soup is None:
-                log_error(f"Failed to fetch listing page: {page_url}")
-                break
-
-            if total is None:
-                total = parse_total_count(soup)
-                if total:
-                    log.info(f"[season {season_suffix}] total players reported: {total}")
-
-            player_links = extract_player_links(soup)
-            if not player_links:
-                break
-
-            for pid, slug in player_links:
-                row_key = f"{season_suffix}:{pid}"
-                if row_key in existing_ids:
-                    continue
-
-                profile_url = f"https://sofifa.com/player/{pid}/{slug}/{version}/"
-                time.sleep(delay)
-                data = scrape_player_profile(profile_url)
-
-                if data is None:
-                    log_error(f"Failed to scrape player {pid} ({profile_url})")
-                    continue
-
-                data["sofifa_id"] = pid
-                data["player_url"] = profile_url
-                data["season_version"] = season_suffix
-
-                append_row(output_path, data)
-                existing_ids.add(row_key)
-                scraped_this_run += 1
-                render_counter(scraped_this_run, max_players)
-
-                if max_players is not None and scraped_this_run >= max_players:
-                    break
-
-            if max_players is not None and scraped_this_run >= max_players:
-                break
-
-            offset += PLAYERS_PER_PAGE
-            page_num += 1
-            if total is not None and offset >= total:
-                break
-            time.sleep(delay)
+        if threads > 1:
+            chunks = [c for c in chunk_list(page_offsets, threads) if c]
+            log.info(f"[season {season_suffix}] {len(page_offsets)} pages split across {len(chunks)} threads")
+            with ThreadPoolExecutor(max_workers=len(chunks)) as executor:
+                futures = [
+                    executor.submit(
+                        scrape_page_range, version, season_suffix, chunk, existing_ids, ids_lock,
+                        output_path, delay, max_players, counter_state, counter_lock, stop_event,
+                    )
+                    for chunk in chunks
+                ]
+                for future in as_completed(futures):
+                    future.result()  # re-raise any worker exception
+        else:
+            scrape_page_range(
+                version, season_suffix, page_offsets, existing_ids, ids_lock,
+                output_path, delay, max_players, counter_state, counter_lock, stop_event,
+            )
     finally:
         finish_counter()
 
-    log.info(f"[season {season_suffix}] done - {scraped_this_run} new players added to {output_path}")
+    log.info(f"[season {season_suffix}] done - {counter_state['count']} new players added to {output_path}")
 
 
-def scrape_season(year_suffix, set_number=SET_NUMBER, delay=REQUEST_DELAY, max_players=None):
+def scrape_season(year_suffix, set_number=SET_NUMBER, delay=REQUEST_DELAY, max_players=None, threads=DEFAULT_THREADS):
     version = f"{year_suffix:02d}{set_number}"
     listing_url = f"https://sofifa.com/?r={version}&set=true&offset=0"
-    scrape_players_from_listing_url(listing_url, delay=delay, max_players=max_players)
+    scrape_players_from_listing_url(listing_url, delay=delay, max_players=max_players, threads=threads)
 
 
-def scrape_all_seasons(year_suffixes=SEASON_YEAR_SUFFIXES):
+def scrape_all_seasons(year_suffixes=SEASON_YEAR_SUFFIXES, threads=DEFAULT_THREADS):
     for year_suffix in year_suffixes:
         try:
-            scrape_season(year_suffix)
+            scrape_season(year_suffix, threads=threads)
         except KeyboardInterrupt:
             print("\nInterrupted - progress so far is already saved (output written incrementally).")
             raise
@@ -473,12 +510,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max-players",
         type=int,
-        default=None, # Change this to a player cap (like 5) for testing.
+        default=None,  # Change this to a player cap (like 5) for testing.
         help="Optional limit for test runs; leave unset to scrape everything",
+    )
+    parser.add_argument(
+        "--threads",
+        type=int,
+        default=DEFAULT_THREADS,
+        help="Number of pages to scrape in parallel.",
     )
     args = parser.parse_args()
 
     try:
-        scrape_players_from_listing_url(args.url, max_players=args.max_players)
+        scrape_players_from_listing_url(args.url, max_players=args.max_players, threads=args.threads)
     except KeyboardInterrupt:
-        print("\nInterrupted. Rows already written stay in machine_learning/players.csv.")
+        print("\nInterrupted. Rows already written stay in machine_learning/players.csv.") 

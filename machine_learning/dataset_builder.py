@@ -198,10 +198,10 @@ class DatasetBuilder:
             all_rows = list(reader)
 
         # Filter out national-team games upfront (~0.7% of the dataset)
-        club_rows = [r for r in all_rows if r.get("competition_type", "").strip() != "national_team_competition"]
+        club_rows = all_rows
         total = len(club_rows)
 
-        print(f"Processing {total} club games (national-team games skipped) across up to {threads} threads.")
+        print(f"Processing {total} club games across up to {threads} threads.")
 
         chunks = [c for c in chunk_list(club_rows, threads) if c]
         self._done_count = 0
@@ -480,9 +480,6 @@ class DatasetBuilder:
         # name and club are fuzzy-matched via rapidfuzz (C-implemented - far
         # faster than difflib.SequenceMatcher at this scale, which matters a
         # lot once you're running many threads over thousands of candidates).
-        # NOTE: players.csv has no nationality column, and scrape_lineup (reused
-        # unchanged) doesn't return nationality either - so unlike the original
-        # plan comment, matching here uses name + club only, not nat.
         cache_key = (player_name, team_name, season)
         if cache_key in self._find_player_cache:
             return self._find_player_cache[cache_key]
@@ -508,33 +505,44 @@ class DatasetBuilder:
         query_name_norm = normalize_name(player_name)
         query_club_lower = team_name.strip().lower()
 
-        # Narrow by club first (cheap) before the pricier name comparison -
-        # cuts a 14k-row pool down to a handful before the expensive step.
-        # Uses process.extract (one batched C-level scan over the
-        # precomputed club_names list) rather than a Python for-loop calling
-        # fuzz.WRatio per candidate, or rebuilding that list every call.
-        club_matches = process.extract(
-            query_club_lower, club_names, scorer=fuzz.WRatio,
-            score_cutoff=CLUB_MATCH_THRESHOLD, limit=None,
+        # --------------------------------------------------
+        # Step 1: Find all good name matches
+        # --------------------------------------------------
+        name_matches = process.extract(
+            query_name_norm,
+            name_norms,
+            scorer=fuzz.WRatio,
+            score_cutoff=NAME_MATCH_THRESHOLD * 100,
+            limit=None,
         )
-        pool_indices = [idx for _, _, idx in club_matches]
-        if not pool_indices:
-            pool_indices = range(len(candidates))
 
-        pool_names = [name_norms[i] for i in pool_indices]
-        match = process.extractOne(query_name_norm, pool_names, scorer=fuzz.WRatio)
-        if match is None:
+        if not name_matches:
             return None
 
-        _, name_score, pool_match_idx = match
-        best_row = candidates[pool_indices[pool_match_idx]]
+        # Only one plausible player -> ignore club
+        if len(name_matches) == 1:
+            _, _, idx = name_matches[0]
+            return candidates[idx]
 
-        # Confirm with a combined name+club score (0-1 scale, matching the
-        # original NAME_MATCH_THRESHOLD semantics) against the winning row.
-        club_score = fuzz.WRatio(query_club_lower, best_row.get("club", "").strip().lower())
-        combined = 0.7 * (name_score / 100.0) + 0.3 * (club_score / 100.0)
+        # --------------------------------------------------
+        # Step 2: Multiple players matched -> use club
+        # --------------------------------------------------
+        best_row = None
+        best_score = -1
 
-        if combined < NAME_MATCH_THRESHOLD:
+        for _, name_score, idx in name_matches:
+            club_score = fuzz.WRatio(
+                query_club_lower,
+                club_names[idx]
+            )
+
+            combined = 0.7 * (name_score / 100.0) + 0.3 * (club_score / 100.0)
+
+            if combined > best_score:
+                best_score = combined
+                best_row = candidates[idx]
+
+        if best_score < NAME_MATCH_THRESHOLD:
             return None
 
         return best_row
@@ -584,8 +592,8 @@ class DatasetBuilder:
         )
 
 if __name__ == "__main__":
-    games_csv_path = os.path.join(".", "machine_learning", "games-test.csv")
-    # games_csv_path = os.path.join(".", "machine_learning", "games-filtered.csv")
+    # games_csv_path = os.path.join(".", "machine_learning", "games-test.csv")
+    games_csv_path = os.path.join(".", "machine_learning", "games-filtered.csv")
     players_csv_path = os.path.join(".", "machine_learning", "players.csv")
     output_path = os.path.join(".", "machine_learning", "final_dataset.csv")
     

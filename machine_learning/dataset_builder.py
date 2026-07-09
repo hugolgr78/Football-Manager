@@ -10,135 +10,137 @@
 # Add the formaqtion home, formation away, score home and score away at the end (score is observed data)
 # Row should be keeper_1 attr, outfield_attrs, keeper_2 attr, outfield_attrs, formation_H, formation_A, score_H, score_A
 # Once finished, update the csv with the skipped rows so that all that remains is the skipped games in the new csv.
+#
+# NOTE: players.csv (built separately by scrape_sofifa_players.py) only has name, club,
+# and season_version columns to match against - no nationality. scrape_lineup (reused
+# unchanged below) also only returns player names, not nationality. So matching here is
+# done on name + club only, via SequenceMatcher. If you want nat-based matching too,
+# scrape_lineup would need extending to pull a flag/nationality per lineup entry - let me
+# know if that's wanted.
 
 import os, time, requests, re, sys, csv
+import unicodedata
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup
 from pathlib import Path
-from difflib import SequenceMatcher
+from rapidfuzz import fuzz, process
 
-KEEPER_MAP = {
-    "gk_diving": "GK diving",
-    "gk_reflexes": "GK reflexes",
-    "gk_handling": "GK handling",
-    "gk_kicking": "GK kicking",
+# Attribute groups, in row order: GK (1st block, keeper only), mental (2nd,
+# both keeper & outfield), physical (3rd, both), technical (4th, outfield
+# only). Keys here match players.csv's actual column names directly, so no
+# alias/translation step is needed when reading rows (unlike the old
+# KEEPER_MAP/MENTAL_MAP/OUTFIELD_MAP, which mapped to Title-Case sofifa
+# labels and needed a separate PLAYERS_CSV_COLUMN_ALIASES patch for 3 of
+# them - not needed anymore since these are already the real column names).
+GK_ALIASES = {
+    "gk_diving": ["gk diving"],
+    "gk_handling": ["gk handling"],
+    "gk_kicking": ["gk kicking"],
+    "gk_positioning": ["gk positioning"],
+    "gk_reflexes": ["gk reflexes"],
 }
 
-MENTAL_MAP = {
-    "composure": "Composure",
-    "stamina": "Stamina",
-    "pace": "Sprint speed",
-    "jumping": "Jumping",
-    "strength": "Strength",
-    "aggression": "Aggression",
-    "acceleration": "Acceleration",
-    "balance": "Balance",
+MENTAL_ALIASES = {
+    "aggression": ["aggression"],
+    "attack_position": ["attack position", "attacking position", "positioning"],
+    "composure": ["composure"],
+    "interceptions": ["interceptions"],
+    "vision": ["vision"],
 }
 
-OUTFIELD_MAP = {
-    "crossing": "Crossing",
-    "dribbling": "Dribbling",
-    "finishing": "Finishing",
-    "free_kick": "Free kick accuracy",
-    "heading": "Heading accuracy",
-    "long_shots": "Long shots",
-    "marking": "Marking",
-    "passing": "Short passing",
-    "penalty": "Penalties",
-    "positioning": "Positioning",
-    "tackling_stand": "Standing tackle",
-    "tackling_slide": "Sliding tackle",
-    "vision": "Vision"
+PHYSICAL_ALIASES = {
+    "acceleration": ["acceleration"],
+    "agility": ["agility"],
+    "balance": ["balance"],
+    "jumping": ["jumping"],
+    "reactions": ["reactions"],
+    "sprint_speed": ["sprint speed"],
+    "stamina": ["stamina"],
+    "strength": ["strength"],
 }
 
-USER_KEEPER_ATTRS = KEEPER_MAP.keys()
-USER_MENTAL_ATTRS = MENTAL_MAP.keys()
-USER_OUTFIELD_ATTRS = OUTFIELD_MAP.keys()
-
-DEFAULT_COLUMNS = [
-    "Unnamed: 0", "Name", "Age", "Photo", "Nationality", "Flag", "Overall", "Potential",
-    "Club", "Club Logo", "Value", "Wage", "Special",
-    "Acceleration", "Aggression", "Agility", "Balance", "Ball control",
-    "Composure", "Crossing", "Curve", "Dribbling", "Finishing",
-    "Free kick accuracy", "GK diving", "GK handling", "GK kicking",
-    "GK positioning", "GK reflexes", "Heading accuracy", "Interceptions",
-    "Jumping", "Long passing", "Long shots", "Marking", "Penalties",
-    "Positioning", "Reactions", "Short passing", "Shot power",
-    "Sliding tackle", "Sprint speed", "Stamina", "Standing tackle",
-    "Strength", "Vision", "Volleys",
-    "CAM", "CB", "CDM", "CF", "CM", "ID",
-    "LAM", "LB", "LCB", "LCM", "LDM", "LF", "LM", "LS", "LW", "LWB",
-    "Preferred Positions",
-    "RAM", "RB", "RCB", "RCM", "RDM", "RF", "RM", "RS", "RW", "RWB", "ST",
-]
-
-POS_LABELS = [
-    "CAM", "CB", "CDM", "CF", "CM",
-    "LAM", "LB", "LCB", "LCM", "LDM", "LF", "LM", "LS", "LW", "LWB",
-    "RAM", "RB", "RCB", "RCM", "RDM", "RF", "RM", "RS", "RW", "RWB", "ST",
-]
-
-SOFIFA_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.5",
-    "Referer": "https://sofifa.com/",
+TECHNICAL_ALIASES = {
+    "ball_control": ["ball control"],
+    "crossing": ["crossing"],
+    "curve": ["curve"],
+    "dribbling": ["dribbling"],
+    "free_kick": ["free kick accuracy", "fk accuracy"],
+    "finishing": ["finishing"],
+    "heading": ["heading accuracy"],
+    "long_passing": ["long passing"],
+    "long_shots": ["long shots"],
+    "penalty": ["penalties"],
+    "marking": ["marking", "marking awareness", "def. awareness", "defensive awareness"],
+    "short_passing": ["short passing"],
+    "shot_power": ["shot power"],
+    "tackling_slide": ["sliding tackle"],
+    "tackling_stand": ["standing tackle"],
+    "volleys": ["volleys"],
 }
 
-COLUMNS = [
-    "Crossing",
-    "Finishing",
-    "Heading accuracy",
-    "Short passing",
-    "Volleys",
-    "Dribbling",
-    "Curve",
-    "FK Accuracy",
-    "Long passing",
-    "Ball control",
-    "Acceleration",
-    "Sprint speed",
-    "Agility",
-    "Reactions",
-    "Balance",
-    "Shot power",
-    "Jumping",
-    "Stamina",
-    "Strength",
-    "Long shots",
-    "Aggression",
-    "Interceptions",
-    "Attack position",
-    "Vision",
-    "Penalties"
-    "Composure",
-    "Marking",
-    "Standing tackle",
-    "Sliding tackle",
-    "GK Diving",
-    "GK Handling",
-    "GK Kicking",
-    "GK Positioning",
-    "GK Reflexes"
-]
-INDEX_COLUMN = COLUMNS[0]
+GK_ATTRS = list(GK_ALIASES.keys())
+MENTAL_ATTRS = list(MENTAL_ALIASES.keys())
+PHYSICAL_ATTRS = list(PHYSICAL_ALIASES.keys())
+TECHNICAL_ATTRS = list(TECHNICAL_ALIASES.keys())
 
-def load_columns(csv_path):
-    path = Path(csv_path)
-    if path.exists():
-        with open(path, newline="", encoding="utf-8") as f:
-            reader = csv.reader(f)
-            headers = next(reader, None)
-            if headers:
-                return headers
-    return DEFAULT_COLUMNS
+# Combined name+club match score (0-1) below which a candidate is rejected.
+NAME_MATCH_THRESHOLD = 0.72
+# Club pre-filter threshold (0-100 scale, rapidfuzz's native scale) used to
+# narrow candidates before the more expensive name comparison.
+CLUB_MATCH_THRESHOLD = 60
+
+
+def normalize_name(name):
+    """Lowercase, strip accents/diacritics, collapse whitespace - matches the
+    normalization already used to build players.csv's `normalized_name` column,
+    so comparisons here are apples-to-apples."""
+    if not name:
+        return ""
+    decomposed = unicodedata.normalize("NFKD", name)
+    ascii_only = decomposed.encode("ascii", "ignore").decode("ascii")
+    ascii_only = re.sub(r"[^a-z0-9\s]", "", ascii_only.lower())
+    return re.sub(r"\s+", " ", ascii_only).strip()
+
 
 def log_error(msg):
     with open("errors.txt", "a") as f:
         f.write(msg + "\n")
+
+
+def chunk_list(lst, n):
+    """Split lst into n contiguous, near-equal chunks (last chunks may get one
+    extra item). E.g. chunk_list(list(range(300)), 30) -> 30 chunks of 10."""
+    n = max(1, min(n, len(lst))) if lst else 0
+    if n == 0:
+        return []
+    k, m = divmod(len(lst), n)
+    return [lst[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n)]
+
+
+def build_output_header():
+    """Column names matching build_match_row's row layout: per side, one
+    keeper block (gk + mental + physical) then ten outfield-player blocks
+    (mental + physical + technical), then formations + scores."""
+    header = []
+    for side in ("home", "away"):
+        # Keeper slot: gk (1st), mental (2nd), physical (3rd) - no technical.
+        for attr in GK_ATTRS:
+            header.append(f"{side}_gk_{attr}")
+        for attr in MENTAL_ATTRS:
+            header.append(f"{side}_gk_{attr}")
+        for attr in PHYSICAL_ATTRS:
+            header.append(f"{side}_gk_{attr}")
+        # Outfield slots: mental (2nd), physical (3rd), technical (4th) - no gk.
+        for i in range(1, 11):
+            for attr in MENTAL_ATTRS:
+                header.append(f"{side}_of{i}_{attr}")
+            for attr in PHYSICAL_ATTRS:
+                header.append(f"{side}_of{i}_{attr}")
+            for attr in TECHNICAL_ATTRS:
+                header.append(f"{side}_of{i}_{attr}")
+    header += ["home_formation", "away_formation", "home_score", "away_score"]
+    return header
 
 class DatasetBuilder:
     def __init__(self, games_csv_path, players_csv_path, output_path):
@@ -148,8 +150,9 @@ class DatasetBuilder:
         self.rows_to_add = []
         self.rows_added = 0
         self.delay = 1.5
-        self.error_game_ids = []          # game IDs that failed during processing
-        self.processed_game_ids = set()   # game IDs successfully completed
+        self.error_game_ids = []          # game IDs that failed during processing (retried next run)
+        self.processed_game_ids = set()   # game IDs done - either succeeded, or permanently skipped (formation)
+        self.formation_skip_count = 0
         self.headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -159,11 +162,36 @@ class DatasetBuilder:
             "Accept-Language": "en-GB,en;q=0.9",
         }
 
-    def process_games(self):
-        # For each row in the games dataset, get the season and the URL.
-        # Then call scrape_lineup with the URL.
-        # Lineup returned -> call build_match_row
-        # Row finished -> Add to self.rows_to_add and update progress
+        # players.csv is loaded lazily, once, and bucketed by season_version so
+        # find_player() doesn't re-scan the whole file for every single player.
+        self._players_loaded = False
+        self._players_by_version = {}
+        # Precomputed parallel lists (same order as _players_by_version[v]) so
+        # find_player doesn't rebuild a 14k-item list on every single lookup.
+        self._club_names_by_version = {}
+        self._name_norms_by_version = {}
+        self._players_lock = threading.Lock()  # guards the lazy-load below across threads
+        # Caches find_player results - the same player/club/season combo
+        # recurs across many games in a real season, so this avoids redundant
+        # fuzzy searches entirely on repeat lookups. A benign race (two
+        # threads computing the same miss concurrently) just means a little
+        # redundant work, not incorrect results, so no lock needed here.
+        self._find_player_cache = {}
+
+        # Guards all shared mutable state (rows_to_add, rows_added, error/processed
+        # game ids, formation_skip_count, output file writes) when running with
+        # multiple threads in process_games.
+        self._state_lock = threading.Lock()
+        self._progress_lock = threading.Lock()
+        self._stop_event = threading.Event()
+        self._done_count = 0
+
+    def process_games(self, threads=30):
+        # Load every game, split into `threads` contiguous chunks, and run each
+        # chunk on its own thread via _process_chunk. Each chunk handles its
+        # games sequentially (formation-skip check -> scrape_lineup ->
+        # build_match_row), the same logic as before - just spread across
+        # threads instead of one big loop.
 
         with open(self.games_path, newline = "", encoding = "utf-8") as f:
             reader = csv.DictReader(f)
@@ -173,52 +201,94 @@ class DatasetBuilder:
         club_rows = [r for r in all_rows if r.get("competition_type", "").strip() != "national_team_competition"]
         total = len(club_rows)
 
-        print(f"Processing {total} club games (national-team games skipped).")
+        print(f"Processing {total} club games (national-team games skipped) across up to {threads} threads.")
+
+        chunks = [c for c in chunk_list(club_rows, threads) if c]
+        self._done_count = 0
 
         try:
-            for idx, row in enumerate(club_rows, start=1):
-                game_id   = row["game_id"].strip()
-                season    = row["season"].strip()
-                url       = row["url"].strip()
-                home_team = row["home_club_name"].strip()
-                away_team = row["away_club_name"].strip()
-                score     = f"{row['home_club_goals'].strip()}:{row['away_club_goals'].strip()}"
-
-                self.print_progress(idx, total, prefix = "Games", suffix = f"{home_team} vs {away_team}")
-
-                lineup = self.scrape_lineup(url)
-                if lineup is None:
-                    log_error(f"[{game_id}] Failed to scrape lineup: {url}")
-                    self.error_game_ids.append(game_id)
-                    continue
-
-                match_row = self.build_match_row(
-                    lineup["home"], lineup["away"],
-                    home_team, away_team,
-                    score, season,
-                )
-                if match_row is None:
-                    log_error(f"[{game_id}] Failed to build match row: {home_team} vs {away_team}")
-                    self.error_game_ids.append(game_id)
-                    continue
-
-                self.rows_to_add.append(match_row)
-                self.processed_game_ids.add(game_id)
-                self.rows_added += 1
-
-                # Flush to disk periodically (every 10 games) to reduce data loss on crash
-                if self.rows_added % 10 == 0:
-                    self._flush_output()
-
+            with ThreadPoolExecutor(max_workers=len(chunks)) as executor:
+                futures = [executor.submit(self._process_chunk, chunk, total) for chunk in chunks]
+                for future in as_completed(futures):
+                    future.result()  # re-raise any worker exception
         except KeyboardInterrupt:
-            print("\nInterrupted — saving progress…")
+            print("\nInterrupted — signalling threads to stop and saving progress…")
+            self._stop_event.set()
+            # ThreadPoolExecutor's context manager above already waits for
+            # in-flight work to notice _stop_event and return before continuing.
+            self._flush_output()
             self.exit_()
             sys.exit(0)
 
         # Final flush
         self._flush_output()
         self.exit_()
-        print(f"\nDone. {self.rows_added} games added; {len(self.error_game_ids)} errors.")
+        print(
+            f"\nDone. {self.rows_added} games added; {len(self.error_game_ids)} errors; "
+            f"{self.formation_skip_count} skipped for missing formation."
+        )
+
+    def _process_chunk(self, rows, total):
+        for row in rows:
+            if self._stop_event.is_set():
+                return
+
+            game_id         = row["game_id"].strip()
+            season          = row["season"].strip()
+            url             = row["url"].strip()
+            home_team       = row["home_club_name"].strip()
+            away_team       = row["away_club_name"].strip()
+            home_formation  = row.get("home_club_formation", "").strip()
+            away_formation  = row.get("away_club_formation", "").strip()
+            score_home      = row["home_club_goals"].strip()
+            score_away      = row["away_club_goals"].strip()
+
+            # Formation missing on either side -> permanently skip. Marking the
+            # game_id as processed (without an error) means exit_() below drops
+            # it from the games CSV for good, instead of queuing a retry.
+            if not home_formation or not away_formation:
+                with self._state_lock:
+                    self.formation_skip_count += 1
+                    self.processed_game_ids.add(game_id)
+                self._tick(total, f"{home_team} vs {away_team}")
+                continue
+
+            lineup = self.scrape_lineup(url)
+            if lineup is None:
+                log_error(f"[{game_id}] Failed to scrape lineup: {url}")
+                with self._state_lock:
+                    self.error_game_ids.append(game_id)
+                self._tick(total, f"{home_team} vs {away_team}")
+                continue
+
+            match_row = self.build_match_row(
+                lineup["home"], lineup["away"],
+                home_team, away_team,
+                home_formation, away_formation,
+                score_home, score_away,
+                season, game_id,
+            )
+            if match_row is None:
+                log_error(f"[{game_id}] Failed to build match row: {home_team} vs {away_team}")
+                with self._state_lock:
+                    self.error_game_ids.append(game_id)
+                self._tick(total, f"{home_team} vs {away_team}")
+                continue
+
+            with self._state_lock:
+                self.rows_to_add.append(match_row)
+                self.processed_game_ids.add(game_id)
+                self.rows_added += 1
+                # Flush to disk periodically (every 10 games) to reduce data loss on crash
+                if self.rows_added % 10 == 0:
+                    self._flush_output()
+
+            self._tick(total, f"{home_team} vs {away_team}")
+
+    def _tick(self, total, suffix):
+        with self._progress_lock:
+            self._done_count += 1
+            self.print_progress(self._done_count, total, prefix="Games", suffix=suffix)
 
     def _flush_output(self):
         # Append any pending rows to the output CSV.
@@ -230,7 +300,7 @@ class DatasetBuilder:
         with open(path, "a", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             if write_header:
-                writer.writerow(["score"])   # extend with real column names if needed
+                writer.writerow(build_output_header())
             writer.writerows(self.rows_to_add)
         self.rows_to_add = []
 
@@ -290,303 +360,184 @@ class DatasetBuilder:
                     time.sleep(delay)
         raise last_error
 
-    def build_match_row(self, home_lineup, away_lineup, home_team, away_team, score, season):
+    def build_match_row(self, home_lineup, away_lineup, home_team, away_team,
+                         home_formation, away_formation, score_home, score_away,
+                         season, game_id=None):
         row = []
         for lineup, team_name in [(home_lineup, home_team), (away_lineup, away_team)]:
             players_data = []
             for p_name in lineup:
-                p_attr = self.get_player_attributes(p_name, team_name, season)
+                p_attr = self.get_player_attributes(p_name, team_name, season, game_id=game_id)
                 if not p_attr: return None
                 players_data.append(p_attr)
-            
+
             keepers = [p for p in players_data if p['is_keeper']]
             outfield = [p for p in players_data if not p['is_keeper']]
-            
+
             if len(keepers) != 1 or len(outfield) != 10:
                 log_error(f"\nKeepers & outfield error for **{team_name}** in {home_team} vs {away_team}: Numbers: {len(keepers)} and {len(outfield)}.")
                 return None
 
             for k in keepers:
-                for attr in USER_KEEPER_ATTRS: row.append(k[attr])
-                for attr in USER_MENTAL_ATTRS: row.append(k[attr])
+                for attr in GK_ATTRS: row.append(k[attr])
+                for attr in MENTAL_ATTRS: row.append(k[attr])
+                for attr in PHYSICAL_ATTRS: row.append(k[attr])
             for o in outfield:
-                for attr in USER_OUTFIELD_ATTRS: row.append(o[attr])
-                for attr in USER_MENTAL_ATTRS: row.append(o[attr])
+                for attr in MENTAL_ATTRS: row.append(o[attr])
+                for attr in PHYSICAL_ATTRS: row.append(o[attr])
+                for attr in TECHNICAL_ATTRS: row.append(o[attr])
 
-        row.append(score)
+        row.extend([home_formation, away_formation, score_home, score_away])
         return row
-    
-    def get_player_attributes(self, player_name, team_name, season, is_keeper=False):
-        # Call find_player to attempt to find the player in the players.csv by finding a row
-        # with the exact name, club and season.
-        # If none, call find_sofifa_link.
-        # Use the returned attributes to return the correct ones using the MAPS.
+
+    def get_player_attributes(self, player_name, team_name, season, is_keeper=False, game_id=None):
+        # Find the player in players.csv via fuzzy name+club match (see find_player).
+        # No google/sofifa fallback - players.csv is the sole source now.
 
         raw = self.find_player(player_name, team_name, season)
 
         if raw is None:
-            raw = self.find_sofifa_link(player_name, team_name, season)
-
-        if raw is None:
-            log_error(f"Could not find attributes for {player_name} ({team_name}, {season})")
+            tag = f"[{game_id}] " if game_id else ""
+            log_error(f"{tag}Could not find attributes for {player_name} ({team_name}, {season})")
             return None
 
-        # Determine whether this player is a keeper from the scraped/found data.
-        # The caller passes is_keeper=False by default; we refine via Preferred Positions.
-        preferred_pos = str(raw.get("Preferred Positions", "")).upper()
-        player_is_keeper = "GK" in preferred_pos or is_keeper
+        # players.csv already carries an explicit is_keeper column (from the
+        # sofifa scrape); fall back to preferred_positions just in case.
+        preferred_pos = str(raw.get("preferred_positions", "")).upper()
+        raw_is_keeper = str(raw.get("is_keeper", "")).strip().lower() == "true"
+        player_is_keeper = raw_is_keeper or "GK" in preferred_pos or is_keeper
 
         attrs = {"is_keeper": player_is_keeper}
 
-        # Always add mental/physical attributes
-        for key, col in MENTAL_MAP.items():
-            attrs[key] = raw.get(col, "")
+        # Mental and physical attributes apply to every player, keeper or not.
+        # These keys already match players.csv's actual column names directly
+        # (no alias/translation step needed, unlike the old MENTAL_MAP setup).
+        for key in MENTAL_ATTRS:
+            attrs[key] = raw.get(key, "")
+        for key in PHYSICAL_ATTRS:
+            attrs[key] = raw.get(key, "")
 
         if player_is_keeper:
-            for key, col in KEEPER_MAP.items():
-                attrs[key] = raw.get(col, "")
+            for key in GK_ATTRS:
+                attrs[key] = raw.get(key, "")
         else:
-            for key, col in OUTFIELD_MAP.items():
-                attrs[key] = raw.get(col, "")
+            for key in TECHNICAL_ATTRS:
+                attrs[key] = raw.get(key, "")
 
         return attrs
 
-    def find_player(self, player_name, team_name, season):
-        # Attempt to find the player in the players.csv by finding a row with the exact
-        # name, club and season. Return the attributes as a dict, or None if not found.
-        path = Path(self.players_path)
-        if not path.exists() or path.stat().st_size == 0:
-            return None
-
-        player_name_lower = player_name.strip().lower()
-        team_name_lower   = team_name.strip().lower()
-        season_str        = str(season).strip()
-
-        with open(path, newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                row_name   = row.get("Name",   "").strip().lower()
-                row_club   = row.get("Club",   "").strip().lower()
-                row_season = row.get("Season", row.get("season", "")).strip()
-
-                if (row_name == player_name_lower
-                        and row_club == team_name_lower
-                        and row_season == season_str):
-                    return dict(row)
-
-        return None
-
-    def find_sofifa_link(self, player_name, team_name, season):
-        # Use google to search player_name + team_name + "sofifa" + season.
-        # Check the first link is sofifa, is in English, is the correct player/season,
-        # and is on the attributes page. Adjust the URL if necessary.
-        # Call scrape_sofifa with the url.
-        # Call add_player_to_csv to add the player to the csv.
-        # Return the raw attributes dict (unfiltered by keeper/outfield).
-
-        query = f"{player_name} {team_name} sofifa {season}"
-        with DDGS() as ddgs:
-            results = [r["href"] for r in ddgs.text(query, max_results=5)]
-
-        # SoFIFA encodes the FIFA edition in a path version segment like /120001/
-        # where the first two digits = FIFA year (e.g. 12 -> FIFA 12 -> season 2012)
-        # and the last four digits are always 0001 for the base roster.
-        # season value from the games CSV is the *start* year of the season
-        # (e.g. 2012 for the 2012/13 season), which maps to FIFA 13 (season+1).
-        fifa_year = (int(season)) % 100  # e.g. 2012 -> 13
-        version   = f"{fifa_year:02d}0001"   # e.g. '130001'
-
-        sofifa_url = None
-        for url in results:
-            if "sofifa.com" not in url:
-                continue
-
-            # Strip non-English locale prefix (e.g. /fr/, /de/)
-            url = re.sub(r"sofifa\.com/[a-z]{2}/", "sofifa.com/", url)
-
-            # Must be a player page
-            m = re.search(r"sofifa\.com/player/(\d+)", url)
-            if not m:
-                continue
-
-            player_id = m.group(1)
-
-            # Extract player name slug from the URL if present, otherwise leave blank
-            slug_match = re.search(rf"player/{player_id}/([^/?#]+)", url)
-            slug = slug_match.group(1).rstrip('/') if slug_match else player_name.lower().replace(' ', '-')
-
-            # Build canonical URL with the correct version path segment
-            sofifa_url = f"https://sofifa.com/player/{player_id}/{slug}/{version}/"
-            break
-
-        if sofifa_url is None:
-            log_error(f"No valid SoFIFA URL found for {player_name} ({team_name}, {season})")
-            return None
-
-        time.sleep(self.delay)
-        data = self.scrape_sofifa(sofifa_url)
-
-        if data is None:
-            return None
-
-        # Sanity-check: scraped name should roughly match the searched name
-        scraped_name = data.get("Name", "").lower()
-        if SequenceMatcher(None, scraped_name, player_name.lower()) < 0.8:
-            log_error(
-                f"Name mismatch for {player_name}: got '{data.get('Name')}' from {sofifa_url}"
-            )
-            return None
-
-        # Persist so we don't need to scrape again
-        self.add_player_to_csv(data)
-
-        return data
-
-    def scrape_sofifa(self, player_url):
-        def fetch_page(url):
-            resp = requests.get(url, headers = SOFIFA_HEADERS, timeout=20)
-            resp.raise_for_status()
-            return BeautifulSoup(resp.text, "html.parser")
-        
-        def t(tag):
-            return tag.get_text(strip=True) if tag else ""
-
-        def extract_attribute_value(block):
-            value_tag = block.find("em")
-            if not value_tag:
-                return "", ""
-
-            value_text = t(value_tag)
-            if not value_text.isdigit():
-                value_text = value_tag.get("title", "").strip()
-            if not value_text.isdigit():
-                return "", ""
-
-            label_tag = block.find("span", attrs={"data-tippy-right-start": True})
-            label_text = t(label_tag)
-            return value_text, label_text
-        
-        def scrape(url):
-            soup = fetch_page(url)
-            data = {col: "" for col in COLUMNS}
-            data[INDEX_COLUMN] = ""
-
-            # ── Name ──────────────────────────────────────────────────────────────────
-            # The short name is in the first <h1>, full name in the second
-            h1s = soup.select("h1")
-            data["Name"] = t(h1s[0]) if h1s else ""
-
-            # ── Photo ─────────────────────────────────────────────────────────────────
-            # The current SoFIFA layout stores the player image in the profile block.
-            photo = (
-                soup.select_one("div.profile img[data-type='player']")
-                or soup.find("img", class_="player-image")
-                or soup.find("img", src=re.compile(r"/players/\d+\.png"))
-            )
-            data["Photo"] = (photo.get("data-src") or photo.get("src")) if photo else ""
-
-            # ── Age ───────────────────────────────────────────────────────────────────
-            # Page shows "29y.o. (Jun 1, 1988)"
-            age_m = re.search(r"(\d+)y\.o\.", soup.get_text())
-            data["Age"] = age_m.group(1) if age_m else ""
-
-            # ── Nationality & Flag ────────────────────────────────────────────────────
-            # The country is shown in the player profile paragraph next to the flag.
-            profile_paragraph = soup.select_one("div.profile p")
-            nat_link = profile_paragraph.select_one('a[href^="/players?na="]') if profile_paragraph else None
-            flag_img = nat_link.find("img") if nat_link else None
-            data["Nationality"] = flag_img.get("title", "").strip() if flag_img else ""
-            if not flag_img:
-                flag_img = soup.find("img", src=re.compile(r"/flags/\d+\.png"))
-            data["Flag"] = (flag_img.get("data-src") or flag_img.get("src")) if flag_img else ""
-
-            # ── Overall & Potential ───────────────────────────────────────────────────
-            # "79 Overall rating" and "79 Potential" appear as <em> inside the meta block
-            # Reliable selector: the two <em> tags inside the player meta/profile section
-            em_tags = soup.select("div.meta span em, p.meta em, .player em")
-            nums = [t(e) for e in em_tags if t(e).isdigit()]
-            if not nums:
-                # fallback: look for "XX Overall rating" and "XX Potential" in text
-                ov_m = re.search(r"(\d{2})\s+Overall rating", soup.get_text())
-                pt_m = re.search(r"(\d{2})\s+Potential", soup.get_text())
-                data["Overall"] = ov_m.group(1) if ov_m else ""
-                data["Potential"] = pt_m.group(1) if pt_m else ""
-            else:
-                data["Overall"] = nums[0]
-                data["Potential"] = nums[1] if len(nums) > 1 else ""
-
-            # ── Value & Wage ──────────────────────────────────────────────────────────
-            # "€12.5MValue" and "€120KWage" in the page text
-            val_m = re.search(r"(€[\d.,]+[KMB]?)Value", soup.get_text())
-            wag_m = re.search(r"(€[\d.,]+[KMB]?)Wage", soup.get_text())
-            data["Value"] = val_m.group(1) if val_m else ""
-            data["Wage"] = wag_m.group(1) if wag_m else ""
-
-            # ── Club & Club Logo ──────────────────────────────────────────────────────
-            club_link = soup.find("a", href=re.compile(r"/team/\d+/"))
-            data["Club"] = t(club_link)
-            club_logo_img = club_link.find("img") if club_link else None
-            data["Club Logo"] = (club_logo_img.get("data-src") or club_logo_img.get("src")) if club_logo_img else ""
-
-            # ── Preferred Positions ───────────────────────────────────────────────────
-            # "Best position ST" in the text; also listed under profile
-            bp_m = re.search(r"Best position\s+([A-Z]+)", soup.get_text())
-            data["Preferred Positions"] = bp_m.group(1) if bp_m else ""
-
-            # ── Attributes ───────────────────────────────────────────────────────────
-            # SoFIFA renders the stats inside div.grid.attribute blocks with one <p>
-            # per attribute. Each block contains <em>VALUE</em> and a label span.
-            attrs = {}
-            for block in soup.select("div.grid.attribute p"):
-                val_text, label = extract_attribute_value(block)
-                if not val_text or label not in COLUMNS:
-                    continue
-                attrs[label] = val_text
-
-            for col_name in COLUMNS:
-                data[col_name] = attrs.get(col_name, "")
-
-            total = sum(int(v) for v in attrs.values() if v.isdigit())
-            data["Special"] = str(total) if total else ""
-
-            return data
-        
+    def _season_to_version_suffix(self, season):
+        # season = start year of the season from games-transfermarkt.csv
+        # (e.g. "2012" for the 2012/13 season). players.csv's season_version
+        # is the two-digit FIFA year. Established convention from earlier in
+        # this project: FIFA year = season + 1 (e.g. 2012/13 -> FIFA 13 ->
+        # season_version "13"). CHECK this matches how you actually scraped
+        # machine_learning players.csv - adjust here if your versions were
+        # scraped under a different year convention.
         try:
-            data = scrape(player_url)
-        except requests.HTTPError as e:
-            print(f"HTTP error: {e}", file=sys.stderr)
-            sys.exit(1)
+            start_year = int(str(season).strip()[:4])
+        except ValueError:
+            return None
+        return str((start_year + 1) % 100).zfill(2)
 
-        return data
+    def _ensure_players_loaded(self):
+        # Load players.csv once, bucketed by season_version, so find_player()
+        # below doesn't re-scan the whole file for every single lookup.
+        # Double-checked locking: cheap unlocked check first (fast path once
+        # loaded), then a locked, re-checked load - this was previously
+        # unguarded and would race/corrupt _players_by_version when multiple
+        # threads hit it for the first time simultaneously.
+        if self._players_loaded:
+            return
 
-    def add_player_to_csv(self, data):
-        def next_row_number(csv_path):
-            path = Path(csv_path)
-            if not path.exists():
-                return 0
+        with self._players_lock:
+            if self._players_loaded:  # another thread may have loaded it while we waited
+                return
 
-            last_row = None
-            with open(path, newline="", encoding="utf-8") as f:
-                reader = csv.reader(f)
-                next(reader, None)
-                for row in reader:
-                    if row:
-                        last_row = row
+            path = Path(self.players_path)
+            if path.exists() and path.stat().st_size > 0:
+                with open(path, newline="", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        version = row.get("season_version", "").strip().zfill(2)
+                        self._players_by_version.setdefault(version, []).append(row)
 
-            if not last_row:
-                return 0
+                # Precompute the lowercased club / normalized-name lists once
+                # per version, so find_player reuses them on every lookup
+                # instead of rebuilding a 14k-item list each time.
+                for version, rows in self._players_by_version.items():
+                    self._club_names_by_version[version] = [
+                        row.get("club", "").strip().lower() for row in rows
+                    ]
+                    self._name_norms_by_version[version] = [
+                        row.get("normalized_name", "").strip() for row in rows
+                    ]
 
-            try:
-                return int(last_row[0]) + 1
-            except (ValueError, IndexError):
-                return 0
+            self._players_loaded = True
 
-        # Add the data to the players.csv file as a new entry, incrementing the id by 1 everytime.
-        path = Path(self.players_path)
-        data[INDEX_COLUMN] = str(next_row_number(path))
-        with open(path, "a", newline = "", encoding = "utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames = COLUMNS, extrasaction = "ignore")
-            writer.writerow(data)
+    def find_player(self, player_name, team_name, season):
+        # Find the player in players.csv: season_version must match exactly;
+        # name and club are fuzzy-matched via rapidfuzz (C-implemented - far
+        # faster than difflib.SequenceMatcher at this scale, which matters a
+        # lot once you're running many threads over thousands of candidates).
+        # NOTE: players.csv has no nationality column, and scrape_lineup (reused
+        # unchanged) doesn't return nationality either - so unlike the original
+        # plan comment, matching here uses name + club only, not nat.
+        cache_key = (player_name, team_name, season)
+        if cache_key in self._find_player_cache:
+            return self._find_player_cache[cache_key]
+
+        result = self._find_player_uncached(player_name, team_name, season)
+        self._find_player_cache[cache_key] = result
+        return result
+
+    def _find_player_uncached(self, player_name, team_name, season):
+        self._ensure_players_loaded()
+
+        version_suffix = self._season_to_version_suffix(season)
+        if version_suffix is None:
+            return None
+
+        candidates = self._players_by_version.get(version_suffix, [])
+        if not candidates:
+            return None
+
+        club_names = self._club_names_by_version.get(version_suffix, [])
+        name_norms = self._name_norms_by_version.get(version_suffix, [])
+
+        query_name_norm = normalize_name(player_name)
+        query_club_lower = team_name.strip().lower()
+
+        # Narrow by club first (cheap) before the pricier name comparison -
+        # cuts a 14k-row pool down to a handful before the expensive step.
+        # Uses process.extract (one batched C-level scan over the
+        # precomputed club_names list) rather than a Python for-loop calling
+        # fuzz.WRatio per candidate, or rebuilding that list every call.
+        club_matches = process.extract(
+            query_club_lower, club_names, scorer=fuzz.WRatio,
+            score_cutoff=CLUB_MATCH_THRESHOLD, limit=None,
+        )
+        pool_indices = [idx for _, _, idx in club_matches]
+        if not pool_indices:
+            pool_indices = range(len(candidates))
+
+        pool_names = [name_norms[i] for i in pool_indices]
+        match = process.extractOne(query_name_norm, pool_names, scorer=fuzz.WRatio)
+        if match is None:
+            return None
+
+        _, name_score, pool_match_idx = match
+        best_row = candidates[pool_indices[pool_match_idx]]
+
+        # Confirm with a combined name+club score (0-1 scale, matching the
+        # original NAME_MATCH_THRESHOLD semantics) against the winning row.
+        club_score = fuzz.WRatio(query_club_lower, best_row.get("club", "").strip().lower())
+        combined = 0.7 * (name_score / 100.0) + 0.3 * (club_score / 100.0)
+
+        if combined < NAME_MATCH_THRESHOLD:
+            return None
+
+        return best_row
 
     def print_progress(self, current, total, prefix = '', suffix = '', length = 50, fill = '█'):
         percent = ("{0:.1f}").format(100 * (current / float(total)))
@@ -634,6 +585,7 @@ class DatasetBuilder:
 
 if __name__ == "__main__":
     games_csv_path = os.path.join(".", "machine_learning", "games-test.csv")
+    # games_csv_path = os.path.join(".", "machine_learning", "games-filtered.csv")
     players_csv_path = os.path.join(".", "machine_learning", "players.csv")
     output_path = os.path.join(".", "machine_learning", "final_dataset.csv")
     

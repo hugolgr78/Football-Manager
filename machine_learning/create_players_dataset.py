@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 # ---------------------------------------------------------------------------
 OUTPUT_DIR = Path("machine_learning")
 OUTPUT_FILE = OUTPUT_DIR / "players.csv"
-SOFIFA_LISTING_URL = "https://sofifa.com/?r=230001&set=true&offset=0"
+SOFIFA_LISTING_URL = "https://sofifa.com/?r=260001&set=true&offset=0"
 
 # sofifa version code = 2-digit FIFA year + 4-digit roster-set number.
 # Your example (r=120002) uses set "0002", matching the Kaggle sample URLs

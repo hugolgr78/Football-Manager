@@ -357,7 +357,7 @@ def scrape_page_range(version, season_suffix, page_offsets, existing_ids, ids_lo
                     return
 
 
-def scrape_players_from_listing_url(listing_url, delay=REQUEST_DELAY, max_players=None, threads=DEFAULT_THREADS):
+def scrape_players_from_listing_url(listing_url, delay=REQUEST_DELAY, max_players=None, threads=DEFAULT_THREADS, player_link=None):
     """
     NOTE on max_players + threads: with threads > 1, max_players is an
     approximate/soft cap, not exact. Several threads can already be
@@ -367,13 +367,52 @@ def scrape_players_from_listing_url(listing_url, delay=REQUEST_DELAY, max_player
     threads=1; use threads>1 once you're scraping for real and an
     approximate cap doesn't matter.
     """
+
+    output_path = OUTPUT_FILE
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    if player_link:
+        profile_url = str(player_link)
+        m = re.search(r"/player/(\d+)", profile_url)
+        pid = m.group(1) if m else str(player_link)
+
+        # Try to extract a 6-digit SoFIFA version code from the URL itself
+        ver_m = re.search(r"/player/\d+/[^/?#]+/(\d{6})/?$", profile_url)
+        if not ver_m:
+            ver_m = re.search(r"(\d{6})/?$", profile_url)
+
+        version = ver_m.group(1) if ver_m else None
+
+        # If not found in the URL, try to find the version code in links on the profile page
+        if not version:
+            soup = fetch(profile_url)
+            if soup:
+                for a in soup.find_all("a", href=True):
+                    m2 = re.search(r"/player/\d+/[^/?#]+/(\d{6})/", a["href"])
+                    if m2:
+                        version = m2.group(1)
+                        break
+
+        season_suffix = version[:2] if version else ""
+
+        data = scrape_player_profile(profile_url)
+        if data is None:
+            log_error(f"Failed to scrape player {pid} ({profile_url})")
+            return
+
+        data["sofifa_id"] = pid
+        data["player_url"] = profile_url
+        data["season_version"] = season_suffix
+
+        append_row(output_path, data)
+        log.info(f"Added player {pid} to {output_path}; exiting.")
+        sys.exit(0)
+
+    # Determine SoFIFA version / season now (used for single-player mode)
     version = extract_version_from_url(listing_url)
     if not version:
         raise ValueError(f"Could not detect a SoFIFA version from URL: {listing_url}")
     season_suffix = version[:2]
-
-    output_path = OUTPUT_FILE
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     existing_ids = load_existing_ids(output_path)
     log.info(f"[season {season_suffix}] {len(existing_ids)} players already scraped")
@@ -456,50 +495,6 @@ def scrape_all_seasons(year_suffixes=SEASON_YEAR_SUFFIXES, threads=DEFAULT_THREA
             print("\nInterrupted - progress so far is already saved (output written incrementally).")
             raise
 
-
-# ---------------------------------------------------------------------------
-# Bonus: quick lookup helper for later use against transfermarkt lineup names
-# ---------------------------------------------------------------------------
-def find_player(player_name, club_name, year_suffix, name_threshold=85, club_threshold=60):
-    """
-    Look up a player in a season's scraped CSV, given a transfermarkt-style
-    name and club. Returns the matching row dict, or None.
-    Requires rapidfuzz: pip install rapidfuzz --break-system-packages
-    """
-    from rapidfuzz import fuzz, process
-
-    path = OUTPUT_FILE
-    if not path.exists():
-        return None
-
-    season_suffix = str(year_suffix)
-
-    with open(path, newline="", encoding="utf-8") as f:
-        rows = [row for row in csv.DictReader(f) if row.get("season_version") == season_suffix]
-
-    if not rows:
-        return None
-
-    club_scores = [fuzz.WRatio(club_name, r.get("club", "")) for r in rows]
-    pool = [r for r, s in zip(rows, club_scores) if s >= club_threshold]
-    if not pool:
-        pool = rows
-
-    query_norm = normalize_name(player_name)
-    names = [r.get("normalized_name", "") for r in pool]
-
-    name_match = process.extractOne(query_norm, names, scorer=fuzz.WRatio)
-
-    best = None
-    if name_match and (best is None or name_match[1] > best[1]):
-        best = name_match
-
-    if best is None or best[1] < name_threshold:
-        return None
-
-    return pool[best[2]]
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -519,9 +514,14 @@ if __name__ == "__main__":
         default=DEFAULT_THREADS,
         help="Number of pages to scrape in parallel.",
     )
+    parser.add_argument(
+        "--player",
+        default=None,
+        help="Player link to scrape individually.",
+    )
     args = parser.parse_args()
 
     try:
-        scrape_players_from_listing_url(args.url, max_players=args.max_players, threads=args.threads)
+        scrape_players_from_listing_url(args.url, max_players=args.max_players, threads=args.threads, player_link=args.player)
     except KeyboardInterrupt:
         print("\nInterrupted. Rows already written stay in machine_learning/players.csv.") 

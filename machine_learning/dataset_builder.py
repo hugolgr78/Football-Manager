@@ -84,11 +84,21 @@ MENTAL_ATTRS = list(MENTAL_ALIASES.keys())
 PHYSICAL_ATTRS = list(PHYSICAL_ALIASES.keys())
 TECHNICAL_ATTRS = list(TECHNICAL_ALIASES.keys())
 
-# Combined name+club match score (0-1) below which a candidate is rejected.
+# Combined name+club match score (0-1) below which a candidate is rejected,
+# for names that aren't confident enough to stand alone (see below).
 NAME_MATCH_THRESHOLD = 0.72
-# Club pre-filter threshold (0-100 scale, rapidfuzz's native scale) used to
-# narrow candidates before the more expensive name comparison.
-CLUB_MATCH_THRESHOLD = 60
+# A name match at or above this (0-100, rapidfuzz's native scale) is accepted
+# on its own, even with zero club corroboration - club data in players.csv
+# can be stale around transfer windows, and a near-exact full-name match is
+# already strong evidence on its own.
+HIGH_CONFIDENCE_NAME_THRESHOLD = 90
+# How many top name candidates (by rapidfuzz score) to pull from the full
+# season pool before scoring club similarity - keeps the club-scoring step
+# cheap without needing a club pre-filter that risks excluding the right row.
+TOP_NAME_CANDIDATES = 5
+
+# Base URL for resolving relative player-profile hrefs found in lineup pages.
+TRANSFERMARKT_BASE = "https://www.transfermarkt.co.uk"
 
 
 def normalize_name(name):
@@ -104,7 +114,9 @@ def normalize_name(name):
 
 
 def log_error(msg):
-    with open("errors.txt", "a") as f:
+    # encoding="utf-8" explicitly - without it, Windows opens this in the
+    # system codepage instead of UTF-8, which breaks on accented player names.
+    with open("errors.txt", "a", encoding="utf-8") as f:
         f.write(msg + "\n")
 
 
@@ -170,6 +182,7 @@ class DatasetBuilder:
         # find_player doesn't rebuild a 14k-item list on every single lookup.
         self._club_names_by_version = {}
         self._name_norms_by_version = {}
+        self._long_name_norms_by_version = {}
         self._players_lock = threading.Lock()  # guards the lazy-load below across threads
         # Caches find_player results - the same player/club/season combo
         # recurs across many games in a real season, so this avoids redundant
@@ -177,6 +190,21 @@ class DatasetBuilder:
         # threads computing the same miss concurrently) just means a little
         # redundant work, not incorrect results, so no lock needed here.
         self._find_player_cache = {}
+        # Caches scrape_player_names results per profile_url - the fallback
+        # fetch only happens on a miss, but the same player can miss across
+        # many games in a season, so this avoids re-fetching their profile
+        # page every time. Same benign-race reasoning as _find_player_cache.
+        self._profile_name_cache = {}
+
+        # Manual name-alias table (see name_aliases.csv / load_name_aliases)
+        # for players whose transfermarkt name has nothing in common with
+        # sofifa's name (nicknames, e.g. "Vitinha" vs "Vitor Machado
+        # Ferreira") - fuzzy matching can't bridge that, so these are looked
+        # up by exact override instead. Checked before fuzzy matching.
+        self.aliases_path = "name_aliases.csv"
+        self._aliases_loaded = False
+        self._aliases = {}  # (normalized transfermarkt name, club lower) -> sofifa search name
+        self._aliases_lock = threading.Lock()
 
         # Guards all shared mutable state (rows_to_add, rows_added, error/processed
         # game ids, formation_skip_count, output file writes) when running with
@@ -186,7 +214,7 @@ class DatasetBuilder:
         self._stop_event = threading.Event()
         self._done_count = 0
 
-    def process_games(self, threads=30):
+    def process_games(self, threads=50):
         # Load every game, split into `threads` contiguous chunks, and run each
         # chunk on its own thread via _process_chunk. Each chunk handles its
         # games sequentially (formation-skip check -> scrape_lineup ->
@@ -198,10 +226,10 @@ class DatasetBuilder:
             all_rows = list(reader)
 
         # Filter out national-team games upfront (~0.7% of the dataset)
-        club_rows = all_rows
+        club_rows = [r for r in all_rows if r.get("competition_type", "").strip() != "national_team_competition"]
         total = len(club_rows)
 
-        print(f"Processing {total} club games across up to {threads} threads.")
+        print(f"Processing {total} club games (national-team games skipped) across up to {threads} threads.")
 
         chunks = [c for c in chunk_list(club_rows, threads) if c]
         self._done_count = 0
@@ -329,7 +357,9 @@ class DatasetBuilder:
                         r1 = pl[10:]
                         r2 = r1.split("/")[0]
                         p_name = r2.replace("-", " ")
-                        lineups[side].append(p_name)
+                        href = player_link.get("href", "")
+                        profile_url = TRANSFERMARKT_BASE + href if href.startswith("/") else href
+                        lineups[side].append({"name": p_name, "profile_url": profile_url})
 
                 # Fallback: formation-player-list-tabel (Stoke-style — graphic has no player links)
                 if len(lineups[side]) < 11:
@@ -339,7 +369,9 @@ class DatasetBuilder:
                         for a in table.find_all('a', href = re.compile(r'/profil/spieler/\d+')):
                             title = a.get('title', '').strip()
                             if title:
-                                lineups[side].append(title)
+                                href = a.get("href", "")
+                                profile_url = TRANSFERMARKT_BASE + href if href.startswith("/") else href
+                                lineups[side].append({"name": title, "profile_url": profile_url})
                             if len(lineups[side]) == 11:
                                 break
 
@@ -348,6 +380,48 @@ class DatasetBuilder:
                 return None
             return lineups
         except: return None
+
+    def scrape_player_names(self, profile_url):
+        """
+        Fetch a transfermarkt player profile page and extract alternate name
+        fields ("Full name", "Name in home country") from its info-table
+        blocks, for use as a fallback when the lineup's display name doesn't
+        match anything in players.csv. Cached per profile_url, since the same
+        player's page may otherwise be re-fetched across many games.
+
+        Returns a dict like {"full_name": "...", "home_country_name": "..."}
+        - either value may be missing/empty if that field isn't on the page.
+        Returns {} on any fetch/parse failure (caller just falls through to
+        treating the player as unmatched, same as before this fallback existed).
+        """
+        if profile_url in self._profile_name_cache:
+            return self._profile_name_cache[profile_url]
+
+        result = {}
+        try:
+            time.sleep(self.delay)
+            response = self.fetch_with_retries(profile_url, self.headers, timeout=30, retries=3, delay=2)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.content, 'html.parser')
+                for block in soup.find_all('div', class_=re.compile(r'\binfo-table\b')):
+                    label_tag = block.find('span', class_=re.compile(r'info-table__content--regular'))
+                    value_tag = block.find('span', class_=re.compile(r'info-table__content--bold'))
+                    if not label_tag or not value_tag:
+                        continue
+                    label = label_tag.get_text(strip=True).rstrip(':').strip().lower()
+                    value = value_tag.get_text(strip=True)
+                    if not value:
+                        continue
+                    if label == "full name":
+                        result["full_name"] = value
+                    elif label == "name in home country":
+                        result["home_country_name"] = value
+        except Exception as exc:
+            log_error(f"Failed to fetch player profile for alternate name: {profile_url}: {exc}")
+            result = {}
+
+        self._profile_name_cache[profile_url] = result
+        return result
 
     def fetch_with_retries(self, url, headers, timeout = 30, retries = 3, delay = 2):
         last_error = None
@@ -366,8 +440,10 @@ class DatasetBuilder:
         row = []
         for lineup, team_name in [(home_lineup, home_team), (away_lineup, away_team)]:
             players_data = []
-            for p_name in lineup:
-                p_attr = self.get_player_attributes(p_name, team_name, season, game_id=game_id)
+            for player in lineup:
+                p_name = player["name"]
+                profile_url = player.get("profile_url")
+                p_attr = self.get_player_attributes(p_name, team_name, season, game_id=game_id, profile_url=profile_url)
                 if not p_attr: return None
                 players_data.append(p_attr)
 
@@ -390,11 +466,28 @@ class DatasetBuilder:
         row.extend([home_formation, away_formation, score_home, score_away])
         return row
 
-    def get_player_attributes(self, player_name, team_name, season, is_keeper=False, game_id=None):
+    def get_player_attributes(self, player_name, team_name, season, is_keeper=False, game_id=None, profile_url=None):
         # Find the player in players.csv via fuzzy name+club match (see find_player).
         # No google/sofifa fallback - players.csv is the sole source now.
 
         raw = self.find_player(player_name, team_name, season)
+
+        # If the lineup's display name didn't match anything (common for
+        # nicknames, e.g. "Vitinha" vs sofifa's "Vitor Machado Ferreira"),
+        # fetch the player's own transfermarkt profile page for their
+        # "Full name" / "Name in home country" and retry with those - only
+        # done on an actual miss, and cached per profile_url, so this doesn't
+        # add cost to players who already match on their lineup name.
+        used_name = player_name
+        if raw is None and profile_url:
+            alt_names = self.scrape_player_names(profile_url)
+            for alt_name in (alt_names.get("full_name"), alt_names.get("home_country_name")):
+                if not alt_name:
+                    continue
+                raw = self.find_player(alt_name, team_name, season)
+                if raw is not None:
+                    used_name = alt_name
+                    break
 
         if raw is None:
             tag = f"[{game_id}] " if game_id else ""
@@ -464,7 +557,9 @@ class DatasetBuilder:
 
                 # Precompute the lowercased club / normalized-name lists once
                 # per version, so find_player reuses them on every lookup
-                # instead of rebuilding a 14k-item list each time.
+                # instead of rebuilding a 14k-item list each time. Both short
+                # `name` and `long_name` are checked - sofifa's short display
+                # name isn't always what you'd expect either.
                 for version, rows in self._players_by_version.items():
                     self._club_names_by_version[version] = [
                         row.get("club", "").strip().lower() for row in rows
@@ -472,14 +567,51 @@ class DatasetBuilder:
                     self._name_norms_by_version[version] = [
                         row.get("normalized_name", "").strip() for row in rows
                     ]
+                    self._long_name_norms_by_version[version] = [
+                        row.get("normalized_long_name", "").strip() for row in rows
+                    ]
 
             self._players_loaded = True
+
+    def _ensure_aliases_loaded(self):
+        # Manual overrides for names fuzzy matching can't bridge (nicknames
+        # like "Vitinha" vs sofifa's "Vitor Machado Ferreira"). File format:
+        # three columns, transfermarkt_name,club,sofifa_name - header row
+        # required. Club is part of the key (not just for reference) so two
+        # different players who happen to share a transfermarkt display name
+        # don't collide. Rows with an empty sofifa_name are unresolved
+        # placeholders (see review_missing_players.py) and are skipped here -
+        # they don't do anything until you fill sofifa_name in yourself.
+        # Missing file is fine (just means no aliases yet).
+        if self._aliases_loaded:
+            return
+
+        with self._aliases_lock:
+            if self._aliases_loaded:
+                return
+
+            path = Path(self.aliases_path)
+            if path.exists() and path.stat().st_size > 0:
+                with open(path, newline="", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        tm_name = row.get("transfermarkt_name", "").strip()
+                        club = row.get("club", "").strip()
+                        sofifa_name = row.get("sofifa_name", "").strip()
+                        if tm_name and club and sofifa_name:
+                            key = (normalize_name(tm_name), club.lower())
+                            self._aliases[key] = sofifa_name
+
+            self._aliases_loaded = True
 
     def find_player(self, player_name, team_name, season):
         # Find the player in players.csv: season_version must match exactly;
         # name and club are fuzzy-matched via rapidfuzz (C-implemented - far
         # faster than difflib.SequenceMatcher at this scale, which matters a
         # lot once you're running many threads over thousands of candidates).
+        # NOTE: players.csv has no nationality column, and scrape_lineup (reused
+        # unchanged) doesn't return nationality either - so unlike the original
+        # plan comment, matching here uses name + club only, not nat.
         cache_key = (player_name, team_name, season)
         if cache_key in self._find_player_cache:
             return self._find_player_cache[cache_key]
@@ -490,6 +622,7 @@ class DatasetBuilder:
 
     def _find_player_uncached(self, player_name, team_name, season):
         self._ensure_players_loaded()
+        self._ensure_aliases_loaded()
 
         version_suffix = self._season_to_version_suffix(season)
         if version_suffix is None:
@@ -499,50 +632,61 @@ class DatasetBuilder:
         if not candidates:
             return None
 
-        club_names = self._club_names_by_version.get(version_suffix, [])
         name_norms = self._name_norms_by_version.get(version_suffix, [])
+        long_name_norms = self._long_name_norms_by_version.get(version_suffix, [])
 
-        query_name_norm = normalize_name(player_name)
+        # Alias override (e.g. "Vitinha" -> "Vitor Machado Ferreira") takes
+        # priority - fuzzy matching can't bridge a nickname to an unrelated
+        # real name, so if this transfermarkt name has a known override, use
+        # that as the query instead of the original.
         query_club_lower = team_name.strip().lower()
+        alias_target = self._aliases.get((normalize_name(player_name), query_club_lower))
+        query_name_norm = normalize_name(alias_target if alias_target else player_name)
 
-        # --------------------------------------------------
-        # Step 1: Find all good name matches
-        # --------------------------------------------------
-        name_matches = process.extract(
-            query_name_norm,
-            name_norms,
-            scorer=fuzz.WRatio,
-            score_cutoff=NAME_MATCH_THRESHOLD * 100,
-            limit=None,
-        )
+        # Search the FULL season pool by name directly - no club pre-filter.
+        # We used to narrow by club first, but club data in players.csv can
+        # be stale (a player's transfermarkt club and sofifa's snapshot club
+        # disagree around transfer windows) or fuzzy-match too loosely on
+        # short/generic club-name tokens (e.g. "1919", "FC"), producing
+        # dozens of false-positive clubs. Either way, pre-filtering by club
+        # can silently exclude the correct row before name matching even
+        # runs. Full-pool search is only ~8ms even over an 18k-row season
+        # (rapidfuzz's batched C scan), so there's no real speed reason to
+        # pre-filter - club is used below only as a secondary confidence
+        # signal, not as an elimination filter.
+        short_matches = process.extract(query_name_norm, name_norms, scorer=fuzz.WRatio, limit=TOP_NAME_CANDIDATES)
+        long_matches = process.extract(query_name_norm, long_name_norms, scorer=fuzz.WRatio, limit=TOP_NAME_CANDIDATES)
 
-        if not name_matches:
+        best_name_score_by_row = {}
+        for _, score, idx in short_matches:
+            best_name_score_by_row[idx] = max(best_name_score_by_row.get(idx, 0), score)
+        for _, score, idx in long_matches:
+            best_name_score_by_row[idx] = max(best_name_score_by_row.get(idx, 0), score)
+
+        if not best_name_score_by_row:
             return None
 
-        # Only one plausible player -> ignore club
-        if len(name_matches) == 1:
-            _, _, idx = name_matches[0]
-            return candidates[idx]
+        # Among the top name candidates, accept the first one whose name
+        # match is strong enough to stand alone (near-exact full name -
+        # collisions this precise within one season are rare), otherwise
+        # fall back to requiring club corroboration too.
+        ranked = sorted(best_name_score_by_row.items(), key=lambda kv: kv[1], reverse=True)[:TOP_NAME_CANDIDATES]
 
-        # --------------------------------------------------
-        # Step 2: Multiple players matched -> use club
-        # --------------------------------------------------
         best_row = None
-        best_score = -1
+        best_combined = -1.0
+        for idx, name_score in ranked:
+            row = candidates[idx]
 
-        for _, name_score, idx in name_matches:
-            club_score = fuzz.WRatio(
-                query_club_lower,
-                club_names[idx]
-            )
+            if name_score >= HIGH_CONFIDENCE_NAME_THRESHOLD:
+                return row  # name alone is confident enough - club may be stale, ignore it
 
+            club_score = fuzz.WRatio(query_club_lower, row.get("club", "").strip().lower())
             combined = 0.7 * (name_score / 100.0) + 0.3 * (club_score / 100.0)
+            if combined > best_combined:
+                best_combined = combined
+                best_row = row
 
-            if combined > best_score:
-                best_score = combined
-                best_row = candidates[idx]
-
-        if best_score < NAME_MATCH_THRESHOLD:
+        if best_row is None or best_combined < NAME_MATCH_THRESHOLD:
             return None
 
         return best_row
@@ -592,8 +736,7 @@ class DatasetBuilder:
         )
 
 if __name__ == "__main__":
-    # games_csv_path = os.path.join(".", "machine_learning", "games-test.csv")
-    games_csv_path = os.path.join(".", "machine_learning", "games-filtered.csv")
+    games_csv_path = os.path.join(".", "machine_learning", "games-test.csv")
     players_csv_path = os.path.join(".", "machine_learning", "players.csv")
     output_path = os.path.join(".", "machine_learning", "final_dataset.csv")
     

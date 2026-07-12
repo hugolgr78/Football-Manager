@@ -226,10 +226,10 @@ class DatasetBuilder:
             all_rows = list(reader)
 
         # Filter out national-team games upfront (~0.7% of the dataset)
-        club_rows = [r for r in all_rows if r.get("competition_type", "").strip() != "national_team_competition"]
+        club_rows = all_rows
         total = len(club_rows)
 
-        print(f"Processing {total} club games (national-team games skipped) across up to {threads} threads.")
+        print(f"Processing {total} club games across up to {threads} threads.")
 
         chunks = [c for c in chunk_list(club_rows, threads) if c]
         self._done_count = 0
@@ -736,7 +736,7 @@ class DatasetBuilder:
         )
 
 if __name__ == "__main__":
-    games_csv_path = os.path.join(".", "machine_learning", "games-test.csv")
+    games_csv_path = os.path.join(".", "machine_learning", "games-filtered_2.csv")
     players_csv_path = os.path.join(".", "machine_learning", "players.csv")
     output_path = os.path.join(".", "machine_learning", "final_dataset.csv")
     

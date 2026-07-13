@@ -3,6 +3,7 @@ data/__pycache__/
 data/*.db
 data/backups/
 data/Image_Helpers/
+machine_learning/*.csv
 utils/__pycache__/
 tabs/__pycache__/
 logs/

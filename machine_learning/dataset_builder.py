@@ -736,9 +736,9 @@ class DatasetBuilder:
         )
 
 if __name__ == "__main__":
-    games_csv_path = os.path.join(".", "machine_learning", "games-filtered_2.csv")
-    players_csv_path = os.path.join(".", "machine_learning", "players.csv")
-    output_path = os.path.join(".", "machine_learning", "final_dataset.csv")
+    games_csv_path = os.path.join(".", "machine_learning", "data", "games-filtered.csv")
+    players_csv_path = os.path.join(".", "machine_learning", "data", "players.csv")
+    output_path = os.path.join(".", "machine_learning", "data", "final_dataset.csv")
     
     output_dir = os.path.dirname(output_path)
     if output_dir and not os.path.exists(output_dir): os.makedirs(output_dir)

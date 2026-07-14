@@ -67,8 +67,8 @@ EARLY_STOPPING_PATIENCE = 10  # stop if val_loss hasn't improved in this many ep
 VAL_FRACTION = 0.15
 RANDOM_SEED = 42
 
-MODEL_OUTPUT_PATH = "machine_learning/match_score_model_v1.pt"
-PREPROCESSING_OUTPUT_PATH = "machine_learning/match_score_preprocessing_v1.pkl"
+MODEL_OUTPUT_PATH = "machine_learning/models/match_score_model_v1.pt"
+PREPROCESSING_OUTPUT_PATH = "machine_learning/models/match_score_preprocessing_v1.pkl"
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

@@ -105,8 +105,8 @@ def filter_games(input_path, output_path, min_season=MIN_SEASON):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", default="games-transfermarkt.csv", help="Path to the source games CSV")
-    parser.add_argument("--output", default="games-filtered.csv", help="Path to write the filtered CSV to")
+    parser.add_argument("--input", default="machine_learning/data/games-transfermarkt.csv", help="Path to the source games CSV")
+    parser.add_argument("--output", default="machine_learning/data/games-transfermarkt.csv", help="Path to write the filtered CSV to")
     parser.add_argument("--min-season", type=int, default=MIN_SEASON, help="Minimum season start year to keep")
     args = parser.parse_args()
 

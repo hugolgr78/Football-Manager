@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 # ---------------------------------------------------------------------------
 # CONFIG
 # ---------------------------------------------------------------------------
-OUTPUT_DIR = Path("machine_learning")
+OUTPUT_DIR = Path("machine_learning/data")
 OUTPUT_FILE = OUTPUT_DIR / "players.csv"
 SOFIFA_LISTING_URL = "https://sofifa.com/?r=260001&set=true&offset=0"
 
@@ -524,4 +524,4 @@ if __name__ == "__main__":
     try:
         scrape_players_from_listing_url(args.url, max_players=args.max_players, threads=args.threads, player_link=args.player)
     except KeyboardInterrupt:
-        print("\nInterrupted. Rows already written stay in machine_learning/players.csv.") 
+        print("\nInterrupted. Rows already written stay in machine_learning/data/players.csv.") 

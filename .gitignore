@@ -4,6 +4,8 @@ data/*.db
 data/backups/
 data/Image_Helpers/
 machine_learning/*.csv
+machine_learning/*.pt
+machine_learning/*.pkl
 utils/__pycache__/
 tabs/__pycache__/
 logs/

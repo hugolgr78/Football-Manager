@@ -454,10 +454,10 @@ class Attributes(ctk.CTkFrame):
             type_ (str, optional): Type of attributes (e.g., "Technical", "Mental & Physical"). Defaults to "Technical".
         """
 
-        frame.grid_rowconfigure((0, 1, 2, 3, 4, 5, 6, 7), weight = 0)
+        frame.grid_rowconfigure((0, 1, 2, 3, 4, 5, 6, 7, 8), weight = 0)
         frame.grid_columnconfigure((0, 1), weight = 0)
 
-        ctk.CTkLabel(frame, text = f"{type_} Attributes", font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).grid(row = 0, column = 0, columnspan = 2, pady = 10)
+        ctk.CTkLabel(frame, text = f"{type_} Attributes", font = (APP_FONT_BOLD, 25), fg_color = TKINTER_BACKGROUND).grid(row = 0, column = 0, columnspan = 2)
 
         row = 1
         column = 0
@@ -496,7 +496,7 @@ class Attributes(ctk.CTkFrame):
 
             frame2.grid(row = row, column = column, padx = 10)
 
-            if i == 6:
+            if i == 7:
                 row = 1
                 column = 1
             else:

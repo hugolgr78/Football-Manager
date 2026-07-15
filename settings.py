@@ -941,53 +941,22 @@ NEWS_DETAILS = {
 
 OVERTHROW_THRESHOLD = 20
 
-KEEPER_ATTRIBUTES = ["aerial_reach", "reflexes", "throwing", "handling", "kicking", "one_on_ones", "shot_stopping", "first_touch"]
-MENTAL_ATTRIBUTES = ["teamwork", "composure", "decisions", "work_rate", "stamina", "pace", "jumping", "strength", "aggression", "acceleration", "balance", "creativity"]
-OUTFIELD_ATTRIBUTES = ["corners", "crossing", "dribbling", "finishing", "first_touch", "free_kick", "heading", "long_shots", "marking", "passing", "penalty", "positioning", "tackling", "vision", "positioning"]
+KEEPER_ATTRIBUTES = ["diving", "handling", "kicking", "positioning", "reflexes"]
+MENTAL_ATTRIBUTES = ["acceleration", "aggression", "attack_position", "agility", "balance", "composure", "interceptions", "jumping", "reactions", "sprint_speed", "stamina", "strength", "vision"]
+OUTFIELD_ATTRIBUTES = ["ball_control", "crossing", "curve", "dribbling", "free_kick", "finishing", "heading", "long_passing", "long_shots", "penalty", "marking", "short_passing", "shot_power", "tackling_slide", "tackling_stand", "volleys"]
 
 CORE_ATTRIBUTES = {
-    "forward": [
-        "finishing", "dribbling", "first_touch", "heading",
-        "crossing", "composure", "decisions",
-        "pace", "acceleration", "creativity"
-    ],
-    "midfielder": [
-        "passing", "vision", "first_touch",
-        "dribbling", "decisions", "teamwork",
-        "composure", "stamina"
-    ],
-    "defender": [
-        "tackling", "marking", "heading",
-        "positioning", "strength", "jumping",
-        "decisions", "aggression"
-    ],
-    "goalkeeper": [
-        "shot_stopping", "reflexes", "handling",
-        "aerial_reach", "one_on_ones", "positioning",
-        "decisions"
-    ]
+    "forward": ["finishing", "dribbling", "ball_control", "heading", "crossing", "composure", "sprint_speed", "acceleration", "attack_position"],
+    "midfielder": ["long_passing", "short_passing", "vision", "ball_control", "dribbling", "composure", "stamina"],
+    "defender": ["tackling_slide", "tackling_stand", "marking", "heading", "interceptions", "strength", "jumping", "aggression", "short_passing"],
+    "goalkeeper": ["diving", "reflexes", "handling", "kicking", "positioning", "reactions", "agility", "jumping"]
 }
 
 SECONDARY_ATTRIBUTES = {
-    "forward": [
-        "vision", "positioning", "strength",
-        "balance", "teamwork", "penalty",
-        "free_kick", "long_shots"
-    ],
-    "midfielder": [
-        "work_rate", "balance", "creativity",
-        "strength", "positioning", "long_shots",
-        "free_kick", "corners", "tackling", "crossing"
-    ],
-    "defender": [
-        "pace", "balance", "composure",
-        "work_rate", "passing", "first_touch",
-        "vision", "long_shots", "free_kick", "crossing"
-    ],
-    "goalkeeper": [
-        "throwing", "kicking", "first_touch",
-        "composure", "strength", "jumping"
-    ]
+    "forward": ["vision", "interceptions", "strength", "balance", "penalty", "free_kick", "long_shots"],
+    "midfielder": ["balance", "strength", "interceptions", "long_shots", "free_kick", "tackling_slide", "tackling_stand", "crossing"],
+    "defender": ["sprint_speed", "balance", "composure", "long_passing", "ball_control", "vision", "long_shots", "free_kick", "crossing"],
+    "goalkeeper": ["composure", "strength", "stamina", "aggression", "interceptions", "vision"]
 }
 
 DEPTH_MULTIPLIER = {

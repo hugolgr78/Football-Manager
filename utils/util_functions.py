@@ -558,7 +558,7 @@ def generate_attributes(age, team_strength, depth, position):
     # --- Mental & Physical: use slightly higher base ranges than before so top players can be high ---
     for a in MENTAL_ATTRIBUTES:
         base = random.uniform(7.0, 15.0)
-        if a in ["pace", "stamina", "acceleration", "strength", "jumping", "balance"]:
+        if a in ["sprint_speed", "stamina", "acceleration", "strength", "jumping", "balance"]:
             val = base * age_mod_phys
         else:
             val = base * age_mod_mental
@@ -566,18 +566,18 @@ def generate_attributes(age, team_strength, depth, position):
         val = strength_adjust(val, team_strength)
         attrs[a] = val
 
-    if position == "goalkeeper":
-        if "jumping" in attrs:
-            jump = attrs["jumping"]
+    # if position == "goalkeeper":
+    #     if "jumping" in attrs:
+    #         jump = attrs["jumping"]
 
-            # aerial reach depends 80% on jumping + noise
-            reach = jump * 0.8 + random.uniform(-2, 2)
+    #         # aerial reach depends 80% on jumping + noise
+    #         reach = jump * 0.8 + random.uniform(-2, 2)
 
-            # apply clamp + strength adjust
-            reach = clamp(reach)
-            reach = strength_adjust(reach, team_strength)
+    #         # apply clamp + strength adjust
+    #         reach = clamp(reach)
+    #         reach = strength_adjust(reach, team_strength)
 
-            attrs["aerial reach"] = reach
+    #         attrs["aerial reach"] = reach
 
     return attrs
 

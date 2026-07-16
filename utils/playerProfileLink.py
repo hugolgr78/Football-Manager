@@ -56,7 +56,7 @@ class PlayerProfileLabel(ctk.CTkFrame):
         self.suffix_label.pack(side = "left")
 
 class PlayerProfileLink(ctk.CTkLabel):
-    def __init__(self, parent, player, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20, font = APP_FONT, ingame = False, ingameFunction = None, caStars = None):
+    def __init__(self, parent, player, text, textColor, relx, rely, anchor, fg_color, tab, fontSize = 20, font = APP_FONT, ingame = False, ingameFunction = None, caStars = None, row = None, column = None, pady = None, padx = None):
         """
         A clickable label that opens the player profile when clicked.
 
@@ -75,10 +75,18 @@ class PlayerProfileLink(ctk.CTkLabel):
             ingame (bool): Whether to use ingame function or not. Default is False.
             ingameFunction (function): The function to call if ingame is True. Default is None.
             caStars (int): The CA stars to display on the profile. Default is None.
+            row (int): The row number if using grid.
+            column (int): The column number if using grid.
+            pady (tuple): The padding on the y axis if using grid.
+            padx (tuple): The padding on the x axis if using grid.
         """
 
         super().__init__(parent, text = text, font = (font, fontSize), fg_color = fg_color, text_color = textColor, height = 0)
-        self.place(relx = relx, rely = rely, anchor = anchor)
+        
+        if relx and rely:
+            self.place(relx = relx, rely = rely, anchor = anchor)
+        else:
+            self.grid(row = row, column = column, pady = pady, padx = padx)
 
         self.player = player
         self.textColor = textColor

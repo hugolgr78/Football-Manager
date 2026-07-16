@@ -4933,10 +4933,10 @@ class DataPolygon(ctk.CTkCanvas):
         self.text_color = text_color
 
         self.draw_gradient_background()
-        self.draw_chart(self.labels, self.values, "#1E40AF")
+        self.draw_chart(self.labels, self.values, POLY_1)
 
         if self.extra and not self.analysis:
-            self.draw_chart(extraLabels, extraValues, "#AF1E1E")
+            self.draw_chart(extraLabels, extraValues, POLY_2)
 
     def draw_gradient_background(self):
         """

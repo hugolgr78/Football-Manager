@@ -1,4 +1,3 @@
-from ast import Match
 import customtkinter as ctk
 from settings import *
 from data.database import Matches, PlayerAttributes, Teams, LeagueTeams, PlayerBans, TeamLineup, MatchEvents, Players, Managers, League, searchResults
@@ -8,6 +7,7 @@ import io
 from utils.teamLogo import TeamLogo
 from utils.frames import FootballPitchPlayerPos, FormGraph, PlayerMatchFrame, DataPolygon
 from utils.util_functions import *
+from utils.playerProfileLink import PlayerProfileLink
 
 class PlayerProfile(ctk.CTkFrame):
     def __init__(self, parent, player, changeBackFunction = None, caStars = None):
@@ -651,12 +651,12 @@ class Attributes(ctk.CTkFrame):
         def divider(row): ctk.CTkFrame(dataFrame, height = 1, fg_color = GREY_BACKGROUND).grid(row = row, column = 0, columnspan = 3, sticky = "ew", padx = 15, pady = 6)
 
         def stat_row(row, label, left, right, highlight = None, fontSize = 18):
-            ctk.CTkLabel(dataFrame, text = label.upper(), font = (APP_FONT_BOLD, 14), text_color = "#9CA3AF").grid(row = row, column = 0, padx = 15, sticky = "w")
+            ctk.CTkLabel(dataFrame, text = label.upper(), font = (APP_FONT_BOLD, 14), text_color = GREY_FONT).grid(row = row, column = 0, padx = 15, sticky = "w")
             ctk.CTkLabel(dataFrame, text = left, font = (APP_FONT_BOLD if highlight == "left" else APP_FONT, fontSize), text_color = "white").grid(row = row, column = 1)
             ctk.CTkLabel(dataFrame, text = right, font = (APP_FONT_BOLD if highlight == "right" else APP_FONT, fontSize), text_color = "white").grid(row = row, column = 2)
     
         def star_row(row, label, leftStars, rightStars):
-            ctk.CTkLabel(dataFrame, text = label.upper(), font = (APP_FONT_BOLD, 14), text_color = "#9CA3AF").grid(row = row, column = 0, padx = 15, sticky = "w")
+            ctk.CTkLabel(dataFrame, text = label.upper(), font = (APP_FONT_BOLD, 14), text_color = GREY_FONT).grid(row = row, column = 0, padx = 15, sticky = "w")
 
             frame = ctk.CTkFrame(dataFrame, fg_color = GREY_BACKGROUND, width = 110, height = 30, corner_radius = 15)
             frame.grid(row = row, column = 1, sticky = "w")
@@ -681,16 +681,20 @@ class Attributes(ctk.CTkFrame):
         dataFrame.grid_propagate(False)
         dataFrame.grid_columnconfigure(0, weight = 0); dataFrame.grid_columnconfigure((1, 2), weight = 1)
 
-        ctk.CTkLabel(dataFrame, text = self.player.last_name, font = (APP_FONT_BOLD, 20), text_color = "white").grid(row = 0, column = 1, pady = (15, 8))
-        ctk.CTkLabel(dataFrame, text = player.last_name, font = (APP_FONT_BOLD, 20), text_color = "white").grid(row = 0, column = 2, pady = (15, 8))
+
+        ctk.CTkLabel(dataFrame, text = self.player.last_name, font = (APP_FONT_BOLD, 20), text_color = POLY_1).grid(row = 0, column = 1, pady = (15, 8))
+        PlayerProfileLink(dataFrame, player, player.last_name, POLY_2, None, None, None, GREY_BACKGROUND, self.parent, font = APP_FONT_BOLD, row = 0, column = 2, pady = (15, 8))
 
         divider(1)
 
-        left_caStars, = Players.get_players_star_ratings([self.player], self.parent.league.id).values()
-        left_paStars, = Players.get_players_star_ratings([self.player], self.parent.league.id, CA = False).values()
+        caStars = Players.get_players_star_ratings([self.player, player], self.parent.league.id, compare = True)
+        paStars = Players.get_players_star_ratings([self.player, player], self.parent.league.id, CA = False, compare = True)
 
-        right_caStars, = Players.get_players_star_ratings([player], self.parent.league.id).values()
-        right_paStars, = Players.get_players_star_ratings([player], self.parent.league.id, CA = False).values()
+        left_caStars = caStars[self.player.id]
+        left_paStars = paStars[self.player.id]
+
+        right_caStars = caStars[player.id]
+        right_paStars = paStars[player.id]
 
         stat_row(2, "Team", Teams.get_team_by_id(self.player.team_id).name, Teams.get_team_by_id(player.team_id).name, fontSize = 12)
         stat_row(3, "Age", self.player.age, player.age)

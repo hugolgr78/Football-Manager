@@ -907,11 +907,12 @@ class Players(Base):
             session.close()
 
     @classmethod
-    def get_players_star_ratings(cls, players, league_id, CA=True):
+    def get_players_star_ratings(cls, players, league_id, CA = True, compare = False):
         """
         Return star ratings for a list of players in a league.
         Output: {player_id: stars, ...}
         """
+
         session = DatabaseManager().get_session()
         player_ids = [p.id for p in players]
         try:
@@ -929,6 +930,15 @@ class Players(Base):
             )
             if not league_players:
                 return {pid: 3.0 for pid in player_ids}
+
+            if compare:
+                # If comparing, ensure all players are added in case one is not in the same league
+                for pid in player_ids:
+                    player = next((p for p in league_players if p[0] == pid), None)
+                    if not player:
+                        player_data = cls.get_player_by_id(pid)
+                        league_players.append((pid, player_data.position, player_data.current_ability, player_data.potential_ability))
+                        continue
 
             # Group players by position
             pos_groups = {}
@@ -954,8 +964,6 @@ class Players(Base):
                     continue
 
                 _, pos, ca, pa = player
-                # Use each teammate's ability (c/p) — previous code mistakenly used the
-                # target player's ca/pa for every entry, producing identical values.
                 abilities = [c if CA else p for _, c, p in pos_groups[pos]]
                 abilities_sorted = sorted(abilities)
 
